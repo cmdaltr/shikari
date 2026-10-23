@@ -176,7 +176,9 @@ function render(p) {
   const techMade = Number(p.created_techniques) || 0;
   const procs = n => `${fmt(n)} procedure${n === 1 ? '' : 's'}`;
   const sweeps = Number(p.ioc_sweeps) || 0;   // report IOC sweeps, one per SIEM
-  const sweepNote = sweeps ? `IOC sweeps for ${sweeps} SIEM${sweeps === 1 ? '' : 's'}` : '';
+  const cveDets = Number(p.cve_detections) || 0;   // a CVE's exploit-request and runtime detections
+  const sweepNote = [sweeps ? `IOC sweeps for ${sweeps} SIEM${sweeps === 1 ? '' : 's'}` : '',
+    cveDets ? `${cveDets} exploit and runtime detection${cveDets === 1 ? '' : 's'}` : ''].filter(Boolean).join(' and ');
 
   if (p.status === 'failed') {
     const err = document.createElement('span');
@@ -194,7 +196,7 @@ function render(p) {
     return 'stop';
   }
 
-  if (phase === 'complete' && !(created > 0) && !(sweeps > 0)) {
+  if (phase === 'complete' && !(created > 0) && !(sweeps > 0) && !(cveDets > 0)) {
     paint(det, { state: 'done', pct: 100, detail: p.error || 'No detections were generated: none of the selected techniques produced a query.' });
     hideLoading();
     setState('Nothing generated');
@@ -250,7 +252,7 @@ function render(p) {
   } else {
     detPctShown = 100;
     const made = total || created
-      ? `${techTotal ? `${fmt(techMade)} of ${fmt(techTotal)} techniques (${procs(created)})` : procs(created)} produced detections${sweeps ? `, plus ${sweepNote}` : ''}`
+      ? `${techTotal ? `${fmt(techMade)} of ${fmt(techTotal)} techniques (${procs(created)})` : procs(created)} produced detections${sweepNote ? `, plus ${sweepNote}` : ''}`
       : `${sweepNote} (no techniques were selected)`;
     paint(det, {
       state: 'done', pct: 100,

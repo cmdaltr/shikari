@@ -16,15 +16,18 @@ Enter one CVE or several, separated by commas: `CVE-2024-3400, CVE-2021-44228`. 
 
 **Browse the last 30 days** under the field lists the CVEs published in that time with an ID from this year (an older ID published now, such as CVE-2013-10076, is a backlog reaching an old bug), newest first: search by ID, product or phrase, and filter to **Exploited (KEV)**, **My technology stack** or **CVSS 7+**. Each shows its CVSS score (or *Not scored yet*: NVD analyses new CVEs days or weeks after they're published), whether it's in KEV and used by ransomware, the stack products it affects, and **Researched** when its hunt will start at once. Picking a CVE adds it to the field; picking it again takes it out. NVD hasn't listed the affected products for most CVEs of the last few weeks, so for those the products are the ones the description names.
 
-Archer reads the CVE's record from the NVD, the advisories and write-ups it links to, and the READMEs of public proof-of-concept exploits on GitHub. It builds three kinds of query:
+Archer reads the CVE's record from the NVD, the advisories and write-ups it links to, and the READMEs of public proof-of-concept exploits on GitHub. It builds four kinds of query:
 
 | Query | From | What it matches |
 |---|---|---|
-| Exploit request (**T1190**) | The PoCs' HTTP requests | Requests to the vulnerable path in HTTP logs: Defender XDR's inspected inbound HTTP on an onboarded server, Google SecOps `NETWORK_HTTP` events from a proxy, WAF or the appliance. High severity when the payload (`../`, `${jndi:`) is in the URL; low when it travels in a cookie or the body, which these logs don't keep, so the query also matches normal use of that path |
+| Exploit request (**T1190**) | The PoCs' HTTP requests | Requests to the vulnerable path in HTTP logs: Defender XDR's inspected inbound HTTP on an onboarded server, Google SecOps `NETWORK_HTTP` events from a proxy, WAF or the appliance. When the payload (`../`, `${jndi:`) travels in a cookie or the body, which these logs don't keep, the query also matches normal use of that path: its description says so |
 | Exploitation detections | ATT&CK and the write-ups | The behaviour of exploiting it, including the shell the write-ups show running afterwards (`wget -qO- http://… \| bash`) |
-| IOC sweeps | The references | The hashes, IPs and domains the advisories and write-ups publish |
+| Runtime shell (**T1190**) | The CVE's products and description | For a code-execution CVE in PHP, a Java application server, IIS (Exchange, SharePoint) or Node.js: its worker process (`php-fpm`, `java`, `w3wp.exe`, `node`) starting recon tools, or a shell whose command line runs recon or a download. It holds however the exploit is delivered, including in a request body HTTP logs don't keep. A bare shell isn't enough: PHP's `exec()` starts one for every call |
+| IOC sweeps | The references | The hashes, IPs and domains the advisories and write-ups publish. A domain seen only in an email address or a mailing list's Message-ID (`…@mail.gmail.com` on oss-security) isn't one |
 
 For an appliance (PAN-OS, Ivanti, Citrix) no EDR runs where the exploit lands, so the exploit request and the sweep are the queries that can see it.
+
+The exploit request, runtime shell and IOC sweep queries are the CVE's own, so they're rated **High** whatever the tactic, and their files, titles and the run's correlations start with the CVE and the exploit's name when it has one: `CVE-2026-109618_PHP2Shell_RuntimeShell_KQL.yaml`. The name is what researchers call it, taken from the proof-of-concept repositories' names and the write-ups' URLs: it needs two sources, one of them a write-up off the vendor's own site, or three repository owners. Product names (Magento, NetScaler) and advisory IDs don't count. With no name, the label is the CVE alone (`CVE-2024-3400_Exploit_UDM.yaml`); several CVEs list their IDs and then each name once.
 
 ## ATT&CK techniques
 

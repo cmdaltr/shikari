@@ -77,3 +77,11 @@ def test_name_leads_with_the_pair_and_counts_a_technique_once():
     assert cf.filename(corr) == "AccessTokenManipulation_and_CloudAccounts_plus2_KQL.yaml"
     assert cf.title(corr) == "Access Token Manipulation and Cloud Accounts (+2 more)"
     assert cf._techniques(corr)[2:] == ["Cached Domain Credentials", "Deobfuscate/Decode Files or Information"]
+
+
+def test_a_cve_runs_correlations_start_with_its_label(tmp_path, monkeypatch):
+    monkeypatch.setattr(cf, "CORRELATE_DIR", str(tmp_path))
+    report = cf.write("CVE-2026-109618", [_corr()], label="CVE-2026-109618_PHP2Shell")
+    assert report["written"] == ["CVE-2026-109618_PHP2Shell_AccessTokenManipulation_and_AccountManipulation_UDM.yaml"]
+    doc = yaml.safe_load(open(tmp_path / "CVE-2026-109618" / report["written"][0]).read())
+    assert doc["name"] == "CVE-2026-109618_PHP2Shell - Access Token Manipulation and Account Manipulation"

@@ -241,9 +241,10 @@ def _brackets_balanced(query: str) -> bool:
     return depth == 0
 
 
-def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, datatype=None, indicators=None, osint_data=None, osint_enhanced=False, entity_mappings=None, reference_used=False, reference_sources=None, tags=None, version=None, attack_override=None, attack_mapping_history=None):
+def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, datatype=None, indicators=None, osint_data=None, osint_enhanced=False, entity_mappings=None, reference_used=False, reference_sources=None, tags=None, version=None, attack_override=None, attack_mapping_history=None, severity=None):
     """Write a detection. tags, version and a hand-made ATT&CK mapping carry over from the
-    file it replaces (detection_action)."""
+    file it replaces (detection_action). severity overrides the tactic's rating
+    (a CVE's own detections are High)."""
     if isinstance(tactic, (list, tuple)):
         tactic = list(tactic)
         if intel_only(tid, tactic):
@@ -273,7 +274,7 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
         # Fallback if no valid line found
         if not datatype:
             datatype = "UnknownDataType"
-    severity = rate_severity(tactic)
+    severity = severity or rate_severity(tactic)
     tactic = str(list(tactic))[2:-2].replace("', '", "\n  - ")
 
     # Indent ALL query lines properly for YAML literal block

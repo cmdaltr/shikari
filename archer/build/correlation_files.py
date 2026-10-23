@@ -37,8 +37,12 @@ def _camel(name: str) -> str:
 
 
 def _label(path: Optional[str]) -> str:
-    """Technique name from a detection filename: AccessTokenManipulation_UDM.yaml -> Access Token Manipulation."""
-    stem = os.path.basename(str(path or "")).rsplit(".", 1)[0].split("_")[0]
+    """
+    Technique name from a detection filename: AccessTokenManipulation_UDM.yaml -> Access Token Manipulation.
+    A CVE run's own detection names its kind after the label: CVE-2026-109618_PHP2Shell_RuntimeShell_KQL.yaml.
+    """
+    stem = os.path.basename(str(path or "")).rsplit(".", 1)[0]
+    stem = stem.rsplit("_", 1)[0].rsplit("_", 1)[-1] if stem.startswith("CVE-") else stem.split("_")[0]
     return re.sub(r"(?<=[a-z])(?=[A-Z])", " ", stem).strip()
 
 
@@ -100,11 +104,11 @@ def _window(query: str) -> Optional[str]:
     return None
 
 
-def render(corr: Dict, group_name: str) -> str:
+def render(corr: Dict, group_name: str, label: str = "") -> str:
     """The file's text, stamped. YAML written by hand so the query stays a literal block."""
     query = (corr.get("combined_query") or "").rstrip()
     lines = [f"id: {uuid.uuid5(_NAMESPACE, group_name + '/' + filename(corr))}",
-             f"name: {json.dumps(title(corr))}",
+             f"name: {json.dumps((f'{label} - ' if label else '') + title(corr))}",
              "kind: correlation",
              f"group: {json.dumps(group_name)}",
              f"vendor: {corr.get('vendor', '')}",
@@ -159,20 +163,29 @@ def errors(corr: Dict) -> List[str]:
     return [f"{f['check']}: {f['message']}" for f in result["findings"] if f["severity"] == "error"]
 
 
-def write(group_name: str, correlations: List[Dict]) -> Dict[str, List[str]]:
+def run_label(group_name: str) -> str:
+    """A CVE run's label (archer.intelligence.cve_label), kept on its progress record; else ''."""
+    from archer.build.progress import read_progress
+
+    return str(read_progress(group_name).get("run_label") or "")
+
+
+def write(group_name: str, correlations: List[Dict], label: Optional[str] = None) -> Dict[str, List[str]]:
     """
     Write each correlation's file and record it on the correlation ("file", relative to
     CORRELATE_DIR). A hand-edited file is kept and its query becomes the correlation's.
+    A CVE run's files start with its label: CVE-2026-109618_PHP2Shell_A_and_B_UDM.yaml.
     Returns {"written", "kept_edited", "removed"} (file names).
     """
     out_dir = group_dir(group_name)
     os.makedirs(out_dir, exist_ok=True)
+    label = run_label(group_name) if label is None else label
     report = {"written": [], "kept_edited": [], "removed": []}
     used = set()
     for corr in correlations:
         if not (corr.get("combined_query") or "").strip():
             continue
-        name = filename(corr)
+        name = (f"{label}_" if label else "") + filename(corr)
         stem, n = name[:-5], 2
         while name in used:  # two correlations of the same pair: number the second
             name, n = f"{stem}_{n}.yaml", n + 1
@@ -186,7 +199,7 @@ def write(group_name: str, correlations: List[Dict]) -> Dict[str, List[str]]:
             continue
         tmp = path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as fh:
-            fh.write(render(corr, group_name))
+            fh.write(render(corr, group_name, label))
         os.replace(tmp, path)
         report["written"].append(name)
     for name in os.listdir(out_dir):

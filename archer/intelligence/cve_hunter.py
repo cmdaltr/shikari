@@ -11,6 +11,8 @@ import requests
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime
 
+from archer.intelligence.cve_label import exploit_name
+
 
 class CVEHunter:
     """
@@ -65,12 +67,15 @@ class CVEHunter:
             # Re-derived each time (no network): a cache written by an older extractor
             # still carries its guessed indicators
             cached["iocs"] = self._extract_iocs(cached)
-            if "mentions" not in (cached.get("reference_iocs") or {}):  # cached before references were read
+            # Cached before references were read, or under older extraction rules
+            if (cached.get("reference_iocs") or {}).get("version") != self.REFERENCE_IOCS_VERSION:
                 cached["reference_iocs"] = self._reference_iocs(cached.get("nvd_data") or {})
                 self._cache_research(cve_id, cached)
             if "exploit" not in cached:  # cached before exploit requests were read
                 cached["exploit"] = self._exploit(cached.get("nvd_data") or {}, cached.get("pocs") or [])
                 self._cache_research(cve_id, cached)
+            # Re-derived too (archer.intelligence.cve_label): the PoCs and references are cached
+            cached["exploit_name"] = exploit_name(cached.get("nvd_data") or {}, cached.get("pocs") or [])
             return cached
 
         result = {
@@ -120,6 +125,7 @@ class CVEHunter:
         result["reference_iocs"] = self._reference_iocs(result["nvd_data"])
         step(4, self.STEPS[4])
         result["exploit"] = self._exploit(result["nvd_data"], result["pocs"])
+        result["exploit_name"] = exploit_name(result["nvd_data"], result["pocs"])  # PHP2Shell, or None
 
         # 5. Generate detection queries
         step(5, self.STEPS[5])
@@ -537,6 +543,7 @@ Format as JSON with these keys: overview, prerequisites, steps, commands, iocs, 
     _NO_INDICATOR_HOSTS = ("nvd.nist.gov", "cve.org", "cve.mitre.org", "cisa.gov/known-exploited",
                            "github.com", "twitter.com", "x.com", "exploit-db.com", "packetstormsecurity")
     MAX_REFERENCE_PAGES = 6
+    REFERENCE_IOCS_VERSION = 2  # 2: a domain only seen in addresses isn't one (oss-security Message-IDs)
 
     def _reference_iocs(self, nvd_data: Dict) -> Dict[str, Any]:
         """
@@ -577,7 +584,7 @@ Format as JSON with these keys: overview, prerequisites, steps, commands, iocs, 
             if found:
                 sources.append(url)
                 mentions = merge_mentions(mentions, page.get("ioc_mentions"))
-        return {"iocs": merged, "sources": sources, "mentions": mentions}
+        return {"iocs": merged, "sources": sources, "mentions": mentions, "version": self.REFERENCE_IOCS_VERSION}
 
     MAX_POC_READMES = 5
 

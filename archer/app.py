@@ -3009,9 +3009,11 @@ async def generate_cve(
             exploit, exploit_sources = {}, []
             from archer.intelligence.cve_hunter import CVEHunter
 
-            # The Research card: each CVE's steps, then the sweeps and exploit detections
+            # The Research card: each CVE's steps, then the sweeps, exploit and runtime detections
             per_cve = len(CVEHunter.STEPS)
-            research_total = per_cve * len(cve_ids) + 2
+            research_total = per_cve * len(cve_ids) + 3
+            nvd_records = []
+            exploit_names = {}
 
             def _research(done, label, item=None):
                 write_progress(group_name, {"research_total": research_total, "research_done": done,
@@ -3020,6 +3022,8 @@ async def generate_cve(
             for n, cve in enumerate(cve_ids):
                 research = research_and_hunt(
                     cve, on_step=lambda i, label, n=n, cve=cve: _research(n * per_cve + i, label, cve))
+                nvd_records.append(research.get("nvd_data") or {})
+                exploit_names[cve] = research.get("exploit_name")
 
                 # Collect techniques
                 all_techniques.extend(research.get("techniques", []))
@@ -3040,6 +3044,12 @@ async def generate_cve(
                 all_iocs["cmd"].extend((exp.get("indicators") or {}).get("cmd", []))
                 _warn_cve_off_stack(group_name, cve, research.get("nvd_data") or {}, archer_session)
 
+            # What the run's detections and correlations start with: CVE-2026-109618_PHP2Shell
+            from archer.intelligence.cve_label import label as cve_label
+
+            run_label = cve_label(exploit_names)
+            write_progress(group_name, {"run_label": run_label})
+
             # Exploitation indicators from the advisories and write-ups: one sweep per SIEM.
             # For an appliance CVE (PAN-OS, Ivanti, Citrix) these are the detections there are.
             from archer.build.ioc_sweep import write_ioc_sweeps
@@ -3048,7 +3058,8 @@ async def generate_cve(
             source = "references for " + ", ".join(cve_ids)
             if reference_sources:
                 source += " (" + ", ".join(sorted({urlparse(u).netloc for u in reference_sources})) + ")"
-            sweeps = write_ioc_sweeps(group_name, reference_iocs, source, GENERATE_DIR, mentions=reference_mentions)
+            sweeps = write_ioc_sweeps(group_name, reference_iocs, source, GENERATE_DIR, mentions=reference_mentions,
+                                      run_label=run_label)
             if sweeps:
                 print(f"IOC sweep detections: {', '.join(os.path.basename(p) for p in sweeps)}")
             write_progress(group_name, {"ioc_sweeps": len(sweeps)})
@@ -3058,10 +3069,21 @@ async def generate_cve(
 
             _research(per_cve * len(cve_ids) + 1, "Building the exploit request detections")
             exploits = write_exploit_detections(group_name, cve_ids, exploit, exploit_sources, GENERATE_DIR,
-                                                excluded_vendors=siem_args.get("excluded_vendors"))
-            _research(research_total, "Research complete")
+                                                excluded_vendors=siem_args.get("excluded_vendors"), run_label=run_label)
             if exploits:
                 print(f"Exploit request detections: {', '.join(os.path.basename(p) for p in exploits)}")
+
+            # A code-execution CVE in a web runtime: its worker starting a shell (archer.build.runtime_detection)
+            from archer.build.runtime_detection import write_runtime_detections
+
+            _research(per_cve * len(cve_ids) + 2, "Building the runtime detections")
+            runtime = write_runtime_detections(group_name, cve_ids, nvd_records, GENERATE_DIR,
+                                               excluded_vendors=siem_args.get("excluded_vendors"), run_label=run_label)
+            if runtime:
+                print(f"Runtime detections: {', '.join(os.path.basename(p) for p in runtime)}")
+            # Built here, not from a technique: the progress page counts them with the sweeps
+            write_progress(group_name, {"cve_detections": len(exploits) + len(runtime)})
+            _research(research_total, "Research complete")
 
             # Deduplicate
             all_techniques = list(set(all_techniques))
@@ -6842,7 +6864,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
 
     # IOC flow: only when this view includes the run's IOC sweep (no IOCs, no diagram)
     ioc_flow = None
-    if any(d["file"].startswith("IOCSweep") for entries in detection_files.values() for d in entries):
+    if any("IOCSweep" in d["file"] for entries in detection_files.values() for d in entries):
         from archer.build.ioc_flow import load_ioc_flow
 
         ioc_flow = load_ioc_flow(group_name) or None

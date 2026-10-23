@@ -284,9 +284,11 @@ def apply_expiry(group_name: str, clean: Dict[str, List[str]], regenerate: bool,
 
 
 def write_ioc_sweeps(group_name: str, iocs: Dict, source: str, generate_dir: str,
-                     siems=("secops", "mde"), excluded_vendors=None, mentions=None) -> List[str]:
+                     siems=("secops", "mde"), excluded_vendors=None, mentions=None,
+                     run_label: Optional[str] = None) -> List[str]:
     """
-    Write one IOC-sweep detection YAML per SIEM; returns the paths written.
+    Write one IOC-sweep detection YAML per SIEM; returns the paths written. A CVE run's
+    run_label (archer.intelligence.cve_label: CVE-2026-109618_PHP2Shell) starts the file name and title.
 
     mentions (ioc_flow.ioc_mentions over the report text) places each IOC in the
     IOC flow shown on the results page; without it the flow falls back to IOC type.
@@ -322,7 +324,8 @@ def write_ioc_sweeps(group_name: str, iocs: Dict, source: str, generate_dir: str
         query = build()
         if not query:
             continue
-        path = os.path.join(generate_dir, f"IOCSweep{safe}_{LANGUAGE_SUFFIX[connector]}.yaml")
+        stem = f"{run_label}_IOCSweep" if run_label else f"IOCSweep{safe}"
+        path = os.path.join(generate_dir, f"{stem}_{LANGUAGE_SUFFIX[connector]}.yaml")
         # A sweep is rewritten every run with the report's current IOCs, unless someone
         # edited it by hand (Regenerate replaces it anyway)
         if os.path.exists(path) and file_state(path)["edited"] and not run_files.regenerating(group_name):
@@ -333,6 +336,8 @@ def write_ioc_sweeps(group_name: str, iocs: Dict, source: str, generate_dir: str
             continue
         # The name is substituted unquoted into the YAML template: no ": " allowed
         title = "IOC Sweep - " + re.sub(r"\s*:\s*", " - ", group_name)
+        if run_label:
+            title = f"{run_label} - IOC Sweep"
         write_yaml(path, title, "IOC-SWEEP", desc, connector, ["IOC Sweep"],
                    group_name, query, datatype=datatype, indicators=clean)
         written.append(path)

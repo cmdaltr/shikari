@@ -89,3 +89,12 @@ def test_sweep_yaml_parses(tmp_path):
     for p in paths:
         doc = yaml.safe_load(open(p))
         assert doc["name"] == "IOC Sweep - APT - Spider"
+
+
+def test_a_domain_only_seen_in_addresses_is_not_an_indicator():
+    # oss-security on openwall prints each post's Message-ID: <...@mail.gmail.com>
+    text = ("Message-ID: <CAEKnhAENTs9-=FsuKz8ABQ9H84jfA@mail.gmail.com>\nFrom: Jane <jane@php.example>\n"
+            "The lure came from billing@evil-invoices[.]com and beaconed to c2.badhost[.]net.")
+    kept = _drop_citation_links({"domain": ["mail[.]gmail[.]com", "php[.]example", "evil-invoices[.]com",
+                                            "c2.badhost[.]net"]}, text)["domain"]
+    assert kept == ["evil-invoices[.]com", "c2.badhost[.]net"]

@@ -327,9 +327,10 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
 
     # Detections the group's earlier runs made that this one didn't stop being the group's,
     # before anything is correlated. A run that produced nothing, hit an error or covered
-    # only one SIEM or index leaves them alone
+    # only one SIEM or index leaves them alone. A CVE run's own detections count as produced
+    # without a technique query (created 0), so its renamed files replace the old ones
     produced = run_files.produced(group_name)
-    if created > 0 and produced and not errors and not (siem_filter or index_filter):
+    if produced and not errors and not (siem_filter or index_filter):
         from archer.build.group_files import prune
 
         pruned = prune(group_name, produced, GENERATE_DIR)

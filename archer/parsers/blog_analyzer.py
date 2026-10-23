@@ -492,6 +492,7 @@ def _drop_publisher_domains(iocs: Dict[str, List[str]], page_url: str, text: str
 
 
 _URL_HOST_PREFIX = re.compile(r"https?://(?:[\w-]+\.)*$", re.I)
+_ADDRESS_PREFIX = re.compile(r"[\w.+=%-]@(?:[\w-]+\.)*$")  # local-part@, then any subdomains of the mention
 
 
 def _drop_citation_links(iocs: Dict[str, List[str]], text: str) -> Dict[str, List[str]]:
@@ -503,7 +504,11 @@ def _drop_citation_links(iocs: Dict[str, List[str]], text: str) -> Dict[str, Lis
     ("https://www.trellix.com/...") come out looking like its IOCs ("fleetdeck[.]io").
     In the source text they differ: indicators are written defanged, citations are
     plain links. A domain is kept if the text defangs it anywhere, or mentions it
-    outside a URL; it's dropped when every mention is the host of an http(s) link.
+    outside a URL or an address; it's dropped when every mention is the host of an
+    http(s) link or follows an @. An address's domain is where mail came from: a
+    mailing-list archive's Message-ID (<CAEK...@mail.gmail.com>, oss-security on
+    openwall) or a poster's address, not the attacker's infrastructure. A phishing
+    sender a report means as an indicator is written defanged, so it's kept.
     """
     if not text:
         return iocs
@@ -514,7 +519,9 @@ def _drop_citation_links(iocs: Dict[str, List[str]], text: str) -> Dict[str, Lis
         if re.search(defanged, text, re.I):
             return False
         mentions = list(re.finditer(re.escape(d), text, re.I))
-        return bool(mentions) and all(_URL_HOST_PREFIX.search(text[max(0, m.start() - 80):m.start()]) for m in mentions)
+        return bool(mentions) and all(_URL_HOST_PREFIX.search(text[max(0, m.start() - 80):m.start()])
+                                      or _ADDRESS_PREFIX.search(text[max(0, m.start() - 80):m.start()])
+                                      for m in mentions)
 
     if iocs.get("domain"):
         iocs["domain"] = [d for d in iocs["domain"] if not is_citation(d)]

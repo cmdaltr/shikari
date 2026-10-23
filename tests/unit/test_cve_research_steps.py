@@ -19,7 +19,8 @@ def test_research_reports_each_step_in_order(monkeypatch):
 
 def test_a_cached_cve_jumps_to_the_last_step(monkeypatch):
     hunter = CVEHunter.__new__(CVEHunter)
-    cached = {"nvd_data": {}, "pocs": [], "reference_iocs": {"mentions": {}}, "exploit": {}}
+    cached = {"nvd_data": {}, "pocs": [], "exploit": {},
+              "reference_iocs": {"mentions": {}, "version": CVEHunter.REFERENCE_IOCS_VERSION}}
     monkeypatch.setattr(hunter, "_get_cached_research", lambda cve: cached, raising=False)
     monkeypatch.setattr(hunter, "_extract_iocs", lambda r: {}, raising=False)
     steps = []
