@@ -276,6 +276,7 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
 # processed first and allowed more correlations through scoring.
 CORRELATION_VENDORS = ["googlesecops", "mde", "splunk"]
 CORRELATION_CAP = {"googlesecops": 100}
+PAIRS_PER_TECHNIQUE = 20  # a technique's partners in one vendor's pairs
 
 
 def _vendor_priority(vendor: str) -> int:
@@ -1009,11 +1010,12 @@ def _score_and_filter_correlations(
         correlations: List of correlation dictionaries
         file_info: File metadata dictionary
         min_relevance: Minimum relevance score threshold (default 0.5 = 50%)
-        max_per_vendor: Maximum correlations per vendor (default 60)
+        max_per_vendor: Maximum technique pairs per vendor (default 60)
         on_scored: called with the running count as correlations are scored, for the progress bar
 
     Returns:
-        Filtered list of correlations with relevance_score >= min_relevance, capped at max_per_vendor
+        Correlations with relevance_score >= min_relevance, best first, covering at most
+        max_per_vendor technique pairs, each technique paired with at most PAIRS_PER_TECHNIQUE others
     """
     # Score each correlation
     scored_correlations = []
@@ -1029,13 +1031,30 @@ def _score_and_filter_correlations(
     # Sort by score (descending)
     scored_correlations.sort(key=lambda x: x[0], reverse=True)
 
-    # Filter by minimum relevance threshold (75% = score >= 75)
+    # Fill the vendor's places best first, a technique paired with at most
+    # PAIRS_PER_TECHNIQUE others. Limiting after the cap left the places a hub's extra
+    # pairs had taken empty (Valid Accounts, with four tactics, scores with anything).
+    # A place is a technique pair: its per-table variants (DeviceProcessEvents,
+    # DeviceFileEvents...) are merged into one correlation later, so they share it
     min_score_threshold = min_relevance * 100
-    top_correlations = [corr for score, corr in scored_correlations if score >= min_score_threshold]
-
-    # Cap at max_per_vendor (default 25)
-    if len(top_correlations) > max_per_vendor:
-        top_correlations = top_correlations[:max_per_vendor]
+    name = lambda path: _technique_key(file_info.get(path, {}).get("name") or _source_label(path))
+    partners: Dict[str, set] = {}
+    places = set()
+    top_correlations = []
+    for score, corr in scored_correlations:
+        if score < min_score_threshold:
+            break
+        ka, kb = name(corr.get("a")), name(corr.get("b"))
+        place = frozenset((ka, kb))
+        if place not in places:
+            if len(places) >= max_per_vendor or any(
+                    other not in partners.get(k, ()) and len(partners.get(k, ())) >= PAIRS_PER_TECHNIQUE
+                    for k, other in ((ka, kb), (kb, ka))):
+                continue
+            places.add(place)
+            partners.setdefault(ka, set()).add(kb)
+            partners.setdefault(kb, set()).add(ka)
+        top_correlations.append(corr)
 
     return top_correlations
 
@@ -1804,9 +1823,8 @@ def _group_vendor_correlations(correlations: List[Dict], file_info: Dict) -> Lis
         corr["combined_query"] = _build_join_correlation_query(corr, file_info)
     pairs = final_correlations
 
-    # Apply technique frequency limit: each technique can appear in multiple correlations
-    # - Super-merged correlations (3+ techniques): unlimited frequency (already consolidated)
-    # - Simple correlations (2 techniques): limit to 10 appearances for diversity
+    # Technique frequency limit. Scoring already applies it while filling the vendor's
+    # places (_score_and_filter_correlations); this holds it for pairs merged since
     technique_count = {}
     diverse_correlations = []
 
@@ -1824,27 +1842,11 @@ def _group_vendor_correlations(correlations: List[Dict], file_info: Dict) -> Lis
         technique_name_a = basename_a.split("_")[0] if "_" in basename_a else basename_a
         technique_name_b = basename_b.split("_")[0] if "_" in basename_b else basename_b
 
-        # Check if this is a super-merged correlation (3+ techniques)
-        techniques_involved = corr.get("techniques_involved", [])
-        is_super_merged = len(techniques_involved) >= 3
-
-        if is_super_merged:
-            # Super-merged correlations always pass (no frequency limit)
+        all_techniques = {technique_name_a, technique_name_b}
+        if max(technique_count.get(t, 0) for t in all_techniques) < PAIRS_PER_TECHNIQUE:
             diverse_correlations.append(corr)
-        else:
-            # Simple 2-technique correlations - apply frequency limit of 10
-            all_techniques = {technique_name_a, technique_name_b}
-
-            # Check if any technique has exceeded the limit
-            max_occurrences = (
-                max(technique_count.get(t, 0) for t in all_techniques) if all_techniques else 0
-            )
-
-            if max_occurrences < 20:  # Allow each technique in up to 20 simple correlations
-                diverse_correlations.append(corr)
-                # Update counts
-                for t in all_techniques:
-                    technique_count[t] = technique_count.get(t, 0) + 1
+            for t in all_techniques:
+                technique_count[t] = technique_count.get(t, 0) + 1
 
     print(
         f"   After frequency limiting: {len(diverse_correlations)} correlations (removed {len(final_correlations) - len(diverse_correlations)} due to technique frequency)"

@@ -522,8 +522,8 @@ These three parameters can be adjusted via **Profile → Config** in the web UI 
 | Parameter | Default | Location | Purpose | Tunable? |
 |-----------|---------|----------|---------|----------|
 | **Min Relevance Score (Threshold)** | **40%** (56/140) | `config.py` + `engine.py` | Quality threshold | ✅ **YES** |
-| **Max Correlations/Vendor** | **60** | `engine.py` function parameter | Prevent overload | ✅ **YES** |
-| **Tech Frequency Limit** | **20** | `_apply_correlation_grouping()` | Ensure diversity | ✅ **YES** |
+| **Max Correlations/Vendor** | **60** (Google SecOps 100) | `CORRELATION_CAP` | Prevent overload. Counts technique pairs: a pair's per-table variants share one place | ✅ **YES** |
+| **Tech Frequency Limit** | **20** | `PAIRS_PER_TECHNIQUE`, applied while filling the vendor's places | Ensure diversity: a technique past its limit leaves its place to the next-best pair | ✅ **YES** |
 
 **See:** [Correlation Quick Reference](CORRELATION_QUICK_REFERENCE.md) for detailed tuning guide.
 

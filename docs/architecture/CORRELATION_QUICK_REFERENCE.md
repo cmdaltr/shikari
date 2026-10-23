@@ -305,9 +305,9 @@ python scripts/test_correlation_params.py -t 50 -v 60 -f 20
 **Default:** 60
 
 **What it does:**
-- Caps the maximum number of correlations generated **per vendor** (MDE, Splunk, etc.)
-- Applied **after** scoring and filtering by threshold
-- Keeps the top N highest-scoring correlations
+- Caps the technique pairs kept **per vendor** (MDE, Splunk, etc.); Google SecOps has 100
+- A pair's per-table variants (Defender XDR's `DeviceProcessEvents` and `DeviceFileEvents` queries for the same two techniques) share one place, since they're merged into one correlation
+- Places are filled best first after scoring; a technique already paired with 20 others gives its place to the next-best pair
 
 **How it influences correlations:**
 

@@ -108,3 +108,30 @@ def test_a_run_keeps_a_chain_only_when_it_produced_every_part():
     chain = {"a": "g/A_UDM.yaml", "b": ["g/B_UDM.yaml", "g/C_UDM.yaml"]}
     assert _run_correlations([chain], {"A_UDM.yaml", "B_UDM.yaml", "C_UDM.yaml"}) == [chain]
     assert _run_correlations([chain], {"A_UDM.yaml", "B_UDM.yaml"}) == []
+
+
+def test_a_hubs_extra_pairs_give_way_to_the_next_best(monkeypatch):
+    # The hub's pairs score highest; past its limit, places go to pairs without it
+    monkeypatch.setattr(engine, "PAIRS_PER_TECHNIQUE", 2)
+    monkeypatch.setattr(engine, "_score_correlation", lambda corr, info: corr["score"])
+    hub = [{"a": "g/Hub_UDM.yaml", "b": f"g/T{i}_UDM.yaml", "score": 140} for i in range(4)]
+    rest = [{"a": f"g/T{i}_UDM.yaml", "b": f"g/U{i}_UDM.yaml", "score": 100} for i in range(3)]
+
+    kept = engine._score_and_filter_correlations(hub + rest, {}, min_relevance=0.4, max_per_vendor=5)
+
+    assert [c["a"] for c in kept].count("g/Hub_UDM.yaml") == 2
+    assert len(kept) == 5
+
+
+def test_a_pairs_per_table_variants_share_its_place(monkeypatch):
+    # Defender XDR has a query per table: the same two techniques on three tables are one place
+    monkeypatch.setattr(engine, "_score_correlation", lambda corr, info: corr["score"])
+    variants = [{"a": f"g/A_{t}.yaml", "b": "g/B_DeviceProcessEvents.yaml", "score": 120}
+                for t in ("DeviceProcessEvents", "DeviceFileEvents", "DeviceRegistryEvents")]
+    others = [{"a": f"g/C{i}_DeviceProcessEvents.yaml", "b": "g/D_DeviceProcessEvents.yaml", "score": 100}
+              for i in range(3)]
+
+    kept = engine._score_and_filter_correlations(variants + others, {}, min_relevance=0.4, max_per_vendor=3)
+
+    assert len(kept) == 5  # A-B's three variants, then C0-D and C1-D
+    assert {c["a"] for c in kept[3:]} == {"g/C0_DeviceProcessEvents.yaml", "g/C1_DeviceProcessEvents.yaml"}
