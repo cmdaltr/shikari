@@ -1,78 +1,116 @@
 """
-Anatomy workflow: who did it, with what, against what, through which services, to get what.
+Anatomy workflow: how an attack runs, as a short chain of cards anyone can follow.
 
-A network for the results page, in the style of the DFIR Report's workflow diagrams: the
-actor, its campaigns and tools, the CVEs it exploits and the legitimate services it abuses
-(Telegram, Dropbox, ngrok), down to what it's after (credentials, data, impact). Each link
-is labelled with what it's for (Exploit, C2, Exfiltration) and carries the techniques and
-procedures behind it, so it can say whether this run has a detection for it.
+In the style of the DFIR Report's workflow diagrams: a group's chain is the actor -> its way in (the CVEs it exploits, the services it phishes through or signs in to) -> what it
+runs (its tools, grouped: offensive frameworks, credential stealers, web shells, ransomware,
+built-in tools) -> what it reaches (the legitimate services it abuses, grouped: cloud storage,
+messaging, tunnels). A CVE's chain is the attacker -> the exploit -> the CVE -> the worker the
+code runs in -> the shell -> the infrastructure. Each step says whether this run detects most
+of what's behind it. No ATT&CK technique IDs or tactics are shown: the chain is the operation,
+the detection pages carry the mapping.
 
-A group's anatomy comes from ATT&CK's procedures (MITRESaw's CSV): the software or campaign
-a procedure is attributed to, the CVEs and services its text names. A CVE's comes from its
-research: the PoCs, the affected product, the worker the code runs in and what the exploit
-runs next. No AI.
-
-Laid out here, not in the browser: columns left to right and the objectives along the
-bottom, so the template only draws it.
+From ATT&CK's procedures (MITRESaw's CSV) for a group, from the cached research for a CVE. No AI.
 """
 
 import json
 import os
 import re
+import zlib
 from collections import defaultdict
 from typing import Dict, Iterable, List, Optional, Set
 
 from archer.build.ioc_flow import refang
-from archer.visualization.flow_view import _PROCEDURES_CSV, _attributed_rows, canonical_tactic
+from archer.visualization.flow_view import _PROCEDURES_CSV, _attributed_rows
 
-MAX = {"software": 8, "campaign": 3, "cve": 5, "service": 7, "ioc": 6}
-
-# Legitimate services named in procedures: (canonical name, pattern)
-SERVICES = [
-    ("Telegram", r"Telegram"), ("Discord", r"Discord"), ("Slack", r"Slack"), ("Dropbox", r"Dropbox"),
-    ("OneDrive", r"OneDrive"), ("Google Drive", r"Google Drive|Google Docs"), ("GitHub", r"GitHub"),
-    ("GitLab", r"GitLab"), ("Pastebin", r"Pastebin"), ("ngrok", r"ngrok"), ("Cloudflare", r"Cloudflare"),
-    ("AWS", r"AWS|Amazon S3|Amazon Web Services|S3 bucket"), ("Azure", r"Azure|Entra ID"), ("MEGA", r"MEGA(?:\.nz)?\b|Mega\.nz"),
-    ("Tor", r"Tor\b(?! ?Browser Bundle)"), ("Microsoft Graph", r"Microsoft Graph"), ("SharePoint", r"SharePoint"),
-    ("Teams", r"Microsoft Teams|\bTeams\b"), ("Gmail", r"Gmail"), ("AnyDesk", r"AnyDesk"), ("TeamViewer", r"TeamViewer"),
-    ("ScreenConnect", r"ScreenConnect|ConnectWise Control"), ("Atera", r"Atera"), ("Splashtop", r"Splashtop"),
-    ("RustDesk", r"RustDesk"), ("Rclone", r"Rclone"), ("Twitter", r"Twitter"), ("Firebase", r"Firebase"),
-    ("Yandex", r"Yandex"), ("Box", r"\bBox\.com|\bBox\b cloud"), ("Notion", r"Notion\b"), ("Trello", r"Trello"),
-    ("Bitbucket", r"Bitbucket"), ("DigitalOcean", r"DigitalOcean"), ("Vultr", r"Vultr"), ("Okta", r"Okta"),
-    ("VPN", r"\bVPNs?\b"),
+# Legitimate services named in procedures, by group: (group, [(name, pattern)])
+SERVICE_GROUPS = [
+    ("Cloud storage", [("Dropbox", r"Dropbox"), ("OneDrive", r"OneDrive"), ("Google Drive", r"Google Drive|Google Docs"),
+                       ("MEGA", r"\bMEGA(?:\.nz)?\b|Mega\.nz"), ("Box", r"\bBox\.com"), ("Yandex Disk", r"Yandex")]),
+    ("Cloud tenants", [("AWS", r"\bAWS\b|Amazon S3|Amazon Web Services|S3 bucket"), ("Azure", r"Azure|Entra ID"),
+                       ("Microsoft 365", r"Microsoft Graph|SharePoint|Microsoft 365|Office 365"), ("Okta", r"Okta"),
+                       ("Firebase", r"Firebase")]),
+    ("Messaging", [("Telegram", r"Telegram"), ("Discord", r"Discord"), ("Slack", r"Slack"),
+                   ("Teams", r"Microsoft Teams|\bTeams\b"), ("Gmail", r"Gmail"), ("Twitter", r"Twitter")]),
+    ("Code and paste sites", [("GitHub", r"GitHub"), ("GitLab", r"GitLab"), ("Pastebin", r"Pastebin"),
+                              ("Bitbucket", r"Bitbucket"), ("Notion", r"\bNotion\b"), ("Trello", r"Trello")]),
+    ("Tunnels and anonymisers", [("ngrok", r"ngrok"), ("Tor", r"\bTor\b"), ("Cloudflare", r"Cloudflare")]),
+    ("Remote access", [("AnyDesk", r"AnyDesk"), ("TeamViewer", r"TeamViewer"),
+                       ("ScreenConnect", r"ScreenConnect|ConnectWise Control"), ("Atera", r"Atera"),
+                       ("Splashtop", r"Splashtop"), ("RustDesk", r"RustDesk"), ("VPN", r"\bVPNs?\b")]),
+    ("Hosting", [("DigitalOcean", r"DigitalOcean"), ("Vultr", r"Vultr"), ("Linode", r"Linode")]),
 ]
-_SERVICES = [(name, re.compile(rf"\b(?:{rx})", re.I if name not in ("Tor", "Box", "MEGA") else 0))
-             for name, rx in SERVICES]
+_SERVICES = [(group, name, re.compile(rx, 0 if name in ("Tor", "MEGA") else re.I))
+             for group, members in SERVICE_GROUPS for name, rx in members]
 
-# What a link is for, from its technique: the first prefix that matches
-ROLES = [
-    ("Exploit", ("T1190", "T1203", "T1068", "T1210", "T1211", "T1212", "T1189", "T1195")),
-    ("Remote access", ("T1133", "T1219", "T1021", "T1078")),
-    ("Exfiltration", ("T1567", "T1041", "T1048", "T1030", "T1537", "T1020")),
-    ("C2", ("T1071", "T1102", "T1090", "T1572", "T1573", "T1568", "T1095", "T1104", "T1001", "T1008")),
-    ("Phishing", ("T1566", "T1598", "T1534")),
-    ("Delivery", ("T1105", "T1608", "T1204")),
-    ("Collection", ("T1213", "T1530", "T1538", "T1114", "T1005", "T1039", "T1119", "T1560")),
-    ("Infrastructure", ("T1583", "T1584", "T1585", "T1586", "T1587", "T1588")),
-    ("Credentials", ("T1555", "T1003", "T1552", "T1110", "T1556", "T1558", "T1539", "T1528")),
-    ("Cloud access", ("T1098", "T1580", "T1069", "T1087", "T1526", "T1619")),
+# What the actor does with a service, in plain words: the first technique prefix that matches
+VERBS = [
+    ("Exploits", ("T1190", "T1203", "T1068", "T1210", "T1211", "T1212", "T1189", "T1195")),
+    ("Uploads to", ("T1567", "T1041", "T1048", "T1030", "T1537", "T1020")),
+    ("Beacons to", ("T1071", "T1102", "T1090", "T1572", "T1573", "T1568", "T1095", "T1104", "T1001", "T1008")),
+    ("Signs in to", ("T1078", "T1021.007")),
+    ("Remote access", ("T1133", "T1219", "T1021")),
+    ("Phishes via", ("T1566", "T1598", "T1534")),
+    ("Downloads from", ("T1105", "T1608", "T1204")),
+    ("Collects from", ("T1213", "T1530", "T1538", "T1114", "T1005", "T1039", "T1119")),
+    ("Hosts on", ("T1583", "T1584", "T1585", "T1586")),
+    ("Steals logins", ("T1555", "T1003", "T1552", "T1110", "T1556", "T1558", "T1539", "T1528")),
+    ("Accesses", ("T1098", "T1580", "T1069", "T1087", "T1526", "T1619")),
 ]
-# Objectives along the bottom: (tactic, label)
-OBJECTIVES = [("Credential Access", "Credentials"), ("Lateral Movement", "Lateral movement"),
-              ("Collection", "Data collected"), ("Exfiltration", "Data exfiltrated"), ("Impact", "Impact")]
+
+# Tool groups, decided in this order (a framework that also dumps credentials is a framework)
+BUILT_IN = {"net", "certutil", "cmd", "powershell", "psexec", "reg", "wmic", "schtasks", "at", "ipconfig", "systeminfo",
+            "tasklist", "netstat", "bitsadmin", "rundll32", "regsvr32", "mshta", "ntdsutil", "vssadmin", "wevtutil",
+            "nltest", "dsquery", "ping", "whoami", "arp", "route", "netsh", "sc", "taskkill", "esentutl", "msiexec",
+            "cscript", "wscript", "forfiles", "expand", "findstr", "query", "qwinsta", "nbtstat", "ftp", "tar",
+            "curl", "wget", "ssh", "procdump", "adexplorer", "dsget", "sdelete", "attrib", "icacls", "xcopy", "robocopy"}
+FRAMEWORKS = {"cobalt strike", "empire", "powersploit", "impacket", "metasploit", "sliver", "brute ratel c4", "mythic",
+              "havoc", "koadic", "pupy", "poshc2", "covenant", "nishang", "powerview", "bloodhound", "sharphound",
+              "rubeus", "responder", "adfind", "crackmapexec", "netexec", "merlin", "silenttrinity"}
+CREDENTIAL_TOOLS = {"mimikatz", "lazagne", "pwdump", "gsecdump", "wce", "secretsdump", "nanodump", "dumpert",
+                    "safetykatz", "kekeo", "redline stealer", "lumma stealer", "vidar", "agent tesla", "formbook",
+                    "azorult", "lokibot", "raccoon stealer", "stealc", "atomic stealer", "pony"}
+WEB_SHELLS = {"china chopper", "aspxspy", "godzilla", "behinder", "antsword", "regeorg", "neo-regeorg", "p.a.s. webshell",
+              "sharppanda", "tunna", "weevely", "b374k"}
+EXFIL_TOOLS = {"rclone", "megasync", "restic", "winscp", "filezilla", "exmatter", "stealbit"}
+REMOTE_TOOLS = {"anydesk", "teamviewer", "screenconnect", "connectwise", "atera", "splashtop", "rustdesk", "ngrok",
+                "plink", "chisel", "frp", "ligolo", "tor", "gost", "fast reverse proxy"}
+_ENCRYPT = ("T1486", "T1490", "T1485", "T1561")
+_CREDS = ("T1003", "T1555", "T1552", "T1539", "T1056", "T1558", "T1110", "T1212")
+TOOL_GROUPS = ["Offensive frameworks", "Credential stealers", "Web shells", "Backdoors and RATs", "Ransomware",
+               "Remote access and tunnels", "Exfiltration tools", "Built-in tools"]
 
 _CVE = re.compile(r"CVE-\d{4}-\d{4,}", re.I)
 _LABEL = re.compile(r"^\[(Software|Campaign): ([^\]]+)\]\s*")
 _LINK = re.compile(r"\[([^\]]+)\]\((https?://[^)]+)\)")
 
 
-def role(tid: str, tactics: Iterable[str] = ()) -> str:
-    for name, prefixes in ROLES:
-        if any(tid == p or tid.startswith(p + ".") for p in prefixes):
-            return name
-    by_tactic = {"Command and Control": "C2", "Exfiltration": "Exfiltration", "Collection": "Collection",
-                 "Initial Access": "Access", "Credential Access": "Credentials", "Lateral Movement": "Lateral movement"}
-    return next((by_tactic[t] for t in tactics if t in by_tactic), "Uses")
+def _has(tids: Iterable[str], prefixes) -> bool:
+    return any(t == p or t.startswith(p + ".") for t in tids for p in prefixes)
+
+
+def verb(tid: str) -> str:
+    return next((v for v, prefixes in VERBS if _has([tid], prefixes)), "Uses")
+
+
+def tool_group(name: str, tids: Iterable[str]) -> str:
+    n, tids = name.lower(), list(tids)
+    if n in BUILT_IN:
+        return "Built-in tools"
+    if n in FRAMEWORKS:
+        return "Offensive frameworks"
+    if n in WEB_SHELLS or "web shell" in n or "webshell" in n:
+        return "Web shells"
+    if n in CREDENTIAL_TOOLS or "stealer" in n:
+        return "Credential stealers"
+    if _has(tids, _ENCRYPT):
+        return "Ransomware"
+    if n in EXFIL_TOOLS:
+        return "Exfiltration tools"
+    if n in REMOTE_TOOLS:
+        return "Remote access and tunnels"
+    if tids and sum(_has([t], _CREDS) for t in tids) / len(tids) >= 0.4:
+        return "Credential stealers"
+    return "Backdoors and RATs"
 
 
 def covered(tid: str, detected: Set[str]) -> bool:
@@ -86,121 +124,116 @@ def _text(procedure: str) -> str:
     return _LINK.sub(r"\1", _LABEL.sub("", procedure or "")).strip()
 
 
-class _Graph:
+class _Chain:
+    """
+    The anatomy as a sequence of cards: each card a stage (the actor, how it gets in, what it
+    runs, what it reaches), each link the step to the next. A link counts the behaviours behind
+    it (techniques, never shown) towards "mostly detected"; by names the detection covering it.
+    """
+
     def __init__(self):
-        self.nodes: Dict[str, Dict] = {}
-        self.edges: Dict[tuple, Dict] = {}
+        self.cards: List[Dict] = []
+        self.links: Dict[tuple, Dict] = {}
 
-    def node(self, nid: str, kind: str, label: str, col: str, **extra) -> Dict:
-        n = self.nodes.setdefault(nid, {"id": nid, "kind": kind, "label": label, "col": col, "weight": 0,
-                                        "techniques": [], "evidence": [], **extra})
-        n["weight"] += 1
-        return n
+    def card(self, cid: str, kind: str, title: str, sub: str = "", sections=None, evidence=None, row: int = 0) -> Dict:
+        card = {"id": cid, "kind": kind, "title": title, "sub": sub, "row": row,
+                "sections": [s for s in sections or [] if s["items"]], "evidence": [e for e in evidence or [] if e][:6]}
+        self.cards.append(card)
+        return card
 
-    def edge(self, src: str, dst: str, label: str, tid: Optional[str] = None, name: str = "", evidence: str = "",
-             detected: Optional[bool] = None) -> Dict:
-        """One link per pair, whatever it's for: AWS reached for cloud access and exfiltration is one arrow."""
-        e = self.edges.setdefault((src, dst), {"source": src, "target": dst, "roles": [], "techniques": [],
-                                               "evidence": [], "detected": False, "checked": False})
-        if label and label not in e["roles"]:
-            e["roles"].append(label)
-        # A detection decides it even without a technique (an IOC sweep)
-        e["checked"] = e["checked"] or detected is not None
-        if tid and tid not in [t["id"] for t in e["techniques"]]:
-            e["techniques"].append({"id": tid, "name": name, "detected": bool(detected)})
-        if evidence and len(e["evidence"]) < 4 and evidence not in e["evidence"]:
-            e["evidence"].append(evidence)
-        e["detected"] = e["detected"] or bool(detected)
+    def link(self, src: str, dst: str, label: str, behaviour: Optional[str] = None, detected: bool = False,
+             text: str = "", by: str = "") -> Dict:
+        e = self.links.setdefault((src, dst), {"source": src, "target": dst, "label": label, "behaviours": {},
+                                               "evidence": [], "covered_by": []})
+        if behaviour:
+            e["behaviours"][behaviour] = e["behaviours"].get(behaviour, False) or detected
+        if text and len(e["evidence"]) < 5 and text not in [x["text"] for x in e["evidence"]]:
+            e["evidence"].append({"text": text, "detected": detected})
+        if by and by not in e["covered_by"]:
+            e["covered_by"].append(by)
         return e
 
 
+def _sections(grouped: Dict[str, List[str]], order: List[str]) -> List[Dict]:
+    """A stage's members by group, each listed under its node ("brief")."""
+    return [{"title": t, "items": grouped[t], "brief": True}
+            for t in sorted(grouped, key=lambda t: (order.index(t) if t in order else 99, t))]
+
+
+ENTRY = ("Exploits", "Phishes via", "Signs in to", "Remote access")
+
+
 def build_group(group_name: str, detected: Set[str], csv_path: str = _PROCEDURES_CSV) -> Optional[Dict]:
-    """A group's anatomy from ATT&CK's procedures; None when ATT&CK has none for it."""
+    """A group's anatomy from ATT&CK's procedures: actor -> gets in by -> runs -> reaches. None without procedures."""
     try:
         rows = _attributed_rows(os.path.abspath(csv_path), os.path.getmtime(csv_path)).get(group_name.lower(), [])
     except OSError:
         return None
     if not rows:
         return None
-    software, campaigns = defaultdict(int), defaultdict(int)
+    software = defaultdict(set)
+    campaigns = []
     for row in rows:
         m = _LABEL.match(row.get("procedure_example") or "")
-        if m and m.group(1) == "Software":
-            name, _, via = m.group(2).partition(" via ")
-            software[name] += 1
-            if via:
-                campaigns[via] += 1
-        elif m:
-            campaigns[m.group(2)] += 1
-    top_sw = sorted(software, key=lambda s: (-software[s], s))[:MAX["software"]]
-    top_camp = sorted(campaigns, key=lambda c: (-campaigns[c], c))[:MAX["campaign"]]
+        if not m:
+            continue
+        if m.group(1) == "Software":
+            software[m.group(2).partition(" via ")[0]].add((row.get("technique_id") or "").upper())
+        if m.group(1) == "Campaign" or " via " in m.group(2):
+            campaign = m.group(2).split(" via ")[-1]
+            if campaign not in campaigns:
+                campaigns.append(campaign)
+    groups = {name: tool_group(name, tids) for name, tids in software.items()}
 
-    g = _Graph()
-    actor = "actor"
-    # Tools on the left, the actor alone in the middle under its campaigns, what it reaches on the
-    # right: no link has to cross a column, and the objectives hang straight down from the actor
-    g.node(actor, "actor", rows[0].get("group_sw_name") or group_name, "b",
-           sub=rows[0].get("group_sw_id") or "")
-    for c in top_camp:
-        g.node("campaign:" + c, "campaign", c, "b", sub="Campaign")
-        g.edge(actor, "campaign:" + c, "")
-    cve_count, service_count = defaultdict(int), defaultdict(int)
-    objective_by = defaultdict(lambda: defaultdict(list))  # tactic -> source -> rows
-
+    entry, tools, reached = defaultdict(list), defaultdict(list), defaultdict(list)
+    evidence = defaultdict(list)
+    steps = []  # (stage, behaviour, detected, text)
     for row in rows:
         tid = (row.get("technique_id") or "").upper()
-        tname = row.get("technique_name") or tid
-        tactics = [t for t in (canonical_tactic(x) for x in (row.get("tactic") or "").split(",")) if t]
         text = _text(row.get("procedure_example") or "")
-        m = _LABEL.match(row.get("procedure_example") or "")
-        source = actor
-        if m and m.group(1) == "Software":
-            name, _, via = m.group(2).partition(" via ")
-            if name in top_sw:
-                source = "software:" + name
-                g.node(source, "software", name, "a", sub="Tool")
-                parent = "campaign:" + via if via in top_camp else actor
-                g.edge(parent, source, "")
-        elif m and m.group(2) in top_camp:
-            source = "campaign:" + m.group(2)
         hit = covered(tid, detected)
+        m = _LABEL.match(row.get("procedure_example") or "")
+        tool = m.group(2).partition(" via ")[0] if m and m.group(1) == "Software" else None
+        if tool:
+            if tool not in tools[groups[tool]]:
+                tools[groups[tool]].append(tool)
+            steps.append(("runs", tid, hit, text))
         for cve in dict.fromkeys(c.upper() for c in _CVE.findall(text)):
-            cve_count[cve] += 1
-            if len(cve_count) <= MAX["cve"] or cve in g.nodes:
-                g.node("cve:" + cve, "cve", cve, "c", sub="Exploited")
-                g.edge(source, "cve:" + cve, "Exploit", tid, tname, text, hit)
-        for name, rx in _SERVICES:
-            if rx.search(text) and "software:" + name != source:
-                service_count[name] += 1
-                nid = "software:" + name if "software:" + name in g.nodes else "service:" + name
-                if nid in g.nodes or len([n for n in g.nodes if n.startswith("service:")]) < MAX["service"]:
-                    if nid not in g.nodes:
-                        g.node(nid, "service", name, "c", sub="Service")
-                    g.edge(source, nid, role(tid, tactics), tid, tname, text, hit)
-        for tactic in tactics:
-            objective_by[tactic][source].append((tid, tname, text, hit))
+            if cve not in entry["Exploits"]:
+                entry["Exploits"].append(cve)
+            steps.append(("entry", tid, hit, text))
+        for group, name, rx in _SERVICES:
+            if not rx.search(text) or name == tool or name in software:
+                continue
+            if any(name in names for names in entry.values()):  # shown once, where they get in
+                continue
+            action = verb(tid)
+            stage, bucket, key = ("entry", entry, action) if action in ENTRY else ("reaches", reached, group)
+            if name not in bucket[key]:
+                bucket[key].append(name)
+            steps.append((stage, tid, hit, text))
 
-    # Each objective hangs off the actor, naming the tool that does most of it (Mimikatz -> Credentials)
-    for tactic, label in OBJECTIVES:
-        by_source = objective_by.get(tactic)
-        if not by_source:
+    chain = _Chain()
+    sub = " · ".join(x for x in (rows[0].get("group_sw_id"),
+                                 f"{len(campaigns)} campaign{'s' if len(campaigns) != 1 else ''}" if campaigns else "") if x)
+    chain.card("actor", "actor", rows[0].get("group_sw_name") or group_name, sub,
+               [{"title": "Campaigns", "items": campaigns}])  # in the panel: the ID and count say enough
+    # (stage, icon, node, the step into it)
+    stages = [
+        ("entry", "door", "Way in", "Gets in by", _sections(entry, list(ENTRY))),
+        ("runs", "software", "Toolkit", "Runs", _sections(tools, TOOL_GROUPS)),
+        ("reaches", "service", "Services", "Reaches", _sections(reached, [g for g, _ in SERVICE_GROUPS])),
+    ]
+    previous = "actor"
+    for key, kind, title, step, sections in stages:
+        if not sections:
             continue
-        lead = max(by_source, key=lambda s: (len({t for t, *_ in by_source[s]}), s != actor))
-        oid = "objective:" + tactic
-        all_rows = [r for rs in by_source.values() for r in rs]
-        techniques = {t: (n, h) for t, n, _, h in all_rows}
-        sub = f"{len(techniques)} technique{'s' if len(techniques) != 1 else ''}"
-        if lead != actor:
-            sub += " · " + g.nodes[lead]["label"]
-        g.node(oid, "objective", label, "band", sub=sub)
-        g.nodes[oid]["techniques"] = [{"id": t, "name": n, "detected": h} for t, (n, h) in sorted(techniques.items())]
-        for tid, tname, text, hit in all_rows:
-            g.edge(actor, oid, label, tid, tname, text, hit)
-
-    view = _finish(g, kind="group")
-    view["stats"].update(software_more=max(0, len(software) - len(top_sw)),
-                         cve_more=max(0, len(cve_count) - MAX["cve"]))
-    return view
+        mine = [s for s in steps if s[0] == key]
+        chain.card(key, kind, title, sections=sections, evidence=[t for *_, t in mine])
+        for _, tid, hit, text in mine:
+            chain.link(previous, key, step, tid, hit, text)
+        previous = key
+    return _finish(chain, kind="group")
 
 
 def _cve_ids(group_name: str, detection_paths: Iterable[str]) -> List[str]:
@@ -223,8 +256,8 @@ def _groups_exploiting(cve: str, csv_path: str = _PROCEDURES_CSV) -> List[str]:
 def build_cve(group_name: str, detection_paths: Iterable[str], detected: Set[str],
               cache_dir: Optional[str] = None) -> Optional[Dict]:
     """
-    A CVE run's anatomy from its cached research: attacker -> exploit -> CVE -> the product's
-    worker -> what it runs -> the infrastructure it reaches, and what the CVE gives the attacker.
+    A CVE run's anatomy from its cached research, one chain per CVE: attacker -> exploit -> CVE ->
+    the product's worker -> the shell it starts -> the infrastructure the advisories name.
     """
     from archer.build.runtime_detection import _workers, runtimes
     from archer.intelligence.cve_hunter import CVEHunter
@@ -234,190 +267,172 @@ def build_cve(group_name: str, detection_paths: Iterable[str], detected: Set[str
     names = [os.path.basename(p) for p in paths]
     has = {kind: any(f"_{kind}_" in n or n.startswith(kind) for n in names)
            for kind in ("Exploit", "RuntimeShell", "IOCSweep")}
+    by = {"Exploit": "Exploit request detection", "RuntimeShell": "Runtime shell detection", "IOCSweep": "IOC sweep"}
     cache_dir = cache_dir or CVEHunter.cache_location()
-    g = _Graph()
-    g.node("actor", "actor", "Attacker", "a", sub="Unattributed")
-    found = False
+    chain = _Chain()
+    row = 0
     for cve in _cve_ids(group_name, paths):
         try:
             with open(os.path.join(cache_dir, f"{cve}.json"), encoding="utf-8") as fh:
                 research = json.load(fh)
         except (OSError, ValueError):
             continue
-        found = True
         nvd = research.get("nvd_data") or {}
         name = research.get("exploit_name") or exploit_name(nvd, research.get("pocs") or [])
         cvss = (nvd.get("cvss_v3") or {}).get("score")
         product = (nvd.get("product") or "").replace("_", " ")
         product = product.upper() if len(product) <= 6 else product.title() if product.islower() else product
-        cid = "cve:" + cve
-        # The product rides on the CVE: as its own node it stacked on the worker in one column
-        g.node(cid, "cve", cve, "c", sub=" · ".join(x for x in (name, product, f"CVSS {cvss}" if cvss else "") if x),
-               evidence=[(nvd.get("description") or "")[:400]] if nvd.get("description") else [])
-        for group in _groups_exploiting(cve):  # beside the PoC, so its link doesn't cross it
-            g.node("group:" + group, "actor", group, "b", sub="ATT&CK group")
-            g.edge("group:" + group, cid, "Exploit", "T1190", "Exploit Public-Facing Application", "", has["Exploit"])
-        pocs = [p for p in research.get("pocs") or [] if p.get("type") == "github"]
-        exp = research.get("exploit") or {}
-        ind = exp.get("indicators") or {}
-        request = ", ".join(ind.get("paths") or [])
+        prev = None
+
+        def step(cid, kind, title, sub="", sections=None, evidence=None, label="", check=None, text=""):
+            nonlocal prev
+            cid = f"{cve}:{cid}"
+            chain.card(cid, kind, title, sub, sections, evidence, row=row)
+            if prev:
+                if check:
+                    chain.link(prev, cid, label, check, has[check], text, by[check] if has[check] else "")
+                else:
+                    chain.link(prev, cid, label)
+            prev = cid
+
+        known = _groups_exploiting(cve)
+        step("actor", "actor", known[0] if known else "Attacker", "Known to exploit it" if known else "Unattributed",
+             [{"title": "Also", "items": known[1:]}])
+        pocs = sorted((p for p in research.get("pocs") or [] if p.get("type") == "github"),
+                      key=lambda p: -(p.get("stars") or 0))
+        ind = (research.get("exploit") or {}).get("indicators") or {}
         if pocs or name:
-            pid = "exploit:" + cve
-            g.node(pid, "exploit", name or "Public PoC", "b",
-                   sub=f"{len(pocs)} public PoC{'s' if len(pocs) != 1 else ''}" if pocs else "Exploit",
-                   evidence=[f"{p.get('source')}" + (f" ({p.get('stars')}★)" if p.get("stars") else "")
-                             for p in sorted(pocs, key=lambda p: -(p.get("stars") or 0))[:5]])
-            g.edge("actor", pid, "")
-            src = pid
-        else:
-            src = "actor"
-        g.edge(src, cid, "Exploit", "T1190", "Exploit Public-Facing Application",
-               f"Requests to {request}" if request else "", has["Exploit"])
-        last = cid
+            step("exploit", "exploit", name or "Public exploit",
+                 f"{len(pocs)} public PoC{'s' if len(pocs) != 1 else ''}" if pocs else "",
+                 [{"title": "Most starred", "items": [p.get("source") for p in pocs[:2]]}],
+                 [p.get("source") + (f" ({p.get('stars')}★)" if p.get("stars") else "") for p in pocs[:5]], "Uses")
+        request = ", ".join(ind.get("paths") or [])
+        step("cve", "cve", cve, " · ".join(x for x in (product, f"CVSS {cvss}" if cvss else "") if x),
+             [{"title": "Request", "items": ind.get("paths") or []}], [(nvd.get("description") or "")[:400]],
+             "Exploits", "Exploit", f"Requests to {request}" if request else "")
         workers = _workers(runtimes(nvd))
         if workers:
-            wid = "process:" + ",".join(workers)
-            g.node(wid, "process", " / ".join(w.rstrip("*") for w in workers[:3]), "d", sub="Worker process")
-            g.edge(last, wid, "Code execution", "T1190", "Exploit Public-Facing Application", "", has["RuntimeShell"])
-            last = wid
+            step("worker", "process", workers[0].rstrip("*"), "Runs the attacker's code",
+                 [{"title": "Or", "items": [w.rstrip("*") for w in workers[1:]]}], label="Runs code in",
+                 check="RuntimeShell")
         cmds = ind.get("cmd") or []
         if workers or cmds:
-            sid = "shell:" + cve
-            g.node(sid, "shell", "Shell", "e", sub=(cmds[0] if cmds else "recon / download"),
-                   evidence=cmds[:4])
-            g.edge(last, sid, "Spawns" if workers else "Code execution", "T1059", "Command and Scripting Interpreter", cmds[0] if cmds else "",
-                   has["RuntimeShell"] or covered("T1059", detected))
-            last = sid
+            step("shell", "shell", "Shell", cmds[0] if cmds else "Recon and downloads",
+                 [{"title": "Runs", "items": cmds[:2]}], cmds[:4], "Starts", "RuntimeShell", cmds[0] if cmds else "")
         refs = (research.get("reference_iocs") or {}).get("iocs") or {}
-        seen = set()
-        for kind in ("ip", "domain"):
-            for value in refs.get(kind) or []:
-                value = refang(value)
-                if value in seen or len(seen) >= MAX["ioc"]:
-                    continue
-                seen.add(value)
-                g.node("ioc:" + value, "ioc", value, "f", sub=kind.upper() if kind == "ip" else "Domain")
-                g.edge(last, "ioc:" + value, "C2 / staging", None, "", "", has["IOCSweep"])
-    if not found:
+        values = list(dict.fromkeys(refang(v) for kind in ("ip", "domain") for v in refs.get(kind) or []))
+        if values:
+            ips = [v for v in values if re.fullmatch(r"[\d.]+", v)]
+            step("infra", "ioc", "Infrastructure", "", [{"title": "IPs", "items": ips, "brief": True},
+                                                        {"title": "Domains", "items": [v for v in values if v not in ips],
+                                                         "brief": True}],
+                 label="Connects to", check="IOCSweep")
+        row += 1
+    if not row:
         return None
-    # What the run's own technique detections reach, beyond the exploit itself
-    for tactic, label in OBJECTIVES:
-        hits = sorted(t for t in detected if _tactic_of(t, paths) == tactic)
-        if hits:
-            oid = "objective:" + tactic
-            g.node(oid, "objective", label, "band", sub=f"{len(hits)} detected")
-            g.nodes[oid]["techniques"] = [{"id": t, "name": t, "detected": True} for t in hits]
-            src = next((n for n in g.nodes if n.startswith("shell:")), "actor")
-            for t in hits:
-                g.edge(src, oid, label, t, t, "", True)
-    return _finish(g, kind="cve")
+    return _finish(chain, kind="cve")
 
-
-def _tactic_of(tid: str, paths: List[str]) -> Optional[str]:
-    from archer.visualization.flow_view import read_detection
-
-    for p in paths:
-        d = read_detection(p)
-        if d and d["id"] == tid and d["tactics"]:
-            return d["tactics"][0]
-    return None
-
-
-# Layout: columns left to right, objectives along the bottom
-COLUMNS = ["a", "b", "c", "d", "e", "f"]
-# Top to bottom within a column: a group's campaigns above it, CVEs above services, product above worker
-KIND_ORDER = ["campaign", "actor", "exploit", "software", "cve", "service", "product", "process", "shell", "ioc"]
-NODE_GAP = 92
-TOP = 70
+# Layout: each chain runs along a line, a node to a stage, with what it holds in a few short lines
+# under it; a longer chain snakes back along the next line. Nodes sit a little off the line and
+# links are gently bowed, drawn with a sketch filter in the template: hand-drawn, not ruled
 WIDTH = 1100
-BAND_GAP = 110
+MAX_PER_LINE = 6
+BRIEF_LINES = 4
+LINE = 16
+SHORT = {"Offensive frameworks": "Frameworks", "Credential stealers": "Stealers", "Backdoors and RATs": "RATs",
+         "Remote access and tunnels": "Tunnels", "Exfiltration tools": "Exfil", "Built-in tools": "Built-in",
+         "Cloud storage": "Storage", "Cloud tenants": "Cloud", "Code and paste sites": "Code sites",
+         "Tunnels and anonymisers": "Tunnels", "Remote access": "Remote", "Phishes via": "Phishing",
+         "Signs in to": "Sign-in", "Web shells": "Web shells"}
 
 
-def _into_band(g: _Graph, e: Dict) -> bool:
-    return g.nodes[e["target"]]["col"] == "band"
+def _jitter(key: str, spread: int) -> int:
+    return zlib.crc32(key.encode()) % (2 * spread + 1) - spread
 
 
-def _finish(g: _Graph, kind: str) -> Dict:
-    nodes = list(g.nodes.values())
-    cols = [c for c in COLUMNS if any(n["col"] == c for n in nodes)]
-    xs = {c: int(110 + i * (WIDTH - 220) / max(1, len(cols) - 1)) if len(cols) > 1 else WIDTH // 2
-          for i, c in enumerate(cols)}
-    tallest = 0
-    by_col = defaultdict(list)
+def _line(head: str, items: List[str], chars: int) -> str:
+    """One short line: "Stealers: LaZagne, Vidar +2", whole items only."""
+    text, shown = (f"{head}: " if head else ""), 0
+    for item in items:
+        more = len(items) - shown - 1
+        piece = (", " if shown else "") + item
+        if len(text + piece) + (len(f" +{more}") if more else 0) > chars and shown:
+            break
+        text, shown = text + piece, shown + 1
+    if len(text) > chars:
+        text = text[:chars - 1] + "…"
+    return text + (f" +{len(items) - shown}" if len(items) > shown else "")
+
+
+def _lines(card: Dict, chars: int) -> List[Dict]:
+    """What goes under the node: title, sub, then a line per group it holds."""
+    out = [{"cls": "title", "text": card["title"] if len(card["title"]) <= chars else card["title"][:chars - 1] + "…"}]
+    if card["sub"]:
+        sub = card["sub"]
+        out.append({"cls": "sub", "text": sub if len(sub) <= chars + 4 else sub[:chars + 3] + "…"})
+    brief = [sec for sec in card["sections"] if sec.get("brief")]
+    single = len(brief) == 1 and not card["sub"]
+    for sec in brief[:BRIEF_LINES]:
+        out.append({"cls": "item", "text": _line("" if single else SHORT.get(sec["title"], sec["title"]), sec["items"], chars)})
+    if len(brief) > BRIEF_LINES:
+        extra = len(brief) - BRIEF_LINES
+        out.append({"cls": "sub", "text": f"+{extra} more group{'s' if extra != 1 else ''}"})
+    return out
+
+
+def _finish(chain: _Chain, kind: str) -> Dict:
+    nodes = chain.cards
+    rows = defaultdict(list)
     for n in nodes:
-        by_col[n["col"]].append(n)
-    for members in by_col.values():
-        members.sort(key=lambda n: KIND_ORDER.index(n["kind"]) if n["kind"] in KIND_ORDER else len(KIND_ORDER))
-    for c, members in by_col.items():
-        if c == "band":
-            continue
-        tallest = max(tallest, len(members))
-    height_main = TOP + max(1, tallest) * NODE_GAP
-    for c, members in by_col.items():
-        if c == "band":
-            continue
-        # Centred on the tallest column
-        offset = (tallest - len(members)) * NODE_GAP / 2
-        for i, n in enumerate(members):
-            n["x"], n["y"] = xs[c], int(TOP + offset + i * NODE_GAP)
-    band = by_col.get("band", [])
-    band_y = height_main + BAND_GAP - NODE_GAP // 2
-    for i, n in enumerate(band):
-        n["x"] = int(WIDTH * (i + 1) / (len(band) + 1))
-        n["y"] = band_y
-    height = band_y + 90 if band else height_main + 10
+        rows[n["row"]].append(n)
+    longest = max(len(r) for r in rows.values())
+    per_line = longest if longest <= MAX_PER_LINE else MAX_PER_LINE - 1
+    slot = WIDTH / per_line
+    chars = int(min(34, (slot - 16) / 6.6))
+    y = 20
+    for row in sorted(rows):
+        members = rows[row]
+        for start in range(0, len(members), per_line):
+            line = members[start:start + per_line]
+            back = (start // per_line) % 2 == 1
+            for i, n in enumerate(line):
+                n["lines"] = _lines(n, chars)
+                pos = per_line - 1 - i if back else i
+                n["x"] = int(slot * (pos + 0.5)) + _jitter(n["id"] + "x", 8)
+                n["y"] = int(y + 34) + _jitter(n["id"] + "y", 9)
+            y += 34 + 46 + max(len(n["lines"]) for n in line) * LINE + 40
+    by_id = {n["id"]: n for n in nodes}
 
-    edges = []
-    for e in g.edges.values():
-        s, t = g.nodes[e["source"]], g.nodes[e["target"]]
-        down = t["col"] == "band" or abs(s["x"] - t["x"]) < 40
-        if down and t["y"] < s["y"]:  # a group's campaigns sit above it
-            sx, sy, tx, ty = s["x"], s["y"] - 30, t["x"], t["y"] + 66
-            c1, c2 = (sx, sy - 10), (tx, ty + 10)
-        elif down:
-            sx, sy, tx, ty = s["x"], s["y"] + 30, t["x"], t["y"] - 34
-            c1, c2 = (sx, sy + (ty - sy) * 0.55), (tx, ty - (ty - sy) * 0.45)
-        else:
+    links = []
+    for i, e in enumerate(chain.links.values()):
+        s, t = by_id[e["source"]], by_id[e["target"]]
+        if abs(t["y"] - s["y"]) < 40:  # along the line, bowed a little up or down
             sign = 1 if t["x"] > s["x"] else -1
             sx, sy, tx, ty = s["x"] + 34 * sign, s["y"], t["x"] - 38 * sign, t["y"]
-            dx = (tx - sx) * 0.5
-            c1, c2 = (sx + dx, sy), (tx - dx, ty)
-        # Label on the curve towards its target (a cubic Bézier at t = 0.7), clear of the crowd at the source
-        t = 0.7
-        k = [(1 - t) ** 3, 3 * (1 - t) ** 2 * t, 3 * (1 - t) * t ** 2, t ** 3]
-        mx = k[0] * sx + k[1] * c1[0] + k[2] * c2[0] + k[3] * tx
-        my = k[0] * sy + k[1] * c1[1] + k[2] * c2[1] + k[3] * ty
-        roles = [] if _into_band(g, e) else e["roles"]  # an objective is its own label
-        e = dict(e, label=" · ".join(roles[:2]) + (f" +{len(roles) - 2}" if len(roles) > 2 else ""), path=f"M{sx:.0f},{sy:.0f} C{c1[0]:.0f},{c1[1]:.0f} {c2[0]:.0f},{c2[1]:.0f} {tx:.0f},{ty:.0f}",
-                 lx=int(mx), ly=int(my),
-                 state="detected" if e["detected"] else ("gap" if e["checked"] else "none"))
-        edges.append(e)
-    # A fan of links with the same label from one source (six IPs, all C2 / staging), or into one
-    # target, says it once, mid-fan
-    fans = defaultdict(list)
-    for e in edges:
-        if e["label"]:
-            fans[("from", e["source"], e["label"])].append(e)
-            fans[("to", e["target"], e["label"])].append(e)
-    for fan in sorted(fans.values(), key=len, reverse=True):
-        fan = [e for e in fan if e["label"]]
-        if len(fan) < 2:
-            continue
-        fan.sort(key=lambda e: e["ly"])
-        for i, e in enumerate(fan):
-            if i != len(fan) // 2:
-                e["label"] = ""
-    links = [e for e in edges if e["checked"]]
+            bow = (12 + abs(_jitter(e["source"] + e["target"], 8))) * (1 if i % 2 else -1)
+            dx = tx - sx
+            c1, c2 = (sx + dx * 0.3, sy + bow), (tx - dx * 0.3, ty + bow)
+        else:  # round the end of the line to the next one, clear of the text under the node
+            side = 1 if s["x"] > WIDTH / 2 else -1
+            sx, sy, tx, ty = s["x"] + 34 * side, s["y"], t["x"] + 38 * side, t["y"]
+            reach = 70 + _jitter(e["source"], 10)
+            c1, c2 = (sx + reach * side, sy + 10), (tx + reach * side, ty - 10)
+        mx = 0.125 * sx + 0.375 * c1[0] + 0.375 * c2[0] + 0.125 * tx
+        my = 0.125 * sy + 0.375 * c1[1] + 0.375 * c2[1] + 0.125 * ty
+        behaviours = e["behaviours"]
+        hits = sum(behaviours.values())
+        state = "none" if not behaviours else ("detected" if hits * 2 > len(behaviours) else "gap")
+        links.append({
+            "source": e["source"], "target": e["target"], "label": e["label"], "state": state,
+            "detected": hits, "total": len(behaviours), "evidence": e["evidence"], "covered_by": e["covered_by"],
+            "path": f"M{sx:.0f},{sy:.0f} C{c1[0]:.0f},{c1[1]:.0f} {c2[0]:.0f},{c2[1]:.0f} {tx:.0f},{ty:.0f}",
+            "lx": int(mx), "ly": int(my) + 4,
+        })
+    counted = [e for e in links if e["state"] != "none"]
     return {
-        "kind": kind,
-        "width": WIDTH,
-        "height": int(height),
-        "band_y": band_y - 50 if band else None,
-        "nodes": nodes,
-        "edges": edges,
-        "stats": {"nodes": len(nodes), "links": len(links),
-                  "detected": sum(1 for e in links if e["detected"]),
-                  "gaps": sum(1 for e in links if not e["detected"])},
+        "kind": kind, "width": WIDTH, "height": int(y - 20), "nodes": nodes, "edges": links,
+        "stats": {"links": len(counted), "detected": sum(e["state"] == "detected" for e in counted),
+                  "gaps": sum(e["state"] == "gap" for e in counted)},
     }
 
 

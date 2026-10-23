@@ -10,19 +10,25 @@
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   let selected = null;  // {node: id} or {edge: index}
 
-  function techniques(list) {
-    if (!list.length) return '';
-    return '<h4>Techniques</h4><ul class="an-techniques">' + list.map(t =>
-      `<li class="is-${t.detected ? 'detected' : 'gap'}"><strong>${esc(t.id)}</strong> ${esc(t.name && t.name !== t.id ? t.name : '')}` +
-      ` · ${t.detected ? 'detected' : 'no detection'}</li>`).join('') + '</ul>';
+  function sections(n) {
+    return n.sections.map(s => `<h4>${esc(s.title)}</h4><ul class="an-members">` +
+      s.items.map(m => `<li>${esc(m)}</li>`).join('') + '</ul>').join('');
   }
-  function evidence(list) {
-    return list.length ? '<h4>Procedures</h4>' + list.map(s => `<blockquote class="an-evidence">${esc(s)}</blockquote>`).join('') : '';
+  function quotes(list) {
+    if (!list.length) return '';
+    return '<h4>What the reporting says</h4>' + list.map(q => typeof q === 'string'
+      ? `<blockquote class="an-evidence">${esc(q)}</blockquote>`
+      : `<blockquote class="an-evidence is-${q.detected ? 'detected' : 'gap'}">${esc(q.text)}</blockquote>`).join('');
+  }
+  function coverage(e) {
+    if (e.covered_by.length) return `<p class="an-coverage is-detected">Detected by: ${esc(e.covered_by.join(', '))}</p>`;
+    if (!e.total) return '';
+    return `<p class="an-coverage is-${e.state}">${e.detected} of ${e.total} behaviour${e.total === 1 ? '' : 's'} detected by this run</p>`;
   }
   function links(edges, end) {
     return '<ul class="an-links">' + edges.map(e => {
       const other = byId[e[end]];
-      return `<li><button type="button" data-goto="${esc(other.id)}">${esc(other.label)}</button>` +
+      return `<li><button type="button" data-goto="${esc(other.id)}">${esc(other.title)}</button>` +
         (e.label ? ` <span style="color:var(--af-muted)">(${esc(e.label)})</span>` : '') + '</li>';
     }).join('') + '</ul>';
   }
@@ -48,15 +54,15 @@
     const n = byId[id];
     const into = view.edges.filter(e => e.target === id);
     const out = view.edges.filter(e => e.source === id);
-    body.innerHTML = `<p class="an-detail-title">${esc(n.label)}</p><p>${esc(n.sub || n.kind)}</p>` +
-      techniques(n.techniques || []) + evidence(n.evidence || []) +
+    body.innerHTML = `<p class="an-detail-title">${esc(n.title)}</p>` + (n.sub ? `<p>${esc(n.sub)}</p>` : '') +
+      sections(n) + quotes(n.evidence || []) +
       (into.length ? '<h4>From</h4>' + links(into, 'source') : '') +
       (out.length ? '<h4>To</h4>' + links(out, 'target') : '');
   }
   function showEdge(i) {
     const e = view.edges[i];
-    body.innerHTML = `<p class="an-detail-title">${esc(byId[e.source].label)} → ${esc(byId[e.target].label)}</p>` +
-      `<p>${esc(e.roles.join(', ') || 'Link')}</p>` + techniques(e.techniques) + evidence(e.evidence);
+    body.innerHTML = `<p class="an-detail-title">${esc(byId[e.source].title)} → ${esc(byId[e.target].title)}</p>` +
+      (e.label ? `<p>${esc(e.label)}</p>` : '') + coverage(e) + quotes(e.evidence);
   }
 
   function select(next) {

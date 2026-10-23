@@ -1,16 +1,14 @@
 {# Anatomy workflow. Context: anatomy (archer.visualization.anatomy.build); only included when there is one #}
 {% set icons = {
   'actor': 'M12 3a4 4 0 1 1 0 8a4 4 0 1 1 0-8zM4 21c0-4.4 3.6-8 8-8s8 3.6 8 8',
-  'campaign': 'M5 21V4M5 4h11l-2 4 2 4H5',
+  'door': 'M6 3h11v18H6zM14 12h.01M3 21h18',
   'software': 'M4 5h16v14H4zM7 10l3 2-3 2M12 15h5',
   'cve': 'M8 9a4 4 0 0 1 8 0v5a4 4 0 0 1-8 0zM4 11h4M16 11h4M4 16h4M16 16h4M9 4l1.5 2M15 4l-1.5 2',
   'service': 'M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 18z',
   'exploit': 'M13 2L4 14h7l-1 8 9-12h-7z',
-  'product': 'M4 4h16v6H4zM4 14h16v6H4zM8 7h.01M8 17h.01',
   'process': 'M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2',
   'shell': 'M4 17l6-5-6-5M12 19h8',
   'ioc': 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
-  'objective': 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 7a5 5 0 1 0 0 10a5 5 0 1 0 0-10zM12 11a1 1 0 1 0 0 2a1 1 0 1 0 0-2z',
 } %}
 <div id="anatomy" class="detection-section af-section an-section">
   <div class="detection-header">
@@ -24,17 +22,13 @@
       Anatomy Workflow
     </h2>
     <div class="af-toolbar" role="toolbar" aria-label="Anatomy workflow">
-      <button type="button" class="af-chip" id="an-gaps-only" aria-pressed="false" title="Show only the links this run has no detection for">Gaps only</button>
+      <button type="button" class="af-chip" id="an-gaps-only" aria-pressed="false" title="Fade the steps this run mostly detects">Gaps only</button>
     </div>
   </div>
 
   <p class="af-stats">
-    {% if anatomy.kind == 'cve' %}How the CVE is exploited and what follows, from its research{% else %}Who, with what, through which services, for what: from ATT&CK's procedures{% endif %} ·
-    <strong>{{ anatomy.stats.links }}</strong> link{{ 's' if anatomy.stats.links != 1 }} ·
-    <strong>{{ anatomy.stats.detected }}</strong> detected ·
-    <span class="af-stats-gap"><strong>{{ anatomy.stats.gaps }}</strong> without a detection</span>
-    {% if anatomy.stats.software_more %} · {{ anatomy.stats.software_more }} more tool{{ 's' if anatomy.stats.software_more != 1 }} not shown{% endif %}
-    {% if anatomy.stats.cve_more %} · {{ anatomy.stats.cve_more }} more CVE{{ 's' if anatomy.stats.cve_more != 1 }}{% endif %}
+    {% if anatomy.kind == 'cve' %}How the CVE is exploited and what follows{% else %}How they get in, what they run and what they reach{% endif %} ·
+    <strong>{{ anatomy.stats.detected }}</strong> of {{ anatomy.stats.links }} step{{ 's' if anatomy.stats.links != 1 }} mostly detected by this run
   </p>
 
   <div class="af-body">
@@ -42,34 +36,33 @@
       <svg class="an-svg" id="an-svg" viewBox="0 0 {{ anatomy.width }} {{ anatomy.height }}" role="img"
            aria-label="Anatomy workflow for {{ group_name }}">
         <defs>
+          {# A slight wobble on lines and node outlines: hand-drawn, not ruled #}
+          <filter id="an-sketch" x="-5%" y="-5%" width="110%" height="110%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7"/>
+            <feDisplacementMap in="SourceGraphic" scale="2.6"/>
+          </filter>
           {% for state in ['detected', 'gap', 'none'] %}
-          <marker id="an-arrow-{{ state }}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" class="an-arrow-{{ state }}"/>
+          <marker id="an-arrow-{{ state }}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M0,1 L9,5 L0,9" class="an-arrow-{{ state }}"/>
           </marker>
           {% endfor %}
         </defs>
-        {% if anatomy.band_y %}
-        <rect class="an-band" x="20" y="{{ anatomy.band_y }}" width="{{ anatomy.width - 40 }}" height="{{ anatomy.height - anatomy.band_y - 8 }}" rx="10"/>
-        <text class="an-band-title" x="36" y="{{ anatomy.band_y + 22 }}">Objectives</text>
-        {% endif %}
         {% for e in anatomy.edges %}
         <g class="an-edge is-{{ e.state }}" data-edge="{{ loop.index0 }}" data-source="{{ e.source }}" data-target="{{ e.target }}"
-           {% if e.techniques or e.evidence %}tabindex="0" role="button" aria-label="{{ e.label or 'Link' }}"{% endif %}>
+           {% if e.evidence or e.covered_by or e.total %}tabindex="0" role="button" aria-label="{{ e.label or 'Step' }}"{% endif %}>
           <path class="an-hit" d="{{ e.path }}"/>
-          <path class="an-line" d="{{ e.path }}" marker-end="url(#an-arrow-{{ e.state }})"/>
-          {% if e.label %}
-          <text class="an-edge-label" x="{{ e.lx }}" y="{{ e.ly }}">{{ e.label }}</text>
-          {% endif %}
+          <path class="an-line" d="{{ e.path }}" marker-end="url(#an-arrow-{{ e.state }})" filter="url(#an-sketch)"/>
+          {% if e.label %}<text class="an-edge-label" x="{{ e.lx }}" y="{{ e.ly }}">{{ e.label }}</text>{% endif %}
         </g>
         {% endfor %}
         {% for n in anatomy.nodes %}
         <g class="an-node an-kind-{{ n.kind }}" data-id="{{ n.id }}" transform="translate({{ n.x }},{{ n.y }})" tabindex="0" role="button"
-           aria-label="{{ n.label }}{% if n.sub %} ({{ n.sub }}){% endif %}">
-          <title>{{ n.label }}{% if n.sub %} · {{ n.sub }}{% endif %}</title>
-          <circle r="27"/>
+           aria-label="{{ n.title }}{% if n.sub %} ({{ n.sub }}){% endif %}">
+          <circle class="an-disc" r="30" filter="url(#an-sketch)"/>
           <path class="an-icon" d="{{ icons.get(n.kind, icons['software']) }}" transform="translate(-12,-12)"/>
-          <text class="an-label" y="44">{{ n.label|truncate(24, True, '…') }}</text>
-          {% if n.sub %}<text class="an-sub" y="59">{{ n.sub|truncate(28, True, '…') }}</text>{% endif %}
+          {% for l in n.lines %}
+          <text class="an-{{ l.cls }}" y="{{ 52 + loop.index0 * 16 }}">{{ l.text }}</text>
+          {% endfor %}
         </g>
         {% endfor %}
       </svg>
@@ -82,10 +75,9 @@
   </div>
 
   <div class="af-legend">
-    <span><span class="an-legend-edge is-detected"></span> this run has a detection for it</span>
-    <span><span class="an-legend-edge is-gap"></span> no detection</span>
-    <span><span class="an-legend-edge is-none"></span> context (uses, affects)</span>
-    <span class="af-legend-hint">Select a node or link for the techniques and procedures behind it</span>
+    <span><span class="an-legend-edge is-detected"></span> mostly detected by this run</span>
+    <span><span class="an-legend-edge is-gap"></span> mostly not detected</span>
+    <span class="af-legend-hint">Select a node or step for everything in it and what the reporting says</span>
   </div>
 
   <script type="application/json" id="an-data">{{ anatomy|tojson }}</script>

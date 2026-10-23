@@ -2,6 +2,7 @@
 
 import csv
 import json
+import re
 
 from archer.visualization import anatomy
 
@@ -30,33 +31,83 @@ ROWS = [
 ]
 
 
-def test_a_groups_anatomy_links_tools_services_cves_and_objectives(tmp_path):
+def _cards(view):
+    return {c["id"]: c for c in view["nodes"]}
+
+
+def _items(card):
+    return {sec["title"]: sec["items"] for sec in card["sections"]}
+
+
+def test_a_groups_anatomy_is_a_chain_of_grouped_cards(tmp_path):
     view = anatomy.build_group("test spider", {"T1567", "T1003.001"}, _csv(tmp_path, ROWS))
-    nodes = {n["id"]: n for n in view["nodes"]}
-    assert {"actor", "software:Empire", "software:Mimikatz", "service:Dropbox", "service:MEGA", "cve:CVE-2021-44228",
-            "campaign:C0027", "objective:Credential Access"} <= set(nodes)
-    edges = {(e["source"], e["target"]): e for e in view["edges"]}
-    # Empire's C2 over Dropbox: no detection for T1102; the group's exfiltration to Dropbox is (T1567 parent)
-    assert edges[("software:Empire", "service:Dropbox")]["roles"] == ["C2"]
-    assert edges[("software:Empire", "service:Dropbox")]["state"] == "gap"
-    assert edges[("actor", "service:Dropbox")]["state"] == "detected"
-    assert edges[("actor", "cve:CVE-2021-44228")]["roles"] == ["Exploit"]
-    # Credentials hangs off the actor and names the tool that does it; one of its two techniques is detected
-    cred = nodes["objective:Credential Access"]
-    assert cred["sub"] == "2 techniques · Mimikatz"
-    assert edges[("actor", "objective:Credential Access")]["state"] == "detected"
-    assert view["stats"]["links"] == view["stats"]["detected"] + view["stats"]["gaps"]
+    cards = _cards(view)
+    assert [c["id"] for c in view["nodes"]] == ["actor", "entry", "runs", "reaches"]
+    assert _items(cards["entry"]) == {"Exploits": ["CVE-2021-44228"]}
+    assert _items(cards["runs"]) == {"Offensive frameworks": ["Empire"], "Credential stealers": ["Mimikatz"]}
+    assert _items(cards["reaches"]) == {"Cloud storage": ["Dropbox", "MEGA"]}
+    assert _items(cards["actor"]) == {"Campaigns": ["C0027"]}
+    # One step per stage, in order; no technique IDs anywhere a viewer reads
+    assert [(e["source"], e["target"]) for e in view["edges"]] == [("actor", "entry"), ("entry", "runs"), ("runs", "reaches")]
+    shown = json.dumps([[c["title"], c["sub"], c["sections"], c["lines"]] for c in view["nodes"]] +
+                       [e["label"] for e in view["edges"]])
+    assert not re.search(r"T\d{4}", shown)
 
 
-def test_layout_keeps_the_actor_alone_in_the_middle_and_nodes_apart(tmp_path):
-    view = anatomy.build_group("test spider", set(), _csv(tmp_path, ROWS))
-    nodes = {n["id"]: n for n in view["nodes"]}
-    middle = [n for n in view["nodes"] if n["x"] == nodes["actor"]["x"]]
-    assert {n["kind"] for n in middle} == {"actor", "campaign"}
-    assert max(n["y"] for n in middle if n["kind"] == "campaign") < nodes["actor"]["y"]
-    spots = [(n["x"], n["y"]) for n in view["nodes"]]
-    assert len(spots) == len(set(spots))
-    assert all(n["y"] > nodes["actor"]["y"] for n in view["nodes"] if n["col"] == "band")
+def test_a_step_is_detected_when_most_of_it_is(tmp_path):
+    view = anatomy.build_group("test spider", {"T1567", "T1003.001"}, _csv(tmp_path, ROWS))
+    steps = {e["target"]: e for e in view["edges"]}
+    assert steps["reaches"]["state"] == "gap"  # C2 over Dropbox undetected, exfiltration detected: 1 of 2
+    assert (steps["runs"]["detected"], steps["runs"]["total"]) == (1, 3)
+    view = anatomy.build_group("test spider", {"T1567", "T1102", "T1003", "T1190"}, _csv(tmp_path, ROWS))
+    assert all(e["state"] == "detected" for e in view["edges"])
+
+
+def test_a_service_they_get_in_through_is_not_repeated_where_they_reach(tmp_path):
+    rows = ROWS + [("T1078.004", "Cloud Accounts", "Initial Access", "Test Spider signed in to AWS."),
+                   ("T1530", "Data from Cloud Storage", "Collection", "Test Spider stole data from AWS S3 buckets.")]
+    cards = _cards(anatomy.build_group("test spider", set(), _csv(tmp_path, rows)))
+    assert _items(cards["entry"])["Signs in to"] == ["AWS"]
+    assert "Cloud tenants" not in _items(cards["reaches"])
+
+
+def test_tools_are_grouped_by_what_they_are():
+    assert anatomy.tool_group("Cobalt Strike", ["T1003.001"]) == "Offensive frameworks"
+    assert anatomy.tool_group("Vidar", ["T1105"]) == "Credential stealers"
+    assert anatomy.tool_group("China Chopper", []) == "Web shells"
+    assert anatomy.tool_group("BlackCat", ["T1486"]) == "Ransomware"
+    assert anatomy.tool_group("certutil", ["T1105"]) == "Built-in tools"
+    assert anatomy.tool_group("PlugX", ["T1071.001", "T1055"]) == "Backdoors and RATs"
+
+
+def _chain(n):
+    chain = anatomy._Chain()
+    for i in range(n):
+        chain.card(f"c{i}", "software", f"Node {i}")
+        if i:
+            chain.link(f"c{i - 1}", f"c{i}", "Then")
+    return anatomy._finish(chain, "cve")["nodes"]
+
+
+def test_a_chain_runs_along_one_line_and_snakes_back_when_long():
+    six = _chain(6)
+    assert max(n["y"] for n in six) - min(n["y"] for n in six) < 40
+    assert [n["x"] for n in six] == sorted(n["x"] for n in six)
+    eight = _chain(8)
+    assert eight[5]["y"] > eight[4]["y"] + 60 and eight[5]["x"] > eight[7]["x"]  # the second line comes back
+    for a in eight:
+        for b in eight:
+            if a is not b:
+                assert abs(a["x"] - b["x"]) >= 150 or abs(a["y"] - b["y"]) >= 80
+
+
+def test_under_a_node_one_short_line_per_group():
+    card = {"title": "Runs", "sub": "", "sections": [
+        {"title": "Credential stealers", "items": ["LaZagne", "Raccoon Stealer", "Vidar", "Mimikatz"], "brief": True},
+        {"title": "Ransomware", "items": ["BlackCat"], "brief": True}]}
+    lines = [l["text"] for l in anatomy._lines(card, 30)]
+    assert lines[0] == "Runs" and lines[2] == "Ransomware: BlackCat"
+    assert lines[1].startswith("Stealers: LaZagne") and re.search(r" \+\d$", lines[1]) and len(lines[1]) <= 33
 
 
 def test_no_procedures_no_anatomy(tmp_path):
@@ -75,13 +126,13 @@ def test_a_cves_anatomy_from_its_research(tmp_path, monkeypatch):
     monkeypatch.setattr(anatomy, "_groups_exploiting", lambda cve, *a: [])
     files = ["CVE-2026-109618_PHP2Shell_RuntimeShell_KQL.yaml", "CVE-2026-109618_PHP2Shell_IOCSweep_KQL.yaml"]
     view = anatomy.build_cve("CVE-2026-109618", files, set(), cache_dir=str(tmp_path))
-    nodes = {n["id"]: n for n in view["nodes"]}
-    assert nodes["cve:CVE-2026-109618"]["sub"] == "PHP2Shell · PHP · CVSS 9.8"
-    assert nodes["exploit:CVE-2026-109618"]["label"] == "PHP2Shell"
-    assert [n["label"] for n in view["nodes"] if n["kind"] == "ioc"] == ["203.0.113.5"]
-    edges = {(e["source"], e["target"]): e for e in view["edges"]}
-    assert edges[("exploit:CVE-2026-109618", "cve:CVE-2026-109618")]["state"] == "gap"  # no exploit-request detection
-    worker = next(n["id"] for n in view["nodes"] if n["kind"] == "process")
-    assert edges[("cve:CVE-2026-109618", worker)]["state"] == "detected"  # the runtime shell detection
-    assert edges[("shell:CVE-2026-109618", "ioc:203.0.113.5")]["state"] == "detected"  # the IOC sweep
+    cards = _cards(view)
+    c = "CVE-2026-109618:"
+    assert [k.split(":")[1] for k in cards] == ["actor", "exploit", "cve", "worker", "shell", "infra"]
+    assert cards[c + "cve"]["sub"] == "PHP · CVSS 9.8" and cards[c + "exploit"]["title"] == "PHP2Shell"
+    assert _items(cards[c + "infra"]) == {"IPs": ["203.0.113.5"]}
+    steps = {e["target"]: e for e in view["edges"]}
+    assert steps[c + "cve"]["state"] == "gap"  # no exploit-request detection
+    assert steps[c + "worker"]["covered_by"] == ["Runtime shell detection"]
+    assert steps[c + "infra"]["state"] == "detected"  # the IOC sweep
     assert anatomy.build_cve("CVE-2026-1", [], set(), cache_dir=str(tmp_path)) is None

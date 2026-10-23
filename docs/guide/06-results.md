@@ -17,7 +17,7 @@ Every hunt, report and company-profile run ends on a Results page: its detection
 | Correlations | Queries chained across techniques and tactics (below) |
 | Attack flow | The group's techniques laid out by tactic, marked detected or not |
 | IOC flow | For a report: its indicators in the order the intrusion used them |
-| Anatomy workflow | Who, with what, through which services, for what: the actor or CVE as a network, each link marked detected or not (below) |
+| Anatomy workflow | How the attack runs, as one line of nodes: way in, toolkit, services; each step marked detected or not (below) |
 | Validation | A four-step checklist to work through before deploying anything |
 
 ## Detection cards
@@ -95,13 +95,13 @@ The toolbar also filters by SIEM, hides undetected techniques, hides selected ca
 
 ## Anatomy workflow
 
-A network of the attack in the style of the DFIR Report's workflow diagrams, built without AI.
+How the attack runs, as one line of nodes in the style of the DFIR Report's workflow diagrams, built without AI. It shows no ATT&CK technique IDs or tactics: the line is the operation, the detection cards carry the mapping.
 
-For a group, from ATT&CK's procedures: its tools on the left, the group in the middle under its campaigns, and on the right the CVEs it exploits and the legitimate services it abuses (Dropbox, Telegram, ngrok, AWS) that a procedure names. Each link says what it's for (Exploit, C2, Exfiltration, Remote access, Cloud access). Its objectives hang below it (Credentials, Lateral movement, Data collected, Data exfiltrated, Impact), each naming the tool that does most of it. Up to eight tools, five CVEs and seven services are shown; the line above the diagram counts the rest.
+For a group, from ATT&CK's procedures: the group → **gets in by** its **Way in** (the CVEs it exploits, the services it phishes through, signs in to or reaches remotely) → **runs** its **Toolkit** (grouped as frameworks, stealers, web shells, RATs, ransomware, tunnels, exfiltration tools, built-in tools) → **reaches** the **Services** its procedures name (grouped as storage, cloud, messaging, code sites, tunnels, remote access, hosting). Under each node, one short line per group; the rest is a click away.
 
-For a CVE, from its research: the attacker, the public PoC or named exploit (and any ATT&CK group known to exploit it), the CVE with its product and CVSS score, the worker process the code runs in, the shell it starts, and the infrastructure the advisories name.
+For a CVE, from its research, one line per CVE: the attacker (or the ATT&CK group known to exploit it) → the public or named exploit → the CVE with its product and CVSS score → the worker process the code runs in → the shell it starts → the infrastructure the advisories name.
 
-A link is teal when the run has a detection for one of its techniques (a technique, its parent or a sub-technique counts), red when it has none, and grey for context such as *uses*. For a CVE, the exploit link counts the exploit request detection, the worker and shell links the runtime shell detection, and the infrastructure links the IOC sweep. **Gaps only** fades everything you already detect. Select a node or link for its techniques, each marked detected or not, and the procedures behind it.
+A chain longer than six nodes snakes back along the next line. A step is teal when this run detects most of what's behind it, red when it mostly doesn't; for a CVE, the exploit step counts the exploit request detection, the worker and shell steps the runtime shell detection, and the infrastructure step the IOC sweep. **Gaps only** fades the steps already detected. Select a node for everything in it and what the reporting says, or a step for how much of it is detected.
 
 ## Buttons
 
