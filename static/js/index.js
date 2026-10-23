@@ -335,6 +335,8 @@ document.addEventListener('DOMContentLoaded', function () {
   function validate() {
     var val = (input && input.value) || '';
     var cveVal = (cveInput && cveInput.value) || '';
+    var techEl = document.getElementById('technique_input');
+    var techVal = (techEl && techEl.value) || '';
 
     if (val.length > 30) {
       if (errorSpan) errorSpan.style.display = 'inline';
@@ -347,8 +349,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var trimmed = val.trim();
     var cveTrimmed = cveVal.trim();
 
-    // Enable button if either group name OR CVE input has a value
-    if (btn) btn.disabled = (trimmed === '' && cveTrimmed === '');
+    // Enable the button when the group, CVE or technique field has a value
+    if (btn) btn.disabled = (trimmed === '' && cveTrimmed === '' && techVal.trim() === '');
 
     // Enable threat briefing button only when group name is present
     var briefingBtn = document.getElementById('briefing-btn');
@@ -360,34 +362,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
   validate();
 
-  // Mutual exclusion between group name and CVE inputs
-  if (input && cveInput) {
-    input.addEventListener('input', function() {
-      if (this.value.trim()) {
-        cveInput.disabled = true;
-        cveInput.placeholder = 'Disabled (using Threat Group)';
-        cveInput.style.opacity = '0.5';
-      } else {
-        cveInput.disabled = false;
-        cveInput.placeholder = 'e.g., CVE-2024-1234 or CVE-2021-44228, CVE-2022-22965';
-        cveInput.style.opacity = '1';
-      }
-      validate(); // Re-validate when group name changes
+  // One of group, CVE or techniques: filling one disables the other two until it's cleared
+  var techniqueField = document.getElementById('technique_input');
+  var huntFields = [
+    { el: input, using: 'Threat Group', placeholder: 'e.g., APT29, Scattered Spider' },
+    { el: cveInput, using: 'CVE', placeholder: 'e.g., CVE-2024-1234 or CVE-2021-44228, CVE-2022-22965' },
+    { el: techniqueField, using: 'ATT&CK techniques', placeholder: 'e.g., T1003, T1021.001, T1078' },
+  ].filter(function (f) { return f.el; });
+  function exclusive() {
+    var active = huntFields.filter(function (f) { return f.el.value.trim(); })[0];
+    huntFields.forEach(function (f) {
+      var off = !!active && active !== f;
+      f.el.disabled = off;
+      f.el.placeholder = off ? 'Disabled (using ' + active.using + ')' : f.placeholder;
+      f.el.style.opacity = off ? '0.5' : '1';
     });
-
-    cveInput.addEventListener('input', function() {
-      if (this.value.trim()) {
-        input.disabled = true;
-        input.placeholder = 'Disabled (using CVE)';
-        input.style.opacity = '0.5';
-      } else {
-        input.disabled = false;
-        input.placeholder = 'e.g., APT29, Scattered Spider';
-        input.style.opacity = '1';
-      }
-      validate(); // Re-validate when CVE input changes
-    });
+    validate();
   }
+  huntFields.forEach(function (f) { f.el.addEventListener('input', exclusive); });
 
   if (form) {
     form.addEventListener('submit', function (e) {
@@ -1381,4 +1373,153 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('hp-stack-count').textContent = n + ' product' + (n === 1 ? '' : 's');
     note.hidden = false;
   }).catch(function () {});
+});
+
+
+// Recent CVEs picker: the last 30 days (archer.intelligence.cve_feed, /api/cves/recent).
+// Picking a CVE adds it to the CVE field; picking it again takes it out.
+document.addEventListener('DOMContentLoaded', function () {
+  var dialog = document.getElementById('cve-picker');
+  var open = document.getElementById('cve-browse');
+  var field = document.getElementById('cve_input');
+  if (!dialog || !open || !field || typeof dialog.showModal !== 'function') return;
+  var list = document.getElementById('cvp-list');
+  var search = document.getElementById('cvp-search');
+  var kev = document.getElementById('cvp-kev');
+  var stack = document.getElementById('cvp-stack');
+  var high = document.getElementById('cvp-high');
+  var more = document.getElementById('cvp-more');
+  var count = document.getElementById('cvp-count');
+  var picked = document.getElementById('cvp-selected');
+  var PAGE = 50;
+  var offset = 0, ask = 0, timer = null;
+
+  function chosen() {
+    return field.value.split(',').map(function (c) { return c.trim().toUpperCase(); }).filter(Boolean);
+  }
+
+  function setChosen(ids) {
+    field.value = ids.join(', ');
+    field.dispatchEvent(new Event('input', { bubbles: true }));  // the group field and Generate follow it
+    picked.textContent = ids.length ? ids.length + ' selected: ' + ids.join(', ') : 'Nothing selected yet';
+  }
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function badge(cls, text, title) {
+    var b = el('span', 'cvp-badge ' + cls, text);
+    if (title) b.title = title;
+    return b;
+  }
+
+  function row(c) {
+    var li = el('li', 'cvp-row');
+    li.tabIndex = 0;
+    li.setAttribute('role', 'checkbox');
+    li.dataset.id = c.cve_id;
+    li.setAttribute('aria-checked', String(chosen().indexOf(c.cve_id) >= 0));
+    var tick = el('span', 'cvp-tick', '✓');
+    tick.setAttribute('aria-hidden', 'true');
+    var body = el('div');
+    var line = el('div', 'cvp-line');
+    line.appendChild(el('span', 'cvp-id', c.cve_id));
+    line.appendChild(el('span', 'cvp-date', (c.published || '').slice(0, 10)));
+    var cvss = c.cvss_v3 || {};
+    var sev = String(cvss.severity || '').toLowerCase();
+    line.appendChild(cvss.score != null
+      ? badge('cvp-sev-' + (sev || 'none'), cvss.score + ' ' + sev.charAt(0).toUpperCase() + sev.slice(1), 'CVSS v3 ' + (cvss.vector || ''))
+      : badge('cvp-sev-none', 'Not scored yet', 'NVD has not analysed it yet'));
+    if (c.kev) {
+      line.appendChild(badge('cvp-kev', 'Exploited',
+        'In CISA KEV since ' + (c.kev.date_added || '?') + (c.kev.due ? '; federal patch deadline ' + c.kev.due : '')));
+      if (c.kev.ransomware) line.appendChild(badge('cvp-ransom', 'Ransomware', 'Known use in ransomware campaigns'));
+    }
+    (c.on_stack || []).forEach(function (p) { line.appendChild(badge('cvp-stack', p, 'In your technology stack')); });
+    if (c.researched) line.appendChild(badge('cvp-done-mark', 'Researched', 'Already researched: its hunt starts at once'));
+    var others = (c.products || []).filter(function (p) { return (c.on_stack || []).indexOf(p) < 0; });
+    if (others.length) line.appendChild(el('span', 'cvp-prod', others.join(', ')));
+    body.appendChild(line);
+    var desc = el('p', 'cvp-desc', c.description || '');
+    desc.title = c.description || '';
+    body.appendChild(desc);
+    li.appendChild(tick);
+    li.appendChild(body);
+    return li;
+  }
+
+  function toggle(li) {
+    var ids = chosen(), id = li.dataset.id, at = ids.indexOf(id);
+    if (at >= 0) ids.splice(at, 1); else ids.push(id);
+    li.setAttribute('aria-checked', String(at < 0));
+    setChosen(ids);
+  }
+
+  function load(reset) {
+    if (reset) offset = 0;
+    var mine = ++ask;
+    var qs = new URLSearchParams({ q: search.value.trim(), offset: String(offset), limit: String(PAGE) });
+    if (kev.checked) qs.set('kev', 'true');
+    if (stack.checked) qs.set('stack', 'true');
+    if (high.checked) qs.set('min_score', '7');
+    if (reset) count.textContent = 'Loading…';
+    fetch('/api/cves/recent?' + qs).then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); }).then(function (data) {
+      if (mine !== ask) return;  // a newer search has been asked for
+      var chip = document.getElementById('cvp-stack-chip');
+      stack.disabled = !data.has_stack;
+      chip.title = data.has_stack ? '' : 'Set a technology stack in Profile to filter by it';
+      if (reset) list.replaceChildren();
+      (data.cves || []).forEach(function (c) { list.appendChild(row(c)); });
+      offset += (data.cves || []).length;
+      more.hidden = offset >= data.total;
+      var st = data.status || {};
+      if (!data.total && !st.last_refresh) {
+        list.replaceChildren(el('li', 'cvp-empty', st.refreshing
+          ? 'Collecting the last 30 days from the NVD. The first collection takes about 20 minutes.'
+          : 'No CVEs collected yet: they are collected when Archer starts.'));
+        count.textContent = '';
+        return;
+      }
+      if (!data.total) list.replaceChildren(el('li', 'cvp-empty', 'No CVE in the last ' + data.window_days + ' days matches.'));
+      count.textContent = data.total.toLocaleString('en-GB') + ' CVE' + (data.total === 1 ? '' : 's') +
+        (st.last_refresh ? ' · updated ' + new Date(st.last_refresh).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '') +
+        (st.refreshing ? ' · updating now' : '');
+    }).catch(function () {
+      if (mine === ask) count.textContent = 'Recent CVEs could not be loaded.';
+    });
+  }
+
+  open.addEventListener('click', function () {
+    if (field.disabled) return;
+    setChosen(chosen());
+    dialog.showModal();
+    search.focus();
+    load(true);
+  });
+  // The group field disables the CVE field; the link follows it
+  new MutationObserver(function () { open.disabled = field.disabled; })
+    .observe(field, { attributes: true, attributeFilter: ['disabled'] });
+
+  list.addEventListener('click', function (e) {
+    var li = e.target.closest('.cvp-row');
+    if (li) toggle(li);
+  });
+  list.addEventListener('keydown', function (e) {
+    var li = e.target.closest('.cvp-row');
+    if (!li) return;
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(li); }
+    if (e.key === 'ArrowDown' && li.nextElementSibling) { e.preventDefault(); li.nextElementSibling.focus(); }
+    if (e.key === 'ArrowUp' && li.previousElementSibling) { e.preventDefault(); li.previousElementSibling.focus(); }
+  });
+  search.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });  // it's inside the Hunt form
+  search.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(function () { load(true); }, 250); });
+  [kev, stack, high].forEach(function (box) { box.addEventListener('change', function () { load(true); }); });
+  more.addEventListener('click', function () { load(false); });
+  document.getElementById('cvp-done').addEventListener('click', function () { dialog.close(); field.focus(); });
+  document.getElementById('cvp-close').addEventListener('click', function () { dialog.close(); });
+  dialog.addEventListener('click', function (e) { if (e.target === dialog) dialog.close(); });  // the backdrop
 });

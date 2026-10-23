@@ -306,15 +306,42 @@
                     </label>
                     <input type="text" name="cve_id" id="cve_input" class="form-input"
                            placeholder="e.g., CVE-2024-1234 or CVE-2021-44228, CVE-2022-22965">
+                    <p class="hp-feed-hint"><button type="button" class="hp-link-btn" id="cve-browse">Browse the last 30 days</button> of CVEs, with CISA's known exploited</p>
+                    <!-- Recent CVEs picker: archer.intelligence.cve_feed via /api/cves/recent (static/js/index.js) -->
+                    <dialog class="cve-picker" id="cve-picker" aria-labelledby="cve-picker-title">
+                      <div class="cvp-head">
+                        <div>
+                          <h2 id="cve-picker-title">Recent CVEs</h2>
+                          <p class="cvp-sub" id="cvp-sub">The last 30 days from the NVD, with CISA's Known Exploited Vulnerabilities. Updated daily.</p>
+                        </div>
+                        <button type="button" class="cvp-close" id="cvp-close" aria-label="Close">&times;</button>
+                      </div>
+                      <div class="cvp-controls">
+                        <input type="search" class="form-input cvp-search" id="cvp-search" placeholder="Search an ID, a product or a phrase: fortios, remote code execution" aria-label="Search recent CVEs">
+                        <div class="cvp-filters" role="group" aria-label="Filters">
+                          <label class="cvp-chip"><input type="checkbox" id="cvp-kev"> Exploited (KEV)</label>
+                          <label class="cvp-chip" id="cvp-stack-chip"><input type="checkbox" id="cvp-stack"> My technology stack</label>
+                          <label class="cvp-chip"><input type="checkbox" id="cvp-high"> CVSS 7+</label>
+                        </div>
+                      </div>
+                      <p class="cvp-count" id="cvp-count" aria-live="polite"></p>
+                      <ul class="cvp-list" id="cvp-list"></ul>
+                      <button type="button" class="cvp-more" id="cvp-more" hidden>Show more</button>
+                      <div class="cvp-foot">
+                        <span id="cvp-selected"></span>
+                        <button type="button" class="cvp-done" id="cvp-done">Done</button>
+                      </div>
+                    </dialog>
                   </div>
                   <!-- Right: ATT&CK Technique IDs -->
-                  <div style="padding-left:20px;opacity:0.6;pointer-events:none;">
-                    <label for="technique_input" class="form-label" style="color:#9ca3af;margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline;">
-                      <span style="background:#6b7280;color:white;padding:3px 10px;border-radius:10px;font-size:0.75em;font-weight:600;letter-spacing:0.5px;white-space:nowrap;">COMING SOON</span>
-                      <span>…&thinsp;<strong style="color:#9ca3af;">ATT&amp;CK Technique IDs</strong></span>
+                  <div style="padding-left:20px;">
+                    <label for="technique_input" class="form-label" style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline;">
+                      <span>Generate queries based on</span>
+                      <span>…&thinsp;<strong>ATT&amp;CK Technique IDs</strong></span>
                     </label>
                     <input type="text" name="technique_ids" id="technique_input" class="form-input"
-                           placeholder="e.g., T1003, T1021.001, T1078" disabled>
+                           placeholder="e.g., T1003, T1021.001, T1078">
+                    <p class="hp-feed-hint">Across every group that uses them, from ATT&amp;CK's procedure examples</p>
                   </div>
                 </div>
               </div>
@@ -1032,17 +1059,15 @@
                 });
                 techIds.sort();
 
-                // Enable the technique input (remove COMING SOON lock)
-                var techWrap = document.getElementById('technique_input').parentElement;
-                techWrap.style.opacity = '1';
-                techWrap.style.pointerEvents = 'auto';
+                // Clear the group and CVE fields so the form uses the technique path
+                ['group_name_input', 'cve_input'].forEach(function (id) {
+                  var other = document.getElementById(id);
+                  if (other) other.value = '';
+                });
                 var techInp = document.getElementById('technique_input');
                 techInp.disabled = false;
                 techInp.value = techIds.join(', ');
-
-                // Clear group name so the form uses technique path
-                var groupInp = document.getElementById('group_name_input');
-                if (groupInp) groupInp.value = '';
+                techInp.dispatchEvent(new Event('input', { bubbles: true }));  // the other two fields follow
 
                 switchToHuntTab();
 
@@ -1976,36 +2001,9 @@
         const cveInput = document.getElementById('cve_input');
 
         if (cveInput) {
-            cveInput.addEventListener('input', function(e) {
-                let value = e.target.value;
-
-                // Split by comma to handle multiple CVEs
-                let cves = value.split(',').map(cve => cve.trim());
-                let validatedCves = [];
-
-                for (let cve of cves) {
-                    // Limit each CVE to 14 characters
-                    if (cve.length > 14) {
-                        cve = cve.substring(0, 14);
-                    }
-                    validatedCves.push(cve);
-                }
-
-                // Reconstruct the value
-                let newValue = validatedCves.join(', ');
-
-                // Only update if changed to avoid cursor jumping
-                if (newValue !== value) {
-                    const cursorPos = e.target.selectionStart;
-                    e.target.value = newValue;
-                    // Try to maintain cursor position
-                    e.target.setSelectionRange(cursorPos, cursorPos);
-                }
-            });
-
-            // Add pattern validation
-            cveInput.setAttribute('pattern', '(CVE-20\\d{2}-\\d{4,5})(\\s*,\\s*CVE-20\\d{2}-\\d{4,5})*');
-            cveInput.setAttribute('title', 'Enter CVE ID(s) in format CVE-20XX-XXXX (max 14 chars each). Multiple CVEs separated by commas.');
+            // A CVE's number has four digits or more: CVE-2026-109619
+            cveInput.setAttribute('pattern', '\\s*(CVE-20\\d{2}-\\d{4,})(\\s*,\\s*CVE-20\\d{2}-\\d{4,})*\\s*');
+            cveInput.setAttribute('title', 'CVE IDs in the form CVE-20YY-NNNN (four digits or more), separated by commas.');
         }
     </script>
 
@@ -2069,7 +2067,12 @@
                 const pane = f.closest('.tab-pane');
                 if (pane.classList.contains('active') || !width) return f.offsetHeight;
                 const saved = pane.style.cssText;
-                pane.style.cssText = saved + ';display:block;position:absolute;visibility:hidden;left:-99999px;width:' + width + 'px';
+                const hide = ';display:block;position:absolute;visibility:hidden;left:-99999px;width:';
+                pane.style.cssText = saved + hide + width + 'px';
+                // Taken out of the flow, the pane can come out narrower than asked (1118 for 1177),
+                // and a narrower pane wraps an option onto another line: correct by the difference
+                const got = pane.getBoundingClientRect().width;
+                if (got && Math.abs(got - width) > 0.5) pane.style.cssText = saved + hide + (2 * width - got) + 'px';
                 const h = f.offsetHeight;
                 pane.style.cssText = saved;
                 return h;

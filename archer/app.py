@@ -10063,8 +10063,9 @@ def api_feed(request: Request, archer_session: Optional[str] = Cookie(None)):
 
 
 @app.get("/api/cves/recent")
-def api_recent_cves(request: Request, kev: bool = False, archer_session: Optional[str] = Cookie(None)):
-    """The last 30 days of CVEs, newest first, marked when they name a product in the user's stack."""
+def api_recent_cves(request: Request, q: str = "", kev: bool = False, stack: bool = False, min_score: float = 0,
+                    offset: int = 0, limit: int = 50, archer_session: Optional[str] = Cookie(None)):
+    """The Hunt page's recent-CVE picker: the last 30 days, newest first, filtered (archer.intelligence.cve_feed.recent)."""
     from archer.intelligence import cve_feed
 
     auth_result = require_auth(request, archer_session)
@@ -10072,8 +10073,10 @@ def api_recent_cves(request: Request, kev: bool = False, archer_session: Optiona
         return JSONResponse({"error": "Not authenticated"}, status_code=401)
     user, db = auth_result
     db.close()
-    return {"cves": cve_feed.recent(_user_stack(user), kev_only=kev), "status": cve_feed.status(),
-            "window_days": cve_feed.WINDOW_DAYS}
+    chosen = _user_stack(user)
+    found = cve_feed.recent(chosen, q=q[:200], kev_only=kev, stack_only=stack, min_score=min_score,
+                            offset=max(0, offset), limit=min(max(1, limit), 200))
+    return {**found, "status": cve_feed.status(), "window_days": cve_feed.WINDOW_DAYS, "has_stack": bool(chosen)}
 
 
 @app.get("/api/feed/search")

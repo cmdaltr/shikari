@@ -1,10 +1,12 @@
 """
-Recent CVEs: the last WINDOW_DAYS days of NVD, with CISA's Known Exploited Vulnerabilities
-(KEV), cached in data/feed/cves.json. A recent CVE is the one worth hunting: the patch may
-not be out, or not applied yet.
+Recent CVEs: the last WINDOW_DAYS days of NVD, marked from CISA's Known Exploited
+Vulnerabilities (KEV), cached in data/feed/cves.json. A recent CVE is the one worth
+hunting: the patch may not be out, or not applied yet.
 
-- Kept: published in the window, or added to KEV in it (KEV often adds an old CVE when
-  exploitation starts), or hunted (its results still point at it). The rest is dropped.
+- Kept: published in the window with an ID from the window's year (in January, December's
+  too), or hunted (its results still point at it; the picker doesn't list it once it's
+  older). An ID's year is when it was reserved: CVE-2013-10076, published this month, is a
+  2013 Perl bug a backlog has only now reached. The rest is dropped, KEV or not.
 - Refresh: the first fills the window by publication date; after that, what NVD modified
   since the last refresh, since NVD often adds a CVE's products (CPEs) days after it's
   published and the technology-stack match needs them. Runs when Archer starts and every
@@ -75,11 +77,26 @@ def _save(data: Dict) -> None:
     os.replace(tmp, CACHE_PATH)
 
 
+def products(cve: Dict) -> List[str]:
+    """
+    The technology-stack products a CVE affects: from its CPEs, or, while NVD hasn't analysed
+    it yet (most CVEs of the last few weeks have no CPEs), the products its description names.
+    """
+    from archer.intelligence.tech_stack import cpe_products, products_named
+
+    return cpe_products(cve.get("cpes") or []) or products_named(cve.get("description") or "")
+
+
 def _trim(cve: Dict) -> Dict:
     """What Archer reads: no CVSS v2 (NVD stopped scoring it in 2022), capped references and CPEs."""
-    return {**{k: v for k, v in cve.items() if k != "cvss_v2"},
+    kept = {**{k: v for k, v in cve.items() if k != "cvss_v2"},
             "references": (cve.get("references") or [])[:KEEP_REFERENCES],
             "cpes": (cve.get("cpes") or [])[:KEEP_CPES]}
+    return {**kept, "products": products(kept)}  # stored: matching 17,000 per request takes seconds
+
+
+def _score(cve: Dict) -> float:
+    return float(((cve.get("cvss_v3") or {}).get("score")) or 0)
 
 
 def _pace() -> float:
@@ -124,10 +141,18 @@ def _kev() -> Dict[str, Dict]:
             for v in r.json().get("vulnerabilities") or [] if v.get("cveID")}
 
 
+def _cutoff() -> str:
+    return (_now() - timedelta(days=WINDOW_DAYS)).isoformat()[:19]
+
+
+def _recent(cve: Dict, cutoff: str) -> bool:
+    """Published since cutoff, with an ID reserved no earlier than cutoff's year."""
+    year = (str(cve.get("cve_id") or "").split("-") + ["", ""])[1]
+    return (cve.get("published") or "") >= cutoff and year >= cutoff[:4]
+
+
 def _in_window(cve: Dict, cutoff: str, hunted: set) -> bool:
-    kev = cve.get("kev") or {}
-    return ((cve.get("published") or "") >= cutoff or (kev.get("date_added") or "") >= cutoff[:10]
-            or cve.get("cve_id") in hunted)
+    return _recent(cve, cutoff) or cve.get("cve_id") in hunted
 
 
 def refresh(stacks: Callable[[], Iterable[Iterable[str]]] = lambda: [], research: bool = True) -> Dict:
@@ -171,21 +196,14 @@ def refresh(stacks: Callable[[], Iterable[Iterable[str]]] = lambda: [], research
                 _commit(cves, hunted, pending={**pending, "index": next_index})
 
         found = _nvd(pending["params"], start=pending["index"], on_page=keep)
+        for cid, c in cves.items():  # cached before products were stored
+            if "products" not in c:
+                cves[cid] = {**c, "products": products(c)}
 
         kev = _kev()
         for cid, entry in kev.items():
             if cid in cves:
                 cves[cid]["kev"] = entry
-        # Old CVEs KEV added in the window: their NVD records, one by one
-        for cid, entry in kev.items():
-            if (entry.get("date_added") or "") >= start.date().isoformat() and cid not in cves:
-                time.sleep(_pace())
-                try:
-                    record = _nvd({"cveId": cid})
-                except requests.RequestException:
-                    continue
-                if record:
-                    cves[cid] = {**record[0], "kev": entry}
 
         cutoff = start.isoformat()[:19]
         cves = _commit(cves, hunted, last_refresh=now.isoformat(), cutoff=cutoff)
@@ -219,17 +237,15 @@ def _commit(cves: Dict, hunted: set, pending: Optional[Dict] = None, last_refres
 
 
 def wanted(cves: Dict[str, Dict], stacks: Iterable[Iterable[str]]) -> List[str]:
-    """The CVEs to research in advance: KEV first, then those naming a stack product; newest first."""
-    from archer.intelligence.tech_stack import cpe_products
-
-    products = {p for stack in stacks for p in stack}
-    picked = []
-    for cid, c in sorted(cves.items(), key=lambda kv: kv[1].get("published") or "", reverse=True):
-        if c.get("kev"):
-            picked.insert(sum(bool(cves[p].get("kev")) for p in picked), cid)
-        elif products and set(cpe_products(c.get("cpes") or [])) & products:
-            picked.append(cid)
-    return picked
+    """
+    The CVEs to research in advance: KEV, newest first; then those affecting a stack product,
+    highest CVSS first (a stack with Linux has some 1,700 kernel CVEs a month, mostly unscored).
+    """
+    stack = {p for s in stacks for p in s}
+    newest = sorted(cves.items(), key=lambda kv: kv[1].get("published") or "", reverse=True)
+    kev = [cid for cid, c in newest if c.get("kev")]
+    on_stack = [cid for cid, c in newest if not c.get("kev") and stack & set(c.get("products") or products(c))]
+    return kev + sorted(on_stack, key=lambda cid: _score(cves[cid]), reverse=True)
 
 
 def preresearch(cves: Dict[str, Dict], stacks: Iterable[Iterable[str]], limit: int = PRERESEARCH_MAX) -> int:
@@ -265,21 +281,36 @@ def mark_hunted(cve_ids: Iterable[str]) -> None:
         _save(data)
 
 
-def recent(stack: Iterable[str] = (), kev_only: bool = False, limit: int = 200) -> List[Dict]:
-    """The window's CVEs, newest first, each with whether it names a product in the stack."""
-    from archer.intelligence.tech_stack import cpe_products
+def recent(stack: Iterable[str] = (), q: str = "", kev_only: bool = False, stack_only: bool = False,
+           min_score: float = 0, offset: int = 0, limit: int = 50) -> Dict:
+    """
+    The Hunt page's picker: the window's CVEs, newest first, filtered by text (ID, description,
+    product), KEV, the user's stack and CVSS. Each says whether it's in the stack and whether
+    it has been researched already (its hunt starts at once).
+    """
+    from archer.intelligence.cve_hunter import CVEHunter
+    from archer.intelligence.tech_stack import label
 
-    stack = set(stack)
-    out = []
-    for c in sorted((_load().get("cves") or {}).values(), key=lambda c: c.get("published") or "", reverse=True):
-        if kev_only and not c.get("kev"):
+    stack, words, cutoff = set(stack), [w for w in q.lower().split() if w], _cutoff()
+    rows = []
+    for c in (_load().get("cves") or {}).values():
+        if not _recent(c, cutoff):  # a hunted CVE kept for its results
             continue
-        on_stack = bool(stack & set(cpe_products(c.get("cpes") or [])))
-        out.append({k: c.get(k) for k in ("cve_id", "published", "description", "cvss_v3", "kev")}
-                   | {"on_stack": on_stack})
-        if len(out) >= limit:
-            break
-    return out
+        hits = stack & set(c.get("products") or [])
+        if (kev_only and not c.get("kev")) or (stack_only and not hits) or _score(c) < min_score:
+            continue
+        text = f"{c.get('cve_id', '')} {c.get('description', '')} {' '.join(c.get('products') or [])}".lower()
+        if words and not all(w in text for w in words):
+            continue
+        rows.append((c, hits))
+    rows.sort(key=lambda r: r[0].get("published") or "", reverse=True)
+    cache_dir = CVEHunter.cache_location()
+    page = [{k: c.get(k) for k in ("cve_id", "published", "description", "cvss_v3", "kev")}
+            | {"products": [label(p) for p in c.get("products") or []][:4],
+               "on_stack": [label(p) for p in hits],
+               "researched": os.path.exists(os.path.join(cache_dir, f"{c.get('cve_id')}.json"))}
+            for c, hits in rows[offset:offset + limit]]
+    return {"cves": page, "total": len(rows), "offset": offset, "limit": limit}
 
 
 def status() -> Dict:

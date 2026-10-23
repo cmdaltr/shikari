@@ -12,7 +12,11 @@ When you've set a [technology stack](16-profile-and-settings.md#technology-stack
 
 ## CVE
 
-Enter one CVE or several, separated by commas: `CVE-2024-3400, CVE-2021-44228`. Each must look like `CVE-20YY-NNNN`. A CVE from the last 30 days is read from Archer's recent-CVE cache, and one in CISA's Known Exploited Vulnerabilities or naming a product in your technology stack has usually been researched already, so the hunt starts at once. Archer reads the CVE's record from the NVD, the advisories and write-ups it links to, and the READMEs of public proof-of-concept exploits on GitHub. It builds three kinds of query:
+Enter one CVE or several, separated by commas: `CVE-2024-3400, CVE-2021-44228`. Each must look like `CVE-20YY-NNNN`. A CVE from the last 30 days is read from Archer's recent-CVE cache, and one in CISA's Known Exploited Vulnerabilities or naming a product in your technology stack has usually been researched already, so the hunt starts at once.
+
+**Browse the last 30 days** under the field lists the CVEs published in that time with an ID from this year (an older ID published now, such as CVE-2013-10076, is a backlog reaching an old bug), newest first: search by ID, product or phrase, and filter to **Exploited (KEV)**, **My technology stack** or **CVSS 7+**. Each shows its CVSS score (or *Not scored yet*: NVD analyses new CVEs days or weeks after they're published), whether it's in KEV and used by ransomware, the stack products it affects, and **Researched** when its hunt will start at once. Picking a CVE adds it to the field; picking it again takes it out. NVD hasn't listed the affected products for most CVEs of the last few weeks, so for those the products are the ones the description names.
+
+Archer reads the CVE's record from the NVD, the advisories and write-ups it links to, and the READMEs of public proof-of-concept exploits on GitHub. It builds three kinds of query:
 
 | Query | From | What it matches |
 |---|---|---|
@@ -24,7 +28,7 @@ For an appliance (PAN-OS, Ivanti, Citrix) no EDR runs where the exploit lands, s
 
 ## ATT&CK techniques
 
-Marked **Coming soon** in the page. The same hunt is available now from the console (`hunt/technique`) and the API: see [Console, API and MCP](17-console-api-mcp.md). It hunts the techniques across every group that uses them.
+Enter technique IDs separated by commas: `T1003, T1021.001, T1078`. Archer hunts each technique across every group that uses it, building queries from the indicators in ATT&CK's procedure examples; a parent technique (`T1003`) also takes its sub-techniques' examples, since its own are often vague. A **Research** bar shows the ATT&CK lookups before detections are built. The same hunt runs from the console (`hunt/technique`) and the API: see [Console, API and MCP](17-console-api-mcp.md). On a group's page, **Hunt techniques** fills this field with the group's techniques.
 
 ## Options
 

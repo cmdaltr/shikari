@@ -32,6 +32,13 @@ class CVEHunter:
         self.cache_dir = CVE_CACHE_DIR
         os.makedirs(self.cache_dir, exist_ok=True)
 
+    @staticmethod
+    def cache_location() -> str:
+        """Where researched CVEs are cached, one JSON file each."""
+        from ..config import CVE_CACHE_DIR
+
+        return CVE_CACHE_DIR
+
     # The steps research_cve reports to on_step, for the progress page's Research card
     STEPS = ("Reading the NVD record", "Searching for proofs of concept", "Mapping to ATT&CK",
              "Reading the advisories and write-ups", "Reading the exploit requests", "Drafting queries")
