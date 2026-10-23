@@ -462,6 +462,7 @@ body, html {
   transition: opacity .3s;
 }
 .pg-card.correlation { --pg-accent: #1565c0; }
+.pg-card.research { --pg-accent: #6a1b9a; }
 .pg-card.opening { --pg-accent: #C53030; }
 .pg-nothing { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,.45); }
 .pg-nothing[hidden] { display: none; }
@@ -515,6 +516,7 @@ body, html {
 [data-theme="dark"] .pg-card { background: var(--bg-secondary); box-shadow: 0 2px 8px var(--shadow); --pg-track: #2a2f35; }
 [data-theme="dark"] .pg-card.detection { --pg-accent: #4caf50; }
 [data-theme="dark"] .pg-card.correlation { --pg-accent: #42a5f5; }
+[data-theme="dark"] .pg-card.research { --pg-accent: #ba68c8; }
 [data-theme="dark"] .pg-title, [data-theme="dark"] .pg-pct { color: var(--text-primary, #e8e8e8); }
 [data-theme="dark"] .pg-count { color: var(--text-secondary, #b0b0b0); }
 [data-theme="dark"] .pg-badge { background: #2a2f35; color: #9aa0a6; }
@@ -627,7 +629,28 @@ body, html {
       </div>
     </div>
 
-    <!-- Progress: detections, then correlations. Driven by static/js/progress.js -->
+    <!-- Progress: research (CVE and technique runs), detections, then correlations. Driven by static/js/progress.js -->
+    <section class="pg-card research" id="pg-research" data-state="waiting" hidden>
+      <div class="pg-head">
+        <h3 class="pg-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Research
+        </h3>
+        <span class="pg-badge">Waiting</span>
+      </div>
+      <div class="pg-figures">
+        <span class="pg-pct">0%</span>
+        <span class="pg-count"></span>
+      </div>
+      <div class="pg-track" role="progressbar" aria-label="Research" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="pg-fill"></div>
+      </div>
+      <div class="pg-foot">
+        <span class="pg-detail" aria-live="polite"></span>
+        <span class="pg-time"></span>
+      </div>
+    </section>
+
     <section class="pg-card detection" id="pg-detection" data-state="waiting">
       <div class="pg-head">
         <h3 class="pg-title">

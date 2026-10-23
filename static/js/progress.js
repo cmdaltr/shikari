@@ -30,12 +30,14 @@ const phaseStarted = {};   // phase -> ms timestamp, for the elapsed-time readou
 const phaseEnded = {};
 let detPctShown = 0;       // never let a bar go backwards between polls
 let corrPctShown = 0;
+let resPctShown = 0;
 
 function resetRun() {
   for (const k of Object.keys(phaseStarted)) delete phaseStarted[k];
   for (const k of Object.keys(phaseEnded)) delete phaseEnded[k];
   detPctShown = 0;
   corrPctShown = 0;
+  resPctShown = 0;
 }
 
 // The run just finished; the results page can switch to all runs
@@ -180,9 +182,11 @@ function render(p) {
     const err = document.createElement('span');
     err.className = 'pg-error';
     err.textContent = 'Error: ';
-    const failed = rank >= PHASES.indexOf('correlations') ? corr : det;
+    const res = card('research');
+    const failed = rank >= PHASES.indexOf('correlations') ? corr
+      : phase === 'preparing' && res && !res.el.hidden ? res : det;
     paint(failed, {
-      state: 'failed', pct: failed === det ? detPctShown : corrPctShown,
+      state: 'failed', pct: failed === det ? detPctShown : failed === corr ? corrPctShown : resPctShown,
       detail: [err, document.createTextNode(p.error || 'Processing failed. Check the server log or try again.')],
     });
     hideLoading();
@@ -197,9 +201,39 @@ function render(p) {
     return 'stop';
   }
 
+  // Research: a CVE or technique run looks things up before any detection is built
+  const res = card('research');
+  const resTotal = Number(p.research_total) || 0;
+  const researching = resTotal > 0 || /Research/.test(p.stage || '');
+  if (res) res.el.hidden = !researching;
+  const resDone = Math.min(Number(p.research_done) || 0, resTotal);
+  const stillResearching = researching && phase === 'preparing' && !(resTotal && resDone >= resTotal);
+  if (researching) {
+    if (stillResearching) {
+      const pct = resTotal ? Math.min(99, Math.floor((resDone / resTotal) * 100)) : 0;
+      resPctShown = Math.max(resPctShown, pct);
+      paint(res, {
+        state: 'active', indeterminate: !resTotal, pct: resPctShown,
+        count: resTotal ? `${fmt(resDone)} / ${fmt(resTotal)} steps` : '',
+        detail: [p.research_item ? strong(`${p.research_item}: `) : '', document.createTextNode(p.research_step || p.stage || 'Researching')].filter(Boolean),
+        time: timing('preparing', now, p),
+      });
+      hideLoading();
+    } else {
+      resPctShown = 100;
+      const found = [p.ttps_found != null ? `${fmt(p.ttps_found)} techniques` : '', p.iocs_found ? `${fmt(p.iocs_found)} indicators` : '']
+        .filter(Boolean).join(', ');
+      paint(res, {
+        state: 'done', pct: 100, count: resTotal ? `${fmt(resTotal)} / ${fmt(resTotal)} steps` : '',
+        detail: [strong('Complete'), document.createTextNode(found ? `: ${found}` : '')],
+        time: timing('preparing', now, p),
+      });
+    }
+  }
+
   // Detections
   if (phase === 'preparing') {
-    paint(det, {
+    paint(det, stillResearching ? { state: 'waiting', pct: 0, detail: 'Starts when the research is done' } : {
       state: 'active', indeterminate: true,
       detail: p.current_step || p.stage_label || (p.stage && p.stage !== 'queued' && p.stage !== 'init' ? p.stage : 'Collecting techniques'),
     });

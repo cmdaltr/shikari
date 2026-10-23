@@ -2986,9 +2986,19 @@ async def generate_cve(
             reference_sources = []
             reference_mentions = {}
             exploit, exploit_sources = {}, []
-            for cve in cve_ids:
-                # print(f"Researching {cve}...")
-                research = research_and_hunt(cve)
+            from archer.intelligence.cve_hunter import CVEHunter
+
+            # The Research card: each CVE's steps, then the sweeps and exploit detections
+            per_cve = len(CVEHunter.STEPS)
+            research_total = per_cve * len(cve_ids) + 2
+
+            def _research(done, label, item=None):
+                write_progress(group_name, {"research_total": research_total, "research_done": done,
+                                            "research_step": label, "research_item": item})
+
+            for n, cve in enumerate(cve_ids):
+                research = research_and_hunt(
+                    cve, on_step=lambda i, label, n=n, cve=cve: _research(n * per_cve + i, label, cve))
 
                 # Collect techniques
                 all_techniques.extend(research.get("techniques", []))
@@ -3013,6 +3023,7 @@ async def generate_cve(
             # For an appliance CVE (PAN-OS, Ivanti, Citrix) these are the detections there are.
             from archer.build.ioc_sweep import write_ioc_sweeps
 
+            _research(per_cve * len(cve_ids), "Building the IOC sweeps")
             source = "references for " + ", ".join(cve_ids)
             if reference_sources:
                 source += " (" + ", ".join(sorted({urlparse(u).netloc for u in reference_sources})) + ")"
@@ -3024,8 +3035,10 @@ async def generate_cve(
             # The exploit's own request, from the PoCs: the CVE-specific T1190 detection
             from archer.build.exploit_detection import write_exploit_detections
 
+            _research(per_cve * len(cve_ids) + 1, "Building the exploit request detections")
             exploits = write_exploit_detections(group_name, cve_ids, exploit, exploit_sources, GENERATE_DIR,
                                                 excluded_vendors=siem_args.get("excluded_vendors"))
+            _research(research_total, "Research complete")
             if exploits:
                 print(f"Exploit request detections: {', '.join(os.path.basename(p) for p in exploits)}")
 
@@ -3362,7 +3375,10 @@ async def hunt_technique(
             # Build manual_data by looking up each technique
             tactic_map = {}
 
-            for tech_id in technique_id_list:
+            for n, tech_id in enumerate(technique_id_list):
+                write_progress(group_name, {"research_total": len(technique_id_list), "research_done": n,
+                                            "research_step": "Looking up the technique in ATT&CK",
+                                            "research_item": tech_id})
                 tech_info = _get_technique_info(tech_id)
 
                 if not tech_info:
@@ -3373,6 +3389,9 @@ async def hunt_technique(
                     tactic = tech_info.get("tactic", "Unknown Tactic")
 
                 tactic_map.setdefault(tactic, []).extend(_technique_entries(tech_id, tech_info))
+
+            write_progress(group_name, {"research_done": len(technique_id_list), "research_step": "Research complete",
+                                        "research_item": None})
 
             # Convert tactic_map to manual_data format
             manual_data = []

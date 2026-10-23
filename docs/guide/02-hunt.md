@@ -44,7 +44,7 @@ After **Generate**, Archer asks whether to use AI for this hunt. **No** runs the
 
 ## What happens next
 
-The progress page shows detections and then correlations being built. When the run finishes, its [Results](06-results.md) page opens.
+The progress page shows detections and then correlations being built. A CVE or technique hunt first has a **Research** bar: for each CVE, the NVD record, proofs of concept, ATT&CK mapping, advisories and exploit requests, then the IOC sweeps; for techniques, each ATT&CK lookup. When the run finishes, its [Results](06-results.md) page opens.
 
 ## Limits
 

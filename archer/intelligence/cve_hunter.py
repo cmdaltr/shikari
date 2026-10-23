@@ -32,21 +32,29 @@ class CVEHunter:
         self.cache_dir = CVE_CACHE_DIR
         os.makedirs(self.cache_dir, exist_ok=True)
 
-    def research_cve(self, cve_id: str) -> Dict[str, Any]:
+    # The steps research_cve reports to on_step, for the progress page's Research card
+    STEPS = ("Reading the NVD record", "Searching for proofs of concept", "Mapping to ATT&CK",
+             "Reading the advisories and write-ups", "Reading the exploit requests", "Drafting queries")
+
+    def research_cve(self, cve_id: str, on_step=None) -> Dict[str, Any]:
         """
         Research a CVE from multiple sources.
 
         Args:
             cve_id: CVE identifier (e.g., "CVE-2024-1234")
+            on_step: called with (index, label) as each of STEPS starts; a cached CVE skips them
 
         Returns:
             Dictionary containing CVE details, PoCs, and techniques
         """
         cve_id = self._normalize_cve_id(cve_id)
 
+        step = on_step or (lambda i, label: None)
+
         # Check cache first
         cached = self._get_cached_research(cve_id)
         if cached:
+            step(len(self.STEPS) - 1, "Cached research")
             # Re-derived each time (no network): a cache written by an older extractor
             # still carries its guessed indicators
             cached["iocs"] = self._extract_iocs(cached)
@@ -80,9 +88,11 @@ class CVEHunter:
         }
 
         # 1. Get CVE details from NVD
+        step(0, self.STEPS[0])
         result["nvd_data"] = self._fetch_nvd_data(cve_id)
 
         # 2. Search for existing PoCs
+        step(1, self.STEPS[1])
         result["pocs"] = self._find_pocs(cve_id)
 
         # 3. If no PoCs found, generate synthetic PoC
@@ -96,12 +106,16 @@ class CVEHunter:
             })
 
         # 4. Analyze techniques and extract IOCs
+        step(2, self.STEPS[2])
         result["techniques"] = self._map_to_attack(result)
         result["iocs"] = self._extract_iocs(result)
+        step(3, self.STEPS[3])
         result["reference_iocs"] = self._reference_iocs(result["nvd_data"])
+        step(4, self.STEPS[4])
         result["exploit"] = self._exploit(result["nvd_data"], result["pocs"])
 
         # 5. Generate detection queries
+        step(5, self.STEPS[5])
         result["detection_queries"] = self._generate_detection_queries(result)
 
         # Cache results
@@ -680,15 +694,16 @@ Format as JSON with these keys: overview, prerequisites, steps, commands, iocs, 
             print(f"Error caching CVE research: {e}")
 
 
-def research_and_hunt(cve_id: str) -> Dict[str, Any]:
+def research_and_hunt(cve_id: str, on_step=None) -> Dict[str, Any]:
     """
     Main entry point for CVE hunting.
 
     Args:
         cve_id: CVE identifier
+        on_step: called with (index, label) as each research step starts (CVEHunter.STEPS)
 
     Returns:
         Complete research and detection package
     """
     hunter = CVEHunter()
-    return hunter.research_cve(cve_id)
+    return hunter.research_cve(cve_id, on_step=on_step)
