@@ -43,7 +43,7 @@
 .corr-flow-wrap { margin: 10px 0; }
 .corr-flow { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
 .corr-flow-step { display: inline-flex; align-items: center; gap: 8px; padding: 4px 14px 4px 4px; border: 1px solid #ddd; border-radius: 999px; background: #fff; font-size: .9em; font-weight: 600; color: #555; }
-.corr-flow-step.is-primary { border-color: #1976d2; color: #1976d2; }
+.corr-flow-step.is-own { border-color: #1976d2; color: #1976d2; }
 .corr-flow-step b { font-weight: 700; color: #2e7d32; }
 .corr-flow-emoji { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: 1px solid; border-radius: 50%; font-size: 1em; }
 [data-theme="dark"] .corr-flow-step { background: var(--bg-secondary); border-color: var(--border-color, #444); color: var(--text-secondary); }
@@ -919,13 +919,15 @@
               {% endif %}
 
               {% if correlation.techniques_by_tactic %}
-              <!-- Tactics this correlation spans: one row of pills, ATT&CK column order (not a sequence) -->
+              <!-- Tactics this correlation spans: one row of pills, ATT&CK column order (not a sequence); hover names the techniques -->
               <div class="corr-flow-wrap">
                 {% set tactic_order = ['Reconnaissance', 'Resource Development', 'Initial Access', 'Execution', 'Persistence', 'Privilege Escalation', 'Stealth', 'Defense Impairment', 'Defense Evasion', 'Credential Access', 'Discovery', 'Lateral Movement', 'Collection', 'Command and Control', 'Exfiltration', 'Impact'] %}
                 <ol class="corr-flow" aria-label="Tactics this correlation spans">
                 {% for tactic in tactic_order if tactic in correlation.techniques_by_tactic %}
-                  {% set is_primary = correlation.primary_tactics and tactic in correlation.primary_tactics %}
-                  {% set n = correlation.techniques_by_tactic[tactic]|map('technique_key')|unique|list|length %}
+                  {# Highlighted: a tactic only one technique brings, which is what the correlation spans by #}
+                  {% set names = correlation.techniques_by_tactic[tactic]|unique_techniques %}
+                  {% set n = names|length %}
+                  {% set is_own = n == 1 and (correlation.techniques_involved|unique_techniques|length) > 1 %}
                   {% if tactic == 'Initial Access' %}
                           {% set flow_emoji = '🚪' %}
                           {% set flow_bg = '#E3F2FD' %}
@@ -991,7 +993,7 @@
                           {% set flow_bg = '#E3F2FD' %}
                           {% set flow_border = '#01579B' %}
                         {% endif %}
-                  <li class="corr-flow-step{% if is_primary %} is-primary{% endif %}" title="{{ tactic }}: {{ n }} technique{{ 's' if n != 1 }}{% if is_primary %} (primary){% endif %}">
+                  <li class="corr-flow-step{% if is_own %} is-own{% endif %}" title="{{ tactic }}: {{ names|join(', ') }}{% if is_own %} (only {{ names[0] }} brings this tactic){% elif n > 1 %} (shared){% endif %}">
                     <span class="corr-flow-emoji" style="background: {{ flow_bg }}; border-color: {{ flow_border }};">{{ flow_emoji }}</span>{{ tactic }}{% if n > 1 %} <b>{{ n }}</b>{% endif %}
                   </li>
                 {% endfor %}

@@ -862,9 +862,10 @@
                 {% endif %}
                 <div style="display: flex; gap: 8px; align-items: stretch; overflow-x: auto;">
                 {% for tactic in displayed_tactics %}
-                    <!-- Tactic Column (highlighted if primary) -->
-                    {% set is_primary = correlation.primary_tactics and tactic in correlation.primary_tactics %}
-                    <div style="flex: 1; min-width: {{ min_box_width }}; background: white; border: 2px solid {% if is_primary %}#1976d2{% else %}#ddd{% endif %}; border-radius: 4px; padding: 8px; position: relative; {% if is_primary %}box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);{% endif %}">
+                    <!-- Tactic Column (highlighted when only one technique brings it) -->
+                    {% set tactic_names = correlation.techniques_by_tactic[tactic]|unique_techniques %}
+                    {% set is_primary = tactic_names|length == 1 and (correlation.techniques_involved|unique_techniques|length) > 1 %}
+                    <div title="{{ tactic }}: {{ tactic_names|join(', ') }}{% if is_primary %} (only {{ tactic_names[0] }} brings this tactic){% endif %}" style="flex: 1; min-width: {{ min_box_width }}; background: white; border: 2px solid {% if is_primary %}#1976d2{% else %}#ddd{% endif %}; border-radius: 4px; padding: 8px; position: relative; {% if is_primary %}box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);{% endif %}">
                       <!-- Tactic Header -->
                       <div style="font-size: 0.75em; font-weight: 700; color: {% if is_primary %}#1976d2{% else %}#555{% endif %}; text-align: center; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
                         {% if tactic == 'Command and Control' or tactic == 'Command And Control' %}
@@ -963,7 +964,8 @@
                 {% endfor %}
                 </div>
                 <div style="margin-top: 8px; text-align: center; font-size: 0.75em; color: #666;">
-                  Attack chain progresses through {{ correlation.primary_tactics|length if correlation.primary_tactics else 0 }} primary tactic{{ 's' if (correlation.primary_tactics|length if correlation.primary_tactics else 0) > 1 else '' }}
+                  {% set own = [] %}{% for t in displayed_tactics if correlation.techniques_by_tactic[t]|unique_techniques|length == 1 %}{% set _ = own.append(t) %}{% endfor %}
+                  Highlighted: {{ own|length }} tactic{{ 's' if own|length != 1 }} only one technique brings
                 </div>
               </div>
               {% endif %}

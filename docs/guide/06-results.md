@@ -42,7 +42,7 @@ A correlation joins several detections into one query that fires when the steps 
 |---|---|
 | Relevance | How strongly the techniques belong together in this group's attacks (only correlations above the threshold in Profile → Config are kept) |
 | Time window | How close together the events must be |
-| Tactics | The stages of the attack it spans |
+| Tactics | Every tactic its techniques sit under (a technique can have several), in ATT&CK column order. A number is how many of its techniques share that tactic. Highlighted tactics are ones only one technique brings: what the correlation spans beyond a single technique. Hover a tactic to see its techniques |
 | Tables / Event types / Indexes | The data sources it needs |
 
 **Show Combined Query** shows the single chained query, and **Each technique's query** lists the queries it was built from. The chain at the top names each technique once.

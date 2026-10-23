@@ -684,6 +684,14 @@ def technique_key(name) -> str:
 templates.env.filters["technique_key"] = technique_key
 
 
+def unique_techniques(names) -> list:
+    """Each technique once, however it's spelled, in the order given."""
+    return list({technique_key(n): n for n in reversed(list(names or []))}.values())[::-1]
+
+
+templates.env.filters["unique_techniques"] = unique_techniques
+
+
 def check_osint_enriched(yaml_file, file_content=None):
     """
     Check if a YAML file has OSINT comparison/enhancement metadata.
