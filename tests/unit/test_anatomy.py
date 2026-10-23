@@ -39,16 +39,22 @@ def _items(card):
     return {sec["title"]: sec["items"] for sec in card["sections"]}
 
 
-def test_a_groups_anatomy_is_a_chain_of_grouped_cards(tmp_path):
+def test_a_groups_anatomy_branches_in_and_out_of_its_toolkit(tmp_path):
     view = anatomy.build_group("test spider", {"T1567", "T1003.001"}, _csv(tmp_path, ROWS))
     cards = _cards(view)
-    assert [c["id"] for c in view["nodes"]] == ["actor", "entry", "runs", "reaches"]
-    assert _items(cards["entry"]) == {"Exploits": ["CVE-2021-44228"]}
+    assert list(cards) == ["actor", "way:Exploit", "way:Phishing", "runs", "does", "service:Code and storage"]
+    assert cards["way:Exploit"]["sections"][0]["items"] == ["CVE-2021-44228"]
+    assert cards["way:Phishing"]["sub"] == "Lures"  # phished, nothing named
     assert _items(cards["runs"]) == {"Offensive frameworks": ["Empire"], "Credential stealers": ["Mimikatz"]}
-    assert _items(cards["reaches"]) == {"Cloud storage": ["Dropbox", "MEGA"]}
+    assert _items(cards["does"]) == {"Steals logins": ["Mimikatz"], "Takes data out": ["by hand"]}
+    assert " · ".join(l["text"] for l in cards["does"]["lines"][1:]) == "Steals logins · Takes data out"
+    assert cards["service:Code and storage"]["sections"][0]["items"] == ["Dropbox", "MEGA"]
     assert _items(cards["actor"]) == {"Campaigns": ["C0027"]}
-    # One step per stage, in order; no technique IDs anywhere a viewer reads
-    assert [(e["source"], e["target"]) for e in view["edges"]] == [("actor", "entry"), ("entry", "runs"), ("runs", "reaches")]
+    assert [(e["source"], e["target"]) for e in view["edges"]] == [
+        ("actor", "way:Exploit"), ("actor", "way:Phishing"), ("way:Exploit", "runs"), ("way:Phishing", "runs"),
+        ("runs", "does"), ("does", "service:Code and storage")]
+    # The fan into the toolkit is labelled once; no technique IDs anywhere a viewer reads
+    assert [e["label"] for e in view["edges"] if e["target"] == "runs"].count("Runs") == 1
     shown = json.dumps([[c["title"], c["sub"], c["sections"], c["lines"]] for c in view["nodes"]] +
                        [e["label"] for e in view["edges"]])
     assert not re.search(r"T\d{4}", shown)
@@ -57,18 +63,20 @@ def test_a_groups_anatomy_is_a_chain_of_grouped_cards(tmp_path):
 def test_a_step_is_detected_when_most_of_it_is(tmp_path):
     view = anatomy.build_group("test spider", {"T1567", "T1003.001"}, _csv(tmp_path, ROWS))
     steps = {e["target"]: e for e in view["edges"]}
-    assert steps["reaches"]["state"] == "gap"  # C2 over Dropbox undetected, exfiltration detected: 1 of 2
+    assert steps["service:Code and storage"]["state"] == "gap"  # C2 over Dropbox undetected, exfiltration detected
     assert (steps["runs"]["detected"], steps["runs"]["total"]) == (1, 3)
-    view = anatomy.build_group("test spider", {"T1567", "T1102", "T1003", "T1190"}, _csv(tmp_path, ROWS))
+    assert (steps["does"]["detected"], steps["does"]["total"]) == (2, 3)  # LSASS and exfiltration, not DCSync
+    assert view["stats"]["links"] == 5  # the fan into the toolkit counts once
+    view = anatomy.build_group("test spider", {"T1567", "T1102", "T1003", "T1190", "T1566"}, _csv(tmp_path, ROWS))
     assert all(e["state"] == "detected" for e in view["edges"])
 
 
-def test_a_service_they_get_in_through_is_not_repeated_where_they_reach(tmp_path):
+def test_a_service_they_get_in_through_is_not_repeated_where_they_go(tmp_path):
     rows = ROWS + [("T1078.004", "Cloud Accounts", "Initial Access", "Test Spider signed in to AWS."),
                    ("T1530", "Data from Cloud Storage", "Collection", "Test Spider stole data from AWS S3 buckets.")]
     cards = _cards(anatomy.build_group("test spider", set(), _csv(tmp_path, rows)))
-    assert _items(cards["entry"])["Signs in to"] == ["AWS"]
-    assert "Cloud tenants" not in _items(cards["reaches"])
+    assert cards["way:Credentials"]["sections"][0]["items"] == ["AWS"]
+    assert "service:Cloud" not in cards
 
 
 def test_tools_are_grouped_by_what_they_are():

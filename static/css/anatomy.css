@@ -48,8 +48,6 @@
 .an-edge:focus-visible .an-line, .an-edge.is-selected .an-line { stroke-width: 3.2; }
 .an-section.has-selection .an-node:not(.is-selected):not(.is-lit),
 .an-section.has-selection .an-edge:not(.is-lit) { opacity: .25; }
-.an-section.gaps-only .an-edge.is-detected,
-.an-section.gaps-only .an-edge.is-none { opacity: .12; }
 .an-edge:focus, .an-node:focus { outline: none; }
 
 .an-legend-edge { display: inline-block; width: 28px; height: 0; border-top: 3px dashed var(--an-none); }

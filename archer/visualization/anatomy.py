@@ -135,8 +135,10 @@ class _Chain:
         self.cards: List[Dict] = []
         self.links: Dict[tuple, Dict] = {}
 
-    def card(self, cid: str, kind: str, title: str, sub: str = "", sections=None, evidence=None, row: int = 0) -> Dict:
-        card = {"id": cid, "kind": kind, "title": title, "sub": sub, "row": row,
+    def card(self, cid: str, kind: str, title: str, sub: str = "", sections=None, evidence=None, row: int = 0,
+             col: Optional[int] = None) -> Dict:
+        """col places it in a column beside others (a group's ways in, its services); None, along the chain."""
+        card = {"id": cid, "kind": kind, "title": title, "sub": sub, "row": row, "col": col,
                 "sections": [s for s in sections or [] if s["items"]], "evidence": [e for e in evidence or [] if e][:6]}
         self.cards.append(card)
         return card
@@ -160,11 +162,52 @@ def _sections(grouped: Dict[str, List[str]], order: List[str]) -> List[Dict]:
             for t in sorted(grouped, key=lambda t: (order.index(t) if t in order else 99, t))]
 
 
-ENTRY = ("Exploits", "Phishes via", "Signs in to", "Remote access")
+# Ways in, side by side: (node, icon, the step into it, technique prefixes never shown, when nothing is named)
+WAYS_IN = [
+    ("Exploit", "cve", "Exploits", ("T1190", "T1203", "T1189", "T1195", "T1211"), "Public-facing apps"),
+    ("Phishing", "phish", "Phishes", ("T1566", "T1598", "T1534"), "Lures"),
+    ("Credentials", "key", "Signs in", ("T1078", "T1133", "T1199", "T1021.007"), "Valid accounts"),
+]
+# Services, side by side: (node, service groups in it)
+SERVICE_BRANCHES = [
+    ("Cloud", ("Cloud tenants", "Hosting", "Tunnels and anonymisers")),
+    ("Messaging", ("Messaging",)),
+    ("Code and storage", ("Code and paste sites", "Cloud storage")),
+]
+# A remote-access product (AnyDesk, Atera) the group runs is part of its toolkit, not a service it reaches
+_TOOLKIT_SERVICES = {"Remote access"}
+
+# What they do once in, in plain words: (action, technique prefixes, never shown). Listed by how
+# much of it the reporting describes, not in an order: an intrusion isn't a sequence of stages
+ACTIONS = [
+    ("Steals logins", ("T1003", "T1555", "T1552", "T1110", "T1558", "T1539", "T1056", "T1528", "T1606",
+                       "T1111", "T1621", "T1556", "T1212")),
+    ("Moves across the network", ("T1021", "T1570", "T1550", "T1563", "T1210", "T1080", "T1072")),
+    ("Gains admin rights", ("T1068", "T1548", "T1134", "T1484")),
+    ("Keeps access", ("T1053", "T1547", "T1543", "T1136", "T1098", "T1505", "T1546", "T1574", "T1037", "T1197",
+                      "T1112", "T1137", "T1542")),
+    ("Hides its tracks", ("T1070", "T1562", "T1027", "T1036", "T1218", "T1564", "T1140", "T1055", "T1620", "T1497",
+                          "T1480", "T1014", "T1006", "T1222", "T1553", "T1685")),
+    ("Looks around", ("T1082", "T1083", "T1087", "T1018", "T1016", "T1069", "T1057", "T1046", "T1135", "T1482",
+                      "T1012", "T1033", "T1049", "T1007", "T1518", "T1580", "T1538", "T1526", "T1613", "T1201",
+                      "T1124", "T1120", "T1614", "T1615", "T1652", "T1654", "T1619")),
+    ("Gathers data", ("T1005", "T1039", "T1213", "T1114", "T1530", "T1560", "T1074", "T1119", "T1115", "T1113",
+                      "T1025", "T1123", "T1125", "T1185", "T1602")),
+    ("Takes data out", ("T1567", "T1041", "T1048", "T1030", "T1537", "T1020", "T1029", "T1052")),
+    ("Encrypts or destroys", ("T1486", "T1490", "T1485", "T1561", "T1489", "T1529", "T1491", "T1565", "T1499")),
+    ("Extorts", ("T1657",)),
+]
+
+
+def action(tid: str) -> Optional[str]:
+    return next((a for a, prefixes in ACTIONS if _has([tid], prefixes)), None)
 
 
 def build_group(group_name: str, detected: Set[str], csv_path: str = _PROCEDURES_CSV) -> Optional[Dict]:
-    """A group's anatomy from ATT&CK's procedures: actor -> gets in by -> runs -> reaches. None without procedures."""
+    """
+    A group's anatomy from ATT&CK's procedures: actor -> way in -> toolkit -> actions -> services.
+    None without procedures.
+    """
     try:
         rows = _attributed_rows(os.path.abspath(csv_path), os.path.getmtime(csv_path)).get(group_name.lower(), [])
     except OSError:
@@ -185,54 +228,96 @@ def build_group(group_name: str, detected: Set[str], csv_path: str = _PROCEDURES
                 campaigns.append(campaign)
     groups = {name: tool_group(name, tids) for name, tids in software.items()}
 
-    entry, tools, reached = defaultdict(list), defaultdict(list), defaultdict(list)
-    evidence = defaultdict(list)
-    steps = []  # (stage, behaviour, detected, text)
+    ways = {w[0]: [] for w in WAYS_IN}  # node -> CVEs or services named
+    tools, actions, branches = defaultdict(list), defaultdict(list), {b[0]: [] for b in SERVICE_BRANCHES}
+    weight, verbs = defaultdict(int), defaultdict(lambda: defaultdict(int))
+    branch_of = {group: b for b, groups in SERVICE_BRANCHES for group in groups}
+    steps = []  # (node, behaviour, detected, text)
     for row in rows:
         tid = (row.get("technique_id") or "").upper()
         text = _text(row.get("procedure_example") or "")
         hit = covered(tid, detected)
         m = _LABEL.match(row.get("procedure_example") or "")
         tool = m.group(2).partition(" via ")[0] if m and m.group(1) == "Software" else None
+        way = next((w for w, _, _, prefixes, _ in WAYS_IN if _has([tid], prefixes)), None)
+        if way:
+            steps.append((way, tid, hit, text))
         if tool:
             if tool not in tools[groups[tool]]:
                 tools[groups[tool]].append(tool)
             steps.append(("runs", tid, hit, text))
+        done = action(tid)
+        if done:  # what they do, and with what: the tool, or the group's own hands
+            who = tool or "by hand"
+            if who not in actions[done]:
+                actions[done].append(who)
+            weight[done] += 1
+            steps.append(("does", tid, hit, text))
         for cve in dict.fromkeys(c.upper() for c in _CVE.findall(text)):
-            if cve not in entry["Exploits"]:
-                entry["Exploits"].append(cve)
-            steps.append(("entry", tid, hit, text))
+            if cve not in ways["Exploit"]:
+                ways["Exploit"].append(cve)
+            if way != "Exploit":
+                steps.append(("Exploit", tid, hit, text))
         for group, name, rx in _SERVICES:
             if not rx.search(text) or name == tool or name in software:
                 continue
-            if any(name in names for names in entry.values()):  # shown once, where they get in
-                continue
-            action = verb(tid)
-            stage, bucket, key = ("entry", entry, action) if action in ENTRY else ("reaches", reached, group)
-            if name not in bucket[key]:
-                bucket[key].append(name)
-            steps.append((stage, tid, hit, text))
+            if way in ("Phishing", "Credentials"):
+                if name not in ways[way]:
+                    ways[way].append(name)
+            elif group in _TOOLKIT_SERVICES:
+                bucket = tools["Remote access and tunnels"]
+                if name not in bucket:
+                    bucket.append(name)
+                steps.append(("runs", tid, hit, text))
+            elif not any(name in named for named in ways.values()):  # shown once, where they get in
+                branch = branch_of[group]
+                if name not in branches[branch]:
+                    branches[branch].append(name)
+                verbs[branch][verb(tid)] += 1
+                steps.append((branch, tid, hit, text))
 
     chain = _Chain()
     sub = " · ".join(x for x in (rows[0].get("group_sw_id"),
                                  f"{len(campaigns)} campaign{'s' if len(campaigns) != 1 else ''}" if campaigns else "") if x)
     chain.card("actor", "actor", rows[0].get("group_sw_name") or group_name, sub,
-               [{"title": "Campaigns", "items": campaigns}])  # in the panel: the ID and count say enough
-    # (stage, icon, node, the step into it)
-    stages = [
-        ("entry", "door", "Way in", "Gets in by", _sections(entry, list(ENTRY))),
-        ("runs", "software", "Toolkit", "Runs", _sections(tools, TOOL_GROUPS)),
-        ("reaches", "service", "Services", "Reaches", _sections(reached, [g for g, _ in SERVICE_GROUPS])),
-    ]
-    previous = "actor"
-    for key, kind, title, step, sections in stages:
-        if not sections:
-            continue
-        mine = [s for s in steps if s[0] == key]
-        chain.card(key, kind, title, sections=sections, evidence=[t for *_, t in mine])
-        for _, tid, hit, text in mine:
-            chain.link(previous, key, step, tid, hit, text)
-        previous = key
+               [{"title": "Campaigns", "items": campaigns}], col=0)  # in the panel: the ID and count say enough
+
+    def evidence(key):
+        return [t for k, *_, t in steps if k == key]
+
+    def link(src, dst, label, key):
+        for k, tid, hit, text in steps:
+            if k == key:
+                chain.link(src, dst, label, tid, hit, text)
+
+    ways_in = []
+    for way, icon, step, _, fallback in WAYS_IN:
+        if ways[way] or any(k == way for k, *_ in steps):
+            cid = "way:" + way
+            chain.card(cid, icon, way, "" if ways[way] else fallback,
+                       [{"title": way, "items": ways[way], "brief": True, "flat": True}], evidence(way), col=1)
+            link("actor", cid, step, way)
+            ways_in.append(cid)
+    previous = ways_in or ["actor"]
+    if tools:
+        chain.card("runs", "software", "Toolkit", sections=_sections(tools, TOOL_GROUPS), evidence=evidence("runs"), col=2)
+        for src in previous:
+            link(src, "runs", "Runs", "runs")
+        previous = ["runs"]
+    if actions:
+        ordered = [dict(sec, brief=False) for sec in _sections(actions, sorted(actions, key=lambda a: -weight[a]))]
+        chain.card("does", "action", "Actions", sections=ordered, evidence=evidence("does"), col=3)
+        for src in previous:
+            link(src, "does", "To", "does")
+        previous = ["does"]
+    for branch, groups_in in SERVICE_BRANCHES:
+        if branches[branch]:
+            cid = "service:" + branch
+            chain.card(cid, "service", branch, sections=[{"title": branch, "items": branches[branch], "brief": True,
+                                                          "flat": True}], evidence=evidence(branch), col=4)
+            top = max(verbs[branch], key=verbs[branch].get)
+            for src in previous:
+                link(src, cid, top, branch)
     return _finish(chain, kind="group")
 
 
@@ -340,10 +425,11 @@ MAX_PER_LINE = 6
 BRIEF_LINES = 4
 LINE = 16
 SHORT = {"Offensive frameworks": "Frameworks", "Credential stealers": "Stealers", "Backdoors and RATs": "RATs",
-         "Remote access and tunnels": "Tunnels", "Exfiltration tools": "Exfil", "Built-in tools": "Built-in",
+         "Remote access and tunnels": "Remote", "Exfiltration tools": "Exfil", "Built-in tools": "Built-in",
          "Cloud storage": "Storage", "Cloud tenants": "Cloud", "Code and paste sites": "Code sites",
          "Tunnels and anonymisers": "Tunnels", "Remote access": "Remote", "Phishes via": "Phishing",
-         "Signs in to": "Sign-in", "Web shells": "Web shells"}
+         "Signs in to": "Sign-in", "Web shells": "Web shells", "Moves across the network": "Moves around",
+         "Encrypts or destroys": "Encrypts"}
 
 
 def _jitter(key: str, spread: int) -> int:
@@ -364,12 +450,39 @@ def _line(head: str, items: List[str], chars: int) -> str:
     return text + (f" +{len(items) - shown}" if len(items) > shown else "")
 
 
+def _flow(words: List[str], chars: int, sep: str = " · ", most: int = BRIEF_LINES) -> List[str]:
+    """Phrases joined with sep into at most `most` lines, then "+N more"."""
+    lines, current, used = [], "", 0
+    for w in words:
+        w = w if len(w) <= chars else w[:chars - 1] + "…"
+        candidate = f"{current}{sep}{w}" if current else w
+        if len(candidate) <= chars or not current:
+            current, used = candidate, used + 1
+            continue
+        if len(lines) + 1 == most:
+            break
+        lines.append(current)
+        current, used = w, used + 1
+    lines.append(current)
+    if used < len(words):
+        lines.append(f"+{len(words) - used} more")
+    return lines
+
+
 def _lines(card: Dict, chars: int) -> List[Dict]:
     """What goes under the node: title, sub, then a line per group it holds."""
     out = [{"cls": "title", "text": card["title"] if len(card["title"]) <= chars else card["title"][:chars - 1] + "…"}]
     if card["sub"]:
         sub = card["sub"]
         out.append({"cls": "sub", "text": sub if len(sub) <= chars + 4 else sub[:chars + 3] + "…"})
+    if card.get("kind") == "action":  # the actions themselves, a few to a line; who does each is in the panel
+        for text in _flow([sec["title"] for sec in card["sections"]], chars):
+            out.append({"cls": "item", "text": text})
+        return out
+    flat = [sec for sec in card["sections"] if sec.get("flat")]
+    if flat:  # one list of names: a way in, a service branch
+        out += [{"cls": "item", "text": t} for t in _flow(flat[0]["items"], chars, ", ", most=2)]
+        return out
     brief = [sec for sec in card["sections"] if sec.get("brief")]
     single = len(brief) == 1 and not card["sub"]
     for sec in brief[:BRIEF_LINES]:
@@ -380,8 +493,29 @@ def _lines(card: Dict, chars: int) -> List[Dict]:
     return out
 
 
+def _columns(nodes: List[Dict]) -> int:
+    """Side-by-side nodes in columns (a group's ways in, its services), centred on the tallest; returns the height."""
+    cols = sorted({n["col"] for n in nodes})
+    slot = WIDTH / len(cols)
+    chars = int(min(34, (slot - 16) / 7))
+    for n in nodes:
+        n["lines"] = _lines(n, chars)
+    block = {id(n): 34 + 46 + len(n["lines"]) * LINE + 26 for n in nodes}
+    heights = {c: sum(block[id(n)] for n in nodes if n["col"] == c) for c in cols}
+    tallest = max(heights.values())
+    for i, c in enumerate(cols):
+        y = 10 + (tallest - heights[c]) / 2
+        for n in (n for n in nodes if n["col"] == c):
+            n["x"] = int(slot * (i + 0.5)) + _jitter(n["id"] + "x", 8)
+            n["y"] = int(y + 34) + _jitter(n["id"] + "y", 6)
+            y += block[id(n)]
+    return int(tallest + 20)
+
+
 def _finish(chain: _Chain, kind: str) -> Dict:
     nodes = chain.cards
+    if all(n.get("col") is not None for n in nodes):
+        return _links(chain, kind, _columns(nodes))
     rows = defaultdict(list)
     for n in nodes:
         rows[n["row"]].append(n)
@@ -401,12 +535,40 @@ def _finish(chain: _Chain, kind: str) -> Dict:
                 n["x"] = int(slot * (pos + 0.5)) + _jitter(n["id"] + "x", 8)
                 n["y"] = int(y + 34) + _jitter(n["id"] + "y", 9)
             y += 34 + 46 + max(len(n["lines"]) for n in line) * LINE + 40
+    return _links(chain, kind, int(y - 20))
+
+
+def _label_spot(p0, c1, c2, p3, label: str, boxes) -> tuple:
+    """Where along the curve its label sits clear of every node: the middle if it can, else the nearest clear spot."""
+    half = len(label) * 3.5 + 4
+
+    def at(t):
+        k = [(1 - t) ** 3, 3 * (1 - t) ** 2 * t, 3 * (1 - t) * t ** 2, t ** 3]
+        return (k[0] * p0[0] + k[1] * c1[0] + k[2] * c2[0] + k[3] * p3[0],
+                k[0] * p0[1] + k[1] * c1[1] + k[2] * c2[1] + k[3] * p3[1])
+
+    def overlap(x, y):
+        return sum(max(0, min(x + half, b[2]) - max(x - half, b[0])) * max(0, min(y + 8, b[3]) - max(y - 8, b[1]))
+                   for b in boxes)
+
+    # On the line if it can, else just above or below it; failing that, wherever it covers least
+    spots = [(x, y + dy) for dy in (0, -14, 14) for x, y in map(at, (0.5, 0.42, 0.58, 0.34, 0.66, 0.26, 0.74, 0.18, 0.82))]
+    return min(spots, key=lambda xy: (overlap(*xy) > 0, overlap(*xy)))
+
+
+def _links(chain: _Chain, kind: str, height: int) -> Dict:
+    """The links between placed nodes: bowed a little, round the end of a line, labelled once per fan."""
+    nodes = chain.cards
     by_id = {n["id"]: n for n in nodes}
+    # What a label mustn't sit on: each node's disc and the text under it
+    boxes = [(n["x"] - max(34, max(len(l["text"]) for l in n["lines"]) * 3.6), n["y"] - 34,
+              n["x"] + max(34, max(len(l["text"]) for l in n["lines"]) * 3.6), n["y"] + 40 + len(n["lines"]) * LINE)
+             for n in nodes]
 
     links = []
     for i, e in enumerate(chain.links.values()):
         s, t = by_id[e["source"]], by_id[e["target"]]
-        if abs(t["y"] - s["y"]) < 40:  # along the line, bowed a little up or down
+        if abs(t["y"] - s["y"]) < 40 or t.get("col") is not None:  # across, bowed a little up or down
             sign = 1 if t["x"] > s["x"] else -1
             sx, sy, tx, ty = s["x"] + 34 * sign, s["y"], t["x"] - 38 * sign, t["y"]
             bow = (12 + abs(_jitter(e["source"] + e["target"], 8))) * (1 if i % 2 else -1)
@@ -417,8 +579,7 @@ def _finish(chain: _Chain, kind: str) -> Dict:
             sx, sy, tx, ty = s["x"] + 34 * side, s["y"], t["x"] + 38 * side, t["y"]
             reach = 70 + _jitter(e["source"], 10)
             c1, c2 = (sx + reach * side, sy + 10), (tx + reach * side, ty - 10)
-        mx = 0.125 * sx + 0.375 * c1[0] + 0.375 * c2[0] + 0.125 * tx
-        my = 0.125 * sy + 0.375 * c1[1] + 0.375 * c2[1] + 0.125 * ty
+        mx, my = _label_spot((sx, sy), c1, c2, (tx, ty), e["label"], boxes)
         behaviours = e["behaviours"]
         hits = sum(behaviours.values())
         state = "none" if not behaviours else ("detected" if hits * 2 > len(behaviours) else "gap")
@@ -426,11 +587,23 @@ def _finish(chain: _Chain, kind: str) -> Dict:
             "source": e["source"], "target": e["target"], "label": e["label"], "state": state,
             "detected": hits, "total": len(behaviours), "evidence": e["evidence"], "covered_by": e["covered_by"],
             "path": f"M{sx:.0f},{sy:.0f} C{c1[0]:.0f},{c1[1]:.0f} {c2[0]:.0f},{c2[1]:.0f} {tx:.0f},{ty:.0f}",
-            "lx": int(mx), "ly": int(my) + 4,
+            "lx": int(mx), "ly": int(my),
         })
-    counted = [e for e in links if e["state"] != "none"]
+    # A fan with one label, in (three ways in, each "Runs" into the toolkit) or out, says it once, mid-fan
+    for end in ("target", "source"):
+        fans = defaultdict(list)
+        for e in links:
+            if e["label"]:
+                fans[(e[end], e["label"])].append(e)
+        for fan in fans.values():
+            fan.sort(key=lambda e: e["ly"])
+            for i, e in enumerate(fan):
+                if i != len(fan) // 2:
+                    e["label"] = ""
+    # A fan into one node carries the same behaviours on each link: count the step once
+    counted = list({e["target"]: e for e in links if e["state"] != "none"}.values())
     return {
-        "kind": kind, "width": WIDTH, "height": int(y - 20), "nodes": nodes, "edges": links,
+        "kind": kind, "width": WIDTH, "height": height, "nodes": nodes, "edges": links,
         "stats": {"links": len(counted), "detected": sum(e["state"] == "detected" for e in counted),
                   "gaps": sum(e["state"] == "gap" for e in counted)},
     }

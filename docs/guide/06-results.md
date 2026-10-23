@@ -9,6 +9,7 @@ Every hunt, report and company-profile run ends on a Results page: its detection
 | Section | What it shows |
 |---|---|
 | Threat briefing | Coverage (how many of the group's techniques you detect), the weakest stage of the attack, and the gaps to close first. Gaps are ranked by how early they come in the attack, then by how many correlations they're part of. Worked out without AI. **Write a summary with AI** adds an optional written summary using the Ask Archer provider |
+| Anatomy workflow | How the attack runs: ways in, toolkit, actions, where it goes; each step marked detected or not (below) |
 | Outside your technology stack | For a technique, CVE or report hunt: what you asked for that your [technology stack](16-profile-and-settings.md#technology-stack) doesn't have. It was generated anyway |
 | Techniques that produced nothing | Each technique the run couldn't build a detection for, and why (usually "no indicators in ATT&CK", or outside your technology stack) |
 | Metrics | Counts of detections, correlations, techniques and tactics, with an estimate of analyst time saved. The time and cost figures are estimates from fixed rates, not measurements |
@@ -17,7 +18,6 @@ Every hunt, report and company-profile run ends on a Results page: its detection
 | Correlations | Queries chained across techniques and tactics (below) |
 | Attack flow | The group's techniques laid out by tactic, marked detected or not |
 | IOC flow | For a report: its indicators in the order the intrusion used them |
-| Anatomy workflow | How the attack runs, as one line of nodes: way in, toolkit, services; each step marked detected or not (below) |
 | Validation | A four-step checklist to work through before deploying anything |
 
 ## Detection cards
@@ -95,13 +95,23 @@ The toolbar also filters by SIEM, hides undetected techniques, hides selected ca
 
 ## Anatomy workflow
 
-How the attack runs, as one line of nodes in the style of the DFIR Report's workflow diagrams, built without AI. It shows no ATT&CK technique IDs or tactics: the line is the operation, the detection cards carry the mapping.
+How the attack runs, in the style of the DFIR Report's workflow diagrams, built without AI. It shows no ATT&CK technique IDs or tactics: the diagram is the operation, the detection cards carry the mapping.
 
-For a group, from ATT&CK's procedures: the group → **gets in by** its **Way in** (the CVEs it exploits, the services it phishes through, signs in to or reaches remotely) → **runs** its **Toolkit** (grouped as frameworks, stealers, web shells, RATs, ransomware, tunnels, exfiltration tools, built-in tools) → **reaches** the **Services** its procedures name (grouped as storage, cloud, messaging, code sites, tunnels, remote access, hosting). Under each node, one short line per group; the rest is a click away.
+For a group, from ATT&CK's procedures, left to right:
+
+| Node | What it holds |
+|---|---|
+| The group | Its ATT&CK ID and how many campaigns |
+| **Exploit**, **Phishing**, **Credentials** | Its ways in, side by side: the CVEs it exploits; the services it phishes through; the accounts and remote access it signs in with (Azure, AWS, VPN) |
+| **Toolkit** | Its tools, grouped: frameworks, stealers, web shells, RATs, ransomware, remote access, exfiltration tools, built-in tools |
+| **Actions** | What it does once in, in plain words: steals logins, moves across the network, gains admin rights, keeps access, hides its tracks, looks around, gathers data, takes data out, encrypts or destroys, extorts. The ones the reporting describes most come first; it isn't an order. Who does each is in the click panel |
+| **Cloud**, **Messaging**, **Code and storage** | Where it goes, side by side: cloud tenants, hosting and tunnels; messaging apps; code and paste sites and cloud storage. Each link says what it does there (uploads to, beacons to, collects from) |
+
+A service it gets in through isn't repeated where it goes.
 
 For a CVE, from its research, one line per CVE: the attacker (or the ATT&CK group known to exploit it) → the public or named exploit → the CVE with its product and CVSS score → the worker process the code runs in → the shell it starts → the infrastructure the advisories name.
 
-A chain longer than six nodes snakes back along the next line. A step is teal when this run detects most of what's behind it, red when it mostly doesn't; for a CVE, the exploit step counts the exploit request detection, the worker and shell steps the runtime shell detection, and the infrastructure step the IOC sweep. **Gaps only** fades the steps already detected. Select a node for everything in it and what the reporting says, or a step for how much of it is detected.
+A CVE chain longer than six nodes snakes back along the next line. A step is teal when this run detects most of what's behind it, red when it mostly doesn't; for a CVE, the exploit step counts the exploit request detection, the worker and shell steps the runtime shell detection, and the infrastructure step the IOC sweep. Select a node for everything in it and what the reporting says, or a step for how much of it is detected.
 
 ## Buttons
 

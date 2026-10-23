@@ -8,6 +8,9 @@
   'exploit': 'M13 2L4 14h7l-1 8 9-12h-7z',
   'process': 'M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2',
   'shell': 'M4 17l6-5-6-5M12 19h8',
+  'phish': 'M3 6h18v12H3zM3 7l9 6 9-6',
+  'key': 'M8 11a4 4 0 1 0 0 8a4 4 0 1 0 0-8zM11 13l9-9M17 7l3 3M15 9l2 2',
+  'action': 'M12 2v4M12 18v4M2 12h4M18 12h4M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8z',
   'ioc': 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
 } %}
 <div id="anatomy" class="detection-section af-section an-section">
@@ -21,13 +24,10 @@
       </div>
       Anatomy Workflow
     </h2>
-    <div class="af-toolbar" role="toolbar" aria-label="Anatomy workflow">
-      <button type="button" class="af-chip" id="an-gaps-only" aria-pressed="false" title="Fade the steps this run mostly detects">Gaps only</button>
-    </div>
   </div>
 
   <p class="af-stats">
-    {% if anatomy.kind == 'cve' %}How the CVE is exploited and what follows{% else %}How they get in, what they run and what they reach{% endif %} ·
+    {% if anatomy.kind == 'cve' %}How the CVE is exploited and what follows{% else %}How they get in, what they run, what they do and where it goes{% endif %} ·
     <strong>{{ anatomy.stats.detected }}</strong> of {{ anatomy.stats.links }} step{{ 's' if anatomy.stats.links != 1 }} mostly detected by this run
   </p>
 

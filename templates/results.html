@@ -280,6 +280,9 @@
         <span class="err" id="briefing-ai-err" role="alert"></span>
       </div>
     </section>
+
+    <!-- Anatomy workflow: how they get in, what they run, what they do and where it goes -->
+    {% if anatomy %}{% include "partials/anatomy.html" %}{% endif %}
     <script>
     (function () {
       var btn = document.getElementById('briefing-ai-btn');
@@ -490,7 +493,7 @@
     </div>
 
     <!-- Divider -->
-    <div style="border-top: 2px solid #e5e7eb; margin: 40px 0;"></div>
+    <div style="border-top: 2px solid #e5e7eb; margin: 16px 0;"></div>
 
     <!-- Detection Rules Section -->
     <div class="detection-section">
@@ -1111,11 +1114,9 @@
     <!-- IOC Flow: the report's indicators in the order the intrusion used them -->
     {% if ioc_flow %}{% include "partials/ioc_flow.html" %}{% endif %}
 
-    <!-- Anatomy workflow: who, with what, through which services, for what -->
-    {% if anatomy %}{% include "partials/anatomy.html" %}{% endif %}
 
     <!-- Divider -->
-    <div style="border-top: 2px solid #e5e7eb; margin: 40px 0;"></div>
+    <div style="border-top: 2px solid #e5e7eb; margin: 16px 0;"></div>
 
     <!-- Validation Section -->
     <div id="validation-checklist" class="detection-section">

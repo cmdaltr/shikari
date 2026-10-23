@@ -89,11 +89,4 @@
     if (ev.key === 'Escape' && selected) select(null);
   });
   document.getElementById('an-detail-close').addEventListener('click', () => select(null));
-  const gaps = document.getElementById('an-gaps-only');
-  gaps.addEventListener('click', () => {
-    const on = !gaps.classList.contains('is-on');
-    gaps.classList.toggle('is-on', on);
-    gaps.setAttribute('aria-pressed', on);
-    root.classList.toggle('gaps-only', on);
-  });
 })();
