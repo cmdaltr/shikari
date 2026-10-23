@@ -20,10 +20,9 @@ The correlation engine generates high-quality attack chain correlations by:
 | **Min Quality Score (Threshold)** | 40% (56/140 points) ⚙️ **TUNABLE** |
 | **Max Correlations/Vendor** | 60 per vendor ⚙️ **TUNABLE** |
 | **Simple Correlation Frequency** | Max 20 appearances per technique ⚙️ **TUNABLE** |
-| **Max Techniques/Correlation** | 8 |
-| **Min Tactics/Correlation** | 2 |
-| **Super-Merge Threshold** | Skip if >10 target techniques |
-| **Super-Merge Frequency** | Unlimited (already consolidated) |
+| **Chain Length** | 3 techniques, each bringing a tactic the other two don't |
+| **Chains per Technique** | 3 (`CHAIN_PER_TECHNIQUE`) |
+| **Chains per Vendor** | 20 (`CHAIN_MAX`); Google SecOps and MDE |
 | **JOIN Time Window** | 60 minutes |
 
 ---
@@ -54,16 +53,13 @@ Filter by Quality (≥40%) → ~60 kept
          ↓
 Group by Technique Pair → ~19 unique pairs
          ↓
-Smart Super-Merge
-    ├─ If 1 target: keep as-is
-    ├─ If 2-10 targets: merge (max 8 techniques, min 2 tactics)
-    └─ If >10 targets: skip merge, keep individual correlations
+Generate JOIN Queries (every pair its own correlation)
          ↓
-Frequency Limit
-    ├─ Super-merged (3+ techniques): unlimited
-    └─ Simple (2 techniques): max 20 appearances
+Frequency Limit (pairs): max 20 appearances per technique
          ↓
-Generate JOIN Queries
+Chains: A–B and B–C both pairs → A + B + C on one host within 1h
+    ├─ each technique brings a tactic of its own
+    └─ closed triangles first; max 3 per technique, 20 per vendor
          ↓
 Final Output (40-60 correlations per vendor)
 ```
@@ -239,10 +235,9 @@ See [CORRELATION_ENGINE.md — Results Page](CORRELATION_ENGINE.md#results-page-
 |-------|-------|----------|
 | **No correlations** | No files in data/groups/ | Generate detections first |
 | **Too few correlations** | High quality threshold | ✅ Fixed - lowered to 60% |
-| **Correlations too complex** | Too many techniques | ✅ Fixed - limited to 8 |
+| **Every correlation is two techniques** | Super-merge skipped hubs with >10 partners | ✅ Fixed - chains of three built from the pairs |
 | **Unrelated techniques** | No tactic requirement | ✅ Fixed - requires 2+ tactics |
-| **Same technique repeated** | No frequency limit | ✅ Fixed - smart frequency (10 for simple, unlimited for merged) |
-| **One massive correlation** | Aggressive super-merge | ✅ Fixed - skip merge if >10 targets |
+| **Same technique repeated** | No frequency limit | ✅ Fixed - frequency limit for pairs, 3 chains per technique |
 
 ---
 
@@ -362,7 +357,7 @@ python scripts/test_correlation_params.py -t 40 -v 100 -f 20
 - Limits how many times a technique can appear as the **first technique** in simple (2-technique) correlations
 - Prevents popular techniques from dominating the correlation list
 - Ensures diversity in attack chain coverage
-- **Does NOT apply** to super-merged correlations (3+ techniques)
+- **Does NOT apply** to chains, which have their own limit (3 per technique)
 
 **How it influences correlations:**
 
@@ -473,11 +468,11 @@ The script will:
 
 For advanced users, additional parameters can be modified directly in code:
 
-#### Adjust Super-Merge Threshold
+#### Adjust Chains
 ```python
-# In engine.py _apply_correlation_grouping()
-elif num_targets > 15:  # Change from 10 to be more aggressive
-    # Skip super-merge for very popular techniques
+# In engine.py
+CHAIN_PER_TECHNIQUE = 3  # how many chains one technique can be in
+CHAIN_MAX = 20           # chains per vendor
 ```
 
 #### Adjust Time Window
@@ -495,7 +490,7 @@ elif num_targets > 15:  # Change from 10 to be more aggressive
 | **Correlation Engine** | `archer/ai/genai/engine.py` |
 | **Configuration** | `archer/config.py` |
 | **Detection Files** | `data/groups/*.yaml` |
-| **Correlation Output** | `data/correlate/{group_name}.json` (index) and `data/correlate/{group_name}/<A>_and_<B>[_plusN]_<UDM, KQL, SPL or ESQL>.yaml` (one per correlation) |
+| **Correlation Output** | `data/correlate/{group_name}.json` (index) and `data/correlate/{group_name}/<A>_and_<B>[_and_<C>]_<UDM, KQL, SPL or ESQL>.yaml` (one per correlation; three names for a chain) |
 | **Full Documentation** | `docs/architecture/CORRELATION_ENGINE.md` |
 
 ---

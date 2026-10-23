@@ -3794,7 +3794,7 @@ def results_json(group_name: str, run: str = ""):
         "latest_run": {"completed_at": latest.get("completed_at"), "files": len(latest.get("files") or [])} if latest else None,
         "detections": detections,
         "correlations": [{"vendor": c.get("vendor", ""), "a": os.path.basename(c.get("a") or ""),
-                          "b": os.path.basename(c.get("b") or ""), "tactics": c.get("tactics") or [],
+                          "b": [os.path.basename(p) for p in _correlation_paths(c)[1:]] if c.get("chain") else os.path.basename(c.get("b") or ""), "tactics": c.get("tactics") or [],
                           "techniques": c.get("techniques_involved") or [], "relevance": c.get("relevance_score"),
                           "query": c.get("combined_query") or ""}
                          for c in correlations],
@@ -5871,8 +5871,13 @@ def _run_correlations(correlations, run_only):
     if run_only is None:
         return correlations
     return [c for c in correlations
-            if os.path.basename(c.get("a") or "") in run_only
-            and os.path.basename(c.get("b") or "") in run_only]
+            if all(os.path.basename(p) in run_only for p in _correlation_paths(c))]
+
+
+def _correlation_paths(corr):
+    """A correlation's detection files: a, then b (a list for a chain)."""
+    b = corr.get("b")
+    return [p for p in [corr.get("a")] + (b if isinstance(b, list) else [b]) if p]
 
 
 
@@ -6689,6 +6694,8 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                                 "techniques_by_tactic": techniques_by_tactic,  # Group techniques by tactic
                                 "attack_chain_length": attack_chain_length,  # Number of tactics in ordered attack flow
                                 "is_merged": is_merged,  # Flag indicating if this is a merged correlation
+                                # Three techniques on one host, in any order (archer.ai.genai.engine._build_chains)
+                                "is_chain": bool(corr.get("chain")),
                                 "primary_tactics": list(
                                     primary_tactics
                                 ),  # Tactics containing the original correlation pair

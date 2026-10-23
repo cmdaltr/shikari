@@ -51,6 +51,9 @@ def _techniques(corr: Dict) -> List[str]:
     def key(name):
         return re.sub(r"[^a-z0-9]", "", name.lower())
 
+    if corr.get("chain"):  # named from the detections' YAML ('PowerShell', not 'Power Shell')
+        return list({key(str(n)): str(n) for n in corr.get("techniques_involved") or [] if n}.values())
+
     b = corr.get("b")
     pair = [_label(corr.get("a"))] + [_label(p) for p in (b if isinstance(b, list) else [b])]
     involved = [str(n) for n in corr.get("techniques_involved") or [] if n]
@@ -64,12 +67,16 @@ def _techniques(corr: Dict) -> List[str]:
 
 def title(corr: Dict) -> str:
     names = _techniques(corr)
+    if corr.get("chain") and len(names) > 2:
+        return ", ".join(names[:-1]) + f" and {names[-1]}"
     return " and ".join(names[:2]) + (f" (+{len(names) - 2} more)" if len(names) > 2 else "") or "Correlation"
 
 
 def filename(corr: Dict) -> str:
+    """A_and_B_UDM.yaml; a chain names all its techniques (A_and_B_and_C_UDM.yaml)."""
     names = _techniques(corr) or ["Correlation"]
-    stem = "_and_".join(_camel(n) for n in names[:2]) + (f"_plus{len(names) - 2}" if len(names) > 2 else "")
+    shown = len(names) if corr.get("chain") else 2
+    stem = "_and_".join(_camel(n) for n in names[:shown]) + (f"_plus{len(names) - shown}" if len(names) > shown else "")
     return f"{stem[:150]}_{SUFFIX.get(corr.get('vendor', ''), _camel(corr.get('vendor', 'Unknown')))}.yaml"
 
 
@@ -84,8 +91,8 @@ def _technique_ids(query: str) -> List[str]:
 
 
 def _window(query: str) -> Optional[str]:
-    """The correlation window: a join's match window, SPL maxspan, or KQL's between-events bin."""
-    for pattern in (r"^\s*\$[\w, $]+\s+over\s+(\d+[smhd])\b", r"maxspan=(\d+[smhd])\b",
+    """The correlation window: a join's match window, a KQL chain's span, SPL maxspan, or KQL's between-events bin."""
+    for pattern in (r"^\s*\$[\w, $]+\s+over\s+(\d+[smhd])\b", r"on the same device within (\d+[smhd])\b", r"maxspan=(\d+[smhd])\b",
                     r"\bbin\(\s*Timestamp\s*,\s*(\d+[smhd])\)", r"ago\((\d+[smhd])\)"):
         m = re.search(pattern, query or "", re.M)
         if m:

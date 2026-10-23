@@ -31,7 +31,7 @@ The Archer Correlation Engine automatically generates high-quality detection cor
 │  3. Scoring           → 6-factor relevance scoring (0-140)   │
 │  4. Filtering         → Keep top-scored correlations         │
 │  5. Grouping          → Merge by technique pairs             │
-│  6. Super-Merging     → Multi-technique correlations         │
+│  6. Chains            → Three techniques on one host         │
 │  7. Frequency Limit   → Ensure diversity                     │
 │  8. JOIN Generation   → Build actionable queries             │
 │                                                               │
@@ -367,91 +367,39 @@ After:
 
 ---
 
-### Phase 6: Super-Merging (Multi-Technique Correlations)
+### Phase 6: Chains (Three Techniques on One Host)
 
-**Purpose:** Create comprehensive correlations where one technique correlates with multiple others.
+**Purpose:** Correlations that span more than two techniques, built from the pairs already
+scored (`_build_chains()`).
 
-**Logic:**
-```python
-# Group by primary technique
-for correlation in correlations:
-    primary = extract_technique(correlation.a)
-    secondary = extract_technique(correlation.b)
+Every pair stays a correlation of its own. This phase used to "super-merge" every pair
+sharing a technique A into *A, then any of B…H*: alternatives rather than a chain, and
+skipped once A had more than ten partners, which is exactly when a hub (Valid Accounts)
+dominates. A chain is instead all of its techniques on one host within the window.
 
-    grouped_by_primary[primary][secondary].append(correlation)
+**Selection:**
+- A–B and B–C must both be scored pairs; a closed triangle (A–C as well) ranks first, then
+  the mean relevance of its pairs, then the number of tactics it spans.
+- Each technique must bring a tactic the other two don't. A technique with four tactics
+  (Cloud Accounts: Initial Access, Persistence, Privilege Escalation, Stealth) can't make up
+  the spread on its own.
+- A technique is in at most `CHAIN_PER_TECHNIQUE` (3) chains, and a vendor has at most
+  `CHAIN_MAX` (20), so the hubs don't take every chain.
+- Google SecOps and MDE only.
 
-# Merge if one technique has multiple targets
-for primary, secondaries in grouped_by_primary.items():
-    if len(secondaries) > 1:
-        # Multi-FactorAuthentication → (B, C, D, E...)
-        merge_into_single_correlation()
-```
-
-**NEW LIMITS (Critical Quality Controls):**
-
-#### Limit 1: Maximum 8 Techniques
-**Why:** Prevents overly complex correlations that overwhelm analysts.
-
-**Before Limit:**
-```yaml
-Correlation: 20 techniques merged
-Problem: Too complex, difficult to investigate
-```
-
-**After Limit:**
-```yaml
-Correlation: 8 techniques maximum
-Benefit: Focused, actionable correlation
-```
-
-#### Limit 2: Minimum 2 Tactics
-**Why:** Ensures correlation spans multiple attack phases (actual attack chain).
-
-**Before Limit:**
-```yaml
-Techniques: 8 techniques, all from "Execution" tactic
-Problem: Not showing attack progression
-```
-
-**After Limit:**
-```yaml
-Techniques: 8 techniques from "Credential Access" + "Lateral Movement"
-Benefit: Shows kill chain progression ✅
-```
-
-**Selection Algorithm:**
-```python
-techniques_involved = set()
-tactics_involved = set()
-
-for correlation in all_correlations:
-    temp_techniques = techniques_involved + correlation.techniques
-    temp_tactics = tactics_involved + correlation.tactics
-
-    # Add if under limits OR need more tactics
-    if len(temp_techniques) <= 8 or len(tactics_involved) < 2:
-        techniques_involved = temp_techniques
-        tactics_involved = temp_tactics
-        selected_correlations.append(correlation)
-
-    # Stop when limits reached
-    if len(techniques_involved) >= 8 and len(tactics_involved) >= 2:
-        break
-```
+**Queries:** no order is imposed, since ATT&CK tactics are goals, not steps.
+- **UDM** (`archer.build.udm.build_chain`): `$e1`, `$e2`, `$e3`, each bound to `$host`,
+  `match: $host over 1h`.
+- **KQL**: each part in its own `let` on its table, each technique's parts unioned and
+  projected to `T<n>Time, DeviceId, DeviceName`, joined on `DeviceId`, and kept when every
+  two are within 60 minutes (`datetime_diff`).
 
 **Example:**
 ```
-Before Super-Merging: 42 correlations
-- Multi-FactorAuthentication → AdditionalCloudCredentials
-- Multi-FactorAuthentication → CreateProcessWithToken
-- Multi-FactorAuthentication → PassTheHash
-- ... (19 more with Multi-FactorAuthentication)
-
-After Super-Merging: 1 correlation
-- Multi-FactorAuthentication → (AdditionalCloudCredentials OR CreateProcessWithToken OR PassTheHash OR ... up to 8 techniques, 2+ tactics)
+Pairs: Cloud Accounts–Modify Registry, Modify Registry–PowerShell, Cloud Accounts–PowerShell
+Chain: Cloud Accounts + Modify Registry + PowerShell (closed triangle)
+       Initial Access/Persistence/Privilege Escalation/Stealth, Defense Impairment, Execution
 ```
-
-**Result:** Reduces from ~40 to 3-10 comprehensive correlations
 
 ---
 
@@ -583,10 +531,10 @@ These three parameters can be adjusted via **Profile → Config** in the web UI 
 
 | Parameter | Value | Location | Purpose |
 |-----------|-------|----------|---------|
-| **Max Techniques/Correlation** | 8 | Super-merging logic | Prevent complexity |
-| **Min Tactics/Correlation** | 2 | Super-merging logic | Ensure cross-phase |
+| **Chain length** | 3 | `CHAIN_LENGTH` | Three techniques on one host |
+| **Chains per technique** | 3 | `CHAIN_PER_TECHNIQUE` | Hubs don't take every chain |
+| **Chains per vendor** | 20 | `CHAIN_MAX` | Keep the list reviewable |
 | **JOIN Time Window** | 60 minutes | JOIN query generation | Event correlation window |
-| **Super-Merge Skip Threshold** | >10 targets | `_apply_correlation_grouping()` | Prevent massive correlations |
 
 ### Scoring Weights
 
@@ -687,32 +635,20 @@ TOTAL: 46/140 = 33% ❌ FILTERED OUT
 
 ---
 
-### Example 3: Super-Merged Correlation
+### Example 3: Chain
 
-**Before Super-Merging:**
+**Pairs scored:**
 ```
-1. Multi-FactorAuthentication → AdditionalCloudCredentials (score: 95%)
-2. Multi-FactorAuthentication → CreateProcessWithToken (score: 92%)
-3. Multi-FactorAuthentication → PassTheHash (score: 90%)
-4. Multi-FactorAuthentication → SID-HistoryInjection (score: 88%)
-... (15 more)
+1. Access Token Manipulation – Additional Local or Domain Groups (score: 100%)
+2. Access Token Manipulation – DCSync (score: 100%)
 ```
 
-**After Super-Merging:**
+**Chain:**
 ```yaml
-Merged Correlation:
-  Primary: Multi-FactorAuthentication
-  Secondaries:
-    - AdditionalCloudCredentials
-    - CreateProcessWithToken
-    - PassTheHash
-    - SID-HistoryInjection
-    - (4 more - limited to 8 total techniques)
-
-  Tactics: Credential Access, Persistence (2 tactics ✅)
-  Techniques: 8 techniques ✅
-
-  Query: JOIN-based with technique comments for each indicator
+Techniques: Access Token Manipulation, Additional Local or Domain Groups, DCSync
+Tactics:    Privilege Escalation/Stealth, Persistence, Credential Access (each brings its own)
+Query:      all three on one device within 1h, any order
+File:       AccessTokenManipulation_and_AdditionalLocalorDomainGroups_and_DCSync_KQL.yaml
 ```
 
 ---
@@ -732,17 +668,18 @@ Merged Correlation:
       "query_b": "DeviceEvents | where ...",
       "combined_query": "let DeviceFileEvents_... JOIN ...",
       "relevance_score": 0.92,
-      "file": "APT29/MultiFactorAuthentication_and_AdditionalCloudCredentials_plus6_KQL.yaml",
-      "techniques_involved": [
-        "Multi-FactorAuthentication",
-        "AdditionalCloudCredentials",
-        "CreateProcessWithToken",
-        "PassTheHash",
-        "SID-HistoryInjection",
-        "AccessTokenManipulation",
-        "PowerShell",
-        "BypassUserAccountControl"
-      ]
+      "file": "APT29/MultiFactorAuthentication_and_AdditionalCloudCredentials_KQL.yaml",
+      "techniques_involved": ["Multi-Factor Authentication", "Additional Cloud Credentials"]
+    },
+    {
+      "vendor": "googlesecops",
+      "chain": true,
+      "a": "data/groups/CloudAccounts_UDM.yaml",
+      "b": ["data/groups/ModifyRegistry_UDM.yaml", "data/groups/PowerShell_UDM.yaml"],
+      "combined_query": "// archer_chain_t1078_004_t1112_t1059_001: ...",
+      "relevance_score": 1.0,
+      "file": "APT29/CloudAccounts_and_ModifyRegistry_and_PowerShell_UDM.yaml",
+      "techniques_involved": ["Cloud Accounts", "Modify Registry", "PowerShell"]
     }
   ],
   "cross_vendor_correlations": []
@@ -752,9 +689,8 @@ Merged Correlation:
 ### Correlation Files
 
 Each correlation is also written as its own YAML, ready to paste into the SIEM
-(`archer/build/correlation_files.py`): `data/correlate/<group>/<A>_and_<B>[_plusN]_<language>.yaml`.
-A and B are the pair the correlation was built from; `_plusN` counts the techniques merged
-in after them, each counted once however `techniques_involved` spells it. The language is
+(`archer/build/correlation_files.py`): `data/correlate/<group>/<A>_and_<B>_<language>.yaml`
+for a pair, `<A>_and_<B>_and_<C>_<language>.yaml` for a chain. The language is
 `UDM` (Google SecOps), `KQL` (Defender XDR), `SPL` (Splunk) or `ESQL` (Elastic). The file
 carries the same stamp as a detection: one edited by hand is kept on the next run and its
 query wins; files a run no longer makes are removed unless edited.
@@ -781,8 +717,9 @@ Correlations are displayed in the web UI with:
    - Time Window: 1h
    - Tactics: Credential Access, Persistence
 
-3. **Techniques Involved:** (For super-merged correlations)
-   - Shows all 8 techniques as colored badges, each once (names are compared on letters
+3. **Chains:** the three techniques joined by `+` rather than `→`, since a chain imposes
+   no order
+   - Each technique shown once (names are compared on letters
      and digits, so `Multi-Factor Authentication` and `Multi-FactorAuthentication` are one)
    - Color indicates attack phase (early/mid/late/final)
 

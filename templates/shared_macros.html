@@ -130,7 +130,13 @@
       {% set _ = unique_techniques.append(tech) %}
     {% endif %}
   {% endfor %}
-  {% if correlation.is_merged and unique_techniques|length >= 2 %}
+  {% if correlation.is_chain %}
+    {# A chain: all of them on one host, in any order, so no arrows #}
+    {% for tech in unique_techniques %}
+      {% if not loop.first %}<span style="margin: 0 8px; color: #999;">+</span>{% endif %}
+      {{ render_technique_badge(tech.name, tech.tactic) }}
+    {% endfor %}
+  {% elif correlation.is_merged and unique_techniques|length >= 2 %}
     {# Display techniques in the order they appear (merged correlations) #}
     {% for tech in unique_techniques %}
       {% set tactic = tech.tactic %}

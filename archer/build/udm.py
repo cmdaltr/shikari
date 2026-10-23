@@ -193,6 +193,45 @@ def _technique(head: str) -> Tuple[str, str]:
     return (tid.group(1) if tid else "?"), (name.group(1) if name else "")
 
 
+def _sides(queries) -> Optional[List[List[Tuple[str, str]]]]:
+    """Each side's (header, expression) parts, or None when a side has nothing to match on,
+    is itself a join, or isn't UDM (KQL or SPL here is a caller's mistake)."""
+    sides = []
+    for qs in queries:
+        qs = [q for q in ([qs] if isinstance(qs, str) else qs or []) if q and q.strip()]
+        if not qs or any(is_join(from_yaral(q) or "") for q in qs):
+            return None
+        parts = [_parts(q) for q in qs]
+        if not all(expr and _FIELD.search(expr) for _, expr in parts):
+            return None
+        sides.append(parts)
+    return sides
+
+
+def _label(parts, fallback: str) -> Tuple[str, List[str]]:
+    names = [n for n in dict.fromkeys(_technique(h)[1] for h, _ in parts) if n]
+    tids = [t for t in dict.fromkeys(_technique(h)[0] for h, _ in parts)]
+    return (" / ".join(names) or fallback or " / ".join(tids)).replace('"', "'"), tids
+
+
+def _side(parts, var: str) -> str:
+    # Statements are ANDed line by line, so a side with alternatives is one bracketed line
+    exprs = list(dict.fromkeys(bind(e, var) for _, e in parts))
+    if len(exprs) > 1:
+        return "(" + " or ".join(f"({e})" for e in exprs) + ")"
+    return exprs[0] if not _top_level_or(exprs[0]) else f"({exprs[0]})"
+
+
+def _join(name: str, description: str, tids: List[str], sides, labels, window: str) -> str:
+    events = "\n\n".join(f"// {label}\n{_side(parts, f'$e{i}')}\n$e{i}.principal.hostname = $host"
+                          for i, (parts, label) in enumerate(zip(sides, labels), 1))
+    return f"""{header(name, description, ", ".join(tids), "HIGH")}
+{events}
+
+match:
+  $host over {window}"""
+
+
 def build_join(queries_a, queries_b, label_a: str = "", label_b: str = "", window: str = "1h") -> Optional[str]:
     """
     Two-event UDM join: an A event and a B event on the same host within `window`.
@@ -200,43 +239,30 @@ def build_join(queries_a, queries_b, label_a: str = "", label_b: str = "", windo
     alternatives for that event. None when a side has nothing to match on, or is
     itself a join.
     """
-    sides = []
-    for qs in (queries_a, queries_b):
-        qs = [q for q in ([qs] if isinstance(qs, str) else qs or []) if q and q.strip()]
-        if not qs or any(is_join(from_yaral(q) or "") for q in qs):
-            return None
-        parts = [_parts(q) for q in qs]
-        # Each side must filter on UDM fields: KQL or SPL here is a caller's mistake
-        if not all(expr and _FIELD.search(expr) for _, expr in parts):
-            return None
-        sides.append(parts)
-    (a, b), labels = sides, []
-    for parts, label in ((a, label_a), (b, label_b)):
-        names = [n for n in dict.fromkeys(_technique(h)[1] for h, _ in parts) if n]
-        tids = [t for t in dict.fromkeys(_technique(h)[0] for h, _ in parts)]
-        labels.append(((" / ".join(names) or label or " / ".join(tids)).replace('"', "'"), tids))
-    (la, tids_a), (lb, tids_b) = labels
+    sides = _sides((queries_a, queries_b))
+    if not sides:
+        return None
+    (la, tids_a), (lb, tids_b) = _label(sides[0], label_a), _label(sides[1], label_b)
     extra = len(tids_a) + len(tids_b) - 2
     name = re.sub(r"\W", "_", f"archer_corr_{tids_a[0]}_then_{tids_b[0]}" + (f"_plus{extra}" if extra else "")).lower()
+    return _join(name, f"{la} and {lb} on the same host within {window}", tids_a + tids_b, sides, [la, lb], window)
 
-    def side(parts, var):
-        # Statements are ANDed line by line, so a side with alternatives is one bracketed line
-        exprs = list(dict.fromkeys(bind(e, var) for _, e in parts))
-        if len(exprs) > 1:
-            return "(" + " or ".join(f"({e})" for e in exprs) + ")"
-        return exprs[0] if not _top_level_or(exprs[0]) else f"({exprs[0]})"
 
-    return f"""{header(name, f"{la} and {lb} on the same host within {window}", ", ".join(tids_a + tids_b), "HIGH")}
-// {la}
-{side(a, "$e1")}
-$e1.principal.hostname = $host
-
-// {lb}
-{side(b, "$e2")}
-$e2.principal.hostname = $host
-
-match:
-  $host over {window}"""
+def build_chain(queries: List, labels: Optional[List[str]] = None, window: str = "1h") -> Optional[str]:
+    """
+    A chain: one event per technique ($e1, $e2, $e3, ...), all on the same host within
+    `window`, in any order (Search can't order events, and ATT&CK isn't a sequence).
+    Each entry is one search or a list of alternatives, as for build_join.
+    """
+    sides = _sides(queries)
+    if not sides or len(sides) < 2:
+        return None
+    named = [_label(parts, (labels or [])[i] if i < len(labels or []) else "") for i, parts in enumerate(sides)]
+    names = [n for n, _ in named]
+    tids = [t for _, ts in named for t in ts]
+    name = re.sub(r"\W", "_", "archer_chain_" + "_".join(ts[0] for _, ts in named)).lower()
+    listed = ", ".join(names[:-1]) + f" and {names[-1]}"
+    return _join(name, f"{listed} on the same host within {window}", tids, sides, names, window)
 
 
 # ── Back to YARA-L, for tools that parse rules ─────────────────────────────

@@ -133,10 +133,9 @@ def _extract_techniques_from_correlation(correlation: Dict) -> List[str]:
     techniques = []
 
     # Check file paths
-    path_a = correlation.get("a", "")
-    path_b = correlation.get("b", "")
-
-    for path in [path_a, path_b]:
+    path_b = correlation.get("b") or ""
+    # A chain's b is a list of paths
+    for path in [correlation.get("a") or ""] + (path_b if isinstance(path_b, list) else [path_b]):
         # Extract T-codes from filename
         matches = re.findall(r'T\d{4}(?:\.\d{3})?', path)
         techniques.extend(matches)

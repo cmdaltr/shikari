@@ -234,17 +234,20 @@ function render(p) {
     const step = p.step || (p.status === 'genai_processing' ? 'pairing' : 'starting');
     const pairs = Number(p.total_pairs) || 0;
     const done = Math.min(Number(p.processed) || 0, pairs);
-    // Pairing is the long part (0-90%); scoring and grouping take the rest
+    const toScore = Number(p.to_score) || 0;
+    const scored = Math.min(Number(p.scored) || 0, toScore);
+    // Pairing is the long part (0-90%), scoring the next (90-96%); grouping takes the rest
     let pct = 0;
     if (step === 'pairing' && pairs > 0) pct = Math.floor((done / pairs) * 90);
-    else if (step === 'scoring') pct = 92;
+    else if (step === 'scoring') pct = 90 + (toScore ? Math.floor((scored / toScore) * 6) : 0);
     else if (step === 'grouping') pct = 96;
     else if (step === 'done') pct = 98;
     corrPctShown = Math.max(corrPctShown, pct);
     paint(corr, {
       state: 'active', pct: corrPctShown,
       indeterminate: step === 'starting' || step === 'loading' || (step === 'pairing' && pairs === 0),
-      count: pairs ? `${fmt(done)} / ${fmt(pairs)} pairs` : '',
+      count: step === 'scoring' && toScore ? `${fmt(scored)} / ${fmt(toScore)} scored`
+        : pairs ? `${fmt(done)} / ${fmt(pairs)} pairs` : '',
       detail: CORRELATION_STEPS[step] || 'Correlating',
       time: timing('correlations', now, p),
     });

@@ -55,7 +55,7 @@ Detection files are shared between groups and runs. When a later run rewrites on
 
 Hunting a group again also takes the group off any detection its earlier runs made that this run didn't: a technique ATT&CK no longer attributes to it, a table a query no longer uses, or a query a check now refuses. A detection no other group uses is deleted; one edited by hand is kept. So the group's results, downloads and correlations hold only what its latest run produced, plus your edits.
 
-Google SecOps rules already combine every follow-on technique into one rule, so the Results page only merges Defender XDR correlations that share a first technique.
+Most correlations are a pair of techniques. A **chain** joins three, shown with `+` between them: all three on the same host within the window, in any order, since ATT&CK tactics are goals rather than steps. Chains are built from pairs that scored (A with B, B with C), and each technique in one has to bring a tactic the other two don't, so a technique with four tactics, such as Cloud Accounts, can't make up the spread on its own. A technique is in at most three chains. Google SecOps and Defender XDR have chains; a chain fires far less often than a pair, so treat one as a high-confidence lead next to its pairs rather than a replacement for them.
 
 ## Precision checks
 
@@ -96,7 +96,7 @@ The toolbar also filters by SIEM, hides undetected techniques, hides selected ca
 
 | Button | What it does |
 |---|---|
-| Download All | A zip of the detections and correlations that are ticked (all of them unless you untick some): `detections/` holds each detection's YAML, `correlations/` each correlation's YAML and the group's index (`<group>.json`), and `attack_flows/` the flow. Files are named for the technique and the table or index (`At_DeviceProcessEvents.yaml`), or the query language where there's one file per SIEM: `UDM`, `KQL`, `SPL` or `ESQL` (`At_UDM.yaml`, `PowerShell_and_At_KQL.yaml`). The Validation checklist must be ticked first |
+| Download All | A zip of the detections and correlations that are ticked (all of them unless you untick some): `detections/` holds each detection's YAML, `correlations/` each correlation's YAML and the group's index (`<group>.json`), and `attack_flows/` the flow. Files are named for the technique and the table or index (`At_DeviceProcessEvents.yaml`), or the query language where there's one file per SIEM: `UDM`, `KQL`, `SPL` or `ESQL` (`At_UDM.yaml`, `PowerShell_and_At_KQL.yaml`, and a chain's three names: `CloudAccounts_and_ModifyRegistry_and_PowerShell_UDM.yaml`). The Validation checklist must be ticked first |
 | Save to Library | Saves the run's detections and correlations to your [Library](07-library.md), and its attack flow to [Flows](09-flows.md) |
 | Generate Report | A Word, PDF or HTML report of the run |
 | Run Emulation | Coming soon. [Emulate](19-emulate.md) shows which logs record each technique and checks this run's indicators against recorded attacks |

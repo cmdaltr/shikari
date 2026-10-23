@@ -267,7 +267,9 @@ def _parse_yaml_for_vendor(path: str) -> Dict:
                 # New section started
                 break
 
-    return {"path": path, "vendor": vendor, "query": query, "tactics": tactics, "name": name}
+    tid = re.search(r"^technique_id:\s*[\"']?(T\d{4}(?:\.\d{3})?)", text, re.M)
+    return {"path": path, "vendor": vendor, "query": query, "tactics": tactics, "name": name,
+            "technique_id": tid.group(1) if tid else None}
 
 
 # Vendors that get correlations, in priority order. SecOps is the primary platform:
@@ -997,7 +999,8 @@ def _score_correlation(corr: Dict, file_info: Dict) -> float:
 
 
 def _score_and_filter_correlations(
-    correlations: List[Dict], file_info: Dict, min_relevance: float = 0.5, max_per_vendor: int = 60
+    correlations: List[Dict], file_info: Dict, min_relevance: float = 0.5, max_per_vendor: int = 60,
+    on_scored=None,
 ) -> List[Dict]:
     """
     Score all correlations and return only those meeting the minimum relevance threshold.
@@ -1007,6 +1010,7 @@ def _score_and_filter_correlations(
         file_info: File metadata dictionary
         min_relevance: Minimum relevance score threshold (default 0.5 = 50%)
         max_per_vendor: Maximum correlations per vendor (default 60)
+        on_scored: called with the running count as correlations are scored, for the progress bar
 
     Returns:
         Filtered list of correlations with relevance_score >= min_relevance, capped at max_per_vendor
@@ -1019,6 +1023,8 @@ def _score_and_filter_correlations(
             score / 140, 2
         )  # Normalize to 0-1 (max 140 with tactic priority + diversity)
         scored_correlations.append((score, corr))
+        if on_scored:
+            on_scored(len(scored_correlations))
 
     # Sort by score (descending)
     scored_correlations.sort(key=lambda x: x[0], reverse=True)
@@ -1516,6 +1522,175 @@ def _get_account_field_for_table(table_name: str) -> str:
     return account_field_map.get(table_name, "InitiatingProcessAccountName")
 
 
+# Chains: three techniques on one host within the window, built from scored pairs
+CHAIN_LENGTH = 3
+CHAIN_PER_TECHNIQUE = 3  # so the hubs (Valid Accounts) don't take every chain
+CHAIN_MAX = 20  # per vendor
+
+
+def _technique_key(name) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(name or "").lower())
+
+
+def _chain_nodes(pairs: List[Dict], file_info: Dict) -> Tuple[Dict, Dict]:
+    """
+    The techniques the pairs connect and the pairs between them. A node holds the
+    technique's detections (each part's file and query, from whichever pairs it is in)
+    and its tactics; an edge holds its pair's relevance.
+    """
+    by_query = {info.get("query", "").strip(): path for path, info in file_info.items() if info.get("query")}
+    nodes, edges = {}, {}
+
+    def node(path):
+        info = file_info.get(path, {})
+        name = info.get("name") or _source_label(path)
+        n = nodes.setdefault(_technique_key(name), {"name": name, "paths": [], "queries": [], "tactics": set(),
+                                                    "technique_id": None})
+        n["tactics"].update(info.get("tactics") or [])
+        n["technique_id"] = n["technique_id"] or info.get("technique_id")
+        return n
+
+    for corr in pairs:
+        if not (corr.get("combined_query") or "").strip() or not all(isinstance(corr.get(k), str) for k in "ab"):
+            continue
+        ends = []
+        for side, text in (("a", corr.get("query_a")), ("b", corr.get("query_b"))):
+            ends.append(_technique_key(node(corr[side])["name"]))
+            for query in (text or "").split("\nUNION\n"):
+                path = by_query.get(query.strip(), corr[side])
+                n = node(path)
+                if query.strip() and query not in n["queries"]:
+                    n["queries"].append(query)
+                    n["paths"].append(path)
+        if ends[0] != ends[1]:
+            edge = frozenset(ends)
+            edges[edge] = max(edges.get(edge, 0), corr.get("relevance_score", 0))
+    return nodes, edges
+
+
+def _chain_query(vendor: str, nodes: List[Dict]) -> str:
+    from archer.validation.precision import correlation_part_ok
+
+    if vendor == "googlesecops":
+        from archer.build.udm import build_chain
+
+        sides = [[q for q in n["queries"] if correlation_part_ok(q, "udm")] for n in nodes]
+        return (build_chain(sides, [n["name"] for n in nodes]) or "") if all(sides) else ""
+    if vendor == "mde":
+        return _kql_chain(nodes)
+    return ""
+
+
+def _kql_chain(nodes: List[Dict], window: str = "1h", lookback: str = "1d") -> str:
+    """
+    KQL: each technique's detections as one event set (each part's table and filters, in
+    its own let, unioned), joined on DeviceId, kept when all of them fall within
+    `window` of each other, in any order.
+    """
+    from archer.validation.precision import correlation_part_ok
+
+    flush = lambda q: "\n".join(l.strip() for l in q.splitlines())
+    lets, tids = [], []
+    for i, n in enumerate(nodes, 1):
+        # Each part in its own let on its table, so the schema check reads it against that table
+        parts = []
+        for query in n["queries"]:
+            table = re.match(r"\s*(\w+)", query)
+            where = _where_clauses(query)
+            if not (table and where and correlation_part_ok(flush(query), "kql")):
+                continue
+            part = f"T{i}_{len(parts) + 1}"
+            parts.append(part)
+            lets.append(f"let {part} = {table.group(1)}\n| where Timestamp > ago(lookback)\n| where "
+                        + "\n| where ".join(where) + ";")
+        if not parts:
+            return ""
+        lets.append(f"let T{i} = union {', '.join(parts)}\n| project T{i}Time = Timestamp, DeviceId, DeviceName;")
+        lets[-len(parts) - 1] = f"// {n['name']}\n" + lets[-len(parts) - 1]
+        if n.get("technique_id"):
+            tids.append(n["technique_id"])
+    names = [n["name"] for n in nodes]
+    listed = ", ".join(names[:-1]) + f" and {names[-1]}"
+    name = "archer_chain_" + "_".join(_technique_key(n) for n in names)
+    count = len(nodes)
+    # Every two within the window is all within it; datetime_diff, as the pair joins use
+    minutes = int(window[:-1]) * {"m": 1, "h": 60, "d": 1440}[window[-1]]
+    close = " and ".join(f"abs(datetime_diff('minute', T{i}Time, T{j}Time)) <= {minutes}"
+                         for i in range(1, count + 1) for j in range(i + 1, count + 1))
+    times = ", ".join(f"T{i}Time = min(T{i}Time)" for i in range(1, count + 1))
+    joins = "\n".join(f"| join kind=inner (T{i} | project-away DeviceName) on DeviceId | project-away DeviceId1"
+                      for i in range(2, len(nodes) + 1))
+    tid = f" · ATT&CK {', '.join(tids)}" if tids else ""
+    return f"""// {name}: {listed} on the same device within {window}{tid} · severity HIGH
+let lookback = {lookback};
+{chr(10).join(lets)}
+T1
+{joins}
+| where {close}
+| summarize {times} by DeviceId, DeviceName"""
+
+
+def _build_chains(pairs: List[Dict], file_info: Dict) -> List[Dict]:
+    """
+    Chains of three techniques from one vendor's scored pairs: A-B and B-C both pairs
+    (A-C too ranks it higher), each technique bringing a tactic the other two don't, so
+    a technique with four tactics (Valid Accounts) can't make up the spread alone. The
+    query needs all three on one host within the window, in any order: ATT&CK tactics
+    are goals, not steps. A technique is in at most CHAIN_PER_TECHNIQUE chains.
+    """
+    from itertools import combinations
+
+    vendor = next((c.get("vendor") for c in pairs if c.get("vendor")), "")
+    if vendor not in ("googlesecops", "mde"):
+        return []
+    nodes, edges = _chain_nodes(pairs, file_info)
+    neighbours: Dict[str, set] = {}
+    for edge in edges:
+        x, y = tuple(edge)
+        neighbours.setdefault(x, set()).add(y)
+        neighbours.setdefault(y, set()).add(x)
+
+    candidates = {}
+    for middle, around in neighbours.items():
+        for x, y in combinations(sorted(around), 2):
+            trio = frozenset((x, middle, y))
+            if trio in candidates:
+                continue
+            tactics = [nodes[k]["tactics"] for k in trio]
+            if not all(t - set().union(*(o for o in tactics if o is not t)) for t in tactics):
+                continue
+            links = [edges[e] for e in map(frozenset, combinations(trio, 2)) if e in edges]
+            candidates[trio] = (len(links) == CHAIN_LENGTH, round(sum(links) / len(links), 2),
+                                len(set().union(*tactics)))
+
+    chains, used = [], {}
+    for trio, (closed, relevance, n_tactics) in sorted(
+            candidates.items(), key=lambda kv: (kv[1], sorted(kv[0])), reverse=True):
+        if len(chains) >= CHAIN_MAX:
+            break
+        if any(used.get(k, 0) >= CHAIN_PER_TECHNIQUE for k in trio):
+            continue
+        members = sorted((nodes[k] for k in trio), key=lambda n: n["name"].lower())
+        query = _chain_query(vendor, members)
+        if not query:
+            continue
+        for k in trio:
+            used[k] = used.get(k, 0) + 1
+        paths = [p for n in members for p in dict.fromkeys(n["paths"])]
+        chains.append({
+            "vendor": vendor,
+            "a": paths[0],
+            "b": paths[1:],
+            "chain": True,
+            "techniques_involved": [n["name"] for n in members],
+            "tactics": sorted(set().union(*(n["tactics"] for n in members))),
+            "relevance_score": relevance,
+            "query_a": "", "query_b": "",
+            "combined_query": query,
+        })
+    return chains
+
+
 def _apply_correlation_grouping(correlations: List[Dict], file_info: Dict) -> List[Dict]:
     """
     Group each vendor's correlations separately. Merging is by technique pair, so
@@ -1562,8 +1737,9 @@ def _group_vendor_correlations(correlations: List[Dict], file_info: Dict) -> Lis
             print(f"   DEBUG technique_name_a: {technique_name_a}")
             print(f"   DEBUG technique_name_b: {technique_name_b}")
 
-        # Create pair key with technique names (unique enough for grouping)
-        pair_key = tuple(sorted([technique_name_a, technique_name_b]))
+        # Pair key on letters and digits: 'Account Manipulation' == 'AccountManipulation'
+        corr["_key_a"] = _technique_key(technique_name_a)
+        pair_key = tuple(sorted([_technique_key(technique_name_a), _technique_key(technique_name_b)]))
 
         if pair_key not in grouped:
             grouped[pair_key] = []
@@ -1593,6 +1769,8 @@ def _group_vendor_correlations(correlations: List[Dict], file_info: Dict) -> Lis
             for corr in corr_list[1:]:
                 query_a = corr.get("query_a", "")
                 query_b = corr.get("query_b", "")
+                if corr.get("_key_a") != merged.get("_key_a"):  # the pair the other way round
+                    query_a, query_b = query_b, query_a
                 if query_a and query_a not in all_queries_a:
                     all_queries_a.append(query_a)
                 if query_b and query_b not in all_queries_b:
@@ -1615,215 +1793,16 @@ def _group_vendor_correlations(correlations: List[Dict], file_info: Dict) -> Lis
             )
             final_correlations.append(merged)
 
-    # Second-level grouping: Merge correlations that share one technique
-    # Example: (A→B), (A→C), (A→D) becomes (A→(B OR C OR D))
-    by_single_technique = {}
+    # Each pair is its own correlation. This used to merge every pair sharing a technique A
+    # into "A, then any of B..H": alternatives, not a chain, and skipped once A had more
+    # than ten partners. Chains of three techniques are built from the pairs below.
     for corr in final_correlations:
-        path_a = corr.get("a", "")
-        path_b = corr.get("b", "")
-
-        # Extract technique name from file_info (using proper names from YAML)
-        # Fall back to filename extraction if not found in file_info
-        technique_name_a = file_info.get(path_a, {}).get("name")
-        if not technique_name_a:
-            basename_a = os.path.basename(path_a).replace(".yaml", "").replace(".yml", "")
-            technique_name_a = basename_a.split("_")[0] if "_" in basename_a else basename_a
-
-        technique_name_b = file_info.get(path_b, {}).get("name")
-        if not technique_name_b:
-            basename_b = os.path.basename(path_b).replace(".yaml", "").replace(".yml", "")
-            technique_name_b = basename_b.split("_")[0] if "_" in basename_b else basename_b
-
-        # Group by the first technique (A)
-        if technique_name_a not in by_single_technique:
-            by_single_technique[technique_name_a] = {}
-        if technique_name_b not in by_single_technique[technique_name_a]:
-            by_single_technique[technique_name_a][technique_name_b] = []
-        by_single_technique[technique_name_a][technique_name_b].append(corr)
-
-    # Merge correlations where one technique correlates with multiple others
-    # BUT only if it's reasonable (3-10 targets) - don't super-merge if too many targets
-    super_merged_correlations = []
-    for tech_a, tech_b_dict in by_single_technique.items():
-        num_targets = len(tech_b_dict)
-
-        if num_targets == 1:
-            # Single target technique - keep all correlations as-is
-            for tech_b, corr_list in tech_b_dict.items():
-                for corr in corr_list:
-                    # Add techniques_involved field for consistency
-                    if "techniques_involved" not in corr:
-                        corr["techniques_involved"] = sorted([tech_a, tech_b])
-
-                    # Build JOIN-based correlation query for this pair too
-                    join_query = _build_join_correlation_query(corr, file_info)
-                    corr["combined_query"] = join_query
-
-                    super_merged_correlations.append(corr)
-        elif num_targets == 2:
-            # 2 targets - create single merged correlation (tech_a correlates with tech_b1 OR tech_b2)
-            # This is a good use case for super-merging
-            pass  # Continue to super-merge logic below
-        elif 3 <= num_targets <= 10:
-            # 3-10 targets - create multiple groups of correlations (up to 5 groups)
-            pass  # Continue to super-merge logic below
-        elif num_targets > 10:
-            # Too many targets (>10) - skip super-merging and keep as individual correlations
-            # This prevents creating one massive correlation from a popular technique
-            print(
-                f"      Skipping super-merge for '{tech_a}' ({num_targets} targets) - keeping as individual correlations"
-            )
-            for tech_b, corr_list in tech_b_dict.items():
-                for corr in corr_list:
-                    if "techniques_involved" not in corr:
-                        corr["techniques_involved"] = sorted([tech_a, tech_b])
-
-                    join_query = _build_join_correlation_query(corr, file_info)
-                    corr["combined_query"] = join_query
-
-                    super_merged_correlations.append(corr)
-            continue  # Skip to next tech_a
-
-        # Super-merge logic for 2-10 targets
-        if 2 <= num_targets <= 10:
-            # Multiple target techniques - create multiple super-correlations if needed
-            # Each super-correlation has max 8 techniques and at least 2 tactics
-            all_corrs = []
-            for corr_list in tech_b_dict.values():
-                all_corrs.extend(corr_list)
-            all_corrs.sort(key=lambda c: c.get("relevance_score", 0), reverse=True)
-
-            # Create multiple super-correlations (groups) instead of one huge correlation
-            # Each group will have up to 8 techniques
-            groups_created = 0
-            max_groups = 5  # Limit to 5 super-correlations per tech_a to avoid over-generation
-            corr_idx = 0
-
-            while corr_idx < len(all_corrs) and groups_created < max_groups:
-                # Start a new group
-                techniques_involved = set()
-                techniques_involved.add(tech_a)
-                tactics_involved = set()
-
-                # Get ALL tactics for tech_a (not just first)
-                for path in [all_corrs[0].get("a", ""), all_corrs[0].get("b", "")]:
-                    if path and path in file_info:
-                        basename = os.path.basename(path).replace(".yaml", "").replace(".yml", "")
-                        tech_name = basename.split("_")[0] if "_" in basename else basename
-                        if tech_name == tech_a:
-                            tactics = file_info[path].get("tactics", [])
-                            tactics_involved.update(tactics)
-                            break
-
-                # Select correlations up to max 8 techniques for this group, ensuring >= 2 tactics
-                selected_corrs = []
-                all_queries_a = []
-                all_queries_b = []
-
-                while corr_idx < len(all_corrs):
-                    corr = all_corrs[corr_idx]
-                    corr_idx += 1
-
-                    # Extract technique names and tactics from this correlation
-                    path_a = corr.get("a", "")
-                    path_b = corr.get("b", "")
-
-                    basename_a = os.path.basename(path_a).replace(".yaml", "").replace(".yml", "")
-                    basename_b = os.path.basename(path_b).replace(".yaml", "").replace(".yml", "")
-
-                    tech_name_a = basename_a.split("_")[0] if "_" in basename_a else basename_a
-                    tech_name_b = basename_b.split("_")[0] if "_" in basename_b else basename_b
-
-                    # Get tactics for these techniques (use ALL tactics, not just first)
-                    temp_tactics = set(tactics_involved)
-                    if path_a in file_info:
-                        tactics = file_info[path_a].get("tactics", [])
-                        temp_tactics.update(tactics)
-                    if path_b in file_info:
-                        tactics = file_info[path_b].get("tactics", [])
-                        temp_tactics.update(tactics)
-
-                    # Check if adding this correlation would exceed 8 techniques
-                    # Use techniques_involved from the correlation if it exists (for already-merged correlations)
-                    corr_techniques = corr.get("techniques_involved", [tech_name_a, tech_name_b])
-                    temp_techniques = set(techniques_involved)
-                    temp_techniques.update(corr_techniques)
-
-                    # Decision logic:
-                    # 1. If we have < 2 tactics, keep adding to build up tactics (up to 8 techniques max)
-                    # 2. If we have >= 2 tactics, only add if we're under 8 techniques
-                    should_add = False
-                    if len(tactics_involved) < 2:
-                        # Still building up tactics - add if under 8 techniques
-                        should_add = len(temp_techniques) <= 8
-                    else:
-                        # Have enough tactics - enforce strict 8 technique limit
-                        should_add = len(temp_techniques) <= 8
-
-                    if should_add:
-                        techniques_involved = temp_techniques
-                        tactics_involved = temp_tactics
-                        selected_corrs.append(corr)
-
-                        qa = corr.get("query_a", "")
-                        qb = corr.get("query_b", "")
-                        if qa and qa not in all_queries_a:
-                            all_queries_a.append(qa)
-                        if qb and qb not in all_queries_b:
-                            all_queries_b.append(qb)
-
-                    # Stop this group if we have 8 techniques and at least 2 tactics
-                    if len(techniques_involved) >= 8 and len(tactics_involved) >= 2:
-                        break
-
-                # Skip if no correlations were selected for this group
-                if not selected_corrs:
-                    break
-
-                # Use the first selected correlation as base
-                base_corr = selected_corrs[0].copy()
-
-                # Combine with UNION (for backward compatibility, but will be replaced by JOIN)
-                if len(all_queries_a) > 1:
-                    base_corr["query_a"] = "\nUNION\n".join(all_queries_a)
-                if len(all_queries_b) > 1:
-                    base_corr["query_b"] = "\nUNION\n".join(all_queries_b)
-
-                # Store the list of all techniques involved in this merged correlation
-                base_corr["techniques_involved"] = sorted(list(techniques_involved))
-
-                # Collect ALL tactics from all techniques (not just first tactic)
-                all_tactics_set = set()
-                for tech_name in techniques_involved:
-                    # Find the file for this technique
-                    for path in [corr.get("a", "") for corr in selected_corrs] + [
-                        corr.get("b", "") for corr in selected_corrs
-                    ]:
-                        if path and path in file_info:
-                            basename = (
-                                os.path.basename(path).replace(".yaml", "").replace(".yml", "")
-                            )
-                            path_tech_name = basename.split("_")[0] if "_" in basename else basename
-                            if path_tech_name == tech_name:
-                                tactics = file_info[path].get("tactics", [])
-                                all_tactics_set.update(tactics)
-                                break
-
-                # Update the correlation with complete tactics
-                base_corr["tactics"] = sorted(list(all_tactics_set))
-
-                # Build JOIN-based correlation query (default behavior)
-                join_query = _build_join_correlation_query(base_corr, file_info)
-                base_corr["combined_query"] = join_query
-
-                print(
-                    f"      Super-merged group {groups_created + 1} for '{tech_a}': {len(selected_corrs)} correlations into 1 multi-technique correlation ({len(techniques_involved)} techniques, {len(all_tactics_set)} tactics)"
-                )
-                super_merged_correlations.append(base_corr)
-                groups_created += 1
-
-    final_correlations = super_merged_correlations
-    print(f"   After super-merging: {len(final_correlations)} correlations")
+        corr.pop("_key_a", None)
+        if "techniques_involved" not in corr:
+            corr["techniques_involved"] = sorted(
+                {file_info.get(corr.get(k), {}).get("name") or _source_label(corr.get(k)) for k in ("a", "b")})
+        corr["combined_query"] = _build_join_correlation_query(corr, file_info)
+    pairs = final_correlations
 
     # Apply technique frequency limit: each technique can appear in multiple correlations
     # - Super-merged correlations (3+ techniques): unlimited frequency (already consolidated)
@@ -1870,7 +1849,9 @@ def _group_vendor_correlations(correlations: List[Dict], file_info: Dict) -> Lis
     print(
         f"   After frequency limiting: {len(diverse_correlations)} correlations (removed {len(final_correlations) - len(diverse_correlations)} due to technique frequency)"
     )
-    return diverse_correlations
+    chains = _build_chains(pairs, file_info)
+    print(f"   Chains: {len(chains)} of three techniques")
+    return chains + diverse_correlations
 
 
 def _score_data_source_diversity(corr: Dict, vendor: str) -> float:
@@ -2219,15 +2200,21 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
 
     # print(f"GenAI: Total correlations before filtering: {len(vendor_corr)}")
 
-    write_progress(
-        group_name,
-        {
-            "status": "genai_processing",
-            "step": "scoring",
-            "total_pairs": total_pairs_all_vendors,
-            "processed": cumulative_count,
-        },
-    )
+    def _scoring_progress(scored):
+        write_progress(
+            group_name,
+            {
+                "status": "genai_processing",
+                "step": "scoring",
+                "total_pairs": total_pairs_all_vendors,
+                "processed": cumulative_count,
+                "to_score": len(vendor_corr),
+                "scored": scored,
+            },
+        )
+
+    _scoring_progress(0)
+    scored_before = 0  # earlier vendors' correlations, so the count runs across all of them
 
     # Score correlations but don't filter aggressively
     # MODIFIED: Reduced filtering to allow more correlations through
@@ -2251,10 +2238,19 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
             # Read per run: a technique hunt can set its own threshold (CoreConfig is fixed at import)
             min_relevance = float(os.getenv("CORRELATION_MIN_RELEVANCE", CoreConfig.correlation_min_relevance))
 
+            def _on_scored(n, base=scored_before):
+                # Same timer as pairing: scoring is quick per item, a file write isn't
+                nonlocal last_report
+                if time.monotonic() - last_report >= 0.4:
+                    last_report = time.monotonic()
+                    _scoring_progress(base + n)
+
             top_vendor_corrs = _score_and_filter_correlations(
                 corrs, file_info, min_relevance=min_relevance,
-                max_per_vendor=CORRELATION_CAP.get(vendor, 60),
+                max_per_vendor=CORRELATION_CAP.get(vendor, 60), on_scored=_on_scored,
             )
+            scored_before += len(corrs)
+            _scoring_progress(scored_before)
             print(
                 f"   Kept {len(top_vendor_corrs)}/{len(corrs)} after relevance filtering (>= {min_relevance:.0%})"
             )

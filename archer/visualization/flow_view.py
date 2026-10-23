@@ -181,6 +181,8 @@ def build_flow_view(detection_paths: Dict[str, Iterable[str]], correlations: Lis
     by_name = {n["name"].lower(): tid for tid, n in nodes.items()}
     edges: Dict[tuple, Dict] = {}
     for corr in correlations or []:
+        if corr.get("chain"):
+            continue  # all on one host in any order: no A -> B, and its pairs are edges already
         vendor = corr.get("vendor", "")
         a = read_detection(corr.get("a", ""))
         b = read_detection(corr.get("b", ""))
