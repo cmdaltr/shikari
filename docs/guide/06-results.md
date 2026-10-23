@@ -17,6 +17,7 @@ Every hunt, report and company-profile run ends on a Results page: its detection
 | Correlations | Queries chained across techniques and tactics (below) |
 | Attack flow | The group's techniques laid out by tactic, marked detected or not |
 | IOC flow | For a report: its indicators in the order the intrusion used them |
+| Anatomy workflow | Who, with what, through which services, for what: the actor or CVE as a network, each link marked detected or not (below) |
 | Validation | A four-step checklist to work through before deploying anything |
 
 ## Detection cards
@@ -91,6 +92,16 @@ You can rearrange the flow before saving or exporting it:
 | Do it from the keyboard | Focus a card and press Alt with the arrow keys: along its tactic, or to the next tactic. On a tactic's name, Alt+arrows move the tactic |
 
 The toolbar also filters by SIEM, hides undetected techniques, hides selected cards, and switches orientation and direction. **Undo** (⌘/Ctrl-Z) reverses any change and **Reset** restores the generated flow. Once the run is in your Library, edits are saved with it. **STIX** downloads the flow as shown, moved techniques and drawn links included, as an Attack Flow 2.x bundle for the CTID Attack Flow Builder.
+
+## Anatomy workflow
+
+A network of the attack in the style of the DFIR Report's workflow diagrams, built without AI.
+
+For a group, from ATT&CK's procedures: its tools on the left, the group in the middle under its campaigns, and on the right the CVEs it exploits and the legitimate services it abuses (Dropbox, Telegram, ngrok, AWS) that a procedure names. Each link says what it's for (Exploit, C2, Exfiltration, Remote access, Cloud access). Its objectives hang below it (Credentials, Lateral movement, Data collected, Data exfiltrated, Impact), each naming the tool that does most of it. Up to eight tools, five CVEs and seven services are shown; the line above the diagram counts the rest.
+
+For a CVE, from its research: the attacker, the public PoC or named exploit (and any ATT&CK group known to exploit it), the CVE with its product and CVSS score, the worker process the code runs in, the shell it starts, and the infrastructure the advisories name.
+
+A link is teal when the run has a detection for one of its techniques (a technique, its parent or a sub-technique counts), red when it has none, and grey for context such as *uses*. For a CVE, the exploit link counts the exploit request detection, the worker and shell links the runtime shell detection, and the infrastructure links the IOC sweep. **Gaps only** fades everything you already detect. Select a node or link for its techniques, each marked detected or not, and the procedures behind it.
 
 ## Buttons
 

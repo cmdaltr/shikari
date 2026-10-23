@@ -1,0 +1,69 @@
+/* Results page: anatomy workflow (templates/partials/anatomy.html). Shares the af- tokens and chrome. */
+.an-section {
+  --an-detected: #0D9488;
+  --an-gap: #B91C1C;
+  --an-none: #94A3B8;
+  --an-node: #fff;
+  --an-ring: #CBD5E1;
+  --an-band: rgba(185, 28, 28, .06);
+}
+[data-theme="dark"] .an-section {
+  --an-detected: #2DD4BF;
+  --an-gap: #F87171;
+  --an-none: #64748B;
+  --an-node: #1E293B;
+  --an-ring: #334155;
+  --an-band: rgba(248, 113, 113, .08);
+}
+.an-canvas { flex: 1 1 auto; min-width: 0; overflow-x: auto; }
+.an-svg { display: block; width: 100%; min-width: 720px; height: auto; font-family: inherit; }
+
+.an-band { fill: var(--an-band); stroke: var(--an-gap); stroke-width: 1.4; stroke-dasharray: 6 5; }
+.an-band-title { text-anchor: start; font-size: 13px; font-weight: 700; fill: var(--af-text); }
+
+.an-line { fill: none; stroke-width: 1.8; stroke-dasharray: 6 5; }
+.an-edge.is-detected .an-line { stroke: var(--an-detected); }
+.an-edge.is-gap .an-line { stroke: var(--an-gap); }
+.an-edge.is-none .an-line { stroke: var(--an-none); opacity: .7; }
+.an-arrow-detected { fill: var(--an-detected); }
+.an-arrow-gap { fill: var(--an-gap); }
+.an-arrow-none { fill: var(--an-none); }
+.an-hit { fill: none; stroke: transparent; stroke-width: 14; }
+.an-edge[tabindex] { cursor: pointer; }
+.an-edge-label {
+  text-anchor: middle; dominant-baseline: middle; font-size: 12px; fill: var(--af-text);
+  paint-order: stroke; stroke: var(--af-node-bg); stroke-width: 5px; stroke-linejoin: round;
+}
+.an-edge.is-gap .an-edge-label { fill: var(--an-gap); }
+
+.an-node { cursor: pointer; }
+.an-node circle { fill: var(--an-node); stroke: var(--an-ring); stroke-width: 2; }
+.an-icon { fill: none; stroke: var(--af-text); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.an-kind-actor circle { stroke: var(--an-gap); }
+.an-kind-actor .an-icon, .an-kind-exploit .an-icon, .an-kind-cve .an-icon { stroke: var(--an-gap); }
+.an-kind-service .an-icon, .an-kind-ioc .an-icon { stroke: #0284C7; }
+.an-kind-objective circle { stroke: var(--an-gap); stroke-dasharray: 4 3; }
+[data-theme="dark"] .an-kind-service .an-icon, [data-theme="dark"] .an-kind-ioc .an-icon { stroke: #7DD3FC; }
+.an-label { text-anchor: middle; font-size: 13px; font-weight: 600; fill: var(--af-text); }
+.an-sub { text-anchor: middle; font-size: 11px; fill: var(--af-muted); }
+
+.an-node:focus-visible circle, .an-node.is-selected circle { stroke: var(--af-focus); stroke-width: 3; }
+.an-edge:focus-visible .an-line, .an-edge.is-selected .an-line { stroke-width: 3; }
+.an-section.has-selection .an-node:not(.is-selected):not(.is-lit),
+.an-section.has-selection .an-edge:not(.is-lit) { opacity: .25; }
+.an-section.gaps-only .an-edge.is-detected,
+.an-section.gaps-only .an-edge.is-none { opacity: .12; }
+.an-edge:focus, .an-node:focus { outline: none; }
+
+.an-legend-edge { display: inline-block; width: 28px; height: 0; border-top: 3px dashed var(--an-none); }
+.an-legend-edge.is-detected { border-top-color: var(--an-detected) !important; }
+.an-legend-edge.is-gap { border-top-color: var(--an-gap) !important; }
+.an-legend-edge.is-none { border-top-color: var(--an-none) !important; }
+
+.an-detail-title { font-weight: 700; margin: 0 0 2px; }
+.an-techniques { margin: 4px 0 0; padding-left: 18px; font-size: .88em; }
+.an-techniques .is-gap { color: var(--an-gap); }
+.an-techniques .is-detected { color: var(--an-detected); }
+.an-evidence { margin: 6px 0 0; padding-left: 10px; border-left: 3px solid var(--an-gap); font-size: .88em; color: var(--af-text); }
+.an-links { margin: 4px 0 0; padding-left: 18px; font-size: .88em; }
+.an-links button { font: inherit; padding: 0; border: 0; background: none; color: var(--accent); cursor: pointer; text-decoration: underline; }

@@ -6869,6 +6869,17 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
 
         ioc_flow = load_ioc_flow(group_name) or None
 
+    # Anatomy workflow: actor, tools, CVEs and services down to its objectives (archer.visualization.anatomy)
+    anatomy = None
+    try:
+        from archer.visualization import anatomy as anatomy_lib
+        from archer.visualization.flow_view import read_detection
+
+        view_paths = [os.path.join(generate_dir, d["file"]) for entries in detection_files.values() for d in entries]
+        anatomy = anatomy_lib.build(group_name, view_paths, {d["id"] for d in map(read_detection, view_paths) if d})
+    except Exception as e:
+        print(f"Anatomy workflow unavailable: {e}")
+
     # Calculate duration (if progress file exists)
     # Progress files are saved with the original group name (with spaces), not sanitized
     duration = 0
@@ -6958,6 +6969,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
             # Vendor keys the user generates for (Profile → SIEM platforms; none chosen means all)
             "profile_vendors": [SIEM_PLATFORMS[s] for s in _user_siems(user)] or list(SIEM_PLATFORMS.values()),
             "ioc_flow": ioc_flow,
+            "anatomy": anatomy,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "validation_results": validation_results,
             "validation_summary": validation_summary,
