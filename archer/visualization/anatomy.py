@@ -615,3 +615,28 @@ def build(group_name: str, detection_paths: Iterable[str], detected: Set[str]) -
     if _CVE.match(group_name):
         return build_cve(group_name, paths, detected)
     return build_group(group_name, detected)
+
+
+def has_anatomy(group_name: str, csv_path: str = _PROCEDURES_CSV) -> bool:
+    """Whether a group or CVE has the material for one: ATT&CK procedures, or cached CVE research."""
+    if _CVE.match(group_name):
+        from archer.intelligence.cve_hunter import CVEHunter
+
+        return any(os.path.isfile(os.path.join(CVEHunter.cache_location(), f"{c}.json"))
+                   for c in _cve_ids(group_name, []))
+    try:
+        rows = _attributed_rows(os.path.abspath(csv_path), os.path.getmtime(csv_path))
+    except OSError:
+        return False
+    return bool(rows.get(group_name.lower()) or rows.get(group_name.replace("_", " ").lower()))
+
+
+def for_group(group_name: str, generate_dir: str) -> Optional[Dict]:
+    """The anatomy of a group or CVE against all of its detections (the Anatomy page; results use the run's)."""
+    from archer.build.group_files import group_yaml_files
+    from archer.visualization.flow_view import read_detection
+
+    paths = group_yaml_files(group_name, generate_dir)
+    detected = {d["id"] for d in map(read_detection, paths) if d}
+    name = group_name if _CVE.match(group_name) else group_name.replace("_", " ")
+    return build(name, paths, detected)

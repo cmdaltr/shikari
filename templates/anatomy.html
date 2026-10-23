@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Archer - Anatomy{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/attack_flow.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/anatomy.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/flows.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container fl-page">
+  <div class="page-header">
+    <h1>Anatomy</h1>
+    <p>How each threat group and CVE in your library runs, and how much of it your detections see</p>
+  </div>
+
+  {% if not kinds %}
+  <section class="fl-empty">
+    <p>No anatomies yet. One appears here once a threat group's or CVE's results are saved to your
+      <a href="/library">library</a>: open its results and use <strong>Save to Library</strong>.</p>
+  </section>
+  {% else %}
+  <!-- One row: the anatomy to show, what it is, and its results (the Flows page's bar) -->
+  <div class="fl-bar">
+    <form class="fl-pick" method="get" action="/anatomy">
+      <label for="an-group">Anatomy</label>
+      <select id="an-group" name="group" onchange="this.form.submit()">
+        {% for kind, entries in kinds.items() %}
+        <optgroup label="{{ kind }}{{ 's' if entries|length != 1 }}">
+          {% for f in entries %}
+          <option value="{{ f.group }}" {% if chosen and f.group == chosen.group %}selected{% endif %}>{{ f.label }}</option>
+          {% endfor %}
+        </optgroup>
+        {% endfor %}
+      </select>
+      <noscript><button type="submit">Open</button></noscript>
+    </form>
+    {% if chosen %}
+    <span class="fl-kind">{{ chosen.kind }}</span>
+    <a class="fl-open" href="/results?group_name={{ chosen.group|urlencode }}">Open results →</a>
+    {% endif %}
+  </div>
+
+  {% if anatomy %}
+    {% set anatomy_scope = "" %}
+    {% include "partials/anatomy.html" %}
+  {% elif chosen %}
+  <section class="fl-empty">
+    <p>There isn't enough in ATT&amp;CK or the CVE's research to draw this one yet.</p>
+  </section>
+  {% endif %}
+  {% endif %}
+</div>
+{% if anatomy %}<script src="{{ url_for('static', path='js/anatomy.js') }}?v={{ request.app.state.asset_version }}"></script>{% endif %}
+{% endblock %}

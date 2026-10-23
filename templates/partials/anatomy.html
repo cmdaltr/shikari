@@ -1,4 +1,6 @@
-{# Anatomy workflow. Context: anatomy (archer.visualization.anatomy.build); only included when there is one #}
+{# Anatomy workflow. Context: anatomy (archer.visualization.anatomy.build), only included when there is one;
+   anatomy_scope, whose detections count: " by this run" on the results page, "" for all of them #}
+{% set scope = anatomy_scope | default(' by this run') %}
 {% set icons = {
   'actor': 'M12 3a4 4 0 1 1 0 8a4 4 0 1 1 0-8zM4 21c0-4.4 3.6-8 8-8s8 3.6 8 8',
   'door': 'M6 3h11v18H6zM14 12h.01M3 21h18',
@@ -28,7 +30,7 @@
 
   <p class="af-stats">
     {% if anatomy.kind == 'cve' %}How the CVE is exploited and what follows{% else %}How they get in, what they run, what they do and where it goes{% endif %} ·
-    <strong>{{ anatomy.stats.detected }}</strong> of {{ anatomy.stats.links }} step{{ 's' if anatomy.stats.links != 1 }} mostly detected by this run
+    <strong>{{ anatomy.stats.detected }}</strong> of {{ anatomy.stats.links }} step{{ 's' if anatomy.stats.links != 1 }} mostly detected{{ scope }}
   </p>
 
   <div class="af-body">
@@ -75,7 +77,7 @@
   </div>
 
   <div class="af-legend">
-    <span><span class="an-legend-edge is-detected"></span> mostly detected by this run</span>
+    <span><span class="an-legend-edge is-detected"></span> mostly detected{{ scope }}</span>
     <span><span class="an-legend-edge is-gap"></span> mostly not detected</span>
     <span class="af-legend-hint">Select a node or step for everything in it and what the reporting says</span>
   </div>

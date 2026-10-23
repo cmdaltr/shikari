@@ -21,6 +21,7 @@ The menu bar has three menus (Detections, Intel, Build), then Profile and Help. 
 | Library | Detections → Library | Everything you've saved, with filters, tags and exports | [Library](07-library.md) |
 | Coverage | Detections → Coverage | Which techniques the reference queries and your detections cover | [Coverage](08-coverage.md) |
 | Flows | Detections → Flows | Every saved attack flow: what you can and can't detect | [Flows](09-flows.md) |
+| Anatomy | Detections → Anatomy | Every saved threat group's and CVE's anatomy workflow | [Flows](09-flows.md#anatomy) |
 | Feed | Intel → Feed | This week's threat research, tagged; search all research | [Threat Feed](10-threat-feed.md) |
 | Cyber Powers | Intel → Cyber Powers | National cyber capability, attribution and targeting on a map | [Cyber Powers](11-cyber-powers.md) |
 | MITRESaw | Intel → MITRESaw | ATT&CK procedures and their indicators; OSINT repository status | [MITRESaw](12-mitresaw.md) |

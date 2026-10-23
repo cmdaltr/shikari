@@ -17,3 +17,5 @@
 /* The page title already says what this is: the flow's own heading would repeat it */
 .fl-page .af-section > .detection-header > h2 { display: none; }
 .fl-page .af-section > .detection-header { justify-content: flex-start; }
+/* The Anatomy page (templates/anatomy.html) has no card heading at all */
+.fl-page .an-section > .detection-header { display: none; }

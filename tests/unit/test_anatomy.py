@@ -144,3 +144,14 @@ def test_a_cves_anatomy_from_its_research(tmp_path, monkeypatch):
     assert steps[c + "worker"]["covered_by"] == ["Runtime shell detection"]
     assert steps[c + "infra"]["state"] == "detected"  # the IOC sweep
     assert anatomy.build_cve("CVE-2026-1", [], set(), cache_dir=str(tmp_path)) is None
+
+
+def test_only_groups_in_attack_and_researched_cves_have_an_anatomy(tmp_path, monkeypatch):
+    from archer.intelligence.cve_hunter import CVEHunter
+
+    path = _csv(tmp_path, ROWS)
+    assert anatomy.has_anatomy("Test Spider", path) and anatomy.has_anatomy("Test_Spider", path)
+    assert not anatomy.has_anatomy("Some Blog Report", path)
+    monkeypatch.setattr(CVEHunter, "cache_location", staticmethod(lambda: str(tmp_path)))
+    (tmp_path / "CVE-2026-109618.json").write_text("{}")
+    assert anatomy.has_anatomy("CVE-2026-109618") and not anatomy.has_anatomy("CVE-2026-1")

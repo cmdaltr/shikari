@@ -8055,6 +8055,33 @@ def flows_page(request: Request, group: str = "", archer_session: Optional[str] 
     })
 
 
+@app.get("/anatomy", response_class=HTMLResponse)
+def anatomy_page(request: Request, group: str = "", archer_session: Optional[str] = Cookie(None)):
+    """Anatomy workflows of the threat groups and CVEs saved to the library (archer.visualization.anatomy)."""
+    from archer.visualization import anatomy as anatomy_lib
+    from archer.visualization.flow_layouts import library_flows
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return auth_result
+    user, db = auth_result
+    try:
+        saved = library_flows(db, user.id, getattr(request.app.state, "bundle", None))
+    finally:
+        db.close()
+    # Reports, technique hunts and profiles have no actor or CVE to draw
+    entries = [f for f in saved if f["kind"] in ("Threat group", "CVE") and anatomy_lib.has_anatomy(f["group"])]
+    chosen = next((f for f in entries if f["group"] == group), None) or (entries[0] if entries else None)
+    view = anatomy_lib.for_group(chosen["group"], GENERATE_DIR) if chosen else None
+    kinds = {}
+    for f in entries:
+        kinds.setdefault(f["kind"], []).append(f)
+    return templates.TemplateResponse("anatomy.html", {
+        "request": request, "user": user, "kinds": kinds, "chosen": chosen,
+        "group_name": chosen["group"] if chosen else "", "anatomy": view,
+    })
+
+
 @app.get("/api/osint-details", response_class=HTMLResponse)
 def results_osint(request: Request, kind: str = "detection", files: List[str] = Query(default=[])):
     """

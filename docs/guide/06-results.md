@@ -113,6 +113,8 @@ For a CVE, from its research, one line per CVE: the attacker (or the ATT&CK grou
 
 A CVE chain longer than six nodes snakes back along the next line. A step is teal when this run detects most of what's behind it, red when it mostly doesn't; for a CVE, the exploit step counts the exploit request detection, the worker and shell steps the runtime shell detection, and the infrastructure step the IOC sweep. Select a node for everything in it and what the reporting says, or a step for how much of it is detected.
 
+Once the run is in your Library, its anatomy is also on [Detections → Anatomy](09-flows.md#anatomy).
+
 ## Buttons
 
 | Button | What it does |

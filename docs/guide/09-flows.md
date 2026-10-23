@@ -31,3 +31,9 @@ The summary line counts techniques detected and gaps.
 ## Limits
 
 A flow shows what ATT&CK attributes to the group, plus what the run found. A technique the group uses that ATT&CK doesn't document won't appear.
+
+## Anatomy
+
+**Detections → Anatomy** shows the [anatomy workflow](06-results.md#anatomy-workflow) of every threat group and CVE in your Library: how it gets in, what it runs, what it does and where it goes. Choose one from the list; **Open results** goes to its Results page. Reports, technique hunts and company profiles aren't listed: there's no actor or CVE to draw.
+
+A Results page counts the steps its own run detects. This page counts every detection you have for the group or CVE, from any run, so the two can differ.
