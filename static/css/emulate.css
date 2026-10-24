@@ -221,3 +221,23 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-plan { font-size: .84em; margin: 6px 0; padding-left: 20px; color: var(--text-secondary); }
 .lab-plan li { margin: 3px 0; }
 .lab-warn { font-size: .84em; color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; }
+
+/* How Emulate works — the pipeline diagram */
+.em-diagram-card .em-dg { margin: 4px 0 10px; overflow-x: auto; }
+.em-dg svg { width: 100%; min-width: 620px; height: auto; display: block; }
+.em-dg-node { fill: var(--bg-primary); stroke: var(--border-color); stroke-width: 1.5; }
+.em-dg-node-end { stroke: var(--accent); }
+.em-dg-loop { fill: rgba(8, 145, 178, .10); stroke: #0e7490; stroke-width: 1.5; }
+.em-dg-out { fill: rgba(197, 48, 48, .10); stroke: var(--accent); stroke-width: 1.5; }
+.em-dg-link { fill: none; stroke: var(--border-color); stroke-width: 1.5; }
+.em-dg-link-strong { fill: none; stroke: var(--accent); stroke-width: 1.75; stroke-dasharray: 5 4; }
+.em-dg-head { fill: var(--border-color); }
+.em-dg-head-strong { fill: var(--accent); }
+.em-dg-t { fill: var(--text-primary); font-size: 12.5px; font-weight: 600; text-anchor: middle; }
+.em-dg-s { fill: var(--text-secondary); font-size: 10px; text-anchor: middle; }
+.em-dg-lane { fill: var(--text-tertiary); font-size: 10.5px; font-weight: 600; letter-spacing: .3px; }
+[data-theme="dark"] .em-dg-loop { fill: rgba(34, 211, 238, .12); stroke: #22d3ee; }
+[data-theme="dark"] .em-dg-node { fill: var(--bg-secondary); }
+
+/* Telemetry: Organise-by block inside the merged section */
+.em-organise { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-color); }

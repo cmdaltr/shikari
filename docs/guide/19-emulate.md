@@ -102,11 +102,15 @@ The filter card applies to whichever view is open below it, and shows only the f
 | Platforms | Windows, Linux, macOS, ESXi, Cloud and SaaS: only the logs from these platforms count, so Linux shows what Linux logging records of each technique |
 | Seen | By group only: Seen, Not seen, No recordings, No indicators, or any noisy indicator |
 
-## Telemetry by technique
+## Telemetry
+
+Where the recordings come from (above), and the views over them. **Update** (admins, or `python -m archer.telemetry --build`) fetches what the sources have changed since. The **Organise by** control switches the view between technique, group and data source; the Filters card at the top of the page applies to whichever is open.
+
+### Organise by technique
 
 Every recorded technique, 20 to a page, with its recordings per source, the **logs** at least half its recordings hold, and, beneath them, those logs' tables or UDM event types for the chosen SIEM: the logs you have to ingest to see it. Only the kinds of logging chosen under Collection count, so with Sysmon left out a technique shows what native logging alone records; one none of whose recordings hold the chosen logs is marked **No recording holds the chosen logs**, a gap for that kind of logging. Select a row for every event type its recordings hold and the recordings themselves. An event type marked **common** turns up in 40% or more of a source's recordings (Security 4688, Sysmon 1), so it's a hint that the event is lab background as much as the attack; it's never taken out.
 
-## Telemetry by group
+### Organise by group
 
 Your detections for the chosen SIEM, for the groups picked in Filters (your latest hunt when none are). Each detection's indicators are matched against the field values of its technique's recordings:
 
@@ -121,7 +125,7 @@ An indicator is **noisy** when recordings of five or more other techniques conta
 
 Not seen isn't proof a detection is wrong: the recording may have used another tool or procedure. It's a cheap first look before testing against your own SIEM.
 
-## Telemetry by data source
+### Organise by data source
 
 Each table or UDM event type for the chosen SIEM, with how many techniques it records (counting it for a technique when at least half the technique's recordings hold it), the recorded logs it comes from, and the techniques. A technique opens in the technique view.
 
