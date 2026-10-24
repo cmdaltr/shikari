@@ -25,7 +25,7 @@
       else if (e.installed) { state = 'installed, not running'; cls = 'is-warn'; }
       else { state = 'not installed'; cls = 'is-missing'; }
       const install = e.install ? `<code class="lab-install">${esc(e.install)}</code>` : '';
-      return `<li class="lab-engine ${cls}"><div><strong>${esc(e.name)}</strong> <span class="lab-engine-state">${state}</span>
+      return `<li class="lab-engine ${cls}"><div><span class="lab-engine-name">${engineIcon(e.key)}<strong>${esc(e.name)}</strong></span> <span class="lab-engine-state">${state}</span>
         <div class="lab-engine-runs">${esc(e.runs)}</div></div>${install}</li>`;
     }).join('');
     el('lab-host').innerHTML = `<div class="lab-host-head">This host: <strong>${esc(h.label)}</strong>
@@ -36,15 +36,30 @@
     const badge = t.ready ? '<span class="lab-badge is-ready">Ready</span>'
       : `<span class="lab-badge is-off" title="${esc(t.reason)}">${esc(t.reason)}</span>`;
     const btn = isAdmin && t.ready ? `<button type="button" class="ui-pill lab-create" data-t="${esc(t.id)}">Create</button>` : '';
-    return `<div class="lab-template"><div class="lab-template-top"><strong>${esc(t.name)}</strong>${badge}</div>
+    return `<div class="lab-template"><div class="lab-template-top"><span class="lab-template-name">${osIcon(t.os)}<strong>${esc(t.name)}</strong></span>${badge}</div>
       <p class="lab-template-about">${esc(t.about)}</p>
       <p class="lab-template-records"><span>Records:</span> ${esc(t.records)}</p>${btn}</div>`;
   }
 
+  const OS_ICON = { windows: 'windows.svg', macos: 'macos.png', linux: 'linux.png' };
+  function osIcon(os) {
+    const f = OS_ICON[os];
+    if (!f) return '';
+    return `<img class="lab-os-icon is-${esc(os)}" src="/static/images/os/${f}" alt="${esc(os)}" width="18" height="18">`;
+  }
+
+  // docker and tart are the engines Archer drives today; vmware/parallels are staged for if they're added
+  const ENGINE_ICON = { docker: 'docker.png', tart: 'tart.png', vmware: 'vmware.svg', parallels: 'parallels.png' };
+  function engineIcon(key) {
+    const f = ENGINE_ICON[key];
+    if (!f) return '';
+    return `<img class="lab-engine-icon is-${esc(key)}" src="/static/images/os/${f}" alt="${esc(key)}" width="18" height="18">`;
+  }
+
   function machineRow(m) {
     const dot = `<span class="lab-dot is-${m.state}" title="${esc(m.state)}"></span>`;
-    const tag = m.archer ? '' : '<span class="lab-tag">outside Archer</span>';
-    const meta = [m.engine, m.os, m.records && ('records ' + m.records)].filter(Boolean).map(esc).join(' · ');
+    const text = [m.engine, m.records && ('records ' + m.records)].filter(Boolean).map(esc).join(' · ');
+    const meta = engineIcon(m.engine) + `<span>${text}</span>`;
     const steps = (m.provisioned || []).length ? `<span class="lab-prov">set up: ${m.provisioned.map(esc).join(', ')}</span>` : '';
     let actions = '';
     if (isAdmin) {
@@ -60,7 +75,7 @@
       </div>`;
     }
     return `<li class="lab-machine" data-engine="${esc(m.engine)}" data-name="${esc(m.name)}" data-os="${esc(m.os)}">
-      <div class="lab-machine-head">${dot}<strong>${esc(m.name)}</strong>${tag}</div>
+      <div class="lab-machine-head">${dot}${osIcon(m.os)}<strong>${esc(m.name)}</strong></div>
       <div class="lab-machine-meta">${meta}${m.detail ? ' · ' + esc(m.detail) : ''}</div>${steps}${actions}</li>`;
   }
 

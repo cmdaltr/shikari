@@ -29,16 +29,19 @@ def _decorate(m: Dict) -> Dict:
 
 
 def listing(engines: Optional[List[str]] = None) -> List[Dict]:
-    """Every machine on the host, across the engines given (default: all that are ready)."""
+    """The machines Archer made, across the engines given (default: all that are ready).
+
+    Only machines in the registry are returned — anything built outside Archer (a VM you
+    cloned yourself, say) is left out, since Archer can't vouch for how it's set up."""
     out = []
     for key, engine in ENGINES.items():
         if engines is not None and key not in engines:
             continue
         try:
-            out += [_decorate(m) for m in engine.list()]
+            out += [d for d in (_decorate(m) for m in engine.list()) if d["archer"]]
         except LabError:
             continue  # an engine that isn't running doesn't stop the others
-    out.sort(key=lambda m: (not m["archer"], m["engine"], m["name"]))
+    out.sort(key=lambda m: (m["engine"], m["name"]))
     return out
 
 

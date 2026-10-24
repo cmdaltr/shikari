@@ -181,3 +181,18 @@ def test_record_dry_run_runs_nothing(monkeypatch):
     assert out == {"run": "box1-run", "executed": False, "plan_only": True}
     assert any(l.startswith("would: ") for l in lines)
     assert any("Dry run" in l for l in lines)
+
+
+def test_listing_shows_only_machines_archer_made(monkeypatch, tmp_path):
+    # Two VMs on the host; only one is in Archer's registry — the other is left out
+    monkeypatch.setattr("archer.lab.registry._PATH", str(tmp_path / "machines.json"))
+    monkeypatch.setattr(engines.Docker, "list", lambda self: [])
+    monkeypatch.setattr(engines.Tart, "list", lambda self: [
+        {"engine": "tart", "name": "mine", "kind": "vm", "image": "", "os": "", "state": "stopped", "detail": ""},
+        {"engine": "tart", "name": "sequoia-vm", "kind": "vm", "image": "", "os": "", "state": "stopped", "detail": ""},
+    ])
+    import archer.lab.registry as reg
+    reg.record("tart", "mine", "macos-vm", "macos", "ghcr.io/cirruslabs/macos")
+    names = [m["name"] for m in machines.listing(["tart"])]
+    assert names == ["mine"]  # sequoia-vm (not in the registry) is omitted
+    assert machines.listing(["tart"])[0]["os"] == "macos"

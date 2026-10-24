@@ -23,116 +23,79 @@
     <div class="em-tile em-check is-starting" id="em-check"><div class="number" id="em-values">Initialising…</div><div class="label">Indicator check</div></div>
   </div>
 
-  <!-- Filters: the Coverage page's filter card. Which apply depends on the view below. -->
-  <div class="ui-card em-filters">
-    <div class="detection-header">
-      <h2>
-        <div class="card-icon filters">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-        </div>
-        Filters
-        <span class="filter-active" id="em-filter-active" hidden></span>
-      </h2>
-      <span id="em-filters-toggle" class="expand-btn" role="button" tabindex="0">Collapse</span>
-    </div>
-    <div class="em-filters-body" id="em-filters-body">
-      <div class="search-row">
-        <input type="search" class="form-input" id="em-q" data-for="technique group" autocomplete="off" maxlength="200"
-               placeholder="Search indicators: a value in the recorded events (comsvcs, lsass.dmp, vssadmin…)" aria-label="Indicators">
-        <button type="button" id="em-clear" title="Clear filters">
-          <svg style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-        </button>
-        <span class="cv-shown" id="em-shown"></span>
-      </div>
-      <div class="filters-row">
-        <select id="em-siem" class="dropdown-styled" aria-label="SIEM platform" title="The SIEM whose tables or event types are shown">
-          <option value="secops">Google SecOps</option>
-          <option value="mde">Defender XDR</option>
-        </select>
-        <div class="em-ms" data-key="technique" data-label="Techniques" data-search="ID or name" data-for="technique group source"></div>
-        <div class="em-ms" data-key="group" data-label="Groups" data-search="Group" data-for="technique group source"></div>
-        <div class="em-ms" data-key="source" data-label="Data sources" data-search="Table or event type" data-for="technique group source"></div>
-        <div class="em-ms" data-key="log" data-label="Logs" data-search="Sysmon 1, Security 4688…" data-for="technique group source"></div>
-        <div class="em-ms" data-key="collection" data-label="Collection" data-for="technique group source" title="Which kinds of logging count: native OS logs are everywhere, Sysmon and agents only where deployed"></div>
-        <div class="em-ms" data-key="platform" data-label="Platforms" data-for="technique group source"></div>
-        <div class="em-ms" data-key="defender" data-label="Defender alerts" data-for="technique" title="Microsoft GUIDE: whether Defender XDR alerts on the technique, and how often rightly"></div>
-        <div class="em-ms" data-key="seen" data-label="Seen" data-for="group"></div>
-      </div>
-    </div>
-  </div>
-
   <!-- How Emulate fits together: recordings → ATT&CK → indicator check → the views below -->
   <section class="ui-card ms-card em-diagram-card">
     <h2>How Emulate works</h2>
     <div class="em-dg">
-      <svg viewBox="0 0 980 230" role="img" aria-labelledby="em-dg-title em-dg-desc" preserveAspectRatio="xMidYMid meet">
+      <svg viewBox="0 0 960 250" role="img" aria-labelledby="em-dg-title em-dg-desc" preserveAspectRatio="xMidYMid meet">
         <title id="em-dg-title">The Emulate pipeline</title>
         <desc id="em-dg-desc">The Lab section builds machines you record attacks on. Those recordings, plus shipped public datasets, are mapped to ATT&amp;CK, then Archer checks whether your detections' indicators appear in the recorded events, and shows the result organised by technique, group or data source.</desc>
         <defs>
           <marker id="em-dg-arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" class="em-dg-head"/>
           </marker>
-          <marker id="em-dg-arrow-strong" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" class="em-dg-head-strong"/>
+          <marker id="em-dg-arrow-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" class="em-dg-head-teal"/>
           </marker>
         </defs>
 
-        <!-- Lab loop: build and record your own machines -->
-        <text x="150" y="19" class="em-dg-lane">Lab — build &amp; record your own machines</text>
-        <rect x="150" y="30" width="96" height="38" rx="8" class="em-dg-loop"/>
-        <text x="198" y="53" class="em-dg-t">Create</text>
-        <rect x="266" y="30" width="96" height="38" rx="8" class="em-dg-loop"/>
-        <text x="314" y="53" class="em-dg-t">Snapshot</text>
-        <rect x="382" y="30" width="120" height="38" rx="8" class="em-dg-loop"/>
-        <text x="442" y="46" class="em-dg-t">Set up</text>
-        <text x="442" y="60" class="em-dg-s">logging + atomics</text>
-        <rect x="522" y="30" width="96" height="38" rx="8" class="em-dg-loop"/>
-        <text x="570" y="46" class="em-dg-t">Record</text>
-        <text x="570" y="60" class="em-dg-s">run atomics</text>
-        <path d="M246,49 L264,49" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
-        <path d="M362,49 L380,49" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
-        <path d="M502,49 L520,49" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
+        <!-- Lab lane: build & record your own machine -->
+        <rect x="196" y="20" width="476" height="72" rx="12" class="em-dg-lane-box"/>
+        <text x="208" y="38" class="em-dg-lane">LAB — build &amp; record a machine</text>
+        <rect x="208" y="48" width="100" height="38" rx="8" class="em-dg-loop"/>
+        <text x="258" y="71" class="em-dg-t">Create</text>
+        <rect x="320" y="48" width="100" height="38" rx="8" class="em-dg-loop"/>
+        <text x="370" y="71" class="em-dg-t">Snapshot</text>
+        <rect x="432" y="48" width="100" height="38" rx="8" class="em-dg-loop"/>
+        <text x="482" y="65" class="em-dg-t">Set up</text>
+        <text x="482" y="79" class="em-dg-s">logging + atomics</text>
+        <rect x="544" y="48" width="100" height="38" rx="8" class="em-dg-loop"/>
+        <text x="594" y="65" class="em-dg-t">Record</text>
+        <text x="594" y="79" class="em-dg-s">run atomics</text>
+        <path d="M308,67 L318,67" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
+        <path d="M420,67 L430,67" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
+        <path d="M532,67 L542,67" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
 
         <!-- Record produces a "Your lab" recording -->
-        <path d="M570,68 C570,104 360,112 180,128" class="em-dg-link-strong" marker-end="url(#em-dg-arrow-strong)"/>
+        <path d="M594,92 C594,126 360,144 180,144" class="em-dg-link-teal" marker-end="url(#em-dg-arrow-teal)"/>
 
         <!-- Feeders -->
-        <rect x="16" y="108" width="160" height="44" rx="8" class="em-dg-out"/>
-        <text x="96" y="127" class="em-dg-t">Your lab</text>
-        <text x="96" y="141" class="em-dg-s">runs you record</text>
-        <rect x="16" y="170" width="160" height="44" rx="8" class="em-dg-node"/>
-        <text x="96" y="189" class="em-dg-t">Public labs</text>
-        <text x="96" y="203" class="em-dg-s">shipped datasets</text>
+        <rect x="16" y="120" width="160" height="48" rx="8" class="em-dg-origin"/>
+        <text x="96" y="141" class="em-dg-t">Your lab</text>
+        <text x="96" y="156" class="em-dg-s">runs you record</text>
+        <rect x="16" y="182" width="160" height="48" rx="8" class="em-dg-node"/>
+        <text x="96" y="203" class="em-dg-t">Public labs</text>
+        <text x="96" y="218" class="em-dg-s">shipped datasets</text>
 
         <!-- Feeders into the pipeline -->
-        <path d="M176,130 C198,130 192,150 210,152" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
-        <path d="M176,192 C198,192 192,164 210,160" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
+        <path d="M176,144 C194,144 192,170 206,172" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
+        <path d="M176,206 C194,206 192,180 206,178" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
 
-        <!-- Main pipeline -->
-        <rect x="210" y="128" width="170" height="56" rx="8" class="em-dg-node"/>
-        <text x="295" y="152" class="em-dg-t">Recordings</text>
-        <text x="295" y="169" class="em-dg-s">one tool run, logging on</text>
-        <rect x="420" y="128" width="160" height="56" rx="8" class="em-dg-node"/>
-        <text x="500" y="152" class="em-dg-t">Mapped to ATT&amp;CK</text>
-        <text x="500" y="169" class="em-dg-s">technique · group · source</text>
-        <rect x="620" y="128" width="180" height="56" rx="8" class="em-dg-node"/>
-        <text x="710" y="152" class="em-dg-t">Indicator check</text>
-        <text x="710" y="169" class="em-dg-s">your detections vs events</text>
-        <rect x="840" y="128" width="130" height="56" rx="8" class="em-dg-node em-dg-node-end"/>
-        <text x="905" y="152" class="em-dg-t">Telemetry</text>
-        <text x="905" y="169" class="em-dg-s">the views below</text>
-        <path d="M380,156 L418,156" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
-        <path d="M580,156 L618,156" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
-        <path d="M800,156 L838,156" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
+        <!-- Main pipeline: equal nodes, equal gaps -->
+        <rect x="208" y="147" width="168" height="56" rx="8" class="em-dg-node"/>
+        <text x="292" y="171" class="em-dg-t">Recordings</text>
+        <text x="292" y="188" class="em-dg-s">one tool run, logging on</text>
+        <rect x="400" y="147" width="168" height="56" rx="8" class="em-dg-node"/>
+        <text x="484" y="171" class="em-dg-t">Mapped to ATT&amp;CK</text>
+        <text x="484" y="188" class="em-dg-s">technique · group · source</text>
+        <rect x="592" y="147" width="168" height="56" rx="8" class="em-dg-node"/>
+        <text x="676" y="171" class="em-dg-t">Indicator check</text>
+        <text x="676" y="188" class="em-dg-s">your detections vs events</text>
+        <rect x="784" y="147" width="160" height="56" rx="8" class="em-dg-node em-dg-node-end"/>
+        <text x="864" y="171" class="em-dg-t">Telemetry</text>
+        <text x="864" y="188" class="em-dg-s">the views below</text>
+        <path d="M376,175 L398,175" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
+        <path d="M568,175 L590,175" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
+        <path d="M760,175 L782,175" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
       </svg>
     </div>
     <p class="ms-note">Recordings are real attacks run in a lab with logging on — the public datasets that ship with Archer, plus any you record yourself in <strong>Lab</strong> below.
       Each is mapped to ATT&amp;CK, then Archer checks whether the indicators your detections match actually appear in the recorded events. The result is the <strong>Telemetry</strong> views, organised by technique, group or data source. No AI is involved.</p>
   </section>
 
-  <!-- Telemetry: the recordings, where they come from, and the views over them -->
+  <!-- Recorded telemetry: where the recordings come from, the filters, and the views over them -->
   <section class="ui-card ms-card" id="em-telemetry">
-    <h2>Telemetry</h2>
+    <h2>Recorded telemetry</h2>
     <ul class="em-sources" id="em-sources"></ul>
     <p class="ms-note">Each recording is one tool run in a lab with logging on (Sysmon, Windows auditing, PowerShell, cloud audit logs), mapped to ATT&amp;CK by the people who recorded it.
       It shows that a technique can be recorded and by which log, for that tool in that lab; not every way the technique can be done.
@@ -142,6 +105,44 @@
       <button type="button" class="btn-primary" id="em-build" hidden>Update</button>
     </div>
     <pre class="ms-log" id="em-log" hidden></pre>
+
+    <!-- Filters: the Coverage page's filter card. Which apply depends on the view below. -->
+    <div class="em-filters" id="em-filters">
+      <div class="detection-header">
+        <h3 class="ui-subtitle">
+          <div class="card-icon filters">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          </div>
+          Filters
+          <span class="filter-active" id="em-filter-active" hidden></span>
+        </h3>
+        <span id="em-filters-toggle" class="expand-btn" role="button" tabindex="0">Collapse</span>
+      </div>
+      <div class="em-filters-body" id="em-filters-body">
+        <div class="search-row">
+          <input type="search" class="form-input" id="em-q" data-for="technique group" autocomplete="off" maxlength="200"
+                 placeholder="Search indicators: a value in the recorded events (comsvcs, lsass.dmp, vssadmin…)" aria-label="Indicators">
+          <button type="button" id="em-clear" title="Clear filters">
+            <svg style="width: 18px; height: 18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          </button>
+          <span class="cv-shown" id="em-shown"></span>
+        </div>
+        <div class="filters-row">
+          <select id="em-siem" class="dropdown-styled" aria-label="SIEM platform" title="The SIEM whose tables or event types are shown">
+            <option value="secops">Google SecOps</option>
+            <option value="mde">Defender XDR</option>
+          </select>
+          <div class="em-ms" data-key="technique" data-label="Techniques" data-search="ID or name" data-for="technique group source"></div>
+          <div class="em-ms" data-key="group" data-label="Groups" data-search="Group" data-for="technique group source"></div>
+          <div class="em-ms" data-key="source" data-label="Data sources" data-search="Table or event type" data-for="technique group source"></div>
+          <div class="em-ms" data-key="log" data-label="Logs" data-search="Sysmon 1, Security 4688…" data-for="technique group source"></div>
+          <div class="em-ms" data-key="collection" data-label="Collection" data-for="technique group source" title="Which kinds of logging count: native OS logs are everywhere, Sysmon and agents only where deployed"></div>
+          <div class="em-ms" data-key="platform" data-label="Platforms" data-for="technique group source"></div>
+          <div class="em-ms" data-key="defender" data-label="Defender alerts" data-for="technique" title="Microsoft GUIDE: whether Defender XDR alerts on the technique, and how often rightly"></div>
+          <div class="em-ms" data-key="seen" data-label="Seen" data-for="group"></div>
+        </div>
+      </div>
+    </div>
 
     <div class="em-organise" id="em-view-card">
       <h3 class="em-view-title ui-subtitle">Organise by
