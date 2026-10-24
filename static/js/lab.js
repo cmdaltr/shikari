@@ -28,20 +28,36 @@
       return `<li class="lab-engine ${cls}"><div><span class="lab-engine-name">${engineIcon(e.key)}<strong>${esc(e.name)}</strong></span> <span class="lab-engine-state">${state}</span>
         <div class="lab-engine-runs">${esc(e.runs)}</div></div>${install}</li>`;
     }).join('');
+    // The engines are collapsed by default — you rarely need them once a platform is ready
     el('lab-host').innerHTML = `<div class="lab-host-head">This host: <strong>${esc(h.label)}</strong>
-      <span class="lab-host-arch">${esc(h.os)} · ${esc(h.arch)}</span></div><ul class="lab-engines">${engines}</ul>`;
+      <span class="lab-host-arch">${esc(h.os)} · ${esc(h.arch)}</span></div>
+      <details class="lab-host-platforms">
+        <summary>${esc(h.label)} supports the following platforms</summary>
+        <ul class="lab-engines">${engines}</ul>
+      </details>`;
   }
 
-  function templateCard(t) {
+  const KIND = t => (t.kind === 'container' ? 'container' : 'VM');
+  const ENGINE_NAME = { docker: 'Docker', tart: 'Tart', vmware: 'VMware', parallels: 'Parallels' };
+
+  // One card per OS; each way of running it (Docker, Tart…) is a row with its own Create button
+  function templateCards(tpls) {
+    const byOs = new Map();
+    tpls.forEach(t => { (byOs.get(t.os) || byOs.set(t.os, []).get(t.os)).push(t); });
+    return [...byOs].map(([os, group]) => {
+      const base = group[0].name.replace(/\s+(container|vm)$/i, '');
+      return `<div class="lab-template"><div class="lab-template-top"><span class="lab-template-name">${osIcon(os)}<strong>${esc(base)}</strong></span></div>
+        <div class="lab-variants">${group.map(variantRow).join('')}</div></div>`;
+    }).join('');
+  }
+
+  function variantRow(t) {
     const badge = t.ready ? '<span class="lab-badge is-ready">Ready</span>'
       : `<span class="lab-badge is-off" title="${esc(t.reason)}">${esc(t.reason)}</span>`;
     const btn = isAdmin && t.ready ? `<button type="button" class="ui-pill lab-create" data-t="${esc(t.id)}">Create</button>` : '';
-    const kind = t.kind === 'container' ? 'container' : 'VM';
-    const engineName = t.engine === 'docker' ? 'Docker' : t.engine === 'tart' ? 'Tart' : esc(t.engine);
-    const runs = `<p class="lab-template-kind">${engineIcon(t.engine)}<span>${engineName} ${kind}</span></p>`;
-    return `<div class="lab-template"><div class="lab-template-top"><span class="lab-template-name">${osIcon(t.os)}<strong>${esc(t.name)}</strong></span>${badge}</div>
-      ${runs}
-      <p class="lab-template-about">${esc(t.about)}</p>
+    return `<div class="lab-variant">
+      <div class="lab-variant-head"><span class="lab-engine-name">${engineIcon(t.engine)}<strong>${esc(ENGINE_NAME[t.engine] || t.engine)} ${KIND(t)}</strong></span>${badge}</div>
+      <p class="lab-variant-about">${esc(t.about)}</p>
       <p class="lab-template-records"><span>Records:</span> ${esc(t.records)}</p>${btn}</div>`;
   }
 
@@ -103,7 +119,7 @@
       host(data.host);
       taken = new Set(data.taken || []);
       const tpls = data.templates || [];
-      el('lab-templates').innerHTML = tpls.map(templateCard).join('');
+      el('lab-templates').innerHTML = templateCards(tpls);
       el('lab-templates-empty').hidden = tpls.length > 0;
       const ms = data.machines || [];
       el('lab-machines').innerHTML = ms.map(machineRow).join('');

@@ -270,3 +270,17 @@ table.em-rows { table-layout: fixed; width: 100%; }
 /* Template card: which engine and kind (so a container reads apart from a VM) */
 .lab-template-kind { display: flex; align-items: center; gap: 6px; font-size: .8em; color: var(--text-secondary); margin: 2px 0 6px; }
 .lab-template-kind .lab-engine-icon { width: 15px; height: 15px; }
+
+/* Host platforms: collapsed by default; the engine cards are narrower inside */
+.lab-host-platforms { margin: 0 0 16px; }
+.lab-host-platforms > summary { cursor: pointer; font-size: .88em; color: var(--accent); font-weight: 600; padding: 4px 0; user-select: none; }
+.lab-host-platforms > summary:hover { text-decoration: underline; }
+.lab-host-platforms[open] > summary { margin-bottom: 10px; }
+.lab-host-platforms .lab-engines { grid-template-columns: repeat(auto-fit, minmax(220px, 300px)); margin: 0; }
+
+/* One OS card, a Create row per platform (Docker, Tart…) */
+.lab-variants { display: flex; flex-direction: column; margin-top: 2px; }
+.lab-variant { padding: 12px 0 10px; border-top: 1px solid var(--border-color); }
+.lab-variant:first-child { border-top: none; padding-top: 8px; }
+.lab-variant-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.lab-variant-about { font-size: .85em; color: var(--text-secondary); margin: 2px 0 6px; line-height: 1.5; }
