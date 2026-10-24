@@ -215,3 +215,9 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 .lab-steps { display: grid; gap: 8px; }
 .lab-logs { max-height: 50vh; overflow: auto; font-size: .8em; white-space: pre-wrap; word-break: break-word; }
+.lab-confirm { display: flex; align-items: flex-start; gap: 8px; font-size: .88em; margin: 12px 0 4px; cursor: pointer; }
+.lab-confirm input { margin-top: 2px; }
+.lab-preview { margin: 10px 0; }
+.lab-plan { font-size: .84em; margin: 6px 0; padding-left: 20px; color: var(--text-secondary); }
+.lab-plan li { margin: 3px 0; }
+.lab-warn { font-size: .84em; color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; }

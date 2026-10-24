@@ -138,3 +138,46 @@ def test_windows_provisioning_uses_powershell_and_lists_three_steps():
     assert steps == ["logging", "powershell", "atomics"]
     assert provision.STEPS["windows"]["interp"][0] == "pwsh"
     assert provision.steps_for("plan9") == []
+
+
+# --- Step 5: record (Atomic Red Team → Your lab). Nothing detonates: execute stays False. ---
+
+def test_clean_techniques_validates_and_dedupes():
+    from archer.lab import record as lab_run
+
+    assert lab_run.clean_techniques("t1059.001, T1053.003 T1059.001") == ["T1059.001", "T1053.003"]
+    assert lab_run.clean_techniques(["T1003"]) == ["T1003"]
+    for bad in ("", "   ", "T105", "1059", "T1059.1", "notatech", "T1059;rm"):
+        with pytest.raises(LabError):
+            lab_run.clean_techniques(bad)
+
+
+def test_plan_lists_the_steps_without_running_anything():
+    from archer.lab import record as lab_run
+
+    steps = lab_run.plan("docker", "box1", "linux", ["T1059.001"], "box1-run", revert_to="clean")
+    joined = "\n".join(steps)
+    assert "record-atomics.ps1" in joined and "box1-run" in joined
+    assert any("Revert box1 to the snapshot clean" in s for s in steps)
+    assert any("Rebuild Your lab" in s for s in steps)
+    # Windows uses powershell and Windows paths
+    win = lab_run.plan("tart", "win1", "windows", ["T1003"], "win1-run")
+    assert any("powershell" in s and "Windows\\Temp" in s for s in win)
+
+
+def test_record_dry_run_runs_nothing(monkeypatch):
+    from archer.lab import record as lab_run
+
+    # Any shell-out or engine use would be a bug in the dry run — make them explode if touched
+    def boom(*a, **k):
+        raise AssertionError("dry run must not touch the engine")
+
+    monkeypatch.setattr(lab_run, "engine_for", boom)
+    monkeypatch.setattr(lab_run, "_push", boom)
+    monkeypatch.setattr(lab_run, "_pull", boom)
+    lines = []
+    out = lab_run.record("docker", "box1", "linux", "T1059.001", run_name="box1-run",
+                         execute=False, say=lines.append)
+    assert out == {"run": "box1-run", "executed": False, "plan_only": True}
+    assert any(l.startswith("would: ") for l in lines)
+    assert any("Dry run" in l for l in lines)

@@ -181,3 +181,36 @@ async def run_provision(request: Request, archer_session: Optional[str] = Cookie
             say(line)
 
     return _background(f"{label} on {name}", work)
+
+
+@router.post("/record")
+async def record(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Run Atomic Red Team in a machine and import the recording into Your lab. execute=false
+    (the default) only previews the plan; execute=true detonates, and the dialog makes the
+    caller confirm the machine is snapshotted first.
+    """
+    denied = _admin(archer_session)
+    if denied:
+        return denied
+    from archer.lab import record as lab_run
+
+    data = await request.json()
+    engine, name, os_name = data.get("engine", ""), data.get("name", ""), data.get("os", "")
+    techniques, execute = data.get("techniques", ""), bool(data.get("execute"))
+    revert_to, run_name = data.get("revert_to", ""), data.get("run_name", "")
+    settle, timeout = int(data.get("settle", 20)), int(data.get("timeout", 120))
+    try:
+        techs = lab_run.clean_techniques(techniques)
+    except LabError as e:
+        return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
+    if not execute:
+        # The preview is cheap and synchronous: just the plan and any warnings
+        return {"preview": True, "plan": lab_run.plan(engine, name, os_name, techs, run_name or f"{name}-run"),
+                "warnings": lab_run.preflight(engine, name, os_name), "techniques": techs}
+
+    def work(say):
+        lab_run.record(engine, name, os_name, techs, run_name=run_name, settle=settle, timeout=timeout,
+                       revert_to=revert_to, execute=True, say=say)
+
+    return _background(f"Record {','.join(techs)} on {name}", work)

@@ -1,15 +1,14 @@
-# Recording a lab (Coming soon)
+# Recording a lab
 
 Step by step: set up disposable Windows, Linux and macOS test machines, run Atomic Red Team on them, and bring each test's logs, and Defender for Endpoint's own rows, into [Emulate](19-emulate.md) as **Your lab**. Public recordings cover Windows well but have nothing recorded by Defender for Endpoint and no macOS unified log; this fills both.
 
-The tooling is in Archer (`scripts/telemetry/record-atomics.ps1`, `python -m archer.telemetry --mde-export`, the **Your lab** source) but no run has been recorded with it yet, so the parts of Archer that depend on it are marked **Coming soon** until one has:
+The quickest path is [Emulate → Lab](19-emulate.md#lab-machines-from-inside-archer): create a machine, set logging on and install Atomic Red Team, snapshot it, then **Record** the techniques — Archer runs the atomics in the machine, pulls the logs into `data/telemetry/lab/`, reverts and rebuilds **Your lab** for you. This page is the manual walkthrough of the same steps, and the only path for a machine Archer doesn't manage (an x64 Windows host, physical hardware, or a cloud VM):
 
 | In Archer | Depends on |
 |---|---|
-| **Your lab** on the Emulate page | A run copied into `data/telemetry/lab/` (part 7) |
+| **Your lab** on the Emulate page | A run in `data/telemetry/lab/` — **Record**, or a run copied in (part 7) |
 | Genuine Defender XDR rows (`MDE Device…` logs) | A machine onboarded to Defender (part 2) and `--mde-export` (part 6) |
 | macOS unified log, Endpoint Security and plist recordings | The macOS VM (part 5) |
-| `archer-cli offline emulate`, the console's `emulate` module, **Run Emulation** on Results | Running atomics from Archer itself, which this replaces for now |
 
 The atomics change the machines they run on. Run them only on VMs you can throw away, and take a snapshot first.
 

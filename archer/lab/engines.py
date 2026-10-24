@@ -114,6 +114,12 @@ class Docker:
     def exec(self, name: str, argv: List[str], timeout: int) -> str:
         return run(["docker", "exec", name, *argv], timeout=timeout)
 
+    def push_file(self, name: str, local_path: str, remote_path: str):
+        run(["docker", "cp", local_path, f"{name}:{remote_path}"], timeout=120)
+
+    def pull_dir(self, name: str, remote_dir: str, local_parent: str):
+        run(["docker", "cp", f"{name}:{remote_dir}", local_parent], timeout=600)
+
 
 class Tart:
     key = "tart"
@@ -162,6 +168,40 @@ class Tart:
 
     def exec(self, name: str, argv: List[str], timeout: int) -> str:
         return run(["tart", "exec", name, *argv], timeout=timeout)
+
+    def push_file(self, name: str, local_path: str, remote_path: str, windows: bool = False):
+        # Tart has no cp; stream the file in over the guest agent (the script is text)
+        with open(local_path, encoding="utf-8") as fh:
+            text = fh.read()
+        if windows:
+            run(["tart", "exec", name, "powershell", "-NoProfile", "-Command",
+                 f"[IO.File]::WriteAllText('{remote_path}', [Console]::In.ReadToEnd())"],
+                timeout=120, input_text=text)
+        else:
+            run(["tart", "exec", name, "bash", "-lc", f"cat > {remote_path}"], timeout=120, input_text=text)
+
+    def pull_dir(self, name: str, remote_dir: str, local_parent: str, windows: bool = False):
+        import base64
+        import os
+        import tarfile
+
+        parent, base = remote_dir.rsplit("/", 1) if "/" in remote_dir else (".", remote_dir)
+        if windows:
+            parent, base = remote_dir.replace("/", "\\").rsplit("\\", 1)
+            b64 = run(["tart", "exec", name, "powershell", "-NoProfile", "-Command",
+                       f"$t=[IO.Path]::GetTempFileName(); tar -czf $t -C '{parent}' '{base}'; "
+                       "[Convert]::ToBase64String([IO.File]::ReadAllBytes($t))"], timeout=600)
+        else:
+            b64 = run(["tart", "exec", name, "bash", "-lc",
+                       f"tar czf - -C {parent} {base} | base64"], timeout=600)
+        data = base64.b64decode("".join(b64.split()))
+        tmp = os.path.join(local_parent, f".{base}.tgz")
+        os.makedirs(local_parent, exist_ok=True)
+        with open(tmp, "wb") as fh:
+            fh.write(data)
+        with tarfile.open(tmp) as tf:
+            tf.extractall(local_parent, filter="data")
+        os.remove(tmp)
 
 
 def parse_tart_list_raw() -> List[str]:

@@ -54,6 +54,7 @@
         <button type="button" class="ui-pill lab-act" data-a="snapshot">Snapshot</button>
         <button type="button" class="ui-pill lab-act" data-a="revert">Revert</button>
         ${m.os ? '<button type="button" class="ui-pill lab-act" data-a="provision">Set up</button>' : ''}
+        ${m.os ? '<button type="button" class="ui-pill lab-act" data-a="record">Record</button>' : ''}
         <button type="button" class="ui-pill" data-a="logs">Logs</button>
         <button type="button" class="ui-pill lab-danger" data-a="delete">Delete</button>
       </div>`;
@@ -135,6 +136,8 @@
       revertDialog(engine, name);
     } else if (act === 'provision') {
       provisionDialog(engine, name, os);
+    } else if (act === 'record') {
+      recordDialog(engine, name, os);
     } else if (act === 'logs') {
       api(`/api/lab/logs?engine=${encodeURIComponent(engine)}&name=${encodeURIComponent(name)}`)
         .then(r => openModal(`Logs — ${name}`, `<pre class="lab-logs">${esc(r.logs || r.error || 'No output')}</pre>`));
@@ -177,6 +180,44 @@
         post('/api/lab/provision', { engine, name, os, step: b.dataset.step }).then(r => { if (r.started) pollJob(); });
       }));
     });
+  }
+
+  function recordDialog(engine, name, os) {
+    openModal(`Record on ${name}`, `
+      <label class="lab-field">ATT&CK techniques
+        <input type="text" id="lab-tech" placeholder="T1059.001, T1053.003" autocomplete="off"></label>
+      <p class="lab-hint">Atomic Red Team runs these in the machine and Archer imports the logs as <strong>Your lab</strong>.
+        The tests change the machine — snapshot it first and revert after.</p>
+      <label class="lab-field">Revert to snapshot afterwards (optional)
+        <input type="text" id="lab-revert" value="clean" autocomplete="off"></label>
+      <div class="lab-preview" id="lab-preview" hidden></div>
+      <label class="lab-confirm"><input type="checkbox" id="lab-snapped"> I've snapshotted this machine and it's disposable</label>
+      <div class="lab-modal-actions">
+        <button type="button" class="ui-pill" id="lab-rec-preview">Preview</button>
+        <button type="button" class="btn-primary lab-danger" id="lab-rec-go" disabled>Run atomics</button>
+      </div>`);
+    const techEl = el('lab-tech'), snapped = el('lab-snapped'), go = el('lab-rec-go');
+    const body = { engine, name, os };
+    const sync = () => { go.disabled = !(snapped.checked && techEl.value.trim()); };
+    snapped.addEventListener('change', sync);
+    techEl.addEventListener('input', sync);
+    el('lab-rec-preview').addEventListener('click', () => {
+      post('/api/lab/record', { ...body, techniques: techEl.value, execute: false }).then(r => {
+        if (!r || !r.plan) return;
+        const warn = (r.warnings || []).length
+          ? `<div class="lab-warn">Not ready: ${r.warnings.map(esc).join('; ')}</div>` : '';
+        el('lab-preview').hidden = false;
+        el('lab-preview').innerHTML = warn + '<ol class="lab-plan">' +
+          r.plan.map(s => `<li>${esc(s)}</li>`).join('') + '</ol>';
+      });
+    });
+    go.addEventListener('click', () => {
+      const revert = el('lab-revert').value.trim();
+      closeModal();
+      post('/api/lab/record', { ...body, techniques: techEl.value, revert_to: revert, execute: true })
+        .then(r => { if (r && r.started) pollJob(); });
+    });
+    techEl.focus();
   }
 
   if (!signedIn || !isAdmin) el('lab-guest').hidden = false;

@@ -15,7 +15,7 @@ The pieces:
   machines    create, start, stop, snapshot, revert, delete, status, logs (archer.lab.machines)
   provision   turn logging on and install Atomic Red Team in a machine (archer.lab.provision)
 
-Running Atomic Red Team and importing the recording (the rest of the loop) is archer.lab.run.
+Running Atomic Red Team and importing the recording (the rest of the loop) is archer.lab.record.
 Everything goes through archer.lab.runner.run, one place that shells out, so the logic above
 it is tested without a hypervisor.
 """
