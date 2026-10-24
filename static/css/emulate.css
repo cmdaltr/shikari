@@ -284,3 +284,9 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-variant:first-child { border-top: none; padding-top: 8px; }
 .lab-variant-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
 .lab-variant-about { font-size: .85em; color: var(--text-secondary); margin: 2px 0 6px; line-height: 1.5; }
+
+/* OS card: a Create button per platform, each with its engine logo */
+.lab-create-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.lab-create { display: inline-flex; align-items: center; gap: 6px; }
+.lab-create .lab-engine-icon { width: 16px; height: 16px; }
+.lab-create[disabled] { opacity: .5; cursor: not-allowed; }

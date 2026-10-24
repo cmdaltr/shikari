@@ -45,6 +45,28 @@ TEMPLATES = [
 ]
 BY_ID = {t["id"]: t for t in TEMPLATES}
 
+# One card per OS: the OS-level blurb and the telemetry it feeds. The weight of a machine is the
+# platform's (a container is light, a VM heavy) — that lives on the engine cards, not here.
+OS_INFO = {
+    "linux": {
+        "name": "Ubuntu 24.04",
+        "about": "A Linux box for recording Linux attack telemetry.",
+        "records": "auditd, syslog, journald (Sysmon for Linux on a VM)",
+    },
+    "macos": {
+        "name": "macOS",
+        "about": "macOS on Apple Silicon. Records the unified log and Endpoint Security, which "
+                 "no public dataset has — the main reason to record your own.",
+        "records": "Endpoint Security (eslogger), the unified log, launch items",
+    },
+    "windows": {
+        "name": "Windows 11",
+        "about": "A Windows box. Needs an x64 host — run Archer on an x64 machine (the Mac Mini) "
+                 "to create it; it won't appear on an Apple Silicon Mac.",
+        "records": "Security, PowerShell, Sysmon, Defender, Task Scheduler, WMI, BITS",
+    },
+}
+
 
 def _image_for(template: Dict, arch: str) -> Optional[str]:
     return (template.get("image") or {}).get(arch)
@@ -71,6 +93,9 @@ def offered(caps: Optional[Dict] = None) -> List[Dict]:
             reason = f"{engine['name']} isn't installed"
         elif not engine.get("running"):
             reason = f"{engine['name']} isn't running"
+        os_info = OS_INFO.get(t["os"], {})
         out.append({**{k: t[k] for k in ("id", "engine", "kind", "os", "name", "records", "about")},
+                    "os_name": os_info.get("name", t["name"]), "os_about": os_info.get("about", t["about"]),
+                    "os_records": os_info.get("records", t["records"]),
                     "image": image, "ready": t["engine"] in ready, "reason": reason})
     return out

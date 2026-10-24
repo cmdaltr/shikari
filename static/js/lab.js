@@ -26,7 +26,7 @@
       else { state = 'not installed'; cls = 'is-missing'; }
       const install = e.install ? `<code class="lab-install">${esc(e.install)}</code>` : '';
       return `<li class="lab-engine ${cls}"><div><span class="lab-engine-name">${engineIcon(e.key)}<strong>${esc(e.name)}</strong></span> <span class="lab-engine-state">${state}</span>
-        <div class="lab-engine-runs">${esc(e.runs)}</div></div>${install}</li>`;
+        <div class="lab-engine-runs">${esc(e.blurb || e.runs)}</div></div>${install}</li>`;
     }).join('');
     // The engines are collapsed by default — you rarely need them once a platform is ready
     el('lab-host').innerHTML = `<div class="lab-host-head">This host: <strong>${esc(h.label)}</strong>
@@ -37,28 +37,25 @@
       </details>`;
   }
 
-  const KIND = t => (t.kind === 'container' ? 'container' : 'VM');
   const ENGINE_NAME = { docker: 'Docker', tart: 'Tart', vmware: 'VMware', parallels: 'Parallels' };
 
-  // One card per OS; each way of running it (Docker, Tart…) is a row with its own Create button
+  // One card per OS; the way to run it (Docker, Tart…) is a Create button with that engine's logo
   function templateCards(tpls) {
     const byOs = new Map();
     tpls.forEach(t => { (byOs.get(t.os) || byOs.set(t.os, []).get(t.os)).push(t); });
     return [...byOs].map(([os, group]) => {
-      const base = group[0].name.replace(/\s+(container|vm)$/i, '');
-      return `<div class="lab-template"><div class="lab-template-top"><span class="lab-template-name">${osIcon(os)}<strong>${esc(base)}</strong></span></div>
-        <div class="lab-variants">${group.map(variantRow).join('')}</div></div>`;
+      const g0 = group[0];
+      const row = isAdmin ? `<div class="lab-create-row">${group.map(createButton).join('')}</div>` : '';
+      return `<div class="lab-template"><div class="lab-template-top"><span class="lab-template-name">${osIcon(os)}<strong>${esc(g0.os_name)}</strong></span></div>
+        <p class="lab-template-about">${esc(g0.os_about)}</p>
+        <p class="lab-template-records"><span>Records:</span> ${esc(g0.os_records)}</p>${row}</div>`;
     }).join('');
   }
 
-  function variantRow(t) {
-    const badge = t.ready ? '<span class="lab-badge is-ready">Ready</span>'
-      : `<span class="lab-badge is-off" title="${esc(t.reason)}">${esc(t.reason)}</span>`;
-    const btn = isAdmin && t.ready ? `<button type="button" class="ui-pill lab-create" data-t="${esc(t.id)}">Create</button>` : '';
-    return `<div class="lab-variant">
-      <div class="lab-variant-head"><span class="lab-engine-name">${engineIcon(t.engine)}<strong>${esc(ENGINE_NAME[t.engine] || t.engine)} ${KIND(t)}</strong></span>${badge}</div>
-      <p class="lab-variant-about">${esc(t.about)}</p>
-      <p class="lab-template-records"><span>Records:</span> ${esc(t.records)}</p>${btn}</div>`;
+  function createButton(t) {
+    const label = ENGINE_NAME[t.engine] || t.engine;
+    const title = t.ready ? `Create with ${label}` : t.reason;
+    return `<button type="button" class="ui-pill lab-create" data-t="${esc(t.id)}" title="${esc(title)}"${t.ready ? '' : ' disabled'}>${engineIcon(t.engine)}<span>Create</span></button>`;
   }
 
   const OS_ICON = { windows: 'windows.svg', macos: 'macos.png', linux: 'linux.png' };

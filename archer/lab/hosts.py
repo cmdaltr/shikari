@@ -29,6 +29,8 @@ ENGINES = {
     "docker": {
         "name": "Docker",
         "runs": "Linux containers",
+        "blurb": "A throwaway container. Fast to create and reset; no kernel of its own. "
+                 "Enough for process and file telemetry.",
         "probe": ["docker", "version", "--format", "{{.Server.Version}}"],
         "install": {"macos": "brew install --cask orbstack   # or Docker Desktop",
                     "linux": "curl -fsSL https://get.docker.com | sh",
@@ -38,6 +40,8 @@ ENGINES = {
     "tart": {
         "name": "Tart",
         "runs": "macOS and Linux VMs on Apple Silicon",
+        "blurb": "A full VM with its own kernel — records exactly as on a real host, Sysmon "
+                 "included. Heavier than a container.",
         "probe": ["tart", "--version"],
         "install": {"macos": "brew install cirruslabs/cli/tart"},
         "requires": {"os": "macos", "arch": "arm64"},
@@ -60,7 +64,7 @@ def _engine_status(key: str, spec: Dict) -> Dict:
     running = present and run_ok(["docker", "info", "--format", "{{.ServerVersion}}"] if key == "docker"
                                  else spec["probe"])
     return {
-        "key": key, "name": spec["name"], "runs": spec["runs"],
+        "key": key, "name": spec["name"], "runs": spec["runs"], "blurb": spec.get("blurb", ""),
         "supported": supported, "installed": present, "running": running,
         "version": version, "note": spec.get("note", ""),
         "install": spec.get("install", {}).get(host_os, "") if supported and not present else "",
