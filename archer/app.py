@@ -8904,6 +8904,10 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
         from archer.visualization.flow_layouts import library_flows
 
         flows = library_flows(db, user.id, getattr(request.app.state, "bundle", None))
+        # The threat groups and CVEs with an anatomy (Detections → Anatomy); the same pick as that page
+        from archer.visualization.anatomy import has_anatomy
+
+        anatomies = [f for f in flows if f["kind"] in ("Threat group", "CVE") and has_anatomy(f["group"])]
         # Denominators from the loaded ATT&CK: Library technique IDs include sub-techniques
         live = [o for o in (getattr(request.app.state, "bundle", None) or {}).get("objects", [])
                 if not o.get("revoked") and not o.get("x_mitre_deprecated")]
@@ -8927,6 +8931,7 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 "manual_hours": manual_hours,
                 "archer_hours": archer_hours,
                 "flows": flows,
+                "anatomies": anatomies,
                 "attack_techniques": attack_techniques,
                 "attack_tactics": attack_tactics,
             },

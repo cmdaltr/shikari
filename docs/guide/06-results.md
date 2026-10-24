@@ -6,6 +6,8 @@ Every hunt, report and company-profile run ends on a Results page: its detection
 
 ## From top to bottom
 
+Every section starts collapsed: click its title to open it, and it stays open next time. The **Key** button at the bottom right opens the key over whatever you're reading.
+
 | Section | What it shows |
 |---|---|
 | Threat briefing | Coverage (how many of the group's techniques you detect), the weakest stage of the attack, and the gaps to close first. Gaps are ranked by how early they come in the attack, then by how many correlations they're part of. Worked out without AI. **Write a summary with AI** adds an optional written summary using the Ask Archer provider |
@@ -13,7 +15,6 @@ Every hunt, report and company-profile run ends on a Results page: its detection
 | Outside your technology stack | For a technique, CVE or report hunt: what you asked for that your [technology stack](16-profile-and-settings.md#technology-stack) doesn't have. It was generated anyway |
 | Techniques that produced nothing | Each technique the run couldn't build a detection for, and why (usually "no indicators in ATT&CK", or outside your technology stack) |
 | Metrics | Counts of detections, correlations, techniques and tactics, with an estimate of analyst time saved. The time and cost figures are estimates from fixed rates, not measurements |
-| Key | What each badge means (below) |
 | Detections | One card per detection, grouped by SIEM |
 | Correlations | Queries chained across techniques and tactics (below) |
 | Attack flow | The group's techniques laid out by tactic, marked detected or not |

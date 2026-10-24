@@ -17,6 +17,21 @@
 [data-theme="dark"] .run-view-label, [data-theme="dark"] .run-view-when { color: var(--text-secondary); }
 
 /* Techniques the latest run built nothing for */
+/* Key: a corner button opening a panel over the page, so it's there from any section */
+.key-fab { position: fixed; right: 20px; bottom: 20px; z-index: 900; display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 16px; border-radius: 999px; border: 1px solid var(--accent, #C53030); cursor: pointer; font: inherit; font-weight: 600;
+  background: var(--bg-secondary, #fff); color: var(--accent, #C53030); box-shadow: 0 4px 14px rgba(0, 0, 0, .18); }
+.key-fab:hover, .key-fab.is-on { background: var(--accent, #C53030); color: #fff; }
+.key-fab:focus-visible { outline: 2px solid #4285F4; outline-offset: 2px; }
+.key-panel { position: fixed; right: 20px; bottom: 74px; z-index: 901; width: min(560px, calc(100vw - 40px)); max-height: 70vh;
+  overflow: auto; background: var(--bg-secondary, #fff); color: var(--text-primary, #1a1a1a);
+  border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, .25); }
+.key-panel[hidden] { display: none; }
+.key-panel-head { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; background: inherit; border-bottom: 1px solid var(--border-color, #e2e8f0); }
+.key-panel-close { border: 0; background: none; font-size: 1.4em; line-height: 1; cursor: pointer; color: var(--text-secondary, #666); }
+.key-panel-body { padding: 16px; overflow-wrap: break-word; }
+@media (max-width: 600px) { .key-fab { right: 16px; bottom: 16px; } .key-panel { right: 16px; left: 16px; width: auto; bottom: 68px; } }
 /* Threat briefing (archer/build/briefing.py): no AI unless someone asks for a summary */
 #briefing h3 { margin: 20px 0 8px; }
 .briefing-lead { margin: 0 0 16px; color: var(--text-primary, #1a1a1a); line-height: 1.55; }
@@ -99,7 +114,7 @@
 
 {% import "partials/attack_mapping.html" as am with context %}
 {% block content %}
-  <div class="results-container">
+  <div class="results-container" data-cards-collapsed>
     <div class="page-header">
       <h1>{{ group_name.replace('_', ' ') }}</h1>
       <p>Results: detections, correlations and the attack flow{% if run_view %} for this run{% endif %}</p>
@@ -313,22 +328,17 @@
     {# Still in Generate Report's metadata #}
     {% set osint_count = namespace(count=0) %}
     {% for vendor in detections %}{% for detection in vendor.detections %}{% if detection.osint_data and detection.osint_data.enriched %}{% set osint_count.count = osint_count.count + 1 %}{% endif %}{% endfor %}{% endfor %}
-    <!-- Key Section -->
-    <div class="ui-card" style="padding: 16px; margin-bottom: 30px;">
-        <div class="detection-header">
-            <h2 onclick="toggleKeyMetrics()" style="cursor: pointer; user-select: none;">
-                <div class="card-icon technique" style="width: 40px; height: 40px; margin-right: 12px;">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF9800" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
-                    </svg>
-                </div>
-                Key
-            </h2>
-            <span id="key-metrics-toggle-text" class="expand-btn" style="transition: all 0.3s ease; cursor: pointer;" onclick="toggleKeyMetrics()">Expand</span>
-        </div>
-
-        <div id="key-metrics-content" style="transition: all 0.3s ease; overflow: hidden; max-height: 0px;">
-          <div style="padding: 20px 0; overflow-wrap: break-word; word-wrap: break-word;">
+    <!-- Key: a button at the corner of the screen, so it can be opened from any section -->
+    <button type="button" class="key-fab" id="key-fab" aria-controls="key-panel" aria-expanded="false" title="What the badges, tactics and colours mean">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+      <span>Key</span>
+    </button>
+    <div class="key-panel" id="key-panel" role="dialog" aria-label="Key" hidden>
+      <div class="key-panel-head">
+        <strong>Key</strong>
+        <button type="button" class="key-panel-close" id="key-panel-close" aria-label="Close the key">×</button>
+      </div>
+          <div class="key-panel-body">
 
             <!-- MITRE ATT&CK Tactics Legend -->
             <div style="margin-bottom: 32px;">
@@ -489,7 +499,6 @@
             </div>
 
           </div>
-        </div>
     </div>
 
     <!-- Divider -->
@@ -2709,24 +2718,6 @@ function toggleValidationChecklist() {
 }
 
 
-// Toggle Key section
-function toggleKeyMetrics() {
-  const content = document.getElementById('key-metrics-content');
-  const toggleText = document.getElementById('key-metrics-toggle-text');
-  const isCollapsed = content.style.maxHeight === '0px';
-
-  if (isCollapsed) {
-    // Expand - use a large value to ensure all content is visible
-    content.style.maxHeight = '3000px';
-    toggleText.textContent = 'Collapse';
-    localStorage.setItem('keyMetricsCollapsed', 'false');
-  } else {
-    // Collapse
-    content.style.maxHeight = '0px';
-    toggleText.textContent = 'Expand';
-    localStorage.setItem('keyMetricsCollapsed', 'true');
-  }
-}
 
 // Toggle Detections section
 function toggleDetectionsSection() {
@@ -2767,26 +2758,30 @@ function toggleCorrelationsSection() {
 }
 
 // Initialize statistics state on page load
+// The key opens over whatever section you're reading; Escape or a click elsewhere closes it
+(function () {
+  const fab = document.getElementById('key-fab');
+  const panel = document.getElementById('key-panel');
+  if (!fab || !panel) return;
+  const show = on => {
+    panel.hidden = !on;
+    fab.setAttribute('aria-expanded', String(on));
+    fab.classList.toggle('is-on', on);
+    if (on) panel.querySelector('.key-panel-close').focus();
+  };
+  fab.addEventListener('click', () => show(panel.hidden));
+  document.getElementById('key-panel-close').addEventListener('click', () => { show(false); fab.focus(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !panel.hidden) { show(false); fab.focus(); } });
+  document.addEventListener('click', e => {
+    if (!panel.hidden && !panel.contains(e.target) && !fab.contains(e.target)) show(false);
+  });
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize key state
-  const keyMetricsContent = document.getElementById('key-metrics-content');
-  const keyMetricsToggleText = document.getElementById('key-metrics-toggle-text');
-  // Default to collapsed
-  const keyMetricsCollapsed = localStorage.getItem('keyMetricsCollapsed') !== 'false';
-
-  if (keyMetricsCollapsed) {
-    keyMetricsContent.style.maxHeight = '0px';
-    keyMetricsToggleText.textContent = 'Expand';
-  } else {
-    // Set initial max-height to enable smooth transitions - use large value
-    keyMetricsContent.style.maxHeight = '3000px';
-    keyMetricsToggleText.textContent = 'Collapse';
-  }
-
-  // Initialize Detections section state (default to expanded)
+  // Initialize Detections section state (collapsed unless opened before)
   const detectionsContent = document.getElementById('detections-section-content');
   const detectionsToggleText = document.getElementById('detections-section-toggle');
-  const detectionsCollapsed = localStorage.getItem('detectionsSectionCollapsed') === 'true';
+  const detectionsCollapsed = localStorage.getItem('detectionsSectionCollapsed') !== 'false';
 
   if (detectionsCollapsed) {
     detectionsContent.style.maxHeight = '0px';
@@ -2796,10 +2791,10 @@ document.addEventListener('DOMContentLoaded', function() {
     detectionsToggleText.textContent = 'Collapse';
   }
 
-  // Initialize Correlations section state (default to expanded)
+  // Initialize Correlations section state (collapsed unless opened before)
   const correlationsContent = document.getElementById('correlations-section-content');
   const correlationsToggleText = document.getElementById('correlations-section-toggle');
-  const correlationsCollapsed = localStorage.getItem('correlationsSectionCollapsed') === 'true';
+  const correlationsCollapsed = localStorage.getItem('correlationsSectionCollapsed') !== 'false';
 
   if (correlationsCollapsed) {
     correlationsContent.style.maxHeight = '0px';

@@ -4,7 +4,9 @@
 // The choice is remembered per page and title. A card that already has its own
 // Collapse/Expand control (an .expand-btn with "toggle" in its id) keeps it: the title works it.
 // A card drawn in more than one box names the others: data-collapse-with="<selector>".
-// A card that starts collapsed until opened says so: data-collapsed-default.
+// A card that starts collapsed until opened says so: data-collapsed-default. A page whose
+// sections all start collapsed puts data-cards-collapsed round them: its top-level cards
+// start collapsed (the cards inside them open as they were).
 // A card with nothing to open (its header says why) opts out: data-card-static.
 (function () {
   const TITLES = 'h2, h3, .section-title, .tactic-section-title, .tactic-filter-label, .mn-card-title, .hiw-section-title';
@@ -52,7 +54,9 @@
   // '1' collapsed, '0' opened (only kept for cards collapsed by default), nothing: the card's default
   const remembered = (key, dflt) => { try { const v = localStorage.getItem(key); return v === null ? dflt : v === '1'; } catch (e) { return dflt; } };
   const remember = (key, on, dflt) => { try { on ? localStorage.setItem(key, '1') : dflt ? localStorage.setItem(key, '0') : localStorage.removeItem(key); } catch (e) {} };
-  const collapsedByDefault = card => card.hasAttribute('data-collapsed-default');
+  const TOGGLED = 'data-card-toggled';
+  const collapsedByDefault = card => card.hasAttribute('data-collapsed-default') ||
+    (!!card.closest('[data-cards-collapsed]') && !card.parentElement.closest(`[${TOGGLED}]`));
 
   function set(title, card, on) {
     card.classList.toggle('is-card-collapsed', on);
@@ -74,6 +78,7 @@
         title.setAttribute('role', 'button');
         title.tabIndex = 0;
         if (!own) set(title, card, remembered(keyOf(title), collapsedByDefault(card)));
+        card.setAttribute(TOGGLED, '');
       }
       // The title (with its chevron) works the card's own Collapse/Expand control, so the
       // control's text button isn't shown

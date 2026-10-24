@@ -1,6 +1,6 @@
 # Coverage
 
-**Detections → Coverage** shows which ATT&CK techniques you have queries for. It has two layers, switched with the buttons above the matrix:
+**Detections → Coverage** shows which ATT&CK techniques you have queries for. Every section starts collapsed: click its title to open it, and it stays open next time. It has two layers, switched with the buttons above the matrix:
 
 | Layer | What it counts |
 |---|---|

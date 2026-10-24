@@ -10,7 +10,7 @@
 
 {% import "partials/attack_mapping.html" as am with context %}
 {% block content %}
-  <div class="results-container">
+  <div class="results-container" data-cards-collapsed>
         <div class="page-header">
             <h1>Library</h1>
             <p>Detections and correlations you have saved, by SIEM, with filters and exports</p>
@@ -1069,6 +1069,40 @@
       </div>
     </div>
 
+    <!-- Anatomy: one per saved threat group or CVE (anatomy.has_anatomy); each opens on /anatomy -->
+    <div class="detection-section" id="library-anatomies">
+      <div class="detection-header">
+        <h2>
+          <div class="card-icon" style="width: 40px; height: 40px; margin-right: 12px; background: transparent;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B91C1C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="18" r="2.5"/>
+              <path d="M11 7.5L6 15.5M13 7.5l5 8M7.5 18h9" stroke-dasharray="2 2"/>
+            </svg>
+          </div>
+          Anatomy
+        </h2>
+        <a class="expand-btn" href="/anatomy">Open Anatomy</a>
+      </div>
+
+      <div class="attack-flow-content">
+        {% if anatomies %}
+        <ul class="lib-flows">
+          {% for f in anatomies %}
+          <li>
+            <a class="lib-flow" href="/anatomy?group={{ f.group | urlencode }}">
+              <span class="lib-flow-kind">{{ f.kind }}</span>
+              <span class="lib-flow-name">{{ f.label }}</span>
+              <span class="lib-flow-stats">How it gets in, what it runs, what it does, where it goes</span>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="lib-flows-empty">Save a threat group's or CVE's detections and its anatomy appears here.</p>
+        {% endif %}
+      </div>
+    </div>
+
   </div> <!-- Close results-container -->
 
   <!-- Footer -->
@@ -1922,11 +1956,11 @@ document.addEventListener('DOMContentLoaded', function() {
         filtersToggleText.textContent = 'Collapse';
     }
 
-    // Initialize Detections section state (default to expanded)
+    // Initialize Detections section state (collapsed unless opened before)
     const detectionsContent = document.getElementById('detections-section-content');
     const detectionsToggleText = document.getElementById('detections-section-toggle');
     if (detectionsContent && detectionsToggleText) {
-        const detectionsCollapsed = localStorage.getItem('detectionsSectionCollapsed') === 'true';
+        const detectionsCollapsed = localStorage.getItem('detectionsSectionCollapsed') !== 'false';
 
         if (detectionsCollapsed) {
             detectionsContent.style.maxHeight = '0px';
@@ -1937,11 +1971,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Initialize Correlations section state (default to expanded)
+    // Initialize Correlations section state (collapsed unless opened before)
     const correlationsContent = document.getElementById('correlations-section-content');
     const correlationsToggleText = document.getElementById('correlations-section-toggle');
     if (correlationsContent && correlationsToggleText) {
-        const correlationsCollapsed = localStorage.getItem('correlationsSectionCollapsed') === 'true';
+        const correlationsCollapsed = localStorage.getItem('correlationsSectionCollapsed') !== 'false';
 
         if (correlationsCollapsed) {
             correlationsContent.style.maxHeight = '0px';

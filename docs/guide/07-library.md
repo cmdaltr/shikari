@@ -1,6 +1,6 @@
 # Library
 
-**Detections → Library** holds every detection and correlation you've saved with **Save to Library** on a [Results](06-results.md) page. It's your working set: search it, filter it, tag it and export it.
+**Detections → Library** holds every detection and correlation you've saved with **Save to Library** on a [Results](06-results.md) page. It's your working set: search it, filter it, tag it and export it. Every section starts collapsed: click its title to open it, and it stays open next time.
 
 ## Finding things
 
@@ -16,7 +16,7 @@ The Metrics card at the top totals what's in the Library: detections, correlatio
 
 ## Detections and correlations
 
-Cards are the same as on the Results page: badges, confidence, **View Query**, and OSINT details where the detection used them. The **ATT&CK Flow** section links each saved group, report or CVE to its attack flow on [Flows](09-flows.md).
+Cards are the same as on the Results page: badges, confidence, **View Query**, and OSINT details where the detection used them. The **ATT&CK Flow** section links each saved group, report or CVE to its attack flow on [Flows](09-flows.md). The **Anatomy** section links each saved threat group or CVE to its anatomy on [Detections → Anatomy](09-flows.md#anatomy).
 
 ## Acting on several at once
 
