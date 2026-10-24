@@ -1,8 +1,9 @@
 """
 The machines you can create here. Each template names the engine that runs it, the OS it
 records, and the image per architecture. offered() keeps only the ones this host can run,
-and picks the image for the host's CPU — so the same list gives Linux containers and a macOS
-VM on an Apple Silicon Mac, and (where Archer runs on an x64 host) a Windows VM.
+and picks the image for the host's CPU — so on an Apple Silicon Mac the list gives a Linux
+container, a Linux VM and a macOS VM. There is no Windows template: the engines here (Docker,
+Tart) can't run Windows — record Windows by hand (docs/guide/20-recording-a-lab.md).
 
 A template says what Emulate can record on it, so the page can tie a machine back to the
 telemetry it produces.
@@ -35,13 +36,10 @@ TEMPLATES = [
         "about": "A macOS VM on Apple Silicon. Records the unified log and Endpoint Security, "
                  "which no public dataset has — the main reason to record your own.",
     },
-    {
-        "id": "windows-vm", "engine": "tart", "kind": "vm", "os": "windows",
-        "name": "Windows 11 VM", "image": {"amd64": "ghcr.io/cirruslabs/windows-2022:latest"},
-        "records": "Security, PowerShell, Sysmon, Defender, Task Scheduler, WMI, BITS",
-        "about": "A Windows VM. Needs an x64 host — run Archer on an x64 machine (the Mac Mini) "
-                 "to create it; it won't appear on an Apple Silicon Mac.",
-    },
+    # No Windows template: Tart is built on Apple's Virtualization.framework, which runs only
+    # Linux and macOS guests. Windows (incl. 11 on ARM) needs a hypervisor Archer doesn't drive
+    # yet — Parallels, VMware Fusion or UTM/QEMU. Record on a Windows box by hand with
+    # scripts/telemetry/record-atomics.ps1 (see docs/guide/20-recording-a-lab.md).
 ]
 BY_ID = {t["id"]: t for t in TEMPLATES}
 
@@ -59,12 +57,7 @@ OS_INFO = {
                  "no public dataset has — the main reason to record your own.",
         "records": "Endpoint Security (eslogger), the unified log, launch items",
     },
-    "windows": {
-        "name": "Windows 11",
-        "about": "A Windows box. Needs an x64 host — run Archer on an x64 machine (the Mac Mini) "
-                 "to create it; it won't appear on an Apple Silicon Mac.",
-        "records": "Security, PowerShell, Sysmon, Defender, Task Scheduler, WMI, BITS",
-    },
+    # "windows" intentionally absent — no engine here can create a Windows VM (see TEMPLATES).
 }
 
 

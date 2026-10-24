@@ -77,7 +77,7 @@ def create(template_id: str, name: str) -> Dict:
     image = (template.get("image") or {}).get(arch)
     if not image:
         raise LabError(f"{template['name']} can't run on this machine",
-                       f"no image for {arch}; run Archer on a {'x64' if template['os'] == 'windows' else arch} host")
+                       f"no image built for {arch}")
     engine = engine_for(template["engine"])
     engine.create(name, image)
     registry.record(template["engine"], name, template_id, template["os"], image)

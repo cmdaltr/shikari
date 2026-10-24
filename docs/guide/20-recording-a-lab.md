@@ -16,10 +16,10 @@ The atomics change the machines they run on. Run them only on VMs you can throw 
 
 | | Where | Notes |
 |---|---|---|
-| Windows 11 VM | Intel Mac Mini | Windows 11 Enterprise evaluation ISO (free, time-limited). x64, so not the ARM MacBook |
-| Ubuntu Server 24.04 VM | Intel Mac Mini | |
-| macOS VM | ARM MacBook | Tart (free) runs macOS VMs on Apple Silicon |
-| Hypervisor on the Mac Mini | | VMware Fusion (free for personal use) or VirtualBox |
+| Windows 11 VM | Apple Silicon or x64 | Windows 11 Enterprise evaluation ISO (free, time-limited). ARM64 on Apple Silicon via UTM/QEMU or VMware Fusion; x64 on the Intel Mac Mini. Archer can't create this one — Tart doesn't run Windows |
+| Ubuntu Server 24.04 VM | Any | Or create it from Lab (Docker container or Tart VM) |
+| macOS VM | ARM MacBook | Tart (free) runs macOS VMs on Apple Silicon; create it from Lab |
+| Hypervisor for Windows | | VMware Fusion (free, incl. commercial) or UTM/QEMU (free, open-source); Parallels works but is paid |
 | A Defender for Endpoint trial tenant | Microsoft | Only for Defender's own rows; the native logs need nothing |
 | Archer's machine | | Where the runs end up |
 

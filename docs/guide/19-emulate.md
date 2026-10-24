@@ -36,7 +36,7 @@ python -m archer.telemetry --guide ~/Downloads/microsoft-security-incident-predi
 
 ## Lab: machines from inside Archer
 
-The **Lab** section (admins) installs, creates and manages the containers and VMs a recording runs on, without leaving Archer. It drives what's on the machine Archer runs on — so for several operating systems, run Archer on each (an x64 host for Windows). It detects and guides; it doesn't install hypervisors itself.
+The **Lab** section (admins) installs, creates and manages the containers and VMs a recording runs on, without leaving Archer. It drives Docker and Tart, so it creates Linux and macOS machines; Windows needs a hypervisor it doesn't drive yet (Parallels, VMware Fusion or UTM/QEMU — Tart can't run Windows, since Apple's Virtualization.framework only takes Linux and macOS guests), so record Windows by hand. It detects and guides; it doesn't install hypervisors itself.
 
 The **host card** names this machine's OS and CPU and each engine's state:
 
@@ -45,7 +45,7 @@ The **host card** names this machine's OS and CPU and each engine's state:
 | Docker (or OrbStack) | Linux containers | any host |
 | Tart | macOS and Linux VMs | Apple Silicon only |
 
-An engine that's missing shows the exact install command to copy. **Create a machine** lists only templates this host can run, with the image chosen for its CPU: on an Apple Silicon Mac, an Ubuntu container, an Ubuntu VM and a macOS VM; a Windows 11 VM appears only where Archer runs on an x64 host. Each template says what it records, so it ties back to the telemetry above.
+An engine that's missing shows the exact install command to copy. **Create a machine** lists one card per OS this host can run, the image chosen for its CPU: on an Apple Silicon Mac, Ubuntu (a Docker container or a Tart VM) and macOS (a Tart VM), with a Create button per platform. Each card says what it records, so it ties back to the telemetry above.
 
 **Your machines** lists every container and VM on the host — the ones Archer made and any made outside it — with a dot for running or stopped. Per machine: **Start/Stop**, **Snapshot**, **Revert**, **Set up**, **Logs** and **Delete**. Delete and Revert confirm first; both are irreversible.
 

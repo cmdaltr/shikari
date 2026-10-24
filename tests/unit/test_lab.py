@@ -25,12 +25,12 @@ def test_arch_and_templates_follow_the_host(monkeypatch):
             "engines": [{"key": "docker", "name": "Docker", "supported": True, "installed": True, "running": True},
                         {"key": "tart", "name": "Tart", "supported": True, "installed": True, "running": True}]}
     ids = {t["id"]: t for t in templates.offered(caps)}
-    assert set(ids) == {"ubuntu-container", "ubuntu-vm", "macos-vm"}  # no windows-vm on arm64
+    assert set(ids) == {"ubuntu-container", "ubuntu-vm", "macos-vm"}  # no Windows: no engine can run it
     assert ids["macos-vm"]["image"].startswith("ghcr.io/cirruslabs/macos")
     assert all(t["ready"] for t in ids.values())
 
 
-def test_windows_only_appears_on_an_x64_host():
+def test_only_docker_templates_on_an_x64_host():
     x64 = {"os": "linux", "arch": "amd64", "ready": ["docker"],
            "engines": [{"key": "docker", "name": "Docker", "supported": True, "installed": True, "running": True},
                        {"key": "tart", "name": "Tart", "supported": False, "installed": False, "running": False}]}
@@ -84,9 +84,11 @@ def test_create_records_the_template_and_pulls_the_right_image(monkeypatch, tmp_
     assert reg.get("docker", "box1")["template"] == "ubuntu-container"
 
 
-def test_create_refuses_a_windows_vm_on_arm(monkeypatch, tmp_path):
+def test_create_refuses_an_unknown_template(monkeypatch, tmp_path):
+    # There is no Windows template (no engine here can run Windows), so asking for one is refused
     monkeypatch.setattr(hosts.platform, "machine", lambda: "arm64")
     monkeypatch.setattr("archer.lab.registry._PATH", str(tmp_path / "machines.json"))
+    assert "windows-vm" not in templates.BY_ID
     with pytest.raises(LabError):
         machines.create("windows-vm", "win1")
 
