@@ -1,0 +1,185 @@
+// Build → Emulate → Lab (templates/emulate.html, archer/lab/web.py): the host, the machines
+// you can create on it, and the ones that exist, with their lifecycle and provisioning.
+(function () {
+  const root = document.getElementById('lab');
+  if (!root) return;
+  const page = document.querySelector('.em-page');
+  const isAdmin = page && page.dataset.admin === 'true';
+  const signedIn = page && page.dataset.signedIn === 'true';
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const el = id => document.getElementById(id);
+  const api = (path, opts) => fetch(path, opts).then(r => r.json());
+
+  const modal = el('lab-modal'), modalBody = el('lab-modal-body'), modalTitle = el('lab-modal-title');
+  function openModal(title, html) { modalTitle.textContent = title; modalBody.innerHTML = html; modal.hidden = false; }
+  function closeModal() { modal.hidden = true; modalBody.innerHTML = ''; }
+  el('lab-modal-close').addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) closeModal(); });
+
+  function host(h) {
+    const engines = h.engines.map(e => {
+      let state, cls;
+      if (!e.supported) { state = 'not on this host'; cls = 'is-na'; }
+      else if (e.running) { state = `ready · ${esc(e.version)}`; cls = 'is-ready'; }
+      else if (e.installed) { state = 'installed, not running'; cls = 'is-warn'; }
+      else { state = 'not installed'; cls = 'is-missing'; }
+      const install = e.install ? `<code class="lab-install">${esc(e.install)}</code>` : '';
+      return `<li class="lab-engine ${cls}"><div><strong>${esc(e.name)}</strong> <span class="lab-engine-state">${state}</span>
+        <div class="lab-engine-runs">${esc(e.runs)}</div></div>${install}</li>`;
+    }).join('');
+    el('lab-host').innerHTML = `<div class="lab-host-head">This host: <strong>${esc(h.label)}</strong>
+      <span class="lab-host-arch">${esc(h.os)} · ${esc(h.arch)}</span></div><ul class="lab-engines">${engines}</ul>`;
+  }
+
+  function templateCard(t) {
+    const badge = t.ready ? '<span class="lab-badge is-ready">Ready</span>'
+      : `<span class="lab-badge is-off" title="${esc(t.reason)}">${esc(t.reason)}</span>`;
+    const btn = isAdmin && t.ready ? `<button type="button" class="ui-pill lab-create" data-t="${esc(t.id)}">Create</button>` : '';
+    return `<div class="lab-template"><div class="lab-template-top"><strong>${esc(t.name)}</strong>${badge}</div>
+      <p class="lab-template-about">${esc(t.about)}</p>
+      <p class="lab-template-records"><span>Records:</span> ${esc(t.records)}</p>${btn}</div>`;
+  }
+
+  function machineRow(m) {
+    const dot = `<span class="lab-dot is-${m.state}" title="${esc(m.state)}"></span>`;
+    const tag = m.archer ? '' : '<span class="lab-tag">outside Archer</span>';
+    const meta = [m.engine, m.os, m.records && ('records ' + m.records)].filter(Boolean).map(esc).join(' · ');
+    const steps = (m.provisioned || []).length ? `<span class="lab-prov">set up: ${m.provisioned.map(esc).join(', ')}</span>` : '';
+    let actions = '';
+    if (isAdmin) {
+      const on = m.state === 'running';
+      actions = `<div class="lab-actions">
+        <button type="button" class="ui-pill lab-act" data-a="${on ? 'stop' : 'start'}">${on ? 'Stop' : 'Start'}</button>
+        <button type="button" class="ui-pill lab-act" data-a="snapshot">Snapshot</button>
+        <button type="button" class="ui-pill lab-act" data-a="revert">Revert</button>
+        ${m.os ? '<button type="button" class="ui-pill lab-act" data-a="provision">Set up</button>' : ''}
+        <button type="button" class="ui-pill" data-a="logs">Logs</button>
+        <button type="button" class="ui-pill lab-danger" data-a="delete">Delete</button>
+      </div>`;
+    }
+    return `<li class="lab-machine" data-engine="${esc(m.engine)}" data-name="${esc(m.name)}" data-os="${esc(m.os)}">
+      <div class="lab-machine-head">${dot}<strong>${esc(m.name)}</strong>${tag}</div>
+      <div class="lab-machine-meta">${meta}${m.detail ? ' · ' + esc(m.detail) : ''}</div>${steps}${actions}</li>`;
+  }
+
+  let timer = null;
+  function pollJob() {
+    api('/api/lab/job').then(({ job, log }) => {
+      const box = el('lab-job');
+      if (job.state === 'idle') { box.hidden = true; return; }
+      box.hidden = false;
+      el('lab-job-state').textContent = job.state === 'running' ? (job.what + '…')
+        : job.state === 'error' ? ('Failed: ' + (job.error || '')) : (job.what + ' — done');
+      el('lab-job-log').textContent = (log || []).join('\n');
+      if (job.state === 'running') { if (!timer) timer = setInterval(pollJob, 1500); }
+      else { clearInterval(timer); timer = null; refresh(); }
+    });
+  }
+
+  function refresh() {
+    api('/api/lab/overview').then(data => {
+      host(data.host);
+      const tpls = data.templates || [];
+      el('lab-templates').innerHTML = tpls.map(templateCard).join('');
+      el('lab-templates-empty').hidden = tpls.length > 0;
+      const ms = data.machines || [];
+      el('lab-machines').innerHTML = ms.map(machineRow).join('');
+      el('lab-machines-empty').hidden = ms.length > 0;
+      if (data.job && data.job.state === 'running' && !timer) pollJob();
+    });
+  }
+
+  function post(path, body) {
+    return api(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(r => { if (r.error) alert(r.error + (r.detail ? '\n\n' + r.detail : '')); return r; });
+  }
+
+  // Create
+  root.addEventListener('click', e => {
+    const c = e.target.closest('.lab-create');
+    if (!c) return;
+    const id = c.dataset.t;
+    openModal('Create a machine', `<label class="lab-field">Name
+      <input type="text" id="lab-name" placeholder="win11-run1" autocomplete="off"></label>
+      <p class="lab-hint">Letters, digits, dot, dash or underscore.</p>
+      <div class="lab-modal-actions"><button type="button" class="ui-pill" id="lab-name-cancel">Cancel</button>
+      <button type="button" class="btn-primary" id="lab-name-go">Create</button></div>`);
+    const go = () => {
+      const name = el('lab-name').value.trim();
+      if (!name) return;
+      closeModal();
+      post('/api/lab/create', { template: id, name }).then(r => { if (r.started) pollJob(); });
+    };
+    el('lab-name-go').addEventListener('click', go);
+    el('lab-name-cancel').addEventListener('click', closeModal);
+    el('lab-name').addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
+    el('lab-name').focus();
+  });
+
+  // Machine actions
+  el('lab-machines').addEventListener('click', e => {
+    const btn = e.target.closest('[data-a]');
+    if (!btn) return;
+    const li = btn.closest('.lab-machine');
+    const engine = li.dataset.engine, name = li.dataset.name, os = li.dataset.os;
+    const act = btn.dataset.a;
+    if (act === 'start' || act === 'stop') {
+      post('/api/lab/action', { engine, name, action: act }).then(refresh);
+    } else if (act === 'delete') {
+      if (confirm(`Delete ${name}? This removes the machine and its snapshots for good.`))
+        post('/api/lab/action', { engine, name, action: 'delete' }).then(refresh);
+    } else if (act === 'snapshot') {
+      snapshotDialog(engine, name);
+    } else if (act === 'revert') {
+      revertDialog(engine, name);
+    } else if (act === 'provision') {
+      provisionDialog(engine, name, os);
+    } else if (act === 'logs') {
+      api(`/api/lab/logs?engine=${encodeURIComponent(engine)}&name=${encodeURIComponent(name)}`)
+        .then(r => openModal(`Logs — ${name}`, `<pre class="lab-logs">${esc(r.logs || r.error || 'No output')}</pre>`));
+    }
+  });
+
+  function snapshotDialog(engine, name) {
+    openModal(`Snapshot ${name}`, `<label class="lab-field">Snapshot name
+      <input type="text" id="lab-snap" value="clean" autocomplete="off"></label>
+      <div class="lab-modal-actions"><button type="button" class="ui-pill" id="lab-snap-cancel">Cancel</button>
+      <button type="button" class="btn-primary" id="lab-snap-go">Snapshot</button></div>`);
+    el('lab-snap-go').addEventListener('click', () => {
+      const snap = el('lab-snap').value.trim(); if (!snap) return; closeModal();
+      post('/api/lab/action', { engine, name, action: 'snapshot', snapshot: snap }).then(refresh);
+    });
+    el('lab-snap-cancel').addEventListener('click', closeModal);
+  }
+
+  function revertDialog(engine, name) {
+    openModal(`Revert ${name}`, `<label class="lab-field">Snapshot to revert to
+      <input type="text" id="lab-snap" value="clean" autocomplete="off"></label>
+      <p class="lab-hint">Everything since that snapshot is discarded.</p>
+      <div class="lab-modal-actions"><button type="button" class="ui-pill" id="lab-snap-cancel">Cancel</button>
+      <button type="button" class="btn-primary lab-danger" id="lab-snap-go">Revert</button></div>`);
+    el('lab-snap-go').addEventListener('click', () => {
+      const snap = el('lab-snap').value.trim(); if (!snap) return; closeModal();
+      post('/api/lab/action', { engine, name, action: 'revert', snapshot: snap }).then(r => { if (r.started) pollJob(); });
+    });
+    el('lab-snap-cancel').addEventListener('click', closeModal);
+  }
+
+  function provisionDialog(engine, name, os) {
+    api(`/api/lab/provision-steps?os=${encodeURIComponent(os)}`).then(({ steps }) => {
+      if (!steps || !steps.length) { openModal('Set up', '<p>No provisioning for this OS.</p>'); return; }
+      const rows = steps.map(s => `<button type="button" class="ui-pill lab-step" data-step="${esc(s.step)}">${esc(s.label)}</button>`).join('');
+      openModal(`Set up ${name}`, `<p class="lab-hint">Each step changes the machine. Snapshot it first.</p>
+        <div class="lab-steps">${rows}</div>`);
+      modalBody.querySelectorAll('.lab-step').forEach(b => b.addEventListener('click', () => {
+        closeModal();
+        post('/api/lab/provision', { engine, name, os, step: b.dataset.step }).then(r => { if (r.started) pollJob(); });
+      }));
+    });
+  }
+
+  if (!signedIn || !isAdmin) el('lab-guest').hidden = false;
+  if (!signedIn) el('lab-guest').textContent = 'Log in as an admin to create and manage machines.';
+  refresh();
+})();

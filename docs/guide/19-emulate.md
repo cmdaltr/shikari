@@ -34,6 +34,33 @@ The summary ships with Archer (`archer/data/telemetry_guide.json`). To rebuild i
 python -m archer.telemetry --guide ~/Downloads/microsoft-security-incident-prediction.zip
 ```
 
+## Lab: machines from inside Archer
+
+The **Lab** section (admins) installs, creates and manages the containers and VMs a recording runs on, without leaving Archer. It drives what's on the machine Archer runs on — so for several operating systems, run Archer on each (an x64 host for Windows). It detects and guides; it doesn't install hypervisors itself.
+
+The **host card** names this machine's OS and CPU and each engine's state:
+
+| Engine | Runs | Where |
+|---|---|---|
+| Docker (or OrbStack) | Linux containers | any host |
+| Tart | macOS and Linux VMs | Apple Silicon only |
+
+An engine that's missing shows the exact install command to copy. **Create a machine** lists only templates this host can run, with the image chosen for its CPU: on an Apple Silicon Mac, an Ubuntu container, an Ubuntu VM and a macOS VM; a Windows 11 VM appears only where Archer runs on an x64 host. Each template says what it records, so it ties back to the telemetry above.
+
+**Your machines** lists every container and VM on the host — the ones Archer made and any made outside it — with a dot for running or stopped. Per machine: **Start/Stop**, **Snapshot**, **Revert**, **Set up**, **Logs** and **Delete**. Delete and Revert confirm first; both are irreversible.
+
+**Set up** provisions a machine in place, each step run inside it:
+
+| Step | Linux | macOS | Windows |
+|---|---|---|---|
+| Turn on audit logging | auditd with ATT&CK rules | notes Endpoint Security / unified log (eslogger needs Full Disk Access, granted in System Settings) | Security, PowerShell and audit policy |
+| Install PowerShell 7 | from Microsoft's installer | via Homebrew | already present |
+| Install Atomic Red Team | Invoke-AtomicRedTeam and the atomics | same | same |
+
+These change the machine, so snapshot it first — the section says so, and Revert puts it back. On a Tart VM the steps run through its guest agent (the Cirrus Labs base images include it); a custom image without it is reported rather than failing silently.
+
+Nothing a hypervisor doesn't already expose is sent anywhere, and the machine names Archer tracks stay in `data/lab/` (gitignored).
+
 ## Recording your own lab (Coming soon)
 
 No public set of attacks recorded by Defender for Endpoint, or by macOS's unified log, exists that Archer has found, so the gaps are filled by recording your own. `scripts/telemetry/record-atomics.ps1` runs Atomic Red Team tests on a **disposable** test machine (PowerShell 7, elevated) and saves each test's logs:

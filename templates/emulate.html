@@ -91,6 +91,47 @@
       <button type="button" class="ui-pill" id="em-next">Next</button>
     </div>
   </section>
+
+  <!-- Lab: the containers and VMs a run records on (archer.lab). Admins create and manage; everyone sees the host -->
+  <section class="ui-card ms-card lab-card" id="lab">
+    <h2>Lab</h2>
+    <p class="ms-note">Install, create and manage the containers and VMs an emulation records on, without leaving Archer.
+      Archer drives what's on this machine: run it on each OS you want to record (an x64 host for Windows).
+      The machines are disposable — snapshot one before you turn logging on or run atomics, and revert when you're done.</p>
+
+    <div class="lab-host" id="lab-host"></div>
+
+    <div class="lab-cols">
+      <div class="lab-col">
+        <h3 class="ui-subtitle">Create a machine</h3>
+        <p class="lab-empty" id="lab-templates-empty" hidden>No engine is ready on this host. Install one above, then reload.</p>
+        <div class="lab-templates" id="lab-templates"></div>
+      </div>
+      <div class="lab-col">
+        <h3 class="ui-subtitle">Your machines</h3>
+        <p class="lab-empty" id="lab-machines-empty">No machines yet. Create one on the left.</p>
+        <ul class="lab-machines" id="lab-machines"></ul>
+      </div>
+    </div>
+
+    <div class="lab-job" id="lab-job" hidden>
+      <span class="ms-state" id="lab-job-state" aria-live="polite"></span>
+      <pre class="ms-log" id="lab-job-log"></pre>
+    </div>
+    <p class="lab-guest" id="lab-guest" hidden>Sign in as an admin to create and manage machines.</p>
+  </section>
+</div>
+
+<!-- One dialog, reused: create, snapshot, revert, provision, logs -->
+<div class="lab-modal" id="lab-modal" hidden>
+  <div class="lab-modal-box" role="dialog" aria-modal="true" aria-labelledby="lab-modal-title">
+    <div class="lab-modal-head">
+      <strong id="lab-modal-title"></strong>
+      <button type="button" class="lab-modal-close" id="lab-modal-close" aria-label="Close">×</button>
+    </div>
+    <div class="lab-modal-body" id="lab-modal-body"></div>
+  </div>
 </div>
 <script src="{{ url_for('static', path='js/emulate.js') }}?v={{ request.app.state.asset_version }}"></script>
+<script src="{{ url_for('static', path='js/lab.js') }}?v={{ request.app.state.asset_version }}"></script>
 {% endblock %}
