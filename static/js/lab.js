@@ -36,7 +36,11 @@
     const badge = t.ready ? '<span class="lab-badge is-ready">Ready</span>'
       : `<span class="lab-badge is-off" title="${esc(t.reason)}">${esc(t.reason)}</span>`;
     const btn = isAdmin && t.ready ? `<button type="button" class="ui-pill lab-create" data-t="${esc(t.id)}">Create</button>` : '';
+    const kind = t.kind === 'container' ? 'container' : 'VM';
+    const engineName = t.engine === 'docker' ? 'Docker' : t.engine === 'tart' ? 'Tart' : esc(t.engine);
+    const runs = `<p class="lab-template-kind">${engineIcon(t.engine)}<span>${engineName} ${kind}</span></p>`;
     return `<div class="lab-template"><div class="lab-template-top"><span class="lab-template-name">${osIcon(t.os)}<strong>${esc(t.name)}</strong></span>${badge}</div>
+      ${runs}
       <p class="lab-template-about">${esc(t.about)}</p>
       <p class="lab-template-records"><span>Records:</span> ${esc(t.records)}</p>${btn}</div>`;
   }
@@ -93,9 +97,11 @@
     });
   }
 
+  let taken = new Set();  // every machine name on the host, for suggesting a clash-free new one
   function refresh() {
     api('/api/lab/overview').then(data => {
       host(data.host);
+      taken = new Set(data.taken || []);
       const tpls = data.templates || [];
       el('lab-templates').innerHTML = tpls.map(templateCard).join('');
       el('lab-templates-empty').hidden = tpls.length > 0;
@@ -111,13 +117,22 @@
       .then(r => { if (r.error) alert(r.error + (r.detail ? '\n\n' + r.detail : '')); return r; });
   }
 
+  // A free name that starts with "archer" and can't clash with a machine already on the host
+  function suggestName(id) {
+    const slug = id.replace(/-(vm|container)$/, '');
+    for (let n = 1; ; n++) {
+      const name = `archer-${slug}-${n}`;
+      if (!taken.has(name)) return name;
+    }
+  }
+
   // Create
   root.addEventListener('click', e => {
     const c = e.target.closest('.lab-create');
     if (!c) return;
     const id = c.dataset.t;
     openModal('Create a machine', `<label class="lab-field">Name
-      <input type="text" id="lab-name" placeholder="win11-run1" autocomplete="off"></label>
+      <input type="text" id="lab-name" value="${esc(suggestName(id))}" autocomplete="off"></label>
       <p class="lab-hint">Letters, digits, dot, dash or underscore.</p>
       <div class="lab-modal-actions"><button type="button" class="ui-pill" id="lab-name-cancel">Cancel</button>
       <button type="button" class="btn-primary" id="lab-name-go">Create</button></div>`);
@@ -131,6 +146,7 @@
     el('lab-name-cancel').addEventListener('click', closeModal);
     el('lab-name').addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
     el('lab-name').focus();
+    el('lab-name').select();
   });
 
   // Machine actions

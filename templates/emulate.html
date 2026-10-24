@@ -116,7 +116,7 @@
           Filters
           <span class="filter-active" id="em-filter-active" hidden></span>
         </h3>
-        <span id="em-filters-toggle" class="expand-btn" role="button" tabindex="0">Collapse</span>
+        <span id="em-filters-switch" class="expand-btn" role="button" tabindex="0">Collapse</span>
       </div>
       <div class="em-filters-body" id="em-filters-body">
         <div class="search-row">
@@ -128,10 +128,13 @@
           <span class="cv-shown" id="em-shown"></span>
         </div>
         <div class="filters-row">
-          <select id="em-siem" class="dropdown-styled" aria-label="SIEM platform" title="The SIEM whose tables or event types are shown">
-            <option value="secops">Google SecOps</option>
-            <option value="mde">Defender XDR</option>
-          </select>
+          <span class="em-siem-pick">
+            <span id="em-siem-logo" class="em-siem-chip" aria-hidden="true"></span>
+            <select id="em-siem" class="dropdown-styled" aria-label="SIEM platform" title="The SIEM whose tables or event types are shown">
+              <option value="secops">Google SecOps</option>
+              <option value="mde">Defender XDR</option>
+            </select>
+          </span>
           <div class="em-ms" data-key="technique" data-label="Techniques" data-search="ID or name" data-for="technique group source"></div>
           <div class="em-ms" data-key="group" data-label="Groups" data-search="Group" data-for="technique group source"></div>
           <div class="em-ms" data-key="source" data-label="Data sources" data-search="Table or event type" data-for="technique group source"></div>

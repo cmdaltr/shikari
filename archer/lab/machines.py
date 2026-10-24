@@ -45,6 +45,27 @@ def listing(engines: Optional[List[str]] = None) -> List[Dict]:
     return out
 
 
+def all_host_names(engines: Optional[List[str]] = None) -> List[str]:
+    """Every machine name the engines report, Archer's and not (Tart lists all its VMs; Docker
+    lists Archer's containers) — so the create dialog can suggest a name that won't collide."""
+    names = []
+    for key, engine in ENGINES.items():
+        if engines is not None and key not in engines:
+            continue
+        try:
+            names += [m["name"] for m in engine.list()]
+        except LabError:
+            continue
+    if engines is None or "tart" in engines:
+        from archer.lab.engines import parse_tart_list_raw
+
+        try:
+            names += parse_tart_list_raw()  # includes VMs and snapshots outside Archer
+        except LabError:
+            pass
+    return names
+
+
 def create(template_id: str, name: str) -> Dict:
     template = BY_ID.get(template_id)
     if not template:

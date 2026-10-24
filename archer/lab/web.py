@@ -87,7 +87,10 @@ def overview(archer_session: Optional[str] = Cookie(None)):
         current = machines.listing(caps["ready"])
     except LabError:
         current = []
-    return {"host": caps, "templates": offered(caps), "machines": current, "job": dict(_job)}
+    # Every name already on the host — Archer's machines and, so a new name can't collide with
+    # one Archer doesn't manage, the host's other VMs too — for the create dialog's suggested name
+    taken = sorted({m["name"] for m in current} | set(machines.all_host_names(caps["ready"])))
+    return {"host": caps, "templates": offered(caps), "machines": current, "taken": taken, "job": dict(_job)}
 
 
 @router.get("/machines")

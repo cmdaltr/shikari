@@ -196,3 +196,14 @@ def test_listing_shows_only_machines_archer_made(monkeypatch, tmp_path):
     names = [m["name"] for m in machines.listing(["tart"])]
     assert names == ["mine"]  # sequoia-vm (not in the registry) is omitted
     assert machines.listing(["tart"])[0]["os"] == "macos"
+
+
+def test_all_host_names_includes_vms_outside_archer(monkeypatch):
+    # For clash-free naming: every name on the host, Archer's and not
+    monkeypatch.setattr(engines.Docker, "list", lambda self: [
+        {"engine": "docker", "name": "archer-ubuntu-1", "kind": "container", "image": "", "os": "linux", "state": "running", "detail": ""}])
+    monkeypatch.setattr("archer.lab.engines.run",
+                        lambda argv, **k: json.dumps([{"Source": "local", "Name": "sequoia-vm"},
+                                                      {"Source": "local", "Name": "archer-macos-1"}]))
+    names = machines.all_host_names(["docker", "tart"])
+    assert "archer-ubuntu-1" in names and "sequoia-vm" in names and "archer-macos-1" in names

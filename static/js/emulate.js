@@ -12,20 +12,27 @@
     return r;
   };
   const PER_PAGE = 20;
-  const EVTX_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>';
+  // Your lab: a flask a third-full of purple, with a few bubbles rising
+  const LAB_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+    + '<path d="M7 16 L17 16 L18 19a2 2 0 0 1 -2 3H8a2 2 0 0 1 -2 -3Z" fill="#8b5cf6" stroke="none"/>'
+    + '<circle cx="11" cy="13" r="1.1" fill="#8b5cf6" stroke="none"/><circle cx="13.6" cy="10" r="0.8" fill="#8b5cf6" stroke="none"/><circle cx="12" cy="7.3" r="0.6" fill="#8b5cf6" stroke="none"/>'
+    + '<path d="M9 3h6M10 3v6L4 19a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-6-10V3"/></svg>';
   const SOURCES = {
     splunk: { name: 'Splunk attack_data', img: '/static/images/siem/splunk.png' },
     otrf: { name: 'Security-Datasets (OTRF)', img: '/static/images/brands/otrf.png' },
-    evtx: { name: 'EVTX-to-MITRE-Attack', svg: EVTX_ICON },
-    guide: { name: 'Microsoft GUIDE', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>' },
-    lab: { name: 'Your lab', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6M10 3v6L4 19a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-6-10V3"/></svg>' },
-    macos: { name: 'macOS-ATTACK-DATASET', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg>' },
+    evtx: { name: 'EVTX-to-MITRE-Attack', img: '/static/images/brands/evtx.png' },
+    guide: { name: 'Microsoft GUIDE', img: '/static/images/brands/microsoft.png' },
+    lab: { name: 'Your lab', svg: LAB_ICON },
+    macos: { name: 'macOS-ATTACK-DATASET', img: '/static/images/brands/attack.png' },
   };
   const logo = (src, cls = 'em-logo') => {
     const s = SOURCES[src] || { name: src };
     const inner = s.img ? `<img src="${s.img}" alt="">` : (s.svg || esc(src));
     return `<span class="${cls} is-${esc(src)}" title="${esc(s.name)}">${inner}</span>`;
   };
+  // SIEM platform marks, used wherever a result is labelled with the chosen SIEM
+  const SIEM_LOGO = { secops: '/static/images/siem/secops.png', mde: '/static/images/siem/mde.png' };
+  const siemLogo = () => `<img class="em-siem-logo" src="${SIEM_LOGO[state.siem] || SIEM_LOGO.secops}" alt="${esc(siemName())}">`;
   const STATUS = { seen: 'Seen', not_seen: 'Not seen', no_recordings: 'No recordings', no_indicators: 'No indicators', noisy: 'Noisy indicator' };
   const PLATFORM = { windows: 'Windows', linux: 'Linux', macos: 'macOS', esxi: 'ESXi', cloud: 'Cloud' };
   const COLLECTION = { native: 'native', sysmon: 'Sysmon', edr: 'EDR', osquery: 'osquery', cloud: 'cloud' };
@@ -207,9 +214,12 @@
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => { state.q = $('em-q').value.trim(); state.page = 1; render(); }, 350);
   });
+  const syncSiemLogo = () => { const e = $('em-siem-logo'); if (e) e.innerHTML = `<img src="${SIEM_LOGO[state.siem] || SIEM_LOGO.secops}" alt="">`; };
   $('em-siem').value = state.siem;
+  syncSiemLogo();
   $('em-siem').addEventListener('change', () => {
     state.siem = $('em-siem').value;
+    syncSiemLogo();
     state.page = 1;
     if (!state.collectionTouched) { defaultCollections(); reload(); return; }
     sourceOptions();
@@ -225,10 +235,10 @@
     defaultCollections();
     reload();
   });
-  $('em-filters-toggle').addEventListener('click', () => {
+  $('em-filters-switch').addEventListener('click', () => {
     const body = $('em-filters-body');
     body.hidden = !body.hidden;
-    $('em-filters-toggle').textContent = body.hidden ? 'Expand' : 'Collapse';
+    $('em-filters-switch').textContent = body.hidden ? 'Expand' : 'Collapse';
   });
   $('em-prev').addEventListener('click', () => { state.page--; render(); scrollToCard(); });
   $('em-next').addEventListener('click', () => { state.page++; render(); scrollToCard(); });
@@ -316,13 +326,13 @@
 
   // The SIEM's tables or event types those logs land in, under the logs
   const dataSources = list => list && list.length
-    ? `<div class="em-ds"><span>${esc(siemName())}</span> ${list.slice(0, 6).map(v => `<code>${esc(v)}</code>`).join(' ')}${list.length > 6 ? ` <span class="em-more" title="${esc(list.slice(6).join('\n'))}">+${list.length - 6}</span>` : ''}</div>`
+    ? `<div class="em-ds">${siemLogo()}<span class="em-ds-siem">${esc(siemName())}</span> ${list.slice(0, 6).map(v => `<code>${esc(v)}</code>`).join(' ')}${list.length > 6 ? ` <span class="em-more" title="${esc(list.slice(6).join('\n'))}">+${list.length - 6}</span>` : ''}</div>`
     : '';
 
   function renderTechniques() {
-    $('em-view-note').innerHTML = `Every technique the labs recorded. <strong>Logs</strong> are what at least half its recordings hold, counting only the logs chosen under <strong>Collection</strong>, with the ${esc(siemName())} ${state.siem === 'mde' ? 'tables' : 'event types'} they land in beneath them.
+    $('em-view-note').innerHTML = `Every technique the labs recorded. <strong>Recordings</strong> is how many separate tool-runs captured the technique; the logos break that down by source and the line beneath names the platforms they ran on. <strong>Logs</strong> are what at least half its recordings hold, counting only the logs chosen under <strong>Collection</strong>, with the ${esc(siemName())} ${state.siem === 'mde' ? 'tables' : 'event types'} they land in beneath them.
       ${state.siem === 'mde' ? 'With Defender XDR, Sysmon\'s recordings stand in for the MDE sensor, which records the same activity without Sysmon installed.' : ''}
-      A technique none of whose recordings hold those logs is marked. Select a row for each log and recording.`;
+      When Collection or Logs filters are set, <em>· N in these logs</em> is how many of the recordings hold them; a technique where none do is marked. Select a row for each log and recording.`;
     if (!data.techniques) return message('Loading…');
     const groupT = groupTechniques();
     const hits = searched();
@@ -340,7 +350,7 @@
     shown(rows.length, data.techniques.length, 'technique');
     if (!rows.length) return message('No recorded technique matches the filters.');
     $('em-results').innerHTML = `<div class="ms-table-wrap"><table class="ms-table em-table em-rows">
-      <thead><tr><th class="em-col-tech">Technique</th><th class="em-col-rec">Recordings</th><th>Logs</th></tr></thead>
+      <thead><tr><th class="em-col-tech">Technique</th><th class="em-col-rec" title="How many recorded tool-runs captured this technique, broken down by source (the logos) and the platforms they ran on">Recordings</th><th>Logs</th></tr></thead>
       <tbody>${pageOf(rows).map(t => {
         const info = data.names[t.technique] || {};
         const open = state.open.has(t.technique);
@@ -382,7 +392,7 @@
         </dl></div>`
       : `<p class="em-guide">${logo('guide')} <span>No Defender XDR alert in GUIDE maps to this technique: a custom detection is where coverage comes from.</span></p>`) : '';
     return `${guideNote}<table class="ms-table em-table em-sub">
-        <thead><tr><th>Log</th><th>Recordings</th><th>Events</th><th>${esc(siemName())}</th></tr></thead>
+        <thead><tr><th>Log</th><th>Recordings</th><th>Events</th><th>${siemLogo()} ${esc(siemName())}</th></tr></thead>
         <tbody>${r.event_types.map(e => `<tr${e.common ? ' class="is-common" title="In 40% or more of a source\'s recordings, whatever the technique: lab background as much as the attack"' : ''}>
           <td>${esc(e.label)} <span class="em-coll is-${esc(e.collection)}">${esc(COLLECTION[e.collection] || e.collection)}</span>${e.common ? ' <span class="em-common">common</span>' : ''}</td><td>${e.recordings} of ${r.visible}</td>
           <td>${e.events.toLocaleString()}</td><td>${e[key] ? `<code>${esc(e[key])}</code>` : '–'}</td></tr>`).join('')}</tbody>
