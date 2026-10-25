@@ -14,6 +14,7 @@ an exception that stops a profile.
 
 import ipaddress
 import os
+import re
 from typing import Dict, List, Optional
 
 import dns.resolver
@@ -119,6 +120,82 @@ def mail_provider(mx: List[Dict[str, object]]) -> str:
         if needle in joined:
             return name
     return ""
+
+
+def _cve_key(cve: str):
+    m = re.match(r"CVE-(\d+)-(\d+)", cve, re.I)
+    return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
+
+
+def internetdb(ip: str) -> Optional[Dict[str, object]]:
+    """Shodan InternetDB (free, keyless): open ports, CPEs, known CVEs and hostnames for one IP."""
+    try:
+        ipaddress.ip_address(ip)
+    except ValueError:
+        return None
+    try:
+        r = requests.get(f"https://internetdb.shodan.io/{ip}", headers={"User-Agent": _UA}, timeout=_TIMEOUT)
+        if r.status_code != 200:
+            return None
+        d = r.json()
+    except Exception:
+        return None
+    return {"ip": ip, "ports": d.get("ports") or [], "cpes": d.get("cpes") or [],
+            "vulns": d.get("vulns") or [], "hostnames": d.get("hostnames") or [], "tags": d.get("tags") or []}
+
+
+def enrich_internetdb(ips: List[str]) -> Dict[str, object]:
+    """Aggregate open ports, CPEs, CVEs and hostnames across the IPs, from Shodan InternetDB."""
+    per_ip, ports, cpes, vulns, hostnames = [], set(), set(), set(), set()
+    for ip in ips:
+        d = internetdb(ip)
+        if not d:
+            continue
+        per_ip.append(d)
+        ports.update(d["ports"]); cpes.update(d["cpes"]); vulns.update(d["vulns"]); hostnames.update(d["hostnames"])
+    return {"per_ip": per_ip, "ports": sorted(ports), "cpes": sorted(cpes),
+            "vulns": sorted(vulns, key=_cve_key, reverse=True), "hostnames": sorted(hostnames)}
+
+
+_DKIM_SELECTORS = ("google", "default", "selector1", "selector2", "k1", "dkim", "mail", "s1", "s2")
+
+
+def email_auth(domain: str) -> Dict[str, object]:
+    """
+    Email anti-spoofing posture from DNS: SPF (and its all-qualifier), DMARC (and its policy), and
+    whether common DKIM selectors publish a key. A domain is 'spoofable' unless SPF fails unknown
+    senders and DMARC is enforced (quarantine/reject). Keyless; empty/False when records are absent.
+    """
+    out = {"spf": False, "spf_record": "", "spf_policy": "", "dmarc": False, "dmarc_policy": "",
+           "dkim_selectors": [], "spoofable": True, "summary": ""}
+    for rec in _txt(domain):
+        if rec.lower().startswith("v=spf1"):
+            out["spf"], out["spf_record"] = True, rec
+            for mark, desc in (("-all", "-all (hard fail)"), ("~all", "~all (soft fail)"),
+                               ("?all", "?all (neutral)"), ("+all", "+all (pass any)")):
+                if mark in rec:
+                    out["spf_policy"] = desc
+                    break
+            break
+    for rec in _txt(f"_dmarc.{domain}"):
+        if rec.lower().startswith("v=dmarc1"):
+            out["dmarc"] = True
+            m = re.search(r"\bp\s*=\s*(\w+)", rec)
+            out["dmarc_policy"] = m.group(1).lower() if m else ""
+            break
+    for sel in _DKIM_SELECTORS:
+        recs = _txt(f"{sel}._domainkey.{domain}")
+        if any(("v=dkim1" in r.lower()) or ("k=" in r.lower()) or ("p=" in r) for r in recs):
+            out["dkim_selectors"].append(sel)
+    enforced = out["spf"] and ("-all" in out["spf_record"] or "~all" in out["spf_record"]) \
+        and out["dmarc"] and out["dmarc_policy"] in ("quarantine", "reject")
+    out["spoofable"] = not enforced
+    bits = [f"SPF {out['spf_policy'] or 'set'}" if out["spf"] else "no SPF",
+            f"DMARC p={out['dmarc_policy']}" if out["dmarc"] else "no DMARC"]
+    if out["dkim_selectors"]:
+        bits.append("DKIM: " + ", ".join(out["dkim_selectors"]))
+    out["summary"] = " · ".join(bits)
+    return out
 
 
 def breach_metadata(domain: str) -> Dict[str, object]:

@@ -116,3 +116,57 @@ def test_breach_metadata_graceful_offline(monkeypatch):
     monkeypatch.setattr(net.requests, "get", boom)
     out = net.breach_metadata("acme.com")
     assert out["breaches"] == [] and out["count"] == 0 and out["lookup_url"]
+
+
+def test_internetdb_aggregates_cves_and_ports(monkeypatch):
+    responses = {
+        "1.1.1.1": {"ports": [443, 80], "cpes": ["cpe:/a:nginx:nginx"], "vulns": ["CVE-2021-1234"], "hostnames": ["a.x.io"]},
+        "2.2.2.2": {"ports": [22, 443], "cpes": ["cpe:/a:openssh:openssh"], "vulns": ["CVE-2023-0001", "CVE-2021-1234"], "hostnames": []},
+    }
+
+    class _Resp:
+        def __init__(self, ip):
+            self._ip = ip
+            self.status_code = 200 if ip in responses else 404
+        def json(self):
+            return responses[self._ip]
+
+    monkeypatch.setattr(net.requests, "get", lambda url, **k: _Resp(url.rsplit("/", 1)[-1]))
+    out = net.enrich_internetdb(["1.1.1.1", "2.2.2.2", "bogus"])
+    assert out["ports"] == [22, 80, 443]
+    assert out["vulns"][0] == "CVE-2023-0001"  # newest CVE first
+    assert "CVE-2021-1234" in out["vulns"] and len(out["vulns"]) == 2  # de-duplicated
+    assert len(out["per_ip"]) == 2
+
+
+def test_internetdb_rejects_bad_ip(monkeypatch):
+    monkeypatch.setattr(net.requests, "get", lambda *a, **k: (_ for _ in ()).throw(AssertionError("should not fetch")))
+    assert net.internetdb("not-an-ip") is None
+
+
+def test_email_auth_enforced_not_spoofable(monkeypatch):
+    mapping = {
+        ("acme.com", "TXT"): ["v=spf1 include:_spf.google.com -all"],
+        ("_dmarc.acme.com", "TXT"): ["v=DMARC1; p=reject; rua=mailto:d@acme.com"],
+        ("google._domainkey.acme.com", "TXT"): ["v=DKIM1; k=rsa; p=MIIBI..."],
+    }
+    monkeypatch.setattr(net.dns.resolver, "resolve", _fake_resolver(mapping))
+    out = net.email_auth("acme.com")
+    assert out["spf"] and out["dmarc"] and out["dmarc_policy"] == "reject"
+    assert out["dkim_selectors"] == ["google"]
+    assert out["spoofable"] is False
+
+
+def test_email_auth_missing_records_spoofable(monkeypatch):
+    monkeypatch.setattr(net.dns.resolver, "resolve", _fake_resolver({}))
+    out = net.email_auth("acme.com")
+    assert out["spf"] is False and out["dmarc"] is False
+    assert out["spoofable"] is True
+
+
+def test_email_auth_softfail_no_dmarc_spoofable(monkeypatch):
+    mapping = {("acme.com", "TXT"): ["v=spf1 include:x ~all"]}
+    monkeypatch.setattr(net.dns.resolver, "resolve", _fake_resolver(mapping))
+    out = net.email_auth("acme.com")
+    assert out["spf"] is True and out["dmarc"] is False
+    assert out["spoofable"] is True  # SPF soft-fail but no enforced DMARC

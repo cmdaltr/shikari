@@ -128,6 +128,17 @@ class CompanyProfiler:
         if profile['breach_surface']['count']:
             print(f"  ✓ {profile['breach_surface']['count']} known breach(es) recorded for {domain}")
 
+        # Exposed services: open ports, software (CPEs) and known CVEs per resolved IP, from Shodan
+        # InternetDB (free, keyless). This is what gives the exposure map its CVE node.
+        ips = profile['company_info'].get('ip_addresses') or []
+        profile['exposed_services'] = net.enrich_internetdb(ips)
+        if profile['exposed_services'].get('vulns'):
+            print(f"  ✓ {len(profile['exposed_services']['vulns'])} known CVE(s) across "
+                  f"{len(profile['exposed_services']['ports'])} open port(s)")
+
+        # Email spoofability: SPF/DMARC/DKIM posture from DNS (keyless), hung off the mail surface.
+        profile['company_info']['email_auth'] = net.email_auth(domain)
+
         # 3. Industry analysis
         if options.get('include_industry'):
             profile['threat_profile']['industry'] = self._analyze_industry(

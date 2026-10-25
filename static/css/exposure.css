@@ -31,6 +31,10 @@
 .ex-section .an-kind-breach .an-icon { stroke: #DC2626; }
 .ex-section .an-kind-breach .an-disc { stroke: #FCA5A5; stroke-width: 2.4; }
 
+.ex-section .an-kind-cve .an-icon { stroke: #DC2626; }
+.ex-section .an-kind-cve .an-disc { stroke: #FCA5A5; stroke-width: 2.4; }
+[data-theme="dark"] .ex-section .an-kind-cve .an-icon { stroke: #F87171; }
+
 .ex-section .an-kind-history .an-icon { stroke: #64748B; }
 
 [data-theme="dark"] .ex-section .an-kind-ip .an-icon,

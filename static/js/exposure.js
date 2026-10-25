@@ -32,6 +32,13 @@
     return html;
   }
 
+  function cveBlock(n) {
+    if (n.kind !== 'cve' || !(n.cves || []).length) return '';
+    return '<h4>Known CVEs</h4><ul class="ex-cve-list">' + n.cves.map(c =>
+      `<li><a href="https://nvd.nist.gov/vuln/detail/${esc(c)}" target="_blank" rel="noopener">${esc(c)}</a></li>`).join('') + '</ul>' +
+      '<p class="pwn" style="color:var(--af-muted);font-size:.88em;margin-top:8px;">Reported by Shodan InternetDB against the exposed services — confirm before acting.</p>';
+  }
+
   function linksTo(id, end) {
     const es = view.edges.filter(e => e[end === 'source' ? 'target' : 'source'] === id);
     if (!es.length) return '';
@@ -65,7 +72,7 @@
     if (!n) return;
     selected = { node: id };
     body.innerHTML = `<h3>${esc(n.title)}</h3>${n.sub ? `<p class="an-sub-text">${esc(n.sub)}</p>` : ''}` +
-      breachBlock(n) + sections(n) + linksTo(id, 'target') + linksTo(id, 'source');
+      breachBlock(n) + cveBlock(n) + sections(n) + linksTo(id, 'target') + linksTo(id, 'source');
     detail.hidden = false;
     highlight();
   }

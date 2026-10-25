@@ -78,9 +78,15 @@ def build(profile: Dict) -> Optional[Dict]:
         chain.link("org", "ns", "delegated to")
 
     mx = ci.get("mx") or []
-    if mx:
-        chain.card("mx", "mail", "Mail (MX)", sub=ci.get("mail_provider") or "", col=1,
-                   sections=_secs(_sec("", [m.get("host") if isinstance(m, dict) else str(m) for m in mx][:5])))
+    auth = ci.get("email_auth") or {}
+    if mx or auth.get("spf") or auth.get("dmarc"):
+        spoof = []
+        if auth:
+            spoof = [auth.get("summary") or "", "Spoofable — weak SPF/DMARC" if auth.get("spoofable") else "Enforced (SPF + DMARC)"]
+        mx_card = chain.card("mx", "mail", "Mail (MX)", sub=ci.get("mail_provider") or "", col=1,
+                   sections=_secs(_sec("", [m.get("host") if isinstance(m, dict) else str(m) for m in mx][:5]),
+                                  _sec("Email auth", spoof)))
+        mx_card["spoofable"] = bool(auth.get("spoofable")) if auth else None
         chain.link("org", "mx", "mail via")
 
     subs = osint.get("subdomains") or []
@@ -129,10 +135,24 @@ def build(profile: Dict) -> Optional[Dict]:
         chain.link("subs" if subs else "org", "certs", "issued for")
 
     assets = osint.get("exposed_assets") or []
-    if assets:
-        chain.card("svc", "service", "Exposed services", sub=_n(len(assets), "host"), col=2,
-                   sections=_secs(_sec("Shodan", [a for a in (_asset_label(x) for x in assets[:8]) if a])))
+    svc = profile.get("exposed_services") or {}
+    ports = svc.get("ports") or []
+    cpes = svc.get("cpes") or []
+    if assets or ports:
+        sub = _n(len(assets), "host") if assets else _n(len(ports), "open port")
+        chain.card("svc", "service", "Exposed services", sub=sub, col=2,
+                   sections=_secs(_sec("Shodan", [a for a in (_asset_label(x) for x in assets[:8]) if a]),
+                                  _sec("Open ports", [str(p) for p in ports[:12]]),
+                                  _sec("Software", [str(c).replace("cpe:/a:", "").replace("cpe:/o:", "") for c in cpes[:5]])))
         chain.link("ips" if ips else "org", "svc", "exposes")
+
+    # Known CVEs on the exposed services (Shodan InternetDB) — the pivot a threat actor weaponises
+    vulns = svc.get("vulns") or []
+    if vulns:
+        cve_card = chain.card("cve", "cve", "Known CVEs", sub=_n(len(vulns), "CVE"), col=2,
+                   sections=_secs(_sec("", vulns[:10])))
+        cve_card["cves"] = vulns
+        chain.link("svc" if (assets or ports) else ("ips" if ips else "org"), "cve", "vulnerable to")
 
     leaks = osint.get("github_leaks") or []
     secrets = osint.get("exposed_secrets") or []

@@ -92,3 +92,22 @@ def test_domain_only_profile_has_no_map():
     assert exposure.build({"domain": "x.io", "company_info": {"domain": "x.io"}}) is None
     assert exposure.build({}) is None
     assert exposure.build(None) is None
+
+
+def test_cve_node_and_email_auth():
+    p = dict(PROFILE)
+    p = {**PROFILE,
+         "company_info": {**PROFILE["company_info"],
+                          "email_auth": {"spf": True, "dmarc": False, "spoofable": True,
+                                         "summary": "SPF ~all (soft fail) · no DMARC"}},
+         "exposed_services": {"ports": [443, 22], "cpes": ["cpe:/a:openssh:openssh"],
+                              "vulns": ["CVE-2023-0001", "CVE-2021-1234"]}}
+    out = exposure.build(p)
+    ids = {n["id"] for n in out["nodes"]}
+    assert "cve" in ids
+    cve = next(n for n in out["nodes"] if n["id"] == "cve")
+    assert cve["cves"] == ["CVE-2023-0001", "CVE-2021-1234"]
+    edges = {(e["source"], e["target"]) for e in out["edges"]}
+    assert ("svc", "cve") in edges  # CVEs hang off the exposed services
+    mx = next(n for n in out["nodes"] if n["id"] == "mx")
+    assert mx["spoofable"] is True
