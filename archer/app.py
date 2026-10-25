@@ -2400,20 +2400,25 @@ def read_form(request: Request, archer_session: Optional[str] = Cookie(None)):
 
     # Check if user is logged in (but don't require it)
     user = None
-    saved_keys = set()
+    saved_keys = {}  # platform -> enabled (NULL/True treated as enabled)
     if archer_session:
         db = next(get_db())
         try:
             user = get_user_from_session_id(archer_session, db)
             if user:
-                saved_keys = {k.platform for k in db.query(APIKey.platform).filter(APIKey.user_id == user.id)}
+                saved_keys = {k.platform: (k.enabled is not False)
+                              for k in db.query(APIKey.platform, APIKey.enabled).filter(APIKey.user_id == user.id)}
         finally:
             db.close()
 
     # Which OSINT keys are set (Profile → API Keys or the environment), for the Profile tab.
     # Only whether each is present; values never reach the page.
     osint_keys = [
-        {"env": env, "set": platform in saved_keys or bool(os.environ.get(env)), "what": what, "url": url, "site": site}
+        {"env": env, "platform": platform,
+         "set": platform in saved_keys or bool(os.environ.get(env)),
+         "in_vault": platform in saved_keys,
+         "enabled": saved_keys.get(platform, True),
+         "what": what, "url": url, "site": site}
         for env, platform, what, url, site in (
             ("SHODAN_API_KEY", "shodan", "Internet-facing assets", "https://account.shodan.io/register", "shodan.io"),
             ("SECURITYTRAILS_API_KEY", "securitytrails", "DNS history", "https://securitytrails.com/app/signup", "securitytrails.com"),
@@ -5041,6 +5046,9 @@ def apply_osint_keys_to_env(db, user_id):
     for platform, env_name in OSINT_KEY_ENV.items():
         row = db.query(APIKey).filter(APIKey.user_id == user_id, APIKey.platform == platform).first()
         if not row:
+            continue
+        if row.enabled is False:
+            os.environ.pop(env_name, None)  # disabled on the home page: kept in the vault, not applied
             continue
         try:
             value = decrypt_api_key(row.encrypted_key)
@@ -10628,6 +10636,57 @@ async def save_api_keys(request: Request, archer_session: Optional[str] = Cookie
         logger.error(f"Error saving API keys: {e}")
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
+    finally:
+        db.close()
+
+
+@app.post("/api/osint-key")
+async def osint_key(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Home-page OSINT key control, so a key can be added or switched off without the Profile page.
+    Body: {"platform": "shodan", "key": "..."} saves/replaces a key (and enables it); or
+    {"platform": "shodan", "enabled": false} keeps the stored key but stops it being applied.
+    Scoped to the OSINT platforms only. Returns the key's set/enabled state for the button to redraw.
+    """
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    try:
+        data = await request.json()
+        platform = str(data.get("platform") or "").strip().lower()
+        if platform not in OSINT_KEY_ENV:
+            return JSONResponse({"success": False, "error": "Unknown OSINT platform"}, status_code=400)
+
+        row = db.query(APIKey).filter(APIKey.user_id == user.id, APIKey.platform == platform).first()
+
+        if "key" in data:
+            key_value = str(data.get("key") or "").strip()
+            if not key_value:
+                return JSONResponse({"success": False, "error": "Empty key"}, status_code=400)
+            encrypted = encrypt_api_key(key_value)
+            if row:
+                row.encrypted_key, row.enabled, row.updated_at = encrypted, True, datetime.utcnow()
+            else:
+                db.add(APIKey(user_id=user.id, platform=platform, encrypted_key=encrypted, enabled=True))
+        elif "enabled" in data:
+            if not row:
+                return JSONResponse({"success": False, "error": "No key to toggle"}, status_code=404)
+            row.enabled = bool(data.get("enabled"))
+            row.updated_at = datetime.utcnow()
+        else:
+            return JSONResponse({"success": False, "error": "Nothing to do"}, status_code=400)
+
+        db.commit()
+        # Reflect the change in the live environment straight away
+        apply_osint_keys_to_env(db, user.id)
+        row = db.query(APIKey).filter(APIKey.user_id == user.id, APIKey.platform == platform).first()
+        return {"success": True, "platform": platform, "set": bool(row),
+                "enabled": (row.enabled is not False) if row else False}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating OSINT key: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
     finally:
         db.close()
 

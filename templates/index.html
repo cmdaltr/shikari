@@ -1898,16 +1898,29 @@
                   <span class="hp-summary-note">(Optional: more sources for a fuller profile)</span>
                 </summary>
                 <div class="hp-keys-body">
-                  <p>Most sources work without a key. These add coverage (ticked: set):</p>
+                  <p>Most sources work without a key. These add coverage &mdash; add one here, or switch a saved key off without removing it:</p>
                   <div class="hp-keys-list">
                     {% for k in osint_keys %}
-                    <label class="option-item" title="{{ 'Set' if k.set else 'Not set' }}">
-                      <input type="checkbox" disabled {% if k.set %}checked{% endif %} aria-label="{{ k.env }} {{ 'set' if k.set else 'not set' }}">
-                      <span class="option-label"><code>{{ k.env }}</code><span>{{ k.what }} (<a href="{{ k.url }}" target="_blank" rel="noopener">{{ k.site }}</a>)</span></span>
-                    </label>
+                    <div class="hp-key-row" data-platform="{{ k.platform }}" data-env="{{ k.env }}">
+                      <span class="hp-key-id"><code>{{ k.env }}</code><span class="hp-key-what">{{ k.what }} (<a href="{{ k.url }}" target="_blank" rel="noopener">{{ k.site }}</a>)</span></span>
+                      {% if k.platform in ['shodan', 'securitytrails', 'hibp', 'github'] %}
+                        {% if k.in_vault %}
+                        <button type="button" class="hp-key-toggle{{ ' is-on' if k.enabled else '' }}" role="switch"
+                                aria-checked="{{ 'true' if k.enabled else 'false' }}" aria-label="{{ k.env }} {{ 'enabled' if k.enabled else 'disabled' }}">
+                          <span class="hp-key-knob"></span><span class="hp-key-state">{{ 'On' if k.enabled else 'Off' }}</span>
+                        </button>
+                        {% elif k.set %}
+                        <span class="hp-key-env" title="Set in the environment (.env)">via .env</span>
+                        {% else %}
+                        <button type="button" class="hp-key-add">+ Add key</button>
+                        {% endif %}
+                      {% else %}
+                        <span class="hp-key-env" title="{{ 'Set' if k.set else 'Not set' }}">{{ 'Set' if k.set else '—' }}</span>
+                      {% endif %}
+                    </div>
                     {% endfor %}
                   </div>
-                  <p class="hp-keys-how">Set them in <a href="/profile#apikeys" target="_blank" rel="noopener">Profile → API Keys</a>, or in <code>.env</code> in the project root.</p>
+                  <p class="hp-keys-how">Or manage every key in <a href="/profile#apikeys" target="_blank" rel="noopener">Profile → API Keys</a>.</p>
                 </div>
               </details>
               </div>
@@ -1918,6 +1931,22 @@
             </form>
           </div>
 
+        </div>
+      </div>
+
+      <!-- OSINT key modal (add a key from the home page) -->
+      <div id="osint-key-modal" class="hp-modal" hidden>
+        <div class="hp-modal-card" role="dialog" aria-modal="true" aria-labelledby="osint-key-title">
+          <button type="button" class="hp-modal-close" aria-label="Close">×</button>
+          <h3 id="osint-key-title">Add API key</h3>
+          <p class="hp-modal-sub"><code id="osint-key-env"></code> — <span id="osint-key-what"></span></p>
+          <input type="password" id="osint-key-input" class="hp-modal-input" autocomplete="off" spellcheck="false" placeholder="Paste the key">
+          <p class="hp-modal-err" id="osint-key-err" hidden></p>
+          <div class="hp-modal-actions">
+            <button type="button" class="hp-btn-secondary" id="osint-key-cancel">Cancel</button>
+            <button type="button" class="hp-btn" id="osint-key-save">Save key</button>
+          </div>
+          <p class="hp-modal-note">Stored encrypted against your profile. It's applied to profiling straight away.</p>
         </div>
       </div>
 

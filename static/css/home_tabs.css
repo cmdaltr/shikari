@@ -58,10 +58,61 @@
 /* Profile: OSINT API keys, open by default and sized to the pane */
 .home-tabs .hp-keys-body { padding: 12px 16px 14px; font-size: 0.92rem; line-height: 1.5; color: #374151; }
 .home-tabs .hp-keys-body p { margin: 0 0 8px; }
-.home-tabs .hp-keys-list { margin: 0 0 8px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 20px; }
-.home-tabs .hp-keys-list .option-item { min-width: 0; overflow-wrap: anywhere; cursor: default; }
-.home-tabs .hp-keys-list input:disabled { opacity: 1; cursor: default; }
+.home-tabs .hp-keys-list { margin: 0 0 8px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 20px; }
+.home-tabs .hp-key-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.home-tabs .hp-key-id { min-width: 0; overflow-wrap: anywhere; }
+.home-tabs .hp-key-what { color: #4b5563; }
+[data-theme="dark"] .home-tabs .hp-key-what { color: var(--text-secondary); }
 .home-tabs .hp-keys-list code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.85em; font-weight: 600; color: var(--tab-accent-dark); margin-right: 6px; }
+
+/* Toggle: a saved key switched on/off without deleting it */
+.home-tabs .hp-key-toggle {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  border: 1px solid rgba(var(--tab-accent-rgb), 0.35); background: rgba(100, 116, 139, 0.14);
+  border-radius: 999px; padding: 3px 10px 3px 4px; font-size: 0.78rem; font-weight: 700; color: #64748b;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.home-tabs .hp-key-toggle .hp-key-knob {
+  width: 14px; height: 14px; border-radius: 50%; background: #94a3b8; transition: transform 0.15s, background 0.15s;
+}
+.home-tabs .hp-key-toggle.is-on { background: rgba(var(--tab-accent-rgb), 0.16); color: var(--tab-accent-dark); border-color: var(--tab-accent); }
+.home-tabs .hp-key-toggle.is-on .hp-key-knob { background: var(--tab-accent); transform: translateX(2px); }
+.home-tabs .hp-key-toggle:disabled { opacity: 0.6; cursor: wait; }
+[data-theme="dark"] .home-tabs .hp-key-toggle.is-on { color: var(--tab-accent); }
+
+.home-tabs .hp-key-add {
+  flex: 0 0 auto; cursor: pointer; border: 1px dashed var(--tab-accent); background: transparent;
+  color: var(--tab-accent-dark); border-radius: 6px; padding: 3px 10px; font-size: 0.78rem; font-weight: 700;
+}
+.home-tabs .hp-key-add:hover { background: rgba(var(--tab-accent-rgb), 0.1); }
+[data-theme="dark"] .home-tabs .hp-key-add { color: var(--tab-accent); }
+.home-tabs .hp-key-env { flex: 0 0 auto; font-size: 0.75rem; font-weight: 600; color: #94a3b8; }
+
+/* Add-key modal */
+.hp-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+  background: rgba(15, 23, 42, 0.55); padding: 16px; }
+.hp-modal[hidden] { display: none; }
+.hp-modal-card { position: relative; width: 100%; max-width: 420px; background: var(--card-bg, #fff);
+  border-radius: 12px; padding: 22px 22px 18px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35); }
+[data-theme="dark"] .hp-modal-card { background: var(--bg-secondary, #1e293b); }
+.hp-modal-close { position: absolute; top: 10px; right: 12px; border: none; background: none; font-size: 1.4rem;
+  line-height: 1; cursor: pointer; color: var(--text-secondary, #64748b); }
+.hp-modal-card h3 { margin: 0 0 4px; font-size: 1.1rem; }
+.hp-modal-sub { margin: 0 0 14px; font-size: 0.85rem; color: var(--text-secondary, #64748b); }
+.hp-modal-sub code { font-family: "JetBrains Mono", ui-monospace, monospace; font-weight: 700; }
+.hp-modal-input { width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 8px; font-size: 0.9rem; background: var(--input-bg, #fff); color: inherit; }
+.hp-modal-input:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15); outline: none; }
+.hp-modal-err { margin: 8px 0 0; color: #dc2626; font-size: 0.82rem; }
+.hp-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+.hp-btn-secondary { cursor: pointer; border: 1px solid rgba(100, 116, 139, 0.4); background: transparent;
+  color: inherit; border-radius: 8px; padding: 8px 16px; font-weight: 600; font-size: 0.85rem; }
+.hp-modal .hp-btn { flex: 0 0 auto; padding: 8px 18px; color: #fff; border: none; border-radius: 8px; cursor: pointer;
+  font-weight: 700; font-size: 0.85rem; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3); }
+.hp-modal .hp-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4); }
+.hp-modal .hp-btn:disabled { opacity: 0.6; cursor: wait; }
+.hp-modal-note { margin: 12px 0 0; font-size: 0.78rem; color: var(--text-secondary, #94a3b8); }
 .home-tabs .hp-keys-body a { color: var(--tab-accent-dark); }
 .home-tabs .hp-keys-how {
   margin: 4px 0 0 !important; padding: 8px 12px; border-left: 3px solid var(--tab-accent); border-radius: 4px;

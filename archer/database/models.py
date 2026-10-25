@@ -187,6 +187,7 @@ class APIKey(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     platform = Column(String(50), nullable=False)  # secops, splunk, mde, elastic, openai, anthropic, ...
     encrypted_key = Column(Text, nullable=False)  # Fernet encrypted
+    enabled = Column(Boolean, nullable=True, default=True)  # NULL/True = applied; False = kept but not used
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

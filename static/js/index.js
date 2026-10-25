@@ -1524,3 +1524,84 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('cvp-close').addEventListener('click', function () { dialog.close(); });
   dialog.addEventListener('click', function (e) { if (e.target === dialog) dialog.close(); });  // the backdrop
 });
+
+// Home-page OSINT key control: toggle a saved key on/off, or add one via a modal (POST /api/osint-key),
+// so a key can be managed without the Profile page. Draws the row's button to match the new state.
+(function () {
+  const list = document.querySelector('.hp-keys-list');
+  const modal = document.getElementById('osint-key-modal');
+  if (!list || !modal) return;
+
+  const input = document.getElementById('osint-key-input');
+  const errEl = document.getElementById('osint-key-err');
+  const envEl = document.getElementById('osint-key-env');
+  const whatEl = document.getElementById('osint-key-what');
+  const saveBtn = document.getElementById('osint-key-save');
+  let active = null;  // the row a modal save will act on
+
+  async function post(payload) {
+    const r = await fetch('/api/osint-key', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    return r.json();
+  }
+
+  function toggleButton(enabled) {
+    const on = !!enabled;
+    return `<button type="button" class="hp-key-toggle${on ? ' is-on' : ''}" role="switch" aria-checked="${on}">` +
+      `<span class="hp-key-knob"></span><span class="hp-key-state">${on ? 'On' : 'Off'}</span></button>`;
+  }
+
+  function openModal(row) {
+    active = row;
+    envEl.textContent = row.dataset.env;
+    whatEl.textContent = (row.querySelector('.hp-key-what') || {}).textContent || '';
+    input.value = '';
+    errEl.hidden = true;
+    modal.hidden = false;
+    input.focus();
+  }
+  function closeModal() { modal.hidden = true; active = null; }
+
+  list.addEventListener('click', async function (e) {
+    const toggle = e.target.closest('.hp-key-toggle');
+    const add = e.target.closest('.hp-key-add');
+    if (toggle) {
+      const row = toggle.closest('.hp-key-row');
+      const next = !toggle.classList.contains('is-on');
+      toggle.disabled = true;
+      const res = await post({ platform: row.dataset.platform, enabled: next }).catch(() => null);
+      toggle.disabled = false;
+      if (res && res.success) {
+        toggle.classList.toggle('is-on', res.enabled);
+        toggle.setAttribute('aria-checked', String(res.enabled));
+        toggle.querySelector('.hp-key-state').textContent = res.enabled ? 'On' : 'Off';
+      }
+    } else if (add) {
+      openModal(add.closest('.hp-key-row'));
+    }
+  });
+
+  saveBtn.addEventListener('click', async function () {
+    if (!active) return;
+    const key = input.value.trim();
+    if (!key) { errEl.textContent = 'Enter a key.'; errEl.hidden = false; return; }
+    saveBtn.disabled = true;
+    const res = await post({ platform: active.dataset.platform, key }).catch(() => null);
+    saveBtn.disabled = false;
+    if (res && res.success) {
+      const addBtn = active.querySelector('.hp-key-add');
+      if (addBtn) addBtn.outerHTML = toggleButton(res.enabled);
+      closeModal();
+    } else {
+      errEl.textContent = (res && res.error) || 'Could not save the key.';
+      errEl.hidden = false;
+    }
+  });
+
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); } });
+  modal.querySelector('.hp-modal-close').addEventListener('click', closeModal);
+  document.getElementById('osint-key-cancel').addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) closeModal(); });
+})();
