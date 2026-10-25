@@ -1180,10 +1180,12 @@ app.include_router(flow_layout_router)
 from archer.mitre.web import router as mitresaw_router
 from archer.telemetry.web import router as telemetry_router
 from archer.lab.web import router as lab_router
+from archer.elevation import router as elevation_router
 
 app.include_router(mitresaw_router)
 app.include_router(telemetry_router)
 app.include_router(lab_router)
+app.include_router(elevation_router)
 
 
 # Favicon route - ensure favicon is served from root with no-cache headers

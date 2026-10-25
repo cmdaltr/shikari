@@ -902,6 +902,58 @@
                 <tbody id="api-token-rows"></tbody>
               </table>
             </div>
+
+            <!-- Access & elevation (archer/elevation.py) -->
+            <div class="security-section access-section" id="access-section">
+              <div style="height: 1px; background: var(--border-color); margin: 32px 0 24px;"></div>
+              <h3 class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l7 4v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>Access &amp; elevation</h3>
+              <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                Request a higher role for a set time. Another analyst at that level or above approves it here &mdash; no email.
+                The grant activates one minute after approval and expires on its own. You, the approver or any admin can end it early.
+              </p>
+
+              <div id="access-current" class="access-current" aria-live="polite"></div>
+
+              <form id="access-request-form" class="access-request" hidden>
+                <div class="access-request-row">
+                  <div>
+                    <label class="form-label" for="access-role">Role</label>
+                    <select id="access-role" class="form-input">
+                      <option value="operator">Operational analyst</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="form-label" for="access-duration">For</label>
+                    <select id="access-duration" class="form-input">
+                      <option value="1">1 hour</option>
+                      <option value="4" selected>4 hours</option>
+                      <option value="8">8 hours</option>
+                      <option value="24">24 hours</option>
+                    </select>
+                  </div>
+                </div>
+                <label class="form-label" for="access-reason">Reason <span style="color: var(--text-tertiary); font-weight: 400;">(optional)</span></label>
+                <input type="text" id="access-reason" class="form-input" maxlength="500" placeholder="e.g. spinning up a Windows lab for IR drill">
+                <div class="access-request-actions">
+                  <button type="submit" class="btn-primary">Request access</button>
+                  <span id="access-request-msg" class="access-msg" role="status"></span>
+                </div>
+              </form>
+
+              <div id="access-mine" class="access-list-block" hidden>
+                <h4 class="access-subhead">Your recent requests</h4>
+                <div id="access-mine-list"></div>
+              </div>
+
+              <div id="access-approvals" hidden>
+                <div style="height: 1px; background: var(--border-color); margin: 28px 0 20px;"></div>
+                <h4 class="access-subhead">Awaiting your approval</h4>
+                <div id="access-pending-list"></div>
+                <h4 class="access-subhead" style="margin-top: 24px;">Active grants you can revoke</h4>
+                <div id="access-active-list"></div>
+              </div>
+            </div>
           </div>
 
           <!-- CONFIG TAB (formerly Mappings) -->
@@ -1948,6 +2000,217 @@
           });
           </script>
 
+          <!-- Access & elevation (JIT role requests) -->
+          <script>
+          (function () {
+            const $ = (id) => document.getElementById(id);
+            const STATUS = {
+              pending:   { cls: 'pending',   label: 'Pending' },
+              scheduled: { cls: 'scheduled', label: 'Starts soon' },
+              approved:  { cls: 'active',    label: 'Active' },
+              expired:   { cls: 'expired',   label: 'Expired' },
+              denied:    { cls: 'denied',    label: 'Denied' },
+              revoked:   { cls: 'revoked',   label: 'Revoked' },
+            };
+            const OPEN = new Set(['pending', 'scheduled', 'approved']);
+            const esc = (s) => (s == null ? '' : String(s).replace(/[&<>"]/g, c => (
+              { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])));
+
+            function rankClass(role) { return role === 'admin' ? 'rank-admin' : role === 'operator' ? 'rank-operator' : ''; }
+
+            function fmtRemaining(ms) {
+              if (ms <= 0) return '0:00';
+              const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+              const pad = (n) => String(n).padStart(2, '0');
+              return h > 0 ? `${h}:${pad(m)}:${pad(ss)}` : `${m}:${pad(ss)}`;
+            }
+
+            async function api(path, opts) {
+              const r = await fetch('/api/access' + path, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts));
+              let body = {};
+              try { body = await r.json(); } catch (e) { /* non-JSON */ }
+              if (!r.ok) throw new Error(body.error || ('Request failed (' + r.status + ')'));
+              return body;
+            }
+
+            function statusTag(status) {
+              const s = STATUS[status] || STATUS.pending;
+              return `<span class="access-status-tag ${s.cls}">${s.label}</span>`;
+            }
+
+            // A live countdown span: counts down to `until` (ISO). `mode` picks the sentence.
+            function countdown(until, mode) {
+              if (!until) return '';
+              return `<span class="access-countdown" data-until="${esc(until)}" data-mode="${mode}"></span>`;
+            }
+
+            function openRequest(requests) { return (requests || []).find(r => OPEN.has(r.status)) || null; }
+
+            function renderCurrent(data) {
+              const box = $('access-current');
+              const open = openRequest(data.requests);
+              const base = `<span class="access-role-pill ${rankClass(data.base_role)}">${esc(data.base_role_label)}</span>`;
+              let html = '';
+              if (open && open.status === 'approved') {
+                html = `<div class="access-state is-elevated">
+                  <span>You are elevated to</span>
+                  <span class="access-role-pill ${rankClass(open.role)}">${esc(open.role_label)}</span>
+                  <span>&middot; ends in ${countdown(open.expires_at, 'ends')}</span>
+                  <span class="spacer"></span>
+                  <button class="btn-secondary" data-revoke="${open.id}">End now</button>
+                </div>`;
+              } else if (open && open.status === 'scheduled') {
+                html = `<div class="access-state is-elevated">
+                  <span>${esc(open.role_label)} approved &mdash; starts in ${countdown(open.starts_at, 'starts')}</span>
+                  <span class="spacer"></span>
+                  <button class="btn-secondary" data-revoke="${open.id}">Cancel</button>
+                </div>`;
+              } else if (open && open.status === 'pending') {
+                html = `<div class="access-state">
+                  <span>Requested ${esc(open.role_label)} for ${open.duration_hours}h &mdash; awaiting approval</span>
+                  <span class="spacer"></span>
+                  <button class="btn-secondary" data-revoke-pending="${open.id}">Withdraw</button>
+                </div>`;
+              } else {
+                html = `<div class="access-state"><span>Current role</span> ${base}</div>`;
+              }
+              box.innerHTML = html;
+              setupForm(data, !!open);
+            }
+
+            function setupForm(data, hasOpen) {
+              const form = $('access-request-form');
+              const roleSel = $('access-role');
+              const base = data.base_role;
+              // Admins are already top rank; nothing to request. Hide the form if there's an open request.
+              if (base === 'admin' || hasOpen) { form.hidden = true; return; }
+              // Only offer roles above the base role.
+              const opOpt = roleSel.querySelector('option[value="operator"]');
+              if (opOpt) opOpt.hidden = (base === 'operator');
+              if (base === 'operator') roleSel.value = 'admin';
+              form.hidden = false;
+            }
+
+            function cardHtml(r, actions) {
+              const who = r.requester ? `<span class="who">${esc(r.requester)}</span>` : '';
+              let timing = '';
+              if (r.status === 'scheduled') timing = `starts in ${countdown(r.starts_at, 'starts')}`;
+              else if (r.status === 'approved') timing = `ends in ${countdown(r.expires_at, 'ends')}`;
+              else if (r.status === 'pending') timing = `${r.duration_hours}h requested`;
+              const reason = r.reason ? `<div class="reason">&ldquo;${esc(r.reason)}&rdquo;</div>` : '';
+              return `<div class="access-card">
+                ${who}
+                <span class="access-role-pill ${rankClass(r.role)}">${esc(r.role_label)}</span>
+                ${statusTag(r.status)}
+                <span class="meta">${timing}</span>
+                <span class="spacer"></span>
+                ${actions}
+                ${reason}
+              </div>`;
+            }
+
+            function renderMine(data) {
+              const wrap = $('access-mine'), list = $('access-mine-list');
+              const rows = (data.requests || []).filter(r => !OPEN.has(r.status)).slice(0, 5);
+              if (!rows.length) { wrap.hidden = true; return; }
+              wrap.hidden = false;
+              list.innerHTML = rows.map(r => cardHtml(r, '')).join('');
+            }
+
+            async function renderApprovals(data) {
+              const block = $('access-approvals');
+              if (!data.can_approve) { block.hidden = true; return; }
+              block.hidden = false;
+              try {
+                const [pending, active] = await Promise.all([api('/pending'), api('/active')]);
+                const pl = $('access-pending-list');
+                pl.innerHTML = pending.requests.length
+                  ? pending.requests.map(r => cardHtml(r,
+                      `<button class="btn-primary" data-approve="${r.id}">Approve</button>
+                       <button class="btn-ghost" data-deny="${r.id}">Deny</button>`)).join('')
+                  : '<div class="access-empty">Nothing waiting on you.</div>';
+                const al = $('access-active-list');
+                al.innerHTML = active.requests.length
+                  ? active.requests.map(r => cardHtml(r, `<button class="btn-secondary" data-revoke="${r.id}">Revoke</button>`)).join('')
+                  : '<div class="access-empty">No active grants to revoke.</div>';
+              } catch (e) { /* leave block, surfaced on action */ }
+            }
+
+            let ticker = null;
+            function startTicker() {
+              if (ticker) clearInterval(ticker);
+              ticker = setInterval(tick, 1000);
+              tick();
+            }
+            function tick() {
+              const now = Date.now();
+              let needsReload = false;
+              document.querySelectorAll('.access-countdown[data-until]').forEach(el => {
+                const target = Date.parse(el.dataset.until);
+                const left = target - now;
+                el.textContent = fmtRemaining(left);
+                if (left <= 0) needsReload = true;
+              });
+              if (needsReload) load();
+            }
+
+            let loading = false;
+            async function load() {
+              if (loading) return; loading = true;
+              try {
+                const data = await api('/mine');
+                renderCurrent(data);
+                renderMine(data);
+                await renderApprovals(data);
+                startTicker();
+              } catch (e) {
+                $('access-current').innerHTML = `<div class="access-empty">Couldn't load access state: ${esc(e.message)}</div>`;
+              } finally { loading = false; }
+            }
+
+            function msg(text, ok) {
+              const m = $('access-request-msg');
+              m.textContent = text; m.className = 'access-msg ' + (ok ? 'ok' : 'err');
+            }
+
+            // Submit a request
+            $('access-request-form').addEventListener('submit', async (e) => {
+              e.preventDefault();
+              msg('', true);
+              try {
+                await api('/request', { method: 'POST', body: JSON.stringify({
+                  role: $('access-role').value,
+                  duration: parseInt($('access-duration').value, 10),
+                  reason: $('access-reason').value.trim(),
+                }) });
+                $('access-reason').value = '';
+                await load();
+              } catch (err) { msg(err.message, false); }
+            });
+
+            // Delegated actions across the section
+            $('access-section').addEventListener('click', async (e) => {
+              const btn = e.target.closest('button'); if (!btn) return;
+              const d = btn.dataset;
+              let path = null, confirmText = null;
+              if (d.approve) path = `/${d.approve}/approve`;
+              else if (d.deny) { path = `/${d.deny}/deny`; confirmText = 'Deny this request?'; }
+              else if (d.revoke) { path = `/${d.revoke}/revoke`; confirmText = 'End this grant now?'; }
+              else if (d.revokePending) { path = `/${d.revokePending}/revoke`; confirmText = 'Withdraw your request?'; }
+              else return;
+              if (confirmText && !window.confirm(confirmText)) return;
+              btn.disabled = true;
+              try { await api(path, { method: 'POST' }); await load(); }
+              catch (err) { btn.disabled = false; alert(err.message); }
+            });
+
+            // Load when the Security tab is opened, and now if it is already active.
+            const secTab = document.querySelector('[data-tab="security"]');
+            if (secTab) secTab.addEventListener('click', load);
+            if (document.getElementById('tab-security')?.classList.contains('active')) load();
+          })();
+          </script>
+
         </div>
       </div>
     </div>
@@ -2035,6 +2298,48 @@
             border-color: #8b5cf6;
             color: #a78bfa;
         }
+
+        /* Access & elevation */
+        .access-current { margin-bottom: 20px; }
+        .access-state { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+            padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); }
+        .access-state.is-elevated { border-color: #0d9488; background: rgba(13, 148, 136, .06); }
+        .access-state .btn-secondary { flex: 0 0 auto; padding: 6px 14px; font-size: 0.85rem; }
+        .access-state .spacer { flex: 1 1 auto; }
+        .access-role-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
+            font-size: 0.82rem; font-weight: 700; letter-spacing: .3px; background: #e5e7eb; color: #374151; }
+        .access-role-pill.rank-operator { background: #cffafe; color: #0e7490; }
+        .access-role-pill.rank-admin { background: #ede9fe; color: #6d28d9; }
+        [data-theme="dark"] .access-role-pill { background: #374151; color: #e5e7eb; }
+        [data-theme="dark"] .access-role-pill.rank-operator { background: #164e52; color: #67e8f9; }
+        [data-theme="dark"] .access-role-pill.rank-admin { background: #3b2d66; color: #c4b5fd; }
+        .access-countdown { font-variant-numeric: tabular-nums; font-weight: 700; color: #0d9488; }
+        [data-theme="dark"] .access-countdown { color: #2dd4bf; }
+        .access-request-row { display: flex; gap: 16px; margin-bottom: 14px; }
+        .access-request-row > div { flex: 1 1 0; min-width: 0; }
+        .access-request-actions { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+        .access-msg { font-size: 0.9rem; }
+        .access-msg.ok { color: #0d9488; }
+        .access-msg.err { color: #dc2626; }
+        [data-theme="dark"] .access-msg.err { color: #f87171; }
+        .access-subhead { font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin: 0 0 12px; }
+        .access-card { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+            padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 10px; }
+        .access-card .who { font-weight: 600; color: var(--text-primary); }
+        .access-card .meta { color: var(--text-secondary); font-size: 0.88rem; }
+        .access-card .reason { color: var(--text-tertiary); font-size: 0.86rem; font-style: italic; width: 100%; margin-top: -2px; }
+        .access-card .spacer { flex: 1 1 auto; }
+        .access-card .btn-ghost, .access-card .btn-primary, .access-card .btn-secondary { padding: 6px 14px; font-size: 0.85rem; }
+        .access-status-tag { font-size: 0.78rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; letter-spacing: .3px; }
+        .access-status-tag.scheduled { background: #fef9c3; color: #a16207; }
+        .access-status-tag.active { background: #d1fae5; color: #047857; }
+        .access-status-tag.pending { background: #e0e7ff; color: #4338ca; }
+        .access-status-tag.denied, .access-status-tag.expired, .access-status-tag.revoked { background: #f3f4f6; color: #6b7280; }
+        [data-theme="dark"] .access-status-tag.scheduled { background: #422006; color: #fde047; }
+        [data-theme="dark"] .access-status-tag.active { background: #064e3b; color: #6ee7b7; }
+        [data-theme="dark"] .access-status-tag.pending { background: #312e81; color: #c7d2fe; }
+        [data-theme="dark"] .access-status-tag.denied, [data-theme="dark"] .access-status-tag.expired, [data-theme="dark"] .access-status-tag.revoked { background: #374151; color: #9ca3af; }
+        .access-empty { color: var(--text-tertiary); font-size: 0.9rem; padding: 4px 0 8px; }
     </style>
 
     <script>

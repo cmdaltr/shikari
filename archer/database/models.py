@@ -55,9 +55,12 @@ def effective_role(user):
     hasn't expired. A grant only ever elevates — a lower temp role than the base is ignored."""
     base = getattr(user, "role", None)
     temp = getattr(user, "temp_role", None)
+    starts = getattr(user, "temp_role_starts", None)
     expires = getattr(user, "temp_role_expires", None)
-    if temp is not None and expires is not None and expires > datetime.utcnow() \
-            and role_rank(temp) > role_rank(base):
+    now = datetime.utcnow()
+    active = temp is not None and expires is not None and expires > now \
+        and (starts is None or starts <= now)
+    if active and role_rank(temp) > role_rank(base):
         return temp
     return base
 
@@ -89,6 +92,7 @@ class User(Base):
     # A time-boxed elevation above `role` (just-in-time privilege): effective_role() uses it only
     # while temp_role_expires is in the future, and only when it's higher than the base role.
     temp_role = Column(Enum(UserRole), nullable=True)
+    temp_role_starts = Column(DateTime, nullable=True)  # a grant activates here (approval + a short delay)
     temp_role_expires = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
 
@@ -112,6 +116,34 @@ class User(Base):
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}', role='{self.role}')>"
+
+
+class RoleRequest(Base):
+    """A just-in-time elevation request: a user asks for a higher role for a set time; a peer at
+    that level or above approves it; it activates after a short delay and expires on its own.
+    The in-force grant is materialised onto User.temp_role/_starts/_expires on approval."""
+    __tablename__ = "role_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # requester
+    requested_role = Column(Enum(UserRole), nullable=False)
+    duration_hours = Column(Integer, nullable=False)
+    reason = Column(Text, nullable=True)
+    # pending → approved | denied; approved → revoked (or expires on its own); or cancelled by the requester
+    status = Column(String(16), nullable=False, default="pending", index=True)
+    requested_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    approver_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    decided_at = Column(DateTime, nullable=True)
+    starts_at = Column(DateTime, nullable=True)   # decided_at + the activation delay
+    expires_at = Column(DateTime, nullable=True)  # starts_at + duration_hours
+    revoked_at = Column(DateTime, nullable=True)
+    revoked_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    user = relationship("User", foreign_keys=[user_id])
+    approver = relationship("User", foreign_keys=[approver_id])
+
+    def __repr__(self):
+        return f"<RoleRequest(id={self.id}, user={self.user_id}, role={self.requested_role}, status={self.status})>"
 
 
 class Session(Base):

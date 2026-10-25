@@ -423,4 +423,7 @@
   }
 
   refresh();  // sets canLab/isAdmin and the guest notice from the server's effective-role check
+
+  // A temporary elevation (or its expiry) changes can_lab/is_admin — re-pull the overview live.
+  if (window.onRoleChange) window.onRoleChange(() => refresh());
 })();
