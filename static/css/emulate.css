@@ -342,8 +342,9 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .em-rows .em-siem-logo { height: 26px; }
 .em-logo-b { position: relative; display: inline-flex; }
 .em-logo-n { position: absolute; right: -6px; bottom: -6px; min-width: 17px; height: 17px; padding: 0 4px;
-  border-radius: 999px; background: var(--em-teal); color: #fff; font-size: 11px; font-weight: 700;
+  border-radius: 999px; background: #0d9488; color: #fff; font-size: 11px; font-weight: 700;
   line-height: 17px; text-align: center; box-sizing: border-box; border: 2px solid var(--bg-primary); }
+[data-theme="dark"] .em-logo-n { background: #14b8a6; }
 
 /* Lab subsection: a touch larger, with teal icon'd subheadings matching the diagram */
 .em-lab-block { font-size: 1.1em; --lab-teal: #0d9488; }
