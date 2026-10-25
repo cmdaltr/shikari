@@ -34,9 +34,6 @@
           <marker id="em-dg-arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" class="em-dg-head"/>
           </marker>
-          <marker id="em-dg-arrow-teal" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M0,0 L10,5 L0,10 z" class="em-dg-head-teal"/>
-          </marker>
           <!-- Node icons (16×16, stroked; colour comes from the .em-ic-* class on each <use>) -->
           <symbol id="ic-flask" viewBox="0 0 16 16"><path d="M6.5 2.5h3M7 2.5V6.5L4 12.2a1 1 0 0 0 .9 1.5h6.2a1 1 0 0 0 .9-1.5L9 6.5V2.5"/></symbol>
           <symbol id="ic-db" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="4.8" ry="1.9"/><path d="M3.2 4v8a4.8 1.9 0 0 0 9.6 0V4"/></symbol>
@@ -63,8 +60,10 @@
         <path d="M420,67 L430,67" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
         <path d="M532,67 L542,67" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
 
-        <!-- Record produces a "Your lab" recording -->
-        <path d="M594,92 C594,126 360,144 180,144" class="em-dg-link-teal" marker-end="url(#em-dg-arrow-teal)"/>
+        <!-- The LAB lane is the "Your lab" source, expanded: a zoom callout fanning up from the card -->
+        <polygon points="16,120 176,120 672,92 196,92" class="em-dg-expand"/>
+        <path d="M16,120 L196,92" class="em-dg-expand-edge"/>
+        <path d="M176,120 L672,92" class="em-dg-expand-edge"/>
 
         <!-- Feeders (telemetry sources) -->
         <rect x="16" y="120" width="160" height="48" rx="8" class="em-dg-origin"/>
@@ -104,15 +103,15 @@
     </div>
     <p class="ms-note">Recordings are real attacks run in a lab with logging on — the public datasets that ship with Archer, plus any you record yourself in <strong>Lab</strong> below.
       Each is mapped to ATT&amp;CK, then Archer checks whether the indicators your detections match actually appear in the recorded events. The result is the <strong>Recorded telemetry</strong> views below, organised by technique, group or data source. No AI is involved.</p>
-    <h3 class="ui-subtitle">Public datasets</h3>
+    <div class="em-sources-head">
+      <h3 class="ui-subtitle">Public datasets</h3>
+      <span class="ms-state" id="em-state" aria-live="polite"></span>
+      <button type="button" class="btn-primary" id="em-build" hidden>Update</button>
+    </div>
     <ul class="em-sources" id="em-sources"></ul>
     <p class="ms-note">Each recording is one tool run in a lab with logging on (Sysmon, Windows auditing, PowerShell, cloud audit logs), mapped to ATT&amp;CK by the people who recorded it.
       It shows that a technique can be recorded and by which log, for that tool in that lab; not every way the technique can be done.
       The recordings ship with Archer; <strong>Update</strong> (or <code>python -m archer.telemetry --build</code>) fetches what the sources have changed since.</p>
-    <div class="ui-actions ms-actions">
-      <span class="ms-state" id="em-state" aria-live="polite"></span>
-      <button type="button" class="btn-primary" id="em-build" hidden>Update</button>
-    </div>
     <pre class="ms-log" id="em-log" hidden></pre>
 
     <!-- Your lab: the machines you record on (archer.lab). Admins create and manage; everyone sees the host -->
@@ -219,6 +218,7 @@
     <div class="lab-modal-body" id="lab-modal-body"></div>
   </div>
 </div>
+<script src="{{ url_for('static', path='js/role-watch.js') }}?v={{ request.app.state.asset_version }}"></script>
 <script src="{{ url_for('static', path='js/emulate.js') }}?v={{ request.app.state.asset_version }}"></script>
 <script src="{{ url_for('static', path='js/lab.js') }}?v={{ request.app.state.asset_version }}"></script>
 {% endblock %}

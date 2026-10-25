@@ -35,6 +35,15 @@
   const siemLogo = () => `<img class="em-siem-logo" src="${SIEM_LOGO[state.siem] || SIEM_LOGO.secops}" alt="${esc(siemName())}">`;
   const STATUS = { seen: 'Seen', not_seen: 'Not seen', no_recordings: 'No recordings', no_indicators: 'No indicators', noisy: 'Noisy indicator' };
   const PLATFORM = { windows: 'Windows', linux: 'Linux', macos: 'macOS', esxi: 'ESXi', cloud: 'Cloud' };
+  // Platform marks: OS logos where we have them, a cloud glyph otherwise
+  const PLATFORM_IMG = { windows: '/static/images/os/windows.svg', linux: '/static/images/os/linux.png', macos: '/static/images/os/macos.png', esxi: '/static/images/os/vmware.svg' };
+  const CLOUD_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 18h9a4 4 0 0 0 .5-7.97A6 6 0 0 0 5 9.3 3.5 3.5 0 0 0 6.5 18Z"/></svg>';
+  const platIcon = (p) => {
+    const name = PLATFORM[p] || p, src = PLATFORM_IMG[p];
+    const inner = src ? `<img src="${src}" alt="">` : (p === 'cloud' ? CLOUD_SVG : esc(name));
+    return `<span class="em-plat is-${esc(p)}" title="${esc(name)}">${inner}</span>`;
+  };
+  const platIcons = (ps) => `<span class="em-plats">${(ps || []).map(platIcon).join('')}</span>`;
   const COLLECTION = { native: 'native', sysmon: 'Sysmon', edr: 'EDR', osquery: 'osquery', cloud: 'cloud' };
   const STATUS_ORDER = ['seen', 'not_seen', 'no_indicators', 'no_recordings', 'no_values'];
 
@@ -332,7 +341,7 @@
     : '';
 
   function renderTechniques() {
-    $('em-view-note').innerHTML = `Every technique the labs recorded. <strong>Recordings</strong> is how many separate tool-runs captured the technique; the logos break that down by source and the line beneath names the platforms they ran on. <strong>Logs</strong> are what at least half its recordings hold, counting only the logs chosen under <strong>Collection</strong>, with the ${esc(siemName())} ${state.siem === 'mde' ? 'tables' : 'event types'} they land in beneath them.
+    $('em-view-note').innerHTML = `Every technique the labs recorded. <strong>Recordings</strong> is how many separate tool-runs captured the technique, with the logos breaking that down by source; <strong>Platforms</strong> are the operating systems they ran on. <strong>Logs</strong> are what at least half its recordings hold, counting only the logs chosen under <strong>Collection</strong>, with the ${esc(siemName())} ${state.siem === 'mde' ? 'tables' : 'event types'} they land in beneath them.
       ${state.siem === 'mde' ? 'With Defender XDR, Sysmon\'s recordings stand in for the MDE sensor, which records the same activity without Sysmon installed.' : ''}
       When Collection or Logs filters are set, <em>· N in these logs</em> is how many of the recordings hold them; a technique where none do is marked. Select a row for each log and recording.`;
     if (!data.techniques) return message('Loading…');
@@ -352,7 +361,7 @@
     shown(rows.length, data.techniques.length, 'technique');
     if (!rows.length) return message('No recorded technique matches the filters.');
     $('em-results').innerHTML = `<div class="ms-table-wrap"><table class="ms-table em-table em-rows">
-      <thead><tr><th class="em-col-tech">Technique</th><th class="em-col-rec" title="How many recorded tool-runs captured this technique, broken down by source (the logos) and the platforms they ran on">Recordings</th><th>Logs</th></tr></thead>
+      <thead><tr><th class="em-col-tech">Technique</th><th class="em-col-rec" title="How many recorded tool-runs captured this technique, broken down by source (the logos)">Recordings</th><th class="em-col-plat" title="Operating systems the recordings ran on">Platforms</th><th>Logs</th></tr></thead>
       <tbody>${pageOf(rows).map(t => {
         const info = data.names[t.technique] || {};
         const open = state.open.has(t.technique);
@@ -362,8 +371,8 @@
             ${hits ? `<br><small class="em-hit">Search found in: ${esc(hits[t.technique].join(', '))}</small>` : ''}</td>
           <td class="em-rec-cell em-nowrap">
             <div class="em-rec-total">${plural(t.recordings, 'recording')}${t.visible !== t.recordings ? ` <small>· ${t.visible} in these logs</small>` : ''}</div>
-            <div class="em-logos" title="Recordings per source">${Object.entries(t.sources).map(([k, n]) => `${logo(k)}<small>${n}</small>`).join('')}</div>
-            <div class="em-rec-plats"><span class="em-rec-lbl">on</span> ${esc(t.platforms.map(p => PLATFORM[p] || p).join(', '))}</div></td>
+            <div class="em-logos" title="Recordings per source">${Object.entries(t.sources).map(([k, n]) => `${logo(k)}<small>${n}</small>`).join('')}</div></td>
+          <td class="em-plat-cell">${platIcons(t.platforms)}</td>
           ${gap ? '<td><span class="em-gap">No recording holds the chosen logs</span></td>' : `<td>${chips(t.logs, 6)}${dataSources(t[siemKey()])}</td>`}
           </tr>
           ${open ? `<tr class="em-detail"><td colspan="3">${detail(t.technique)}</td></tr>` : ''}`;
@@ -570,4 +579,12 @@
   render();
   status();
   reload();
+
+  // Reveal/remove the operator-only Update button live when a temporary elevation starts or ends.
+  if (signedIn && window.onRoleChange) {
+    window.onRoleChange(eff => {
+      page.dataset.canOperate = (eff === 'operator' || eff === 'admin') ? 'true' : 'false';
+      status();  // re-renders the Update button's visibility and label
+    });
+  }
 })();

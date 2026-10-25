@@ -242,9 +242,9 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .em-dg-loop { fill: rgba(13, 148, 136, .10); stroke: var(--em-teal); stroke-width: 1.5; }
 .em-dg-origin { fill: rgba(13, 148, 136, .14); stroke: var(--em-teal); stroke-width: 1.5; }
 .em-dg-link { fill: none; stroke: var(--border-color); stroke-width: 1.5; }
-.em-dg-link-teal { fill: none; stroke: var(--em-teal); stroke-width: 1.75; stroke-dasharray: 5 4; }
+.em-dg-expand { fill: rgba(13, 148, 136, .07); stroke: none; }
+.em-dg-expand-edge { fill: none; stroke: var(--em-teal); stroke-width: 1.25; stroke-dasharray: 4 4; opacity: .65; }
 .em-dg-head { fill: var(--border-color); }
-.em-dg-head-teal { fill: var(--em-teal); }
 .em-dg-t { fill: var(--text-primary); font-size: 12.5px; font-weight: 600; text-anchor: middle; }
 .em-dg-s { fill: var(--text-secondary); font-size: 10px; text-anchor: middle; }
 .em-dg-start { text-anchor: start; }
@@ -318,10 +318,18 @@ table.em-rows { table-layout: fixed; width: 100%; }
 
 /* Recordings column: label its three parts — total, per-source logos, platforms */
 .em-rec-cell { white-space: normal; }
+.em-sources-head { display: flex; align-items: center; gap: 12px; }
+.em-sources-head h3 { margin-right: auto; }
+.em-sources-head .ms-state { font-size: .85em; color: var(--text-secondary); }
 .em-rec-total { font-weight: 600; }
 .em-rec-total small { font-weight: 400; color: var(--text-secondary); }
-.em-rec-plats { font-size: .8em; color: var(--text-secondary); margin-top: 3px; }
-.em-rec-lbl { text-transform: uppercase; letter-spacing: .04em; font-size: .78em; opacity: .7; margin-right: 2px; }
+.em-plats { display: inline-flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+.em-plat { width: 20px; height: 20px; border-radius: 4px; background: #fff; border: 1px solid var(--border-color);
+  display: inline-flex; align-items: center; justify-content: center; overflow: hidden; }
+.em-plat img { width: 14px; height: 14px; object-fit: contain; }
+.em-plat svg { width: 14px; height: 14px; stroke: #0284c7; }
+.em-plat-cell { white-space: nowrap; }
+.em-rows .em-col-plat { width: 9%; }
 
 /* Lab subsection: a touch larger, with teal icon'd subheadings matching the diagram */
 .em-lab-block { font-size: 1.1em; --lab-teal: #0d9488; }
