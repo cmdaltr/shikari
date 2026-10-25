@@ -228,7 +228,7 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-warn { font-size: .84em; color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; }
 
 /* How Emulate works — the pipeline diagram */
-.em-diagram-card .em-dg { margin: 4px 0 10px; overflow-x: auto; }
+.em-sources-card .em-dg { margin: 4px 0 10px; overflow-x: auto; }
 .em-dg svg { width: 100%; min-width: 620px; height: auto; display: block; }
 .em-dg { --em-teal: #0d9488; }
 .em-dg-node { fill: var(--bg-primary); stroke: var(--border-color); stroke-width: 1.5; }
@@ -304,3 +304,8 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-iso-result { font-size: .85em; color: var(--text-secondary); }
 .lab-iso-result.is-good { color: var(--rx-ok); font-weight: 600; }
 .lab-iso-result.is-bad { color: var(--accent); font-weight: 600; }
+
+/* Sources card: separate "Your lab" from the datasets above it */
+.em-lab-block { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border-color); }
+.em-sources-card > .ui-subtitle { margin-top: 18px; }
+.em-sources-card > .ui-subtitle:first-of-type { margin-top: 4px; }

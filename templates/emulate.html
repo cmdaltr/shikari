@@ -23,9 +23,9 @@
     <div class="em-tile em-check is-starting" id="em-check"><div class="number" id="em-values">Initialising…</div><div class="label">Indicator check</div></div>
   </div>
 
-  <!-- How Emulate fits together: recordings → ATT&CK → indicator check → the views below -->
-  <section class="ui-card ms-card em-diagram-card">
-    <h2>How Emulate works</h2>
+  <!-- Where telemetry comes from: the pipeline diagram, the public datasets, and your own Lab -->
+  <section class="ui-card ms-card em-sources-card">
+    <h2>Where telemetry comes from</h2>
     <div class="em-dg">
       <svg viewBox="0 0 960 250" role="img" aria-labelledby="em-dg-title em-dg-desc" preserveAspectRatio="xMidYMid meet">
         <title id="em-dg-title">The Emulate pipeline</title>
@@ -91,11 +91,7 @@
     </div>
     <p class="ms-note">Recordings are real attacks run in a lab with logging on — the public datasets that ship with Archer, plus any you record yourself in <strong>Lab</strong> below.
       Each is mapped to ATT&amp;CK, then Archer checks whether the indicators your detections match actually appear in the recorded events. The result is the <strong>Telemetry</strong> views, organised by technique, group or data source. No AI is involved.</p>
-  </section>
-
-  <!-- Recorded telemetry: where the recordings come from, the filters, and the views over them -->
-  <section class="ui-card ms-card" id="em-telemetry">
-    <h2>Recorded telemetry</h2>
+    <h3 class="ui-subtitle">Public datasets</h3>
     <ul class="em-sources" id="em-sources"></ul>
     <p class="ms-note">Each recording is one tool run in a lab with logging on (Sysmon, Windows auditing, PowerShell, cloud audit logs), mapped to ATT&amp;CK by the people who recorded it.
       It shows that a technique can be recorded and by which log, for that tool in that lab; not every way the technique can be done.
@@ -105,6 +101,40 @@
       <button type="button" class="btn-primary" id="em-build" hidden>Update</button>
     </div>
     <pre class="ms-log" id="em-log" hidden></pre>
+
+    <!-- Your lab: the machines you record on (archer.lab). Admins create and manage; everyone sees the host -->
+    <div class="em-lab-block" id="lab">
+      <h3 class="ui-subtitle">Your lab</h3>
+      <p class="ms-note">Install, create and manage the containers and VMs an emulation records on, without leaving Archer.
+        Archer drives Docker and Tart to create Linux and macOS machines, and UTM for Windows (and other OSes QEMU runs) — you build the UTM VM once, then Archer manages it.
+        The machines are disposable — snapshot one before you turn logging on or run atomics, and revert when you're done.</p>
+
+      <div class="lab-host" id="lab-host"></div>
+
+      <div class="lab-cols">
+        <div class="lab-col">
+          <h3 class="ui-subtitle">Create a machine</h3>
+          <p class="lab-empty" id="lab-templates-empty" hidden>No engine is ready on this host. Install one above, then reload.</p>
+          <div class="lab-templates" id="lab-templates"></div>
+        </div>
+        <div class="lab-col">
+          <h3 class="ui-subtitle">Your machines</h3>
+          <p class="lab-empty" id="lab-machines-empty">No machines yet. Create one on the left.</p>
+          <ul class="lab-machines" id="lab-machines"></ul>
+        </div>
+      </div>
+
+      <div class="lab-job" id="lab-job" hidden>
+        <span class="ms-state" id="lab-job-state" aria-live="polite"></span>
+        <pre class="ms-log" id="lab-job-log"></pre>
+      </div>
+      <p class="lab-guest" id="lab-guest" hidden>Sign in as an admin to create and manage machines.</p>
+    </div>
+  </section>
+
+  <!-- Telemetry: the filters and the views over the recordings -->
+  <section class="ui-card ms-card" id="em-telemetry">
+    <h2>Telemetry</h2>
 
     <!-- Filters: the Coverage page's filter card. Which apply depends on the view below. -->
     <div class="em-filters" id="em-filters">
@@ -163,35 +193,6 @@
         <button type="button" class="ui-pill" id="em-next">Next</button>
       </div>
     </div>
-  </section>
-
-  <!-- Lab: the containers and VMs a run records on (archer.lab). Admins create and manage; everyone sees the host -->
-  <section class="ui-card ms-card lab-card" id="lab">
-    <h2>Lab</h2>
-    <p class="ms-note">Install, create and manage the containers and VMs an emulation records on, without leaving Archer.
-      Archer drives Docker and Tart to create Linux and macOS machines, and UTM for Windows (and other OSes QEMU runs) — you build the UTM VM once, then Archer manages it.
-      The machines are disposable — snapshot one before you turn logging on or run atomics, and revert when you're done.</p>
-
-    <div class="lab-host" id="lab-host"></div>
-
-    <div class="lab-cols">
-      <div class="lab-col">
-        <h3 class="ui-subtitle">Create a machine</h3>
-        <p class="lab-empty" id="lab-templates-empty" hidden>No engine is ready on this host. Install one above, then reload.</p>
-        <div class="lab-templates" id="lab-templates"></div>
-      </div>
-      <div class="lab-col">
-        <h3 class="ui-subtitle">Your machines</h3>
-        <p class="lab-empty" id="lab-machines-empty">No machines yet. Create one on the left.</p>
-        <ul class="lab-machines" id="lab-machines"></ul>
-      </div>
-    </div>
-
-    <div class="lab-job" id="lab-job" hidden>
-      <span class="ms-state" id="lab-job-state" aria-live="polite"></span>
-      <pre class="ms-log" id="lab-job-log"></pre>
-    </div>
-    <p class="lab-guest" id="lab-guest" hidden>Sign in as an admin to create and manage machines.</p>
   </section>
 </div>
 
