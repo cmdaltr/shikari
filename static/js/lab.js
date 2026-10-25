@@ -61,11 +61,11 @@
     if (!utm || !utm.supported) return '';
     let body;
     if (utm.running) {
-      body = `<p class="lab-template-about">Two ways to a Windows machine: clone one you've already built, or build a new one from a Microsoft ISO (you make it in UTM once, then Archer manages it).</p>
-        <div class="lab-create-row">
+      const buttons = isAdmin ? `<div class="lab-create-row">
           <button type="button" class="ui-pill lab-win" data-win="clone">${engineIcon('utm')}<span>Clone existing</span></button>
           <button type="button" class="ui-pill lab-win" data-win="iso">${osIcon('windows')}<span>From ISO</span></button>
-        </div>`;
+        </div>` : '';
+      body = `<p class="lab-template-about">Two ways to a Windows machine: clone one you've already built, or build a new one from a Microsoft ISO (you make it in UTM once, then Archer manages it).</p>${buttons}`;
     } else {
       const note = utm.installed
         ? "Open UTM once and allow Archer's Automation access (System Settings → Privacy & Security → Automation). Then Windows machines can be cloned or built from an ISO here."
