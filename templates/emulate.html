@@ -10,7 +10,7 @@
 {% block main_class %}page-shell{% endblock %}
 
 {% block content %}
-<div class="results-container ms-page em-page" data-signed-in="{{ 'true' if user else 'false' }}" data-admin="{{ 'true' if user and user.role.value == 'admin' else 'false' }}" data-siem="{{ siem }}">
+<div class="results-container ms-page em-page" data-signed-in="{{ 'true' if user else 'false' }}" data-admin="{{ 'true' if user and user.role.value == 'admin' else 'false' }}" data-can-operate="{{ 'true' if user and user.role.value in ['admin', 'operator'] else 'false' }}" data-siem="{{ siem }}">
   <div class="page-header">
     <h1>Emulate</h1>
     <p>Which logs record each technique, from attacks emulated and recorded in labs, and whether your detections' indicators appear in them</p>
@@ -71,8 +71,8 @@
         <use href="#ic-flask" x="26" y="135" width="18" height="18" class="em-ic em-ic-teal"/>
         <text x="50" y="140" class="em-dg-t em-dg-start">Your lab</text>
         <text x="50" y="155" class="em-dg-s em-dg-start">runs you record</text>
-        <rect x="16" y="182" width="160" height="48" rx="8" class="em-dg-node"/>
-        <use href="#ic-db" x="26" y="197" width="18" height="18" class="em-ic em-ic-teal"/>
+        <rect x="16" y="182" width="160" height="48" rx="8" class="em-dg-node em-dg-pub"/>
+        <use href="#ic-db" x="26" y="197" width="18" height="18" class="em-ic em-ic-red"/>
         <text x="50" y="202" class="em-dg-t em-dg-start">Public datasets</text>
         <text x="50" y="217" class="em-dg-s em-dg-start">shipped with Archer</text>
 
@@ -117,7 +117,7 @@
 
     <!-- Your lab: the machines you record on (archer.lab). Admins create and manage; everyone sees the host -->
     <div class="em-lab-block" id="lab">
-      <h3 class="ui-subtitle">Your lab</h3>
+      <h3 class="ui-subtitle lab-head"><svg class="lab-head-ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 2.5h3M7 2.5V6.5L4 12.2a1 1 0 0 0 .9 1.5h6.2a1 1 0 0 0 .9-1.5L9 6.5V2.5"/></svg>Your lab</h3>
       <p class="ms-note">Install, create and manage the containers and VMs an emulation records on, without leaving Archer.
         Archer drives Docker and Tart to create Linux and macOS machines, and UTM for Windows (and other OSes QEMU runs) — you build the UTM VM once, then Archer manages it.
         The machines are disposable — snapshot one before you turn logging on or run atomics, and revert when you're done.</p>
@@ -126,12 +126,12 @@
 
       <div class="lab-cols">
         <div class="lab-col">
-          <h3 class="ui-subtitle">Create a machine</h3>
+          <h3 class="ui-subtitle lab-head"><svg class="lab-head-ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="9" rx="1.5"/><path d="M8 6v4M6 8h4"/></svg>Create a machine</h3>
           <p class="lab-empty" id="lab-templates-empty" hidden>No engine is ready on this host. Install one above, then reload.</p>
           <div class="lab-templates" id="lab-templates"></div>
         </div>
         <div class="lab-col">
-          <h3 class="ui-subtitle">Your machines</h3>
+          <h3 class="ui-subtitle lab-head"><svg class="lab-head-ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3" width="11" height="4" rx="1"/><rect x="2.5" y="9" width="11" height="4" rx="1"/><path d="M5 5h.01M5 11h.01"/></svg>Your machines</h3>
           <p class="lab-empty" id="lab-machines-empty">No machines yet. Create one on the left.</p>
           <ul class="lab-machines" id="lab-machines"></ul>
         </div>

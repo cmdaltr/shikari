@@ -85,7 +85,9 @@
     };
     const card = (k, name, url, meta, tip, cls = '') => {
       const [tag, line] = CARD[k] || ['', ''];
-      return `<li class="${cls}" title="${esc(tip)}">${logo(k, 'em-source-logo')}<div>
+      // Your lab is teal (matches its diagram node); the public datasets are red (match theirs)
+      const tint = k === 'lab' ? 'em-ds-lab' : 'em-ds-pub';
+      return `<li class="${tint} ${cls}" title="${esc(tip)}">${logo(k, 'em-source-logo')}<div>
         <div class="em-source-head">${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(name)}</a>` : `<strong>${esc(name)}</strong>`}
           ${tag ? `<em class="em-source-tag${k === 'lab' && cls ? ' is-soon' : ''}">${esc(tag)}</em>` : ''}</div>
         <span>${meta}</span><small>${esc(line)}</small></div></li>`;
@@ -105,7 +107,7 @@
           'Download it from Kaggle, then python -m archer.telemetry --guide <zip>', 'is-guide is-missing'));
     if (hadGuide !== data.guide) render();
     const btn = $('em-build');
-    btn.hidden = page.dataset.admin !== 'true';
+    btn.hidden = page.dataset.canOperate !== 'true';  // Update needs the Operational analyst role
     btn.disabled = running;
     btn.textContent = r.values ? 'Update' : 'Download';
     $('em-state').textContent = running ? 'Downloading and summarising…' : r.job.state === 'done' ? 'Up to date' : '';
