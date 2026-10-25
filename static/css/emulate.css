@@ -309,3 +309,10 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .em-lab-block { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border-color); }
 .em-sources-card > .ui-subtitle { margin-top: 18px; }
 .em-sources-card > .ui-subtitle:first-of-type { margin-top: 4px; }
+
+/* Recordings column: label its three parts — total, per-source logos, platforms */
+.em-rec-cell { white-space: normal; }
+.em-rec-total { font-weight: 600; }
+.em-rec-total small { font-weight: 400; color: var(--text-secondary); }
+.em-rec-plats { font-size: .8em; color: var(--text-secondary); margin-top: 3px; }
+.em-rec-lbl { text-transform: uppercase; letter-spacing: .04em; font-size: .78em; opacity: .7; margin-right: 2px; }

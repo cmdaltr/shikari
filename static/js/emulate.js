@@ -358,9 +358,10 @@
         return `<tr class="em-row${open ? ' is-open' : ''}${gap ? ' is-gap' : ''}" data-tid="${esc(t.technique)}" tabindex="0" aria-expanded="${open}">
           <td><strong>${esc(t.technique)}</strong> ${esc(info.name || '')}${info.tactics ? `<br><small>${esc(info.tactics.join(', '))}</small>` : ''}
             ${hits ? `<br><small class="em-hit">Search found in: ${esc(hits[t.technique].join(', '))}</small>` : ''}</td>
-          <td class="em-nowrap">${t.recordings}${t.visible !== t.recordings ? ` <small>· ${t.visible} in these logs</small>` : ''}
-            <div class="em-logos">${Object.entries(t.sources).map(([k, n]) => `${logo(k)}<small>${n}</small>`).join('')}</div>
-            <small>${esc(t.platforms.map(p => PLATFORM[p] || p).join(', '))}</small></td>
+          <td class="em-rec-cell em-nowrap">
+            <div class="em-rec-total">${plural(t.recordings, 'recording')}${t.visible !== t.recordings ? ` <small>· ${t.visible} in these logs</small>` : ''}</div>
+            <div class="em-logos" title="Recordings per source">${Object.entries(t.sources).map(([k, n]) => `${logo(k)}<small>${n}</small>`).join('')}</div>
+            <div class="em-rec-plats"><span class="em-rec-lbl">on</span> ${esc(t.platforms.map(p => PLATFORM[p] || p).join(', '))}</div></td>
           ${gap ? '<td><span class="em-gap">No recording holds the chosen logs</span></td>' : `<td>${chips(t.logs, 6)}${dataSources(t[siemKey()])}</td>`}
           </tr>
           ${open ? `<tr class="em-detail"><td colspan="3">${detail(t.technique)}</td></tr>` : ''}`;
