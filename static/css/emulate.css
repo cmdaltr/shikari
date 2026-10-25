@@ -334,16 +334,16 @@ table.em-rows { table-layout: fixed; width: 100%; }
 /* Recorded-telemetry table: total in Recordings, big dataset logos (with count badges) in Datasets */
 .em-rec-n { font-size: 1.15em; font-weight: 700; }
 .em-rows .em-col-ds { width: 22%; }
-.em-ds-cell .em-logos { gap: 18px; margin: 0; flex-wrap: wrap; row-gap: 20px; }
-.em-rows .em-ds-cell .em-logo { width: 68px; height: 68px; border-radius: 12px; }
-.em-rows .em-ds-cell .em-logo svg { width: 44px; height: 44px; }
+.em-ds-cell .em-logos { gap: 15px; margin: 0; flex-wrap: wrap; row-gap: 16px; }
+.em-rows .em-ds-cell .em-logo { width: 54px; height: 54px; border-radius: 10px; }
+.em-rows .em-ds-cell .em-logo svg { width: 35px; height: 35px; }
 .em-rows .em-plat { width: 34px; height: 34px; border-radius: 7px; }
 .em-rows .em-plat img { width: 22px; height: 22px; }
 .em-rows .em-plat svg { width: 22px; height: 22px; }
 .em-logo-b { position: relative; display: inline-flex; }
-.em-ds-cell .em-logo-n { position: absolute; right: -10px; bottom: -10px; min-width: 38px; height: 38px; padding: 0 9px;
-  border-radius: 999px; background: #0d9488; color: #fff; font-size: 24px; font-weight: 700;
-  line-height: 38px; text-align: center; box-sizing: border-box; border: 3px solid var(--bg-primary); }
+.em-ds-cell .em-logo-n { position: absolute; right: -8px; bottom: -8px; min-width: 30px; height: 30px; padding: 0 7px;
+  border-radius: 999px; background: #0d9488; color: #fff; font-size: 19px; font-weight: 700;
+  line-height: 30px; text-align: center; box-sizing: border-box; border: 3px solid var(--bg-primary); }
 [data-theme="dark"] .em-ds-cell .em-logo-n { background: #14b8a6; }
 
 /* Lab subsection: a touch larger, with teal icon'd subheadings matching the diagram */
