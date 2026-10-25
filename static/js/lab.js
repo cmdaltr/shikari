@@ -59,14 +59,21 @@
   function utmCard(hostData) {
     const utm = (hostData.engines || []).find(e => e.key === 'utm');
     if (!utm || !utm.supported) return '';
-    const note = utm.running
-      ? "Build a VM in the UTM app — Windows 11 on ARM, or any OS QEMU runs — name it without spaces (e.g. archer-win11) and install the UTM guest tools in it (so Archer can run commands and copy files). It then appears under Your machines; set its OS, and Archer snapshots, sets it up and records on it."
-      : (utm.installed
-        ? "Open UTM once and allow Archer's Automation access (System Settings → Privacy & Security → Automation). Then build a VM there and it appears under Your machines."
-        : "Install UTM to run Windows 11 on ARM and other OSes QEMU supports, then build a VM in it.");
-    const install = !utm.installed && utm.install ? `<p class="lab-template-records"><code class="lab-install">${esc(utm.install)}</code></p>` : '';
-    return `<div class="lab-template lab-template-utm"><div class="lab-template-top"><span class="lab-template-name">${engineIcon('utm')}<strong>Windows &amp; others, via UTM</strong></span></div>
-      <p class="lab-template-about">${esc(note)}</p>${install}</div>`;
+    let body;
+    if (utm.running) {
+      body = `<p class="lab-template-about">Two ways to a Windows machine: clone one you've already built, or build a new one from a Microsoft ISO (you make it in UTM once, then Archer manages it).</p>
+        <div class="lab-create-row">
+          <button type="button" class="ui-pill lab-win" data-win="clone">${engineIcon('utm')}<span>Clone existing</span></button>
+          <button type="button" class="ui-pill lab-win" data-win="iso">${osIcon('windows')}<span>From ISO</span></button>
+        </div>`;
+    } else {
+      const note = utm.installed
+        ? "Open UTM once and allow Archer's Automation access (System Settings → Privacy & Security → Automation). Then Windows machines can be cloned or built from an ISO here."
+        : "Install UTM to run Windows 11 on ARM and other OSes QEMU supports.";
+      const install = !utm.installed && utm.install ? `<p class="lab-template-records"><code class="lab-install">${esc(utm.install)}</code></p>` : '';
+      body = `<p class="lab-template-about">${esc(note)}</p>${install}`;
+    }
+    return `<div class="lab-template lab-template-utm"><div class="lab-template-top"><span class="lab-template-name">${engineIcon('utm')}<strong>Windows &amp; others, via UTM</strong></span></div>${body}</div>`;
   }
 
   function createButton(t) {
@@ -133,6 +140,7 @@
   }
 
   let taken = new Set();  // every machine name on the host, for suggesting a clash-free new one
+  let lastMachines = [];  // the last machines listing, for the clone-from-create picker
   function refresh() {
     api('/api/lab/overview').then(data => {
       host(data.host);
@@ -141,6 +149,7 @@
       el('lab-templates').innerHTML = templateCards(tpls) + utmCard(data.host);
       el('lab-templates-empty').hidden = tpls.length > 0;
       const ms = data.machines || [];
+      lastMachines = ms;
       el('lab-machines').innerHTML = ms.map(machineRow).join('');
       el('lab-machines-empty').hidden = ms.length > 0;
       if (data.job && data.job.state === 'running' && !timer) pollJob();
@@ -182,6 +191,13 @@
     el('lab-name').addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
     el('lab-name').focus();
     el('lab-name').select();
+  });
+
+  // Windows: clone an existing VM, or the guided from-ISO build
+  root.addEventListener('click', e => {
+    const b = e.target.closest('.lab-win');
+    if (!b) return;
+    if (b.dataset.win === 'clone') cloneFromCreate(); else isoDialog();
   });
 
   // Machine actions
@@ -240,6 +256,66 @@
     el('lab-clone').addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
     el('lab-clone').focus();
     el('lab-clone').select();
+  }
+
+  // Clone from the create area: pick a source UTM VM, then clone it
+  function cloneFromCreate() {
+    const utmVms = lastMachines.filter(m => m.engine === 'utm');
+    if (!utmVms.length) {
+      openModal('Clone a Windows VM', `<p class="lab-hint">No UTM VM to clone yet. Build one from an ISO first (the From ISO button), then clone it here.</p>
+        <div class="lab-modal-actions"><button type="button" class="btn-primary" id="lab-ok">OK</button></div>`);
+      el('lab-ok').addEventListener('click', closeModal);
+      return;
+    }
+    const opts = utmVms.map(m => `<option value="${esc(m.name)}">${esc(m.name)}${m.os ? ` (${esc(m.os)})` : ''}</option>`).join('');
+    openModal('Clone a Windows VM', `<label class="lab-field">Clone from
+      <select id="lab-src" class="dropdown-styled">${opts}</select></label>
+      <label class="lab-field">New machine name
+      <input type="text" id="lab-clone" autocomplete="off"></label>
+      <p class="lab-hint">Copies the VM (instant on APFS until it diverges). The clone inherits the source's OS and set-up; snapshot it before recording.</p>
+      <div class="lab-modal-actions"><button type="button" class="ui-pill" id="lab-clone-cancel">Cancel</button>
+      <button type="button" class="btn-primary" id="lab-clone-go">Clone</button></div>`);
+    const src = el('lab-src'), nameInput = el('lab-clone');
+    const sync = () => { nameInput.value = suggestCloneName(src.value); };
+    sync();
+    src.addEventListener('change', sync);
+    const go = () => {
+      const newName = nameInput.value.trim();
+      if (!newName) return;
+      closeModal();
+      post('/api/lab/clone', { engine: 'utm', name: src.value, new_name: newName }).then(r => { if (r.started) pollJob(); });
+    };
+    el('lab-clone-go').addEventListener('click', go);
+    el('lab-clone-cancel').addEventListener('click', closeModal);
+    nameInput.addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
+  }
+
+  // Guided build from a Microsoft ISO — Archer verifies the ISO; you build the VM in UTM once
+  function isoDialog() {
+    openModal('Build a Windows VM from an ISO', `<ol class="lab-iso-steps">
+      <li>Download the official <strong>Windows 11 Arm64</strong> ISO from
+        <a href="https://www.microsoft.com/software-download/windows11arm64" target="_blank" rel="noopener">Microsoft</a> (~5 GB).</li>
+      <li>Check it's the right installer:
+        <label class="lab-field">Path to the .iso
+          <input type="text" id="lab-iso-path" placeholder="~/Downloads/Win11_arm64.iso" autocomplete="off"></label>
+        <div class="lab-iso-check"><button type="button" class="ui-pill" id="lab-iso-go">Verify ISO</button>
+          <span id="lab-iso-result" class="lab-iso-result"></span></div></li>
+      <li>In UTM: <strong>New Virtual Machine → Virtualize → Windows</strong>, pick that ISO, 4 GB RAM, name it without spaces (e.g. <code>archer-win11</code>), and install the <strong>UTM guest tools</strong> so Archer can run commands in it.</li>
+      <li>It appears under Your machines. <strong>Set OS → Windows</strong>, then <strong>Set up</strong> and <strong>Record</strong>. For more Windows VMs after this, use <strong>Clone</strong> — no reinstall.</li>
+    </ol>
+    <div class="lab-modal-actions"><button type="button" class="btn-primary" id="lab-iso-close">Done</button></div>`);
+    el('lab-iso-close').addEventListener('click', closeModal);
+    el('lab-iso-go').addEventListener('click', () => {
+      const path = el('lab-iso-path').value.trim();
+      const out = el('lab-iso-result');
+      if (!path) { out.textContent = 'Give the path first.'; out.className = 'lab-iso-result is-bad'; return; }
+      out.textContent = 'Checking…'; out.className = 'lab-iso-result';
+      post('/api/lab/verify-iso', { path }).then(r => {
+        if (r && r.error) { out.textContent = r.error; out.className = 'lab-iso-result is-bad'; return; }
+        out.textContent = r.detail || '';
+        out.className = 'lab-iso-result ' + (r.ok_arm64 ? 'is-good' : 'is-bad');
+      });
+    });
   }
 
   function adoptDialog(engine, name) {

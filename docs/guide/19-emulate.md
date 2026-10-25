@@ -47,6 +47,8 @@ The **host card** names this machine's OS and CPU and each engine's state:
 
 An engine that's missing shows the exact install command to copy. **Create a machine** lists one card per OS this host can run, the image chosen for its CPU: on an Apple Silicon Mac, Ubuntu (a Docker container or a Tart VM) and macOS (a Tart VM), with a Create button per platform. Each card says what it records, so it ties back to the telemetry above.
 
+Windows is the exception, because UTM has no create-from-image. The Windows card offers two ways to get a machine: **Clone existing** copies a Windows VM you've already built (via `utmctl clone` — instant on APFS until the disk diverges), and the clone inherits its OS and set-up; **From ISO** is a guided build — Archer verifies that a downloaded file is a genuine Windows 11 ARM64 installer (a read-only check of the ISO, no hash), then you build the VM in UTM once and it appears under Your machines. After the first one, Clone is the quick path. A **Clone** button on each UTM machine row does the same copy.
+
 **Your machines** lists every container and VM on the host — the ones Archer made and any made outside it — with a dot for running or stopped. Per machine: **Start/Stop**, **Snapshot**, **Revert**, **Set up**, **Logs** and **Delete**. Delete and Revert confirm first; both are irreversible.
 
 **Set up** provisions a machine in place, each step run inside it:

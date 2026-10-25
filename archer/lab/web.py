@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse
 
 from archer.auth import get_user_from_session_id
 from archer.database.db import get_db
-from archer.lab import hosts, machines, provision
+from archer.lab import hosts, iso, machines, provision
 from archer.lab.runner import LabError
 from archer.lab.templates import offered
 
@@ -198,6 +198,21 @@ async def clone(request: Request, archer_session: Optional[str] = Cookie(None)):
         machines.clone(engine, name, new_name)
 
     return _background(f"Clone {name}", work)
+
+
+@router.post("/verify-iso")
+async def verify_iso(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Check a downloaded file is a Windows 11 ARM64 installer, before you build the VM from it
+    in UTM. Read-only: it only reads the ISO's volume descriptor and directory tree."""
+    denied = _admin(archer_session)
+    if denied:
+        return denied
+    import os as _os
+
+    path = (await request.json()).get("path", "").strip()
+    if not path:
+        return JSONResponse({"error": "Give the path to the .iso file."}, status_code=400)
+    return iso.inspect(_os.path.expanduser(path)).as_dict()
 
 
 @router.get("/provision-steps")
