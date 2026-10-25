@@ -17,11 +17,15 @@ from archer.lab.templates import BY_ID
 
 
 def _decorate(m: Dict) -> Dict:
-    """Add what Archer remembers about the machine to the engine's own view."""
+    """Add what Archer remembers about the machine to the engine's own view.
+
+    A UTM VM counts as Archer's the moment it exists — Archer didn't make it, but it drives any
+    UTM VM — so it shows even before it's adopted; its OS is unknown until you set it."""
     known = registry.get(m["engine"], m["name"])
     template = BY_ID.get((known or {}).get("template", ""))
     return {**m,
-            "archer": bool(known),
+            "archer": bool(known) or m["engine"] == "utm",
+            "adopted": bool(known),
             "os": (known or {}).get("os") or m.get("os") or "",
             "template": (known or {}).get("template", ""),
             "records": template["records"] if template else "",
@@ -43,6 +47,16 @@ def listing(engines: Optional[List[str]] = None) -> List[Dict]:
             continue  # an engine that isn't running doesn't stop the others
     out.sort(key=lambda m: (m["engine"], m["name"]))
     return out
+
+
+def adopt(engine_key: str, name: str, os_name: str) -> Dict:
+    """Tell Archer what OS a VM it didn't create runs, so it can provision and record it.
+    For UTM VMs, which Archer manages but doesn't build."""
+    name = safe_name(name)
+    if os_name not in ("windows", "linux", "macos"):
+        raise LabError("Unknown OS", "Pick windows, linux or macos")
+    registry.record(engine_key, name, f"{engine_key}-vm", os_name, "")
+    return {"engine": engine_key, "name": name, "os": os_name}
 
 
 def all_host_names(engines: Optional[List[str]] = None) -> List[str]:

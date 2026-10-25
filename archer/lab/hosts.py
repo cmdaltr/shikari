@@ -46,7 +46,46 @@ ENGINES = {
         "install": {"macos": "brew install cirruslabs/cli/tart"},
         "requires": {"os": "macos", "arch": "arm64"},
     },
+    "utm": {
+        "name": "UTM",
+        "runs": "Windows, Linux and more via QEMU",
+        "blurb": "QEMU VMs on macOS, including Windows 11 on ARM. You build the VM in UTM once; "
+                 "Archer then starts, snapshots, provisions and records it.",
+        "probe": ["utmctl", "version"],
+        "install": {"macos": "brew install --cask utm"},
+        "requires": {"os": "macos"},
+        "note": "The first time Archer drives utmctl, macOS asks you to allow Automation access "
+                "to UTM — grant it (System Settings → Privacy & Security → Automation), and open "
+                "the UTM app once.",
+    },
 }
+
+
+_UTM_READY = {"t": 0.0, "ok": False}
+
+
+def _utm_version() -> str:
+    """UTM's version from its bundle — not utmctl, which would try to drive the app and can hang."""
+    import plistlib
+
+    try:
+        with open("/Applications/UTM.app/Contents/Info.plist", "rb") as fh:
+            return plistlib.load(fh).get("CFBundleShortVersionString", "")
+    except Exception:
+        return ""
+
+
+def _utm_ready() -> bool:
+    """Whether utmctl answers — true only once the UTM app is open and Automation is allowed.
+    Cached briefly, and short-timed, because before the grant utmctl blocks on the macOS prompt."""
+    import time
+
+    now = time.time()
+    if now - _UTM_READY["t"] < 20:
+        return _UTM_READY["ok"]
+    ok = run_ok(["utmctl", "list", "--hide"], timeout=8)
+    _UTM_READY.update(t=now, ok=ok)
+    return ok
 
 
 def _engine_status(key: str, spec: Dict) -> Dict:
@@ -56,13 +95,21 @@ def _engine_status(key: str, spec: Dict) -> Dict:
     present = which(spec["probe"][0]) is not None
     version = ""
     if present:
-        try:
-            version = first_line(run(spec["probe"], timeout=15, check=False))
-        except Exception:
-            version = ""
-    # OrbStack provides docker but reports its own daemon; "running" means the daemon answers
-    running = present and run_ok(["docker", "info", "--format", "{{.ServerVersion}}"] if key == "docker"
-                                 else spec["probe"])
+        if key == "utm":
+            version = _utm_version()
+        else:
+            try:
+                version = first_line(run(spec["probe"], timeout=15, check=False))
+            except Exception:
+                version = ""
+    # docker: OrbStack reports its own daemon, so "running" means the daemon answers.
+    # utm: "running" means utmctl answers (app open + Automation granted), checked with a timeout.
+    if key == "docker":
+        running = present and run_ok(["docker", "info", "--format", "{{.ServerVersion}}"])
+    elif key == "utm":
+        running = present and _utm_ready()
+    else:
+        running = present and run_ok(spec["probe"])
     return {
         "key": key, "name": spec["name"], "runs": spec["runs"], "blurb": spec.get("blurb", ""),
         "supported": supported, "installed": present, "running": running,

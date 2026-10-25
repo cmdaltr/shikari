@@ -36,7 +36,7 @@ python -m archer.telemetry --guide ~/Downloads/microsoft-security-incident-predi
 
 ## Lab: machines from inside Archer
 
-The **Lab** section (admins) installs, creates and manages the containers and VMs a recording runs on, without leaving Archer. It drives Docker and Tart, so it creates Linux and macOS machines; Windows needs a hypervisor it doesn't drive yet (Parallels, VMware Fusion or UTM/QEMU — Tart can't run Windows, since Apple's Virtualization.framework only takes Linux and macOS guests), so record Windows by hand. It detects and guides; it doesn't install hypervisors itself.
+The **Lab** section (admins) installs, creates and manages the containers and VMs a recording runs on, without leaving Archer. It drives three engines: **Docker** and **Tart** create Linux and macOS machines from an image; **UTM** (QEMU) runs Windows 11 on ARM and other OSes, but has no create-from-image, so you build that VM in the UTM app once and Archer then manages, snapshots, provisions and records it. (Tart can't run Windows — Apple's Virtualization.framework only takes Linux and macOS guests.) It detects and guides; it doesn't install hypervisors itself. The first time Archer drives UTM, grant it Automation access to UTM when macOS asks.
 
 The **host card** names this machine's OS and CPU and each engine's state:
 

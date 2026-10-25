@@ -2,8 +2,9 @@
 The machines you can create here. Each template names the engine that runs it, the OS it
 records, and the image per architecture. offered() keeps only the ones this host can run,
 and picks the image for the host's CPU — so on an Apple Silicon Mac the list gives a Linux
-container, a Linux VM and a macOS VM. There is no Windows template: the engines here (Docker,
-Tart) can't run Windows — record Windows by hand (docs/guide/20-recording-a-lab.md).
+container, a Linux VM and a macOS VM. There is no Windows template: Docker and Tart can't run
+Windows, and UTM (which does, via QEMU) has no create-from-image. A Windows VM is built in the
+UTM app once and then managed from Your machines (archer.lab.engines.UTM).
 
 A template says what Emulate can record on it, so the page can tie a machine back to the
 telemetry it produces.
@@ -36,10 +37,10 @@ TEMPLATES = [
         "about": "A macOS VM on Apple Silicon. Records the unified log and Endpoint Security, "
                  "which no public dataset has — the main reason to record your own.",
     },
-    # No Windows template: Tart is built on Apple's Virtualization.framework, which runs only
-    # Linux and macOS guests. Windows (incl. 11 on ARM) needs a hypervisor Archer doesn't drive
-    # yet — Parallels, VMware Fusion or UTM/QEMU. Record on a Windows box by hand with
-    # scripts/telemetry/record-atomics.ps1 (see docs/guide/20-recording-a-lab.md).
+    # No Windows template: Tart can't run Windows (Apple's Virtualization.framework takes only
+    # Linux and macOS guests), and UTM — which runs Windows 11 on ARM via QEMU — has no
+    # create-from-image. Build the Windows VM in the UTM app once; Archer then manages and records
+    # it from Your machines (archer.lab.engines.UTM). record-atomics.ps1 still works by hand too.
 ]
 BY_ID = {t["id"]: t for t in TEMPLATES}
 

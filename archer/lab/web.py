@@ -163,6 +163,21 @@ async def action(request: Request, archer_session: Optional[str] = Cookie(None))
         return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
 
 
+@router.post("/adopt")
+async def adopt(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Set the OS of a VM Archer manages but didn't create (a UTM VM), so it can be provisioned
+    and recorded."""
+    denied = _admin(archer_session)
+    if denied:
+        return denied
+    data = await request.json()
+    engine, name, os_name = data.get("engine", ""), data.get("name", ""), data.get("os", "")
+    try:
+        return {"ok": True, **machines.adopt(engine, name, os_name)}
+    except LabError as e:
+        return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
+
+
 @router.get("/provision-steps")
 def provision_steps(os: str):
     return {"steps": provision.steps_for(os)}

@@ -290,3 +290,8 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-create { display: inline-flex; align-items: center; gap: 6px; }
 .lab-create .lab-engine-icon { width: 16px; height: 16px; }
 .lab-create[disabled] { opacity: .5; cursor: not-allowed; }
+
+/* UTM: the automation note on the engine card, and the "via UTM" info card */
+.lab-engine-note { font-size: .8em; color: var(--accent); margin: 6px 0 0; line-height: 1.45; }
+.lab-template-utm { border-style: dashed; }
+.lab-template-utm .lab-install { display: inline-block; margin-top: 2px; }

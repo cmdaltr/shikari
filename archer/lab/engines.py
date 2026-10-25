@@ -12,6 +12,7 @@ installed. Names are validated by the caller (archer.lab.machines) before they r
 """
 
 import json
+import re
 from typing import Dict, List
 
 from archer.lab.runner import LabError, run, run_ok, spawn
@@ -204,6 +205,111 @@ class Tart:
         os.remove(tmp)
 
 
+_UTM_UUID = re.compile(r"^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$")
+
+
+def parse_utm_list(out: str) -> List[Dict]:
+    """`utmctl list`: a table of UUID, status and name. The header and blank lines are skipped;
+    a UTM VM is 'started' when running. The name (space-free, by our convention) is the id we use."""
+    machines = []
+    for line in (out or "").splitlines():
+        parts = line.split()
+        if len(parts) < 2 or parts[0].lower() == "uuid":
+            continue
+        uuid, status = parts[0], parts[1].lower()
+        name = " ".join(parts[2:]) if len(parts) > 2 else uuid
+        machines.append({"engine": "utm", "name": name, "uuid": uuid, "kind": "vm", "image": "", "os": "",
+                        "state": "running" if status in ("started", "running") else "stopped",
+                        "detail": status})
+    return machines
+
+
+class UTM:
+    """UTM/QEMU VMs on macOS, driven through utmctl. Archer can't create a VM (utmctl has no
+    create-from-image) — you build it in the UTM app once — but it starts, snapshots, restores,
+    provisions and records whatever UTM holds. Snapshots are QEMU saved states (fast); exec and
+    base64 move files, so no dependence on utmctl's undocumented file push/pull."""
+
+    key = "utm"
+
+    def list(self) -> List[Dict]:
+        return parse_utm_list(run(["utmctl", "list", "--hide"], timeout=30))
+
+    def create(self, name: str, image: str):
+        raise LabError("Build this VM in UTM first",
+                       "utmctl can't create a VM from an image. Make it in the UTM app "
+                       "(New → Virtualize or Emulate), name it without spaces, and it appears "
+                       "here for Archer to manage.")
+
+    def start(self, name: str):
+        run(["utmctl", "start", "--hide", name], timeout=180)
+
+    def stop(self, name: str):
+        run(["utmctl", "stop", "--hide", name], timeout=120, check=False)
+
+    def snapshot(self, name: str, snap: str):
+        run(["utmctl", "snapshot", "create", name, "--name", snap], timeout=600)
+
+    def revert(self, name: str, snap: str):
+        run(["utmctl", "snapshot", "restore", name, "--snapshot", snap], timeout=600)
+
+    def delete(self, name: str):
+        run(["utmctl", "delete", "--hide", name], timeout=60, check=False)
+
+    def status(self, name: str) -> Dict:
+        found = [m for m in self.list() if m["name"] == name]
+        if not found:
+            raise LabError("No such machine", name)
+        return found[0]
+
+    def logs(self, name: str, tail: int) -> str:
+        ip = run(["utmctl", "ip-address", "--hide", name], check=False).strip()
+        return (f"UTM keeps no console log. The VM's address is {ip}.\n" if ip
+                else "UTM keeps no console log, and the VM has no address yet "
+                     "(it may be booting, or missing the guest agent / SPICE tools).\n")
+
+    def exec(self, name: str, argv: List[str], timeout: int, input_text=None) -> str:
+        cmd = ["utmctl", "exec", "--hide", name]
+        if input_text is not None:
+            cmd.append("--input")
+        cmd += ["--cmd", *argv]          # --cmd is variadic, so it has to come last
+        return run(cmd, timeout=timeout, input_text=input_text)
+
+    def push_file(self, name: str, local_path: str, remote_path: str, windows: bool = False):
+        import base64
+
+        with open(local_path, "rb") as fh:
+            b64 = base64.b64encode(fh.read()).decode()
+        if windows:
+            ps = ("$b=[Console]::In.ReadToEnd(); "
+                  f"[IO.File]::WriteAllBytes('{remote_path}', [Convert]::FromBase64String($b))")
+            self.exec(name, ["powershell", "-NoProfile", "-Command", ps], timeout=300, input_text=b64)
+        else:
+            self.exec(name, ["bash", "-lc", f"base64 -d > '{remote_path}'"], timeout=300, input_text=b64)
+
+    def pull_dir(self, name: str, remote_dir: str, local_parent: str, windows: bool = False):
+        import base64
+        import os
+        import tarfile
+
+        if windows:
+            parent, base = remote_dir.replace("/", "\\").rsplit("\\", 1)
+            ps = (f"$t=[IO.Path]::GetTempFileName(); tar -czf $t -C '{parent}' '{base}'; "
+                  "[Convert]::ToBase64String([IO.File]::ReadAllBytes($t))")
+            b64 = self.exec(name, ["powershell", "-NoProfile", "-Command", ps], timeout=600)
+        else:
+            parent, base = remote_dir.rsplit("/", 1) if "/" in remote_dir else (".", remote_dir)
+            b64 = self.exec(name, ["bash", "-lc", f"tar czf - -C {parent} {base} | base64"], timeout=600)
+        data = base64.b64decode("".join(b64.split()))
+        os.makedirs(local_parent, exist_ok=True)
+        tmp = os.path.join(local_parent, f".{base}.tgz")
+        with open(tmp, "wb") as fh:
+            fh.write(data)
+        with tarfile.open(tmp) as tf:
+            tf.extractall(local_parent, filter="data")
+        os.remove(tmp)
+
+
 def parse_tart_list_raw() -> List[str]:
     """Every local Tart VM name, snapshots included (delete sweeps a machine's snapshots)."""
     try:
@@ -213,7 +319,7 @@ def parse_tart_list_raw() -> List[str]:
     return [r.get("Name", "") for r in rows if isinstance(r, dict) and r.get("Source") == "local"]
 
 
-ENGINES = {"docker": Docker(), "tart": Tart()}
+ENGINES = {"docker": Docker(), "tart": Tart(), "utm": UTM()}
 
 
 def engine_for(key: str):

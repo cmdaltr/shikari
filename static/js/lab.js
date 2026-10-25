@@ -25,8 +25,10 @@
       else if (e.installed) { state = 'installed, not running'; cls = 'is-warn'; }
       else { state = 'not installed'; cls = 'is-missing'; }
       const install = e.install ? `<code class="lab-install">${esc(e.install)}</code>` : '';
+      // Show the engine's note when it's installed but not answering (e.g. UTM needs Automation access)
+      const note = e.note && e.installed && !e.running ? `<p class="lab-engine-note">${esc(e.note)}</p>` : '';
       return `<li class="lab-engine ${cls}"><div><span class="lab-engine-name">${engineIcon(e.key)}<strong>${esc(e.name)}</strong></span> <span class="lab-engine-state">${state}</span>
-        <div class="lab-engine-runs">${esc(e.blurb || e.runs)}</div></div>${install}</li>`;
+        <div class="lab-engine-runs">${esc(e.blurb || e.runs)}</div>${note}</div>${install}</li>`;
     }).join('');
     // The engines are collapsed by default — you rarely need them once a platform is ready
     el('lab-host').innerHTML = `<div class="lab-host-head">This host: <strong>${esc(h.label)}</strong>
@@ -52,6 +54,21 @@
     }).join('');
   }
 
+  // UTM can't create a VM from an image, so instead of a Create button this card tells you how:
+  // build it in UTM once, then it shows up under Your machines for Archer to drive.
+  function utmCard(hostData) {
+    const utm = (hostData.engines || []).find(e => e.key === 'utm');
+    if (!utm || !utm.supported) return '';
+    const note = utm.running
+      ? "Build a VM in the UTM app — Windows 11 on ARM, or any OS QEMU runs — name it without spaces (e.g. archer-win11) and install the UTM guest tools in it (so Archer can run commands and copy files). It then appears under Your machines; set its OS, and Archer snapshots, sets it up and records on it."
+      : (utm.installed
+        ? "Open UTM once and allow Archer's Automation access (System Settings → Privacy & Security → Automation). Then build a VM there and it appears under Your machines."
+        : "Install UTM to run Windows 11 on ARM and other OSes QEMU supports, then build a VM in it.");
+    const install = !utm.installed && utm.install ? `<p class="lab-template-records"><code class="lab-install">${esc(utm.install)}</code></p>` : '';
+    return `<div class="lab-template lab-template-utm"><div class="lab-template-top"><span class="lab-template-name">${engineIcon('utm')}<strong>Windows &amp; others, via UTM</strong></span></div>
+      <p class="lab-template-about">${esc(note)}</p>${install}</div>`;
+  }
+
   function createButton(t) {
     const label = ENGINE_NAME[t.engine] || t.engine;
     const title = t.ready ? `Create with ${label}` : t.reason;
@@ -65,8 +82,8 @@
     return `<img class="lab-os-icon is-${esc(os)}" src="/static/images/os/${f}" alt="${esc(os)}" width="18" height="18">`;
   }
 
-  // docker and tart are the engines Archer drives today; vmware/parallels are staged for if they're added
-  const ENGINE_ICON = { docker: 'docker.png', tart: 'tart.png', vmware: 'vmware.svg', parallels: 'parallels.png' };
+  // docker, tart and utm are the engines Archer drives; vmware/parallels are staged for if they're added
+  const ENGINE_ICON = { docker: 'docker.png', tart: 'tart.png', utm: 'utm.svg', vmware: 'vmware.svg', parallels: 'parallels.png' };
   function engineIcon(key) {
     const f = ENGINE_ICON[key];
     if (!f) return '';
@@ -81,10 +98,14 @@
     let actions = '';
     if (isAdmin) {
       const on = m.state === 'running';
+      // A UTM VM Archer didn't create needs its OS set before it can be set up or recorded on
+      const needsOs = m.engine === 'utm' && !m.os;
+      const setOs = needsOs ? '<button type="button" class="ui-pill lab-act" data-a="adopt">Set OS</button>' : '';
       actions = `<div class="lab-actions">
         <button type="button" class="ui-pill lab-act" data-a="${on ? 'stop' : 'start'}">${on ? 'Stop' : 'Start'}</button>
         <button type="button" class="ui-pill lab-act" data-a="snapshot">Snapshot</button>
         <button type="button" class="ui-pill lab-act" data-a="revert">Revert</button>
+        ${setOs}
         ${m.os ? '<button type="button" class="ui-pill lab-act" data-a="provision">Set up</button>' : ''}
         ${m.os ? '<button type="button" class="ui-pill lab-act" data-a="record">Record</button>' : ''}
         <button type="button" class="ui-pill" data-a="logs">Logs</button>
@@ -116,7 +137,7 @@
       host(data.host);
       taken = new Set(data.taken || []);
       const tpls = data.templates || [];
-      el('lab-templates').innerHTML = templateCards(tpls);
+      el('lab-templates').innerHTML = templateCards(tpls) + utmCard(data.host);
       el('lab-templates-empty').hidden = tpls.length > 0;
       const ms = data.machines || [];
       el('lab-machines').innerHTML = ms.map(machineRow).join('');
@@ -182,11 +203,30 @@
       provisionDialog(engine, name, os);
     } else if (act === 'record') {
       recordDialog(engine, name, os);
+    } else if (act === 'adopt') {
+      adoptDialog(engine, name);
     } else if (act === 'logs') {
       api(`/api/lab/logs?engine=${encodeURIComponent(engine)}&name=${encodeURIComponent(name)}`)
         .then(r => openModal(`Logs — ${name}`, `<pre class="lab-logs">${esc(r.logs || r.error || 'No output')}</pre>`));
     }
   });
+
+  function adoptDialog(engine, name) {
+    openModal(`Set the OS for ${name}`, `<label class="lab-field">Operating system
+      <select id="lab-os" class="dropdown-styled">
+        <option value="windows">Windows</option>
+        <option value="linux">Linux</option>
+        <option value="macos">macOS</option>
+      </select></label>
+      <p class="lab-hint">So Archer knows how to turn on logging, install Atomic Red Team and record on it.</p>
+      <div class="lab-modal-actions"><button type="button" class="ui-pill" id="lab-os-cancel">Cancel</button>
+      <button type="button" class="btn-primary" id="lab-os-go">Save</button></div>`);
+    el('lab-os-go').addEventListener('click', () => {
+      closeModal();
+      post('/api/lab/adopt', { engine, name, os: el('lab-os').value }).then(refresh);
+    });
+    el('lab-os-cancel').addEventListener('click', closeModal);
+  }
 
   function snapshotDialog(engine, name) {
     openModal(`Snapshot ${name}`, `<label class="lab-field">Snapshot name

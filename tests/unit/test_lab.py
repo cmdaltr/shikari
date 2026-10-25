@@ -209,3 +209,70 @@ def test_all_host_names_includes_vms_outside_archer(monkeypatch):
                                                       {"Source": "local", "Name": "archer-macos-1"}]))
     names = machines.all_host_names(["docker", "tart"])
     assert "archer-ubuntu-1" in names and "sequoia-vm" in names and "archer-macos-1" in names
+
+
+# --- UTM engine (Windows/Linux VMs via QEMU; utmctl-driven, create is manual) ---
+
+def test_parse_utm_list_reads_the_table_and_marks_running():
+    out = ("UUID                                  Status   Name\n"
+           "11111111-1111-1111-1111-111111111111  started  archer-win11\n"
+           "22222222-2222-2222-2222-222222222222  stopped  archer-ubuntu\n")
+    rows = engines.parse_utm_list(out)
+    assert [(r["name"], r["state"]) for r in rows] == [("archer-win11", "running"), ("archer-ubuntu", "stopped")]
+    assert all(r["engine"] == "utm" and r["kind"] == "vm" for r in rows)
+
+
+def test_utm_snapshot_restore_and_start_use_utmctl(monkeypatch):
+    calls = []
+    monkeypatch.setattr("archer.lab.engines.run", lambda argv, **k: calls.append(list(argv)) or "")
+    u = engines.UTM()
+    u.snapshot("win", "clean")
+    u.revert("win", "clean")
+    u.start("win")
+    assert ["utmctl", "snapshot", "create", "win", "--name", "clean"] in calls
+    assert ["utmctl", "snapshot", "restore", "win", "--snapshot", "clean"] in calls
+    assert any(c[:3] == ["utmctl", "start", "--hide"] for c in calls)
+
+
+def test_utm_create_is_refused_with_guidance():
+    with pytest.raises(LabError):
+        engines.UTM().create("win", "")
+
+
+def test_utm_exec_puts_cmd_last_and_forwards_stdin(monkeypatch):
+    seen = {}
+
+    def fake_run(argv, timeout=120, check=True, input_text=None):
+        seen["argv"], seen["input"] = list(argv), input_text
+        return "ok"
+
+    monkeypatch.setattr("archer.lab.engines.run", fake_run)
+    engines.UTM().exec("vm", ["bash", "-lc", "id"], timeout=30, input_text="data")
+    a = seen["argv"]
+    assert a[:4] == ["utmctl", "exec", "--hide", "vm"] and "--input" in a
+    assert a[a.index("--cmd") + 1:] == ["bash", "-lc", "id"] and seen["input"] == "data"
+
+
+def test_utm_vms_are_managed_and_adopt_sets_their_os(monkeypatch, tmp_path):
+    monkeypatch.setattr("archer.lab.registry._PATH", str(tmp_path / "m.json"))
+    monkeypatch.setattr(engines.Docker, "list", lambda self: [])
+    monkeypatch.setattr(engines.Tart, "list", lambda self: [])
+    monkeypatch.setattr(engines.UTM, "list", lambda self: [
+        {"engine": "utm", "name": "archer-win11", "uuid": "u", "kind": "vm", "image": "",
+         "os": "", "state": "stopped", "detail": "stopped"}])
+    rows = machines.listing(["utm"])
+    assert rows and rows[0]["archer"] is True and rows[0]["adopted"] is False and rows[0]["os"] == ""
+    machines.adopt("utm", "archer-win11", "windows")
+    rows = machines.listing(["utm"])
+    assert rows[0]["adopted"] is True and rows[0]["os"] == "windows"
+
+
+def test_utm_engine_is_detected_on_macos(monkeypatch):
+    monkeypatch.setattr(hosts.platform, "machine", lambda: "arm64")
+    monkeypatch.setattr(hosts.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(hosts, "which", lambda t: "/opt/homebrew/bin/utmctl" if t == "utmctl" else None)
+    monkeypatch.setattr(hosts, "_utm_version", lambda: "5.0.8")
+    monkeypatch.setattr(hosts, "_utm_ready", lambda: True)
+    e = {x["key"]: x for x in hosts.capabilities()["engines"]}["utm"]
+    assert e["supported"] and e["installed"] and e["running"] and e["version"] == "5.0.8"
+    assert e["blurb"] and "brew install --cask utm" not in e["install"]  # installed, so no install cmd
