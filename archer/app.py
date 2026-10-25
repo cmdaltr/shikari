@@ -5023,6 +5023,33 @@ async def emulate_technique(
         return JSONResponse({"success": False, "error": str(e)}, status_code=500)
 
 
+OSINT_KEY_ENV = {
+    "shodan": "SHODAN_API_KEY",
+    "securitytrails": "SECURITYTRAILS_API_KEY",
+    "github": "GITHUB_TOKEN",
+    "hibp": "HIBP_API_KEY",
+}
+
+
+def apply_osint_keys_to_env(db, user_id):
+    """
+    The OSINT profiler reads its keys from os.environ, but the UI saves them to the APIKey table.
+    Bridge the two: push the user's saved OSINT keys into the environment before profiling. A saved
+    key wins over a shell-set one; a platform with no saved key is left as the environment has it.
+    Single-machine use (the keys are org-wide), so the process environment is the right place.
+    """
+    for platform, env_name in OSINT_KEY_ENV.items():
+        row = db.query(APIKey).filter(APIKey.user_id == user_id, APIKey.platform == platform).first()
+        if not row:
+            continue
+        try:
+            value = decrypt_api_key(row.encrypted_key)
+        except Exception:
+            value = None
+        if value:
+            os.environ[env_name] = value
+
+
 @app.post("/profile")
 def profile_company(
     request: Request,
@@ -5033,6 +5060,7 @@ def profile_company(
     include_supply_chain: str = Form(None),
     use_openai: str = Form(None),
     generate_detections: str = Form(None),
+    archer_session: Optional[str] = Cookie(None),
 ):
     """
     Profile a company based on their domain and generate threat intelligence.
@@ -5068,6 +5096,18 @@ def profile_company(
 
         # Use domain as group_name for progress tracking
         group_name = domain.replace(".", "_").replace("/", "_")
+
+        # Make the user's saved OSINT keys available to the profiler (it reads os.environ)
+        try:
+            _kdb = next(get_db())
+            try:
+                _ku = get_user_from_session_id(archer_session, _kdb) if archer_session else None
+                if _ku:
+                    apply_osint_keys_to_env(_kdb, _ku.id)
+            finally:
+                _kdb.close()
+        except Exception:
+            pass
 
         # Profile the company
         print(f"\nProfiling domain: {domain}")
