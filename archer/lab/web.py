@@ -37,15 +37,41 @@ def _user(archer_session: Optional[str]):
         db.close()
 
 
-def _admin(archer_session: Optional[str]):
-    from archer.database.models import UserRole
+def _lab(archer_session: Optional[str]):
+    """(user, None) if they may use the lab — an operational analyst or admin — else (None, denial).
+    The lab runs host commands and detonates atomics, so it sits above the plain analyst role."""
+    from archer.database.models import UserRole, at_least
 
     user = _user(archer_session)
     if not user:
-        return JSONResponse({"error": "Please log in"}, status_code=401)
-    if user.role != UserRole.ADMIN:
-        return JSONResponse({"error": "Only an admin can manage lab machines"}, status_code=403)
-    return None
+        return None, JSONResponse({"error": "Please log in"}, status_code=401)
+    if not at_least(user, UserRole.OPERATOR):
+        return None, JSONResponse({"error": "The lab needs the Operational analyst role",
+                                   "detail": "Ask an admin to grant it."}, status_code=403)
+    return user, None
+
+
+def _is_admin(user) -> bool:
+    from archer.database.models import UserRole, at_least
+
+    return at_least(user, UserRole.ADMIN)
+
+
+def _can_lab(user) -> bool:
+    from archer.database.models import UserRole, at_least
+
+    return at_least(user, UserRole.OPERATOR)
+
+
+def _owns(user, engine: str, name: str) -> bool:
+    """Whether this user may act on the named machine (admin on any, owner on their own, any
+    operational analyst on an unclaimed UTM VM)."""
+    return machines.can_manage(engine, name, user.id, _is_admin(user))
+
+
+def _not_yours():
+    return JSONResponse({"error": "That machine isn't yours to manage",
+                         "detail": "Only its owner or an admin can."}, status_code=403)
 
 
 def _say(line: str):
@@ -81,21 +107,31 @@ def _background(what: str, fn):
 
 @router.get("/overview")
 def overview(archer_session: Optional[str] = Cookie(None)):
-    """The host, the templates it can run, and the machines on it. Browsing needs no admin."""
+    """The host, the templates it can run, and the machines this user may manage. Anyone signed
+    in sees the host and templates; the machine list is empty below the Operational analyst role."""
+    user = _user(archer_session)
+    can_lab = _can_lab(user)
+    is_admin = _is_admin(user)
     caps = hosts.capabilities()
-    try:
-        current = machines.listing(caps["ready"])
-    except LabError:
-        current = []
-    # Every name already on the host — Archer's machines and, so a new name can't collide with
-    # one Archer doesn't manage, the host's other VMs too — for the create dialog's suggested name
-    taken = sorted({m["name"] for m in current} | set(machines.all_host_names(caps["ready"])))
-    return {"host": caps, "templates": offered(caps), "machines": current, "taken": taken, "job": dict(_job)}
+    current, taken = [], []
+    if can_lab:
+        try:
+            current = machines.listing(caps["ready"], user_id=user.id, is_admin=is_admin)
+        except LabError:
+            current = []
+        # Every name already on the host — Archer's and the host's other VMs too — so a new name
+        # can't collide, for the create dialog's suggestion
+        taken = sorted({m["name"] for m in current} | set(machines.all_host_names(caps["ready"])))
+    return {"host": caps, "templates": offered(caps), "machines": current, "taken": taken,
+            "job": dict(_job), "can_lab": can_lab, "is_admin": is_admin}
 
 
 @router.get("/machines")
 def list_machines(archer_session: Optional[str] = Cookie(None)):
-    return {"machines": machines.listing(), "job": dict(_job)}
+    user, denied = _lab(archer_session)
+    if denied:
+        return denied
+    return {"machines": machines.listing(user_id=user.id, is_admin=_is_admin(user)), "job": dict(_job)}
 
 
 @router.get("/job")
@@ -104,7 +140,12 @@ def job():
 
 
 @router.get("/logs")
-def machine_logs(engine: str, name: str):
+def machine_logs(engine: str, name: str, archer_session: Optional[str] = Cookie(None)):
+    user, denied = _lab(archer_session)
+    if denied:
+        return denied
+    if not _owns(user, engine, name):
+        return _not_yours()
     try:
         return {"logs": machines.logs(engine, name)}
     except LabError as e:
@@ -113,7 +154,7 @@ def machine_logs(engine: str, name: str):
 
 @router.post("/create")
 async def create(request: Request, archer_session: Optional[str] = Cookie(None)):
-    denied = _admin(archer_session)
+    user, denied = _lab(archer_session)
     if denied:
         return denied
     data = await request.json()
@@ -130,7 +171,7 @@ async def create(request: Request, archer_session: Optional[str] = Cookie(None))
 
     def work(say):
         say(f"Creating {name} from {BY_ID[template_id]['name']} (pulling the image can take a while)…")
-        machines.create(template_id, name)
+        machines.create(template_id, name, owner=user.id)
 
     return _background(f"Create {name}", work)
 
@@ -138,12 +179,14 @@ async def create(request: Request, archer_session: Optional[str] = Cookie(None))
 @router.post("/action")
 async def action(request: Request, archer_session: Optional[str] = Cookie(None)):
     """start, stop, delete, snapshot, revert. The quick ones answer now; revert runs as a job."""
-    denied = _admin(archer_session)
+    user, denied = _lab(archer_session)
     if denied:
         return denied
     data = await request.json()
     engine, name, act = data.get("engine", ""), data.get("name", ""), data.get("action", "")
     snap = data.get("snapshot", "")
+    if not _owns(user, engine, name):
+        return _not_yours()
     try:
         if act == "start":
             machines.start(engine, name)
@@ -167,13 +210,15 @@ async def action(request: Request, archer_session: Optional[str] = Cookie(None))
 async def adopt(request: Request, archer_session: Optional[str] = Cookie(None)):
     """Set the OS of a VM Archer manages but didn't create (a UTM VM), so it can be provisioned
     and recorded."""
-    denied = _admin(archer_session)
+    user, denied = _lab(archer_session)
     if denied:
         return denied
     data = await request.json()
     engine, name, os_name = data.get("engine", ""), data.get("name", ""), data.get("os", "")
+    if not _owns(user, engine, name):
+        return _not_yours()
     try:
-        return {"ok": True, **machines.adopt(engine, name, os_name)}
+        return {"ok": True, **machines.adopt(engine, name, os_name, owner=user.id)}
     except LabError as e:
         return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
 
@@ -181,11 +226,13 @@ async def adopt(request: Request, archer_session: Optional[str] = Cookie(None)):
 @router.post("/clone")
 async def clone(request: Request, archer_session: Optional[str] = Cookie(None)):
     """Clone an existing VM into a new one — UTM's fast Windows path (copy a prepared VM)."""
-    denied = _admin(archer_session)
+    user, denied = _lab(archer_session)
     if denied:
         return denied
     data = await request.json()
     engine, name, new_name = data.get("engine", ""), data.get("name", ""), data.get("new_name", "")
+    if not _owns(user, engine, name):
+        return _not_yours()
     try:
         from archer.lab.runner import safe_name
 
@@ -195,7 +242,7 @@ async def clone(request: Request, archer_session: Optional[str] = Cookie(None)):
 
     def work(say):
         say(f"Cloning {name} to {new_name} — copying the disk can take a few minutes…")
-        machines.clone(engine, name, new_name)
+        machines.clone(engine, name, new_name, owner=user.id)
 
     return _background(f"Clone {name}", work)
 
@@ -204,7 +251,7 @@ async def clone(request: Request, archer_session: Optional[str] = Cookie(None)):
 async def verify_iso(request: Request, archer_session: Optional[str] = Cookie(None)):
     """Check a downloaded file is a Windows 11 ARM64 installer, before you build the VM from it
     in UTM. Read-only: it only reads the ISO's volume descriptor and directory tree."""
-    denied = _admin(archer_session)
+    _user_, denied = _lab(archer_session)
     if denied:
         return denied
     import os as _os
@@ -222,11 +269,13 @@ def provision_steps(os: str):
 
 @router.post("/provision")
 async def run_provision(request: Request, archer_session: Optional[str] = Cookie(None)):
-    denied = _admin(archer_session)
+    user, denied = _lab(archer_session)
     if denied:
         return denied
     data = await request.json()
     engine, name, os_name, step = data.get("engine", ""), data.get("name", ""), data.get("os", ""), data.get("step", "")
+    if not _owns(user, engine, name):
+        return _not_yours()
     label = provision.LABELS.get(step, step)
 
     def work(say):
@@ -245,13 +294,15 @@ async def record(request: Request, archer_session: Optional[str] = Cookie(None))
     (the default) only previews the plan; execute=true detonates, and the dialog makes the
     caller confirm the machine is snapshotted first.
     """
-    denied = _admin(archer_session)
+    user, denied = _lab(archer_session)
     if denied:
         return denied
     from archer.lab import record as lab_run
 
     data = await request.json()
     engine, name, os_name = data.get("engine", ""), data.get("name", ""), data.get("os", "")
+    if not _owns(user, engine, name):
+        return _not_yours()
     techniques, execute = data.get("techniques", ""), bool(data.get("execute"))
     revert_to, run_name = data.get("revert_to", ""), data.get("run_name", "")
     settle, timeout = int(data.get("settle", 20)), int(data.get("timeout", 120))

@@ -38,11 +38,15 @@ def _save(data: Dict):
     os.replace(tmp, _PATH)
 
 
-def record(engine: str, name: str, template_id: str, os_name: str, image: str):
+def record(engine: str, name: str, template_id: str, os_name: str, image: str, owner=None):
+    """Remember a machine Archer made or adopted. `owner` is the user id that may manage it
+    (an admin may manage any); it's kept across re-records unless a new one is given."""
     with _lock:
         data = _load()
+        existing = data.get(_key(engine, name), {})
         data[_key(engine, name)] = {"template": template_id, "os": os_name, "image": image,
-                                    "provisioned": [], "archer": True}
+                                    "provisioned": existing.get("provisioned", []), "archer": True,
+                                    "owner": owner if owner is not None else existing.get("owner")}
         _save(data)
 
 

@@ -4,8 +4,11 @@
   const root = document.getElementById('lab');
   if (!root) return;
   const page = document.querySelector('.em-page');
-  const isAdmin = page && page.dataset.admin === 'true';
   const signedIn = page && page.dataset.signedIn === 'true';
+  // Effective-role flags come from /overview (so a temporary elevation counts), not the page's
+  // base-role dataset. They stay false until the first refresh answers.
+  let canLab = false;   // operational analyst or admin — may use the lab
+  let isAdmin = false;  // admin — may manage any machine
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const el = id => document.getElementById(id);
   const api = (path, opts) => fetch(path, opts).then(r => r.json());
@@ -47,7 +50,7 @@
     tpls.forEach(t => { (byOs.get(t.os) || byOs.set(t.os, []).get(t.os)).push(t); });
     return [...byOs].map(([os, group]) => {
       const g0 = group[0];
-      const row = isAdmin ? `<div class="lab-create-row">${group.map(createButton).join('')}</div>` : '';
+      const row = canLab ? `<div class="lab-create-row">${group.map(createButton).join('')}</div>` : '';
       return `<div class="lab-template"><div class="lab-template-top"><span class="lab-template-name">${osIcon(os)}<strong>${esc(g0.os_name)}</strong></span></div>
         <p class="lab-template-about">${esc(g0.os_about)}</p>
         <p class="lab-template-records"><span>Records:</span> ${esc(g0.os_records)}</p>${row}</div>`;
@@ -61,7 +64,7 @@
     if (!utm || !utm.supported) return '';
     let body;
     if (utm.running) {
-      const buttons = isAdmin ? `<div class="lab-create-row">
+      const buttons = canLab ? `<div class="lab-create-row">
           <button type="button" class="ui-pill lab-win" data-win="clone">${engineIcon('utm')}<span>Clone existing</span></button>
           <button type="button" class="ui-pill lab-win" data-win="iso">${osIcon('windows')}<span>From ISO</span></button>
         </div>` : '';
@@ -103,7 +106,7 @@
     const meta = engineIcon(m.engine) + `<span>${text}</span>`;
     const steps = (m.provisioned || []).length ? `<span class="lab-prov">set up: ${m.provisioned.map(esc).join(', ')}</span>` : '';
     let actions = '';
-    if (isAdmin) {
+    if (m.manageable) {
       const on = m.state === 'running';
       // A UTM VM Archer didn't create needs its OS set before it can be set up or recorded on
       const needsOs = m.engine === 'utm' && !m.os;
@@ -143,6 +146,8 @@
   let lastMachines = [];  // the last machines listing, for the clone-from-create picker
   function refresh() {
     api('/api/lab/overview').then(data => {
+      canLab = !!data.can_lab;
+      isAdmin = !!data.is_admin;
       host(data.host);
       taken = new Set(data.taken || []);
       const tpls = data.templates || [];
@@ -152,6 +157,12 @@
       lastMachines = ms;
       el('lab-machines').innerHTML = ms.map(machineRow).join('');
       el('lab-machines-empty').hidden = ms.length > 0;
+      const guest = el('lab-guest');
+      guest.hidden = canLab;
+      guest.textContent = signedIn
+        ? 'You need the Operational analyst role to create and manage machines. Ask an admin to grant it.'
+        : 'Log in as an Operational analyst or admin to create and manage machines.';
+      el('lab-machines-empty').hidden = ms.length > 0 || !canLab;
       if (data.job && data.job.state === 'running' && !timer) pollJob();
     });
   }
@@ -411,7 +422,5 @@
     techEl.focus();
   }
 
-  if (!signedIn || !isAdmin) el('lab-guest').hidden = false;
-  if (!signedIn) el('lab-guest').textContent = 'Log in as an admin to create and manage machines.';
-  refresh();
+  refresh();  // sets canLab/isAdmin and the guest notice from the server's effective-role check
 })();

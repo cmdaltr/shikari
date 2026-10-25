@@ -1101,7 +1101,8 @@
               html += `<td style="padding: 12px;">${escapeHtml(user.full_name)}${youLabel}</td>`;
               html += `<td style="padding: 12px;">${escapeHtml(user.email)}</td>`;
               html += `<td style="padding: 12px;">${teamDisplay}</td>`;
-              html += `<td style="padding: 12px; text-transform: capitalize;">${escapeHtml(user.role)}</td>`;
+              const roleLabels = { standard: 'Analyst', operator: 'Operational analyst', admin: 'Administrator' };
+              html += `<td style="padding: 12px;">${escapeHtml(roleLabels[String(user.role).toLowerCase()] || user.role)}</td>`;
               html += `<td style="padding: 12px;">${statusBadge}</td>`;
               html += actionsCell;
               html += '</tr>';
@@ -1333,7 +1334,8 @@
                   <div>
                     <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-primary);">Role</label>
                     <select id="manage-user-role" class="dropdown-styled" style="width: 100%;">
-                      <option value="standard">Standard User</option>
+                      <option value="standard">Analyst</option>
+                      <option value="operator">Operational analyst</option>
                       <option value="admin">Administrator</option>
                     </select>
                   </div>

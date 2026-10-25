@@ -21,9 +21,50 @@ Base = declarative_base()
 
 
 class UserRole(str, enum.Enum):
-    """User role enumeration"""
+    """User roles, in increasing privilege. Each inherits the abilities of the ones below it —
+    gate on at_least(user, role), never role equality, so a higher role passes a lower gate.
+
+      STANDARD  Analyst — hunt, view, author detections, watchlists
+      OPERATOR  Operational analyst — the above + lab (own machines), telemetry rebuild, source edits
+      ADMIN     the above + user/role management and secrets & integration settings
+    """
     ADMIN = "admin"
+    OPERATOR = "operator"
     STANDARD = "standard"
+
+
+# Privilege order, low → high. The gate is at_least(), so adding a tier here is all it takes.
+ROLE_RANK = {UserRole.STANDARD: 1, UserRole.OPERATOR: 2, UserRole.ADMIN: 3}
+
+
+def role_rank(role) -> int:
+    """Privilege level of a role (a UserRole, its value, or its name); 0 if unknown."""
+    if isinstance(role, UserRole):
+        return ROLE_RANK.get(role, 0)
+    try:
+        return ROLE_RANK.get(UserRole(role), 0)
+    except (ValueError, TypeError):
+        try:
+            return ROLE_RANK.get(UserRole[str(role)], 0)  # accept the stored NAME too (e.g. "ADMIN")
+        except (KeyError, ValueError):
+            return 0
+
+
+def effective_role(user):
+    """The user's role in force right now: their base role, raised to a temporary grant that
+    hasn't expired. A grant only ever elevates — a lower temp role than the base is ignored."""
+    base = getattr(user, "role", None)
+    temp = getattr(user, "temp_role", None)
+    expires = getattr(user, "temp_role_expires", None)
+    if temp is not None and expires is not None and expires > datetime.utcnow() \
+            and role_rank(temp) > role_rank(base):
+        return temp
+    return base
+
+
+def at_least(user, role: "UserRole") -> bool:
+    """True when the user's effective role is `role` or higher — the canonical capability check."""
+    return bool(user) and role_rank(effective_role(user)) >= ROLE_RANK[role]
 
 
 class User(Base):
@@ -45,6 +86,10 @@ class User(Base):
     tech_stack = Column(Text, nullable=True)  # JSON array: product ids (archer.intelligence.tech_stack; empty: everything applies)
     password_hash = Column(String(255), nullable=False)  # bcrypt hash
     role = Column(Enum(UserRole), nullable=False, default=UserRole.STANDARD)
+    # A time-boxed elevation above `role` (just-in-time privilege): effective_role() uses it only
+    # while temp_role_expires is in the future, and only when it's higher than the base role.
+    temp_role = Column(Enum(UserRole), nullable=True)
+    temp_role_expires = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
 
     # Account lockout fields

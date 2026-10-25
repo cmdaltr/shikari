@@ -73,7 +73,7 @@ from archer.auth import (
     admin_reset_password,
     validate_password,
 )
-from archer.database.models import User, UserRole, APIKey
+from archer.database.models import User, UserRole, APIKey, at_least
 from archer.validation.query_syntax_validator import validate_query_syntax
 from archer.validation import get_validation_router
 from archer.chat import router as chat_router
@@ -10127,7 +10127,7 @@ def api_feed(request: Request, archer_session: Optional[str] = Cookie(None)):
     from archer.intelligence.watchlists import watched
 
     return {**feed.view(_user_industries(user), stack=_user_stack(user)), "watched": watched(user.id),
-            "can_edit_sources": user.role == UserRole.ADMIN}
+            "can_edit_sources": at_least(user, UserRole.OPERATOR)}
 
 
 @app.get("/api/cves/recent")
@@ -10265,8 +10265,9 @@ def _feed_admin(request: Request, archer_session: Optional[str]):
         return JSONResponse({"error": "Not authenticated"}, status_code=401)
     user, db = auth_result
     db.close()
-    if user.role != UserRole.ADMIN:
-        return JSONResponse({"error": "Only an admin can change the feed's sources"}, status_code=403)
+    if not at_least(user, UserRole.OPERATOR):
+        return JSONResponse({"error": "Changing the feed's sources needs the Operational analyst role"},
+                            status_code=403)
     return user
 
 
@@ -11154,9 +11155,10 @@ async def create_user(request: Request, archer_session: Optional[str] = Cookie(N
         if not is_valid:
             return {"success": False, "error": error_message}
 
-        # Validate role
-        if role not in ["admin", "standard"]:
-            return {"success": False, "error": "Invalid role. Must be 'admin' or 'standard'"}
+        # Validate role (admin, operator or standard)
+        valid_roles = {r.value for r in UserRole}
+        if role not in valid_roles:
+            return {"success": False, "error": f"Invalid role. Must be one of: {', '.join(sorted(valid_roles))}"}
 
         # Check if user already exists
         existing_user = db.query(User).filter(User.email == email).first()
@@ -11164,7 +11166,7 @@ async def create_user(request: Request, archer_session: Optional[str] = Cookie(N
             return {"success": False, "error": "User with this email already exists"}
 
         # Create new user
-        user_role = UserRole.ADMIN if role == "admin" else UserRole.STANDARD
+        user_role = UserRole(role)
         hashed_password = hash_password(password)
 
         new_user = User(
@@ -11254,9 +11256,9 @@ async def update_user(request: Request, user_id: int, archer_session: Optional[s
         # Update role if provided
         if "role" in data:
             role = data["role"].lower()
-            if role not in ["admin", "standard"]:
+            if role not in {r.value for r in UserRole}:
                 return {"success": False, "error": "Invalid role"}
-            user.role = UserRole.ADMIN if role == "admin" else UserRole.STANDARD
+            user.role = UserRole(role)
 
         # Update active status if provided
         if "is_active" in data:

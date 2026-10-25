@@ -48,12 +48,13 @@ def status():
 
 @router.post("/build")
 def start_build(archer_session: Optional[str] = Cookie(None)):
-    """Fetch what changed in both sources and rebuild (admin; runs in the background)."""
-    from archer.database.models import UserRole
+    """Fetch what changed in both sources and rebuild (operational analyst or admin; backgrounded)."""
+    from archer.database.models import UserRole, at_least
 
     user = _user(archer_session)
-    if not user or user.role != UserRole.ADMIN:
-        return JSONResponse({"error": "Only an admin can rebuild the recorded telemetry"}, status_code=403)
+    if not at_least(user, UserRole.OPERATOR):
+        return JSONResponse({"error": "Rebuilding the recorded telemetry needs the Operational analyst role"},
+                            status_code=403)
     with _lock:
         if _job["state"] == "running":
             return {"started": False, "job": dict(_job)}

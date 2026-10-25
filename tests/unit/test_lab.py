@@ -194,10 +194,10 @@ def test_listing_shows_only_machines_archer_made(monkeypatch, tmp_path):
         {"engine": "tart", "name": "sequoia-vm", "kind": "vm", "image": "", "os": "", "state": "stopped", "detail": ""},
     ])
     import archer.lab.registry as reg
-    reg.record("tart", "mine", "macos-vm", "macos", "ghcr.io/cirruslabs/macos")
-    names = [m["name"] for m in machines.listing(["tart"])]
+    reg.record("tart", "mine", "macos-vm", "macos", "ghcr.io/cirruslabs/macos", owner=1)
+    names = [m["name"] for m in machines.listing(["tart"], user_id=1, is_admin=False)]
     assert names == ["mine"]  # sequoia-vm (not in the registry) is omitted
-    assert machines.listing(["tart"])[0]["os"] == "macos"
+    assert machines.listing(["tart"], user_id=1, is_admin=False)[0]["os"] == "macos"
 
 
 def test_all_host_names_includes_vms_outside_archer(monkeypatch):

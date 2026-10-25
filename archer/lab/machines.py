@@ -16,54 +16,75 @@ from archer.lab.runner import LabError, safe_name
 from archer.lab.templates import BY_ID
 
 
-def _decorate(m: Dict) -> Dict:
+def _manageable(engine: str, owner, user_id, is_admin: bool) -> bool:
+    """Who may act on a machine: an admin on any; its owner on their own; any operational analyst
+    on an unclaimed UTM VM (built by hand outside Archer, not yet adopted)."""
+    if is_admin:
+        return True
+    if owner is not None and owner == user_id:
+        return True
+    return engine == "utm" and owner is None
+
+
+def _decorate(m: Dict, user_id=None, is_admin: bool = False) -> Dict:
     """Add what Archer remembers about the machine to the engine's own view.
 
     A UTM VM counts as Archer's the moment it exists — Archer didn't make it, but it drives any
     UTM VM — so it shows even before it's adopted; its OS is unknown until you set it."""
     known = registry.get(m["engine"], m["name"])
     template = BY_ID.get((known or {}).get("template", ""))
+    owner = (known or {}).get("owner")
     return {**m,
             "archer": bool(known) or m["engine"] == "utm",
             "adopted": bool(known),
             "os": (known or {}).get("os") or m.get("os") or "",
             "template": (known or {}).get("template", ""),
             "records": template["records"] if template else "",
-            "provisioned": (known or {}).get("provisioned", [])}
+            "provisioned": (known or {}).get("provisioned", []),
+            "owner": owner,
+            "manageable": _manageable(m["engine"], owner, user_id, is_admin)}
 
 
-def listing(engines: Optional[List[str]] = None) -> List[Dict]:
-    """The machines Archer made, across the engines given (default: all that are ready).
+def can_manage(engine_key: str, name: str, user_id, is_admin: bool) -> bool:
+    """Whether this user may act on the machine (start, snapshot, delete, provision, record…)."""
+    owner = (registry.get(engine_key, name) or {}).get("owner")
+    return _manageable(engine_key, owner, user_id, is_admin)
 
-    Only machines in the registry are returned — anything built outside Archer (a VM you
-    cloned yourself, say) is left out, since Archer can't vouch for how it's set up."""
+
+def listing(engines: Optional[List[str]] = None, user_id=None, is_admin: bool = False) -> List[Dict]:
+    """The machines Archer made, across the engines given (default: all that are ready), that this
+    user may see: an admin sees all; an operational analyst sees their own plus unclaimed UTM VMs.
+
+    Anything built outside Archer (a VM you cloned yourself, say) is left out — except UTM VMs,
+    which Archer drives whether or not it made them."""
     out = []
     for key, engine in ENGINES.items():
         if engines is not None and key not in engines:
             continue
         try:
-            out += [d for d in (_decorate(m) for m in engine.list()) if d["archer"]]
+            out += [d for d in (_decorate(m, user_id, is_admin) for m in engine.list())
+                    if d["archer"] and d["manageable"]]
         except LabError:
             continue  # an engine that isn't running doesn't stop the others
     out.sort(key=lambda m: (m["engine"], m["name"]))
     return out
 
 
-def adopt(engine_key: str, name: str, os_name: str) -> Dict:
-    """Tell Archer what OS a VM it didn't create runs, so it can provision and record it.
-    For UTM VMs, which Archer manages but doesn't build."""
+def adopt(engine_key: str, name: str, os_name: str, owner=None) -> Dict:
+    """Tell Archer what OS a VM it didn't create runs, so it can provision and record it, and
+    claim it for `owner`. For UTM VMs, which Archer manages but doesn't build."""
     name = safe_name(name)
     if os_name not in ("windows", "linux", "macos"):
         raise LabError("Unknown OS", "Pick windows, linux or macos")
-    registry.record(engine_key, name, f"{engine_key}-vm", os_name, "")
+    registry.record(engine_key, name, f"{engine_key}-vm", os_name, "", owner=owner)
     return {"engine": engine_key, "name": name, "os": os_name}
 
 
-def clone(engine_key: str, name: str, new_name: str) -> Dict:
+def clone(engine_key: str, name: str, new_name: str, owner=None) -> Dict:
     """Clone an existing VM into a new Archer-managed machine — the fast Windows path: copy a
     prepared VM rather than install one from an ISO. UTM only (its engine has clone). The clone
     inherits the source's OS when Archer knows it, so Set up and Record work on it straight away;
-    otherwise set the OS on it afterwards."""
+    otherwise set the OS on it afterwards. The clone is owned by `owner`."""
     engine, name = _op(engine_key, name)
     engine_clone = getattr(engine, "clone", None)
     if engine_clone is None:
@@ -71,8 +92,7 @@ def clone(engine_key: str, name: str, new_name: str) -> Dict:
     new_name = safe_name(new_name)
     os_name = (registry.get(engine_key, name) or {}).get("os") or ""
     engine_clone(name, new_name)
-    if os_name:
-        registry.record(engine_key, new_name, f"{engine_key}-vm", os_name, "")
+    registry.record(engine_key, new_name, f"{engine_key}-vm", os_name, "", owner=owner)
     return {"engine": engine_key, "name": new_name, "os": os_name}
 
 
@@ -97,7 +117,7 @@ def all_host_names(engines: Optional[List[str]] = None) -> List[str]:
     return names
 
 
-def create(template_id: str, name: str) -> Dict:
+def create(template_id: str, name: str, owner=None) -> Dict:
     template = BY_ID.get(template_id)
     if not template:
         raise LabError("Unknown template", template_id)
@@ -111,7 +131,7 @@ def create(template_id: str, name: str) -> Dict:
                        f"no image built for {arch}")
     engine = engine_for(template["engine"])
     engine.create(name, image)
-    registry.record(template["engine"], name, template_id, template["os"], image)
+    registry.record(template["engine"], name, template_id, template["os"], image, owner=owner)
     return {"name": name, "engine": template["engine"], "template": template_id}
 
 
