@@ -170,3 +170,5 @@ python -m archer.telemetry --mde-export data/telemetry/lab/win11-av-on
 | A test's folder is empty | It didn't run on this platform, or its prerequisites failed: the console shows the warning |
 | `--mde-export`: 403 | Admin consent wasn't granted for `ThreatHunting.Read.All`, or the secret expired |
 | `--mde-export`: 0 rows | Defender hasn't caught up yet (wait longer), or the device name differs from the manifest's `host` |
+| A UTM VM won't boot — `QEMULauncher` crashes at launch (sandbox/`libsecinit` trap) | The VM is on a volume mounted `noowners` (common for external drives). Enable ownership: `sudo diskutil enableOwnership /Volumes/<name>` (or Finder → Get Info → untick *Ignore ownership on this volume*), then re-open the VM in UTM. Or keep the VM on the internal disk |
+| UTM crashes on launch on macOS 26/27 (`libswift_Concurrency`, `swift_task_isCurrentExecutor`) | UTM 5.0.8's stable build predates that macOS; install the newer beta from [mac.getutm.app](https://mac.getutm.app/). Archer's clone and headless `utmctl` work regardless; the GUI is only needed to build a VM from an ISO |
