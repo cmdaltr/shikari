@@ -16,12 +16,14 @@ The menu bar has three menus (Detections, Intel, Build), then Profile and Help. 
 | Hunt | Home → Hunt | Detections for a threat group, a CVE or ATT&CK techniques | [Hunt](02-hunt.md) |
 | Analyse | Home → Analyse | Detections from a report: a URL or an uploaded file | [Analyse](03-analyse.md) |
 | Profile (company) | Home → Profile | The threat groups likely to target a company, then their detections | [Company profile](04-company-profile.md) |
+| Exposure map | After a profile, or Intel → Catalogue | What OSINT surfaced about a company and how it links back to the domain | [Company profile](04-company-profile.md#exposure-map) |
 | Research | Home → Research | Find groups by keyword and compare their techniques | [Research](05-research.md) |
 | Results | Opens after a run | A run's detections, correlations, attack flow and briefing | [Results](06-results.md) |
 | Library | Detections → Library | Everything you've saved, with filters, tags and exports | [Library](07-library.md) |
 | Coverage | Detections → Coverage | Which techniques the reference queries and your detections cover | [Coverage](08-coverage.md) |
 | Flows | Detections → Flows | Every saved attack flow: what you can and can't detect | [Flows](09-flows.md) |
 | Anatomy | Detections → Anatomy | Every saved threat group's and CVE's anatomy workflow | [Flows](09-flows.md#anatomy) |
+| Catalogue | Intel → Catalogue | Every organisation profiled so far; opens each one's exposure map | [Company profile](04-company-profile.md#companies-catalogue) |
 | Feed | Intel → Feed | This week's threat research, tagged; search all research | [Threat Feed](10-threat-feed.md) |
 | Cyber Powers | Intel → Cyber Powers | National cyber capability, attribution and targeting on a map | [Cyber Powers](11-cyber-powers.md) |
 | MITRESaw | Intel → MITRESaw | ATT&CK procedures and their indicators; OSINT repository status | [MITRESaw](12-mitresaw.md) |

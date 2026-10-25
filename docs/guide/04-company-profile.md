@@ -10,6 +10,25 @@
 3. **Choose.** A window shows the profile summary (company, industry, location, hosting, source, risk score) and the recommended groups, the top three ticked. Tick or untick any. If the profile saw products (the web server banner, WordPress, the email provider from the MX records), **Add to my technology stack** adds them to Profile → [Technology stack](16-profile-and-settings.md#technology-stack). Use it only when the company is your own.
 4. **Generate.** Archer runs a [Hunt](02-hunt.md) for each ticked group. Each gets its own [Results](06-results.md) page.
 
+The profile is saved, so the same company doesn't have to be re-run, and its exposure map and catalogue entry are built from it.
+
+## Exposure map
+
+**View exposure map** on the profile summary (or `/exposure?domain=…`) opens the **Organisation Exposure Map** — a node-and-link graph, in the same style as the attack anatomy on a Results page, of everything profiling surfaced from public sources and how each piece links back to the domain. It answers "what can a threat actor see before they act", and nothing is harvested to build it.
+
+Two hops out from the organisation:
+
+- **Off the domain:** resolved IP addresses, nameservers, mail (MX) with its provider, subdomains (from certificate transparency), the technology fingerprint (server, CDN, cloud, TLS grade, missing security headers) and historical snapshots (Wayback).
+- **Off those:** the networks behind the IPs (ASNs, announced ranges, hosting country), certificates issued for the subdomains, exposed services (open ports and software from Shodan InternetDB), **known CVEs** on those services, and the **breach & leak surface** — HIBP breach *metadata* for the email domain (names, dates and counts only, never accounts or credentials), plus any GitHub leaks.
+
+The Mail node also carries email **spoofability**: whether SPF, DMARC and DKIM are published and enforced. A domain is flagged spoofable unless SPF hard/soft-fails unknown senders *and* DMARC is set to quarantine/reject.
+
+Select any node or link for the detail behind it; the CVE node links each CVE to its NVD entry, and the breach node links out to HIBP.
+
+## Companies Catalogue
+
+**Intel → Catalogue** (`/catalogue`, top of the Intel menu) lists every organisation profiled so far, newest first — a Library for companies. Each card opens that company's exposure map.
+
 ## Options
 
 | Option | Default | What it does |
@@ -19,9 +38,11 @@
 
 Industry, geography and technology stack are always included.
 
-## OSINT API keys
+## OSINT sources and keys
 
-Most sources need no key. Shodan, SecurityTrails and a GitHub token add coverage (internet-facing assets, DNS history, code search). The page shows which are set; set them in Profile → API Keys → OSINT Sources, or in `.env` in the project root.
+Most sources need no key: DNS, crt.sh certificate transparency, the Wayback Machine, **Team Cymru** (IP→ASN, announced ranges and hosting country), **Shodan InternetDB** (open ports, software and known CVEs per IP) and **HIBP**'s public domain-breach endpoint (breach metadata only). SPF/DMARC/DKIM come straight from DNS.
+
+Optional keys add coverage: **Shodan** (internet-facing assets), **SecurityTrails** (DNS history), **HIBP** (breach metadata, higher rate limits) and a **GitHub** token (code/secret search). The home Profile tab lists each one with a toggle — add a key in place from a small modal, or switch a saved key off without deleting it (kept in the vault, just not applied). You can also manage them in Profile → API Keys → OSINT Sources, or set them in `.env` in the project root. A disabled or absent key simply means that source is skipped.
 
 ## Limits
 

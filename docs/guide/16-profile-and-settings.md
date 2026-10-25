@@ -50,7 +50,7 @@ Your past runs (all, groups or CVEs), with links to their results and downloads.
 | AI Assignment | Which provider and model answer Ask Archer, and which generate detections |
 | Max LLM calls per detection run | A cap on AI calls in one run (one call per procedure, each a large prompt). Past it, the standard pipeline carries on alone |
 | Hunt prompt | Whether Archer asks about AI on every hunt; **Ask again** resets a remembered answer |
-| OSINT Sources | Shodan, SecurityTrails and GitHub keys for [Company profile](04-company-profile.md) |
+| OSINT Sources | Shodan, SecurityTrails, HIBP and GitHub keys for [Company profile](04-company-profile.md). All optional — most sources are keyless. These can also be added or toggled on/off from the home Profile tab |
 | SIEM Platforms | API keys for Google SecOps, Splunk, Defender XDR and Elastic |
 | Emulation Tools | Coming soon |
 
