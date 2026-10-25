@@ -341,7 +341,7 @@
     : '';
 
   function renderTechniques() {
-    $('em-view-note').innerHTML = `Every technique the labs recorded. <strong>Recordings</strong> is how many separate tool-runs captured the technique, with the logos breaking that down by source; <strong>Platforms</strong> are the operating systems they ran on. <strong>Logs</strong> are what at least half its recordings hold, counting only the logs chosen under <strong>Collection</strong>, with the ${esc(siemName())} ${state.siem === 'mde' ? 'tables' : 'event types'} they land in beneath them.
+    $('em-view-note').innerHTML = `Every technique the labs recorded. <strong>Recordings</strong> is how many separate tool-runs captured the technique; <strong>Datasets</strong> breaks that down by source; <strong>Platforms</strong> are the operating systems they ran on. <strong>Logs</strong> are what at least half its recordings hold, counting only the logs chosen under <strong>Collection</strong>.
       ${state.siem === 'mde' ? 'With Defender XDR, Sysmon\'s recordings stand in for the MDE sensor, which records the same activity without Sysmon installed.' : ''}
       When Collection or Logs filters are set, <em>· N in these logs</em> is how many of the recordings hold them; a technique where none do is marked. Select a row for each log and recording.`;
     if (!data.techniques) return message('Loading…');
@@ -361,7 +361,7 @@
     shown(rows.length, data.techniques.length, 'technique');
     if (!rows.length) return message('No recorded technique matches the filters.');
     $('em-results').innerHTML = `<div class="ms-table-wrap"><table class="ms-table em-table em-rows">
-      <thead><tr><th class="em-col-tech">Technique</th><th class="em-col-rec" title="How many recorded tool-runs captured this technique, broken down by source (the logos)">Recordings</th><th class="em-col-plat" title="Operating systems the recordings ran on">Platforms</th><th>Logs</th></tr></thead>
+      <thead><tr><th class="em-col-tech">Technique</th><th class="em-col-rec" title="How many recorded tool-runs captured this technique">Recordings</th><th class="em-col-ds" title="Which datasets the recordings come from, and how many from each">Datasets</th><th class="em-col-plat" title="Operating systems the recordings ran on">Platforms</th><th>Logs</th></tr></thead>
       <tbody>${pageOf(rows).map(t => {
         const info = data.names[t.technique] || {};
         const open = state.open.has(t.technique);
@@ -370,12 +370,12 @@
           <td><strong>${esc(t.technique)}</strong> ${esc(info.name || '')}${info.tactics ? `<br><small>${esc(info.tactics.join(', '))}</small>` : ''}
             ${hits ? `<br><small class="em-hit">Search found in: ${esc(hits[t.technique].join(', '))}</small>` : ''}</td>
           <td class="em-rec-cell em-nowrap">
-            <div class="em-rec-total"><span class="em-rec-n">${t.recordings.toLocaleString()}</span> ${t.recordings === 1 ? 'recording' : 'recordings'}${t.visible !== t.recordings ? ` <small>· ${t.visible} in these logs</small>` : ''}</div>
-            <div class="em-logos" title="Recordings per dataset">${Object.entries(t.sources).map(([k, n]) => `<span class="em-logo-b">${logo(k)}<span class="em-logo-n">${n}</span></span>`).join('')}</div></td>
+            <div class="em-rec-total"><span class="em-rec-n">${t.recordings.toLocaleString()}</span> ${t.recordings === 1 ? 'recording' : 'recordings'}${t.visible !== t.recordings ? ` <small>· ${t.visible} in these logs</small>` : ''}</div></td>
+          <td class="em-ds-cell"><div class="em-logos" title="Recordings per dataset">${Object.entries(t.sources).map(([k, n]) => `<span class="em-logo-b">${logo(k)}<span class="em-logo-n">${n}</span></span>`).join('')}</div></td>
           <td class="em-plat-cell">${platIcons(t.platforms)}</td>
-          ${gap ? '<td><span class="em-gap">No recording holds the chosen logs</span></td>' : `<td>${chips(t.logs, 6)}${dataSources(t[siemKey()])}</td>`}
+          ${gap ? '<td><span class="em-gap">No recording holds the chosen logs</span></td>' : `<td>${chips(t.logs, 6)}</td>`}
           </tr>
-          ${open ? `<tr class="em-detail"><td colspan="3">${detail(t.technique)}</td></tr>` : ''}`;
+          ${open ? `<tr class="em-detail"><td colspan="5">${detail(t.technique)}</td></tr>` : ''}`;
       }).join('')}</tbody></table></div>`;
   }
 
