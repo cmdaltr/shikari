@@ -370,8 +370,8 @@
           <td><strong>${esc(t.technique)}</strong> ${esc(info.name || '')}${info.tactics ? `<br><small>${esc(info.tactics.join(', '))}</small>` : ''}
             ${hits ? `<br><small class="em-hit">Search found in: ${esc(hits[t.technique].join(', '))}</small>` : ''}</td>
           <td class="em-rec-cell em-nowrap">
-            <div class="em-rec-total">${plural(t.recordings, 'recording')}${t.visible !== t.recordings ? ` <small>· ${t.visible} in these logs</small>` : ''}</div>
-            <div class="em-logos" title="Recordings per source">${Object.entries(t.sources).map(([k, n]) => `${logo(k)}<small>${n}</small>`).join('')}</div></td>
+            <div class="em-rec-total"><span class="em-rec-n">${t.recordings.toLocaleString()}</span> ${t.recordings === 1 ? 'recording' : 'recordings'}${t.visible !== t.recordings ? ` <small>· ${t.visible} in these logs</small>` : ''}</div>
+            <div class="em-logos" title="Recordings per dataset">${Object.entries(t.sources).map(([k, n]) => `<span class="em-logo-b">${logo(k)}<span class="em-logo-n">${n}</span></span>`).join('')}</div></td>
           <td class="em-plat-cell">${platIcons(t.platforms)}</td>
           ${gap ? '<td><span class="em-gap">No recording holds the chosen logs</span></td>' : `<td>${chips(t.logs, 6)}${dataSources(t[siemKey()])}</td>`}
           </tr>

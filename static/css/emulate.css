@@ -106,7 +106,7 @@
 .em-chips code { font-size: .82em; background: var(--bg-secondary, #f3f4f6); border: 1px solid var(--border-color); border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
 table.em-rows { table-layout: fixed; width: 100%; }
 .em-rows .em-col-tech { width: 27%; }
-.em-rows .em-col-rec { width: 14%; }
+.em-rows .em-col-rec { width: 16%; }
 .em-rows td { overflow-wrap: anywhere; }
 .em-ds { margin-top: 8px; font-size: .82em; color: var(--text-secondary); line-height: 1.7; }
 .em-ds { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
@@ -323,13 +323,27 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .em-sources-head .ms-state { font-size: .85em; color: var(--text-secondary); }
 .em-rec-total { font-weight: 600; }
 .em-rec-total small { font-weight: 400; color: var(--text-secondary); }
-.em-plats { display: inline-flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+.em-plats { display: inline-flex; gap: 7px; align-items: center; flex-wrap: wrap; }
 .em-plat { width: 20px; height: 20px; border-radius: 4px; background: #fff; border: 1px solid var(--border-color);
   display: inline-flex; align-items: center; justify-content: center; overflow: hidden; }
 .em-plat img { width: 14px; height: 14px; object-fit: contain; }
 .em-plat svg { width: 14px; height: 14px; stroke: #0284c7; }
 .em-plat-cell { white-space: nowrap; }
-.em-rows .em-col-plat { width: 9%; }
+.em-rows .em-col-plat { width: 12%; }
+
+/* Recorded-telemetry table: larger icons, with per-dataset counts as a badge on each dataset logo */
+.em-rec-n { font-size: 1.15em; font-weight: 700; }
+.em-logos { gap: 12px; margin-top: 8px; }
+.em-rows .em-logo { width: 34px; height: 34px; border-radius: 7px; }
+.em-rows .em-logo svg { width: 22px; height: 22px; }
+.em-rows .em-plat { width: 34px; height: 34px; border-radius: 7px; }
+.em-rows .em-plat img { width: 22px; height: 22px; }
+.em-rows .em-plat svg { width: 22px; height: 22px; }
+.em-rows .em-siem-logo { height: 26px; }
+.em-logo-b { position: relative; display: inline-flex; }
+.em-logo-n { position: absolute; right: -6px; bottom: -6px; min-width: 17px; height: 17px; padding: 0 4px;
+  border-radius: 999px; background: var(--em-teal); color: #fff; font-size: 11px; font-weight: 700;
+  line-height: 17px; text-align: center; box-sizing: border-box; border: 2px solid var(--bg-primary); }
 
 /* Lab subsection: a touch larger, with teal icon'd subheadings matching the diagram */
 .em-lab-block { font-size: 1.1em; --lab-teal: #0d9488; }
