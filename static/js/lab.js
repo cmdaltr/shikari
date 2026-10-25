@@ -105,6 +105,7 @@
         <button type="button" class="ui-pill lab-act" data-a="${on ? 'stop' : 'start'}">${on ? 'Stop' : 'Start'}</button>
         <button type="button" class="ui-pill lab-act" data-a="snapshot">Snapshot</button>
         <button type="button" class="ui-pill lab-act" data-a="revert">Revert</button>
+        ${m.engine === 'utm' ? '<button type="button" class="ui-pill lab-act" data-a="clone">Clone</button>' : ''}
         ${setOs}
         ${m.os ? '<button type="button" class="ui-pill lab-act" data-a="provision">Set up</button>' : ''}
         ${m.os ? '<button type="button" class="ui-pill lab-act" data-a="record">Record</button>' : ''}
@@ -203,6 +204,8 @@
       provisionDialog(engine, name, os);
     } else if (act === 'record') {
       recordDialog(engine, name, os);
+    } else if (act === 'clone') {
+      cloneDialog(engine, name);
     } else if (act === 'adopt') {
       adoptDialog(engine, name);
     } else if (act === 'logs') {
@@ -210,6 +213,34 @@
         .then(r => openModal(`Logs — ${name}`, `<pre class="lab-logs">${esc(r.logs || r.error || 'No output')}</pre>`));
     }
   });
+
+  // A clash-free clone name from the source: archer-win11 -> archer-win11-2
+  function suggestCloneName(src) {
+    const stem = src.replace(/-\d+$/, '');
+    for (let n = 2; ; n++) {
+      const name = `${stem}-${n}`;
+      if (!taken.has(name)) return name;
+    }
+  }
+
+  function cloneDialog(engine, name) {
+    openModal(`Clone ${name}`, `<label class="lab-field">New machine name
+      <input type="text" id="lab-clone" value="${esc(suggestCloneName(name))}" autocomplete="off"></label>
+      <p class="lab-hint">Copies the VM and its disk into a new machine — a few minutes. The clone inherits ${esc(name)}'s OS and set-up; snapshot it before recording.</p>
+      <div class="lab-modal-actions"><button type="button" class="ui-pill" id="lab-clone-cancel">Cancel</button>
+      <button type="button" class="btn-primary" id="lab-clone-go">Clone</button></div>`);
+    const go = () => {
+      const newName = el('lab-clone').value.trim();
+      if (!newName) return;
+      closeModal();
+      post('/api/lab/clone', { engine, name, new_name: newName }).then(r => { if (r.started) pollJob(); });
+    };
+    el('lab-clone-go').addEventListener('click', go);
+    el('lab-clone-cancel').addEventListener('click', closeModal);
+    el('lab-clone').addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
+    el('lab-clone').focus();
+    el('lab-clone').select();
+  }
 
   function adoptDialog(engine, name) {
     openModal(`Set the OS for ${name}`, `<label class="lab-field">Operating system

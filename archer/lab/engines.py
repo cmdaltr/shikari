@@ -253,6 +253,11 @@ class UTM:
     def revert(self, name: str, snap: str):
         run(["utmctl", "snapshot", "restore", name, "--snapshot", snap], timeout=600)
 
+    def clone(self, name: str, new_name: str):
+        # Copies the disk, so it's slow for a Windows VM — run it as a job. UTM registers the
+        # clone itself; it inherits the source's drives, snapshots and guest tools.
+        run(["utmctl", "clone", name, "--name", new_name], timeout=1800)
+
     def delete(self, name: str):
         run(["utmctl", "delete", "--hide", name], timeout=60, check=False)
 

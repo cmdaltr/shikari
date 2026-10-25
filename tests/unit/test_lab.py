@@ -239,6 +239,31 @@ def test_utm_create_is_refused_with_guidance():
         engines.UTM().create("win", "")
 
 
+def test_utm_clone_uses_utmctl(monkeypatch):
+    calls = []
+    monkeypatch.setattr("archer.lab.engines.run", lambda argv, **k: calls.append(list(argv)) or "")
+    engines.UTM().clone("archer-win11", "archer-win11-2")
+    assert ["utmctl", "clone", "archer-win11", "--name", "archer-win11-2"] in calls
+
+
+def test_machines_clone_carries_the_source_os(monkeypatch, tmp_path):
+    monkeypatch.setattr("archer.lab.registry._PATH", str(tmp_path / "m.json"))
+    cloned = []
+    monkeypatch.setattr(engines.UTM, "clone", lambda self, name, new: cloned.append((name, new)))
+    import archer.lab.registry as reg
+    reg.record("utm", "archer-win11", "utm-vm", "windows", "")
+    out = machines.clone("utm", "archer-win11", "archer-win11-2")
+    assert cloned == [("archer-win11", "archer-win11-2")]
+    assert out["os"] == "windows"
+    assert reg.get("utm", "archer-win11-2")["os"] == "windows"  # clone registered with the OS
+
+
+def test_machines_clone_refused_for_an_engine_without_clone(monkeypatch):
+    monkeypatch.setattr(engines.Docker, "list", lambda self: [])
+    with pytest.raises(LabError):
+        machines.clone("docker", "box", "box-2")
+
+
 def test_utm_exec_puts_cmd_last_and_forwards_stdin(monkeypatch):
     seen = {}
 

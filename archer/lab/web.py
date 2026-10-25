@@ -178,6 +178,28 @@ async def adopt(request: Request, archer_session: Optional[str] = Cookie(None)):
         return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
 
 
+@router.post("/clone")
+async def clone(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Clone an existing VM into a new one — UTM's fast Windows path (copy a prepared VM)."""
+    denied = _admin(archer_session)
+    if denied:
+        return denied
+    data = await request.json()
+    engine, name, new_name = data.get("engine", ""), data.get("name", ""), data.get("new_name", "")
+    try:
+        from archer.lab.runner import safe_name
+
+        safe_name(new_name)
+    except LabError as e:
+        return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
+
+    def work(say):
+        say(f"Cloning {name} to {new_name} — copying the disk can take a few minutes…")
+        machines.clone(engine, name, new_name)
+
+    return _background(f"Clone {name}", work)
+
+
 @router.get("/provision-steps")
 def provision_steps(os: str):
     return {"steps": provision.steps_for(os)}

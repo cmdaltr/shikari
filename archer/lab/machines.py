@@ -59,6 +59,23 @@ def adopt(engine_key: str, name: str, os_name: str) -> Dict:
     return {"engine": engine_key, "name": name, "os": os_name}
 
 
+def clone(engine_key: str, name: str, new_name: str) -> Dict:
+    """Clone an existing VM into a new Archer-managed machine — the fast Windows path: copy a
+    prepared VM rather than install one from an ISO. UTM only (its engine has clone). The clone
+    inherits the source's OS when Archer knows it, so Set up and Record work on it straight away;
+    otherwise set the OS on it afterwards."""
+    engine, name = _op(engine_key, name)
+    engine_clone = getattr(engine, "clone", None)
+    if engine_clone is None:
+        raise LabError("This engine can't clone a machine", engine_key)
+    new_name = safe_name(new_name)
+    os_name = (registry.get(engine_key, name) or {}).get("os") or ""
+    engine_clone(name, new_name)
+    if os_name:
+        registry.record(engine_key, new_name, f"{engine_key}-vm", os_name, "")
+    return {"engine": engine_key, "name": new_name, "os": os_name}
+
+
 def all_host_names(engines: Optional[List[str]] = None) -> List[str]:
     """Every machine name the engines report, Archer's and not (Tart lists all its VMs; Docker
     lists Archer's containers) — so the create dialog can suggest a name that won't collide."""
