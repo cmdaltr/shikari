@@ -230,9 +230,14 @@ table.em-rows { table-layout: fixed; width: 100%; }
 /* How Emulate works — the pipeline diagram */
 .em-sources-card .em-dg { margin: 4px 0 10px; overflow-x: auto; }
 .em-dg svg { width: 100%; min-width: 620px; height: auto; display: block; }
-.em-dg { --em-teal: #0d9488; }
+.em-dg { --em-teal: #0d9488; --em-blue: #2563eb; --em-green: #059669; }
 .em-dg-node { fill: var(--bg-primary); stroke: var(--border-color); stroke-width: 1.5; }
-.em-dg-node-end { stroke: var(--accent); stroke-width: 1.75; }
+.em-dg-node-end { fill: rgba(5, 150, 105, .06); stroke: var(--em-green); stroke-width: 1.75; }
+/* Node icons: stroked, coloured by stage (teal = generate, blue = process, green = result) */
+.em-ic { fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.em-ic-teal { stroke: var(--em-teal); }
+.em-ic-blue { stroke: var(--em-blue); }
+.em-ic-green { stroke: var(--em-green); }
 .em-dg-lane-box { fill: rgba(13, 148, 136, .05); stroke: var(--em-teal); stroke-width: 1.25; stroke-dasharray: 4 4; opacity: .9; }
 .em-dg-loop { fill: rgba(13, 148, 136, .10); stroke: var(--em-teal); stroke-width: 1.5; }
 .em-dg-origin { fill: rgba(13, 148, 136, .14); stroke: var(--em-teal); stroke-width: 1.5; }
@@ -242,8 +247,9 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .em-dg-head-teal { fill: var(--em-teal); }
 .em-dg-t { fill: var(--text-primary); font-size: 12.5px; font-weight: 600; text-anchor: middle; }
 .em-dg-s { fill: var(--text-secondary); font-size: 10px; text-anchor: middle; }
+.em-dg-start { text-anchor: start; }
 .em-dg-lane { fill: var(--em-teal); font-size: 10px; font-weight: 700; letter-spacing: .6px; }
-[data-theme="dark"] .em-dg { --em-teal: #2dd4bf; }
+[data-theme="dark"] .em-dg { --em-teal: #2dd4bf; --em-blue: #60a5fa; --em-green: #34d399; }
 [data-theme="dark"] .em-dg-node { fill: var(--bg-secondary); }
 
 /* Telemetry: Organise-by block inside the merged section */
