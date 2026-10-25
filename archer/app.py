@@ -2417,6 +2417,7 @@ def read_form(request: Request, archer_session: Optional[str] = Cookie(None)):
         for env, platform, what, url, site in (
             ("SHODAN_API_KEY", "shodan", "Internet-facing assets", "https://account.shodan.io/register", "shodan.io"),
             ("SECURITYTRAILS_API_KEY", "securitytrails", "DNS history", "https://securitytrails.com/app/signup", "securitytrails.com"),
+            ("HIBP_API_KEY", "hibp", "Breach exposure", "https://haveibeenpwned.com/API/Key", "haveibeenpwned.com"),
             ("GITHUB_TOKEN", "github", "Secret scanning", "https://github.com/settings/tokens", "github.com"),
             ("OPENAI_API_KEY", "openai", "AI Enhancement", "https://platform.openai.com/api-keys", "openai.com"),
         )
@@ -8145,6 +8146,80 @@ def flow_only_page(request: Request, group_name: str, archer_session: Optional[s
     })
 
 
+@app.get("/exposure", response_class=HTMLResponse)
+def exposure_page(request: Request, domain: str, archer_session: Optional[str] = Cookie(None)):
+    """
+    The organisation exposure map for a profiled domain (archer.visualization.exposure): what the
+    OSINT profiling unearthed and how each piece links back to the domain. Reads the saved profile
+    under data/profiles/; build it on the home page first.
+    """
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return auth_result
+    user, db = auth_result
+    db.close()
+
+    safe = (domain or "").strip().lower().replace("http://", "").replace("https://", "").split("/")[0]
+    safe_file = re.sub(r"[^a-z0-9._-]", "_", safe).replace(".", "_")
+    profiles_dir = Path("data") / "profiles"
+    path = profiles_dir / f"{safe_file}_profile.json"
+    expo = None
+    if safe_file and os.path.dirname(os.path.abspath(path)) == os.path.abspath(profiles_dir) and path.is_file():
+        try:
+            with open(path, encoding="utf-8") as fh:
+                profile = json.load(fh)
+            from archer.visualization import exposure as exposure_mod
+            expo = exposure_mod.build(profile)
+        except (OSError, ValueError):
+            expo = None
+    return templates.TemplateResponse("exposure.html", {"request": request, "user": user,
+                                                        "domain": safe, "exposure": expo})
+
+
+@app.get("/catalogue", response_class=HTMLResponse)
+def catalogue_page(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Every organisation profiled so far (data/profiles/*_profile.json), newest first, each linking
+    to its exposure map. Like the Library, but for company OSINT rather than detections.
+    """
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return auth_result
+    user, db = auth_result
+    db.close()
+
+    companies = []
+    profiles_dir = Path("data") / "profiles"
+    if profiles_dir.is_dir():
+        for path in profiles_dir.glob("*_profile.json"):
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    prof = json.load(fh)
+            except (OSError, ValueError):
+                continue
+            ci = prof.get("company_info") or {}
+            osint = prof.get("osint") or {}
+            net = ci.get("networks") or {}
+            domain = prof.get("domain") or ci.get("domain")
+            if not domain:
+                continue
+            companies.append({
+                "domain": domain,
+                "name": ci.get("company_name") or domain,
+                "country": ci.get("country"),
+                "risk": prof.get("risk_score") or 0,
+                "groups": len(prof.get("recommended_groups") or []),
+                "timestamp": prof.get("timestamp"),
+                "ips": len(ci.get("ip_addresses") or []),
+                "subdomains": len(osint.get("subdomains") or []),
+                "asns": len(net.get("asns") or []),
+                "hosting": net.get("hosting_countries") or [],
+                "breaches": (prof.get("breach_surface") or {}).get("count") or 0,
+            })
+    companies.sort(key=lambda c: c["timestamp"] or "", reverse=True)
+    return templates.TemplateResponse("catalogue.html", {"request": request, "user": user, "companies": companies})
+
+
 LIBRARY_VENDORS = (("googlesecops", "Google SecOps"), ("mde", "Defender XDR"), ("splunk", "Splunk"), ("elastic", "Elastic"))
 # Not generated yet: shown, marked Coming Soon (as on the Profile page)
 LIBRARY_COMING_SOON = {"elastic"}
@@ -10457,7 +10532,7 @@ async def save_api_keys(request: Request, archer_session: Optional[str] = Cookie
         # these routes used "key_name", so no key was ever saved (each save raised and
         # the page still said "saved"). Shodan/SecurityTrails/GitHub had fields but
         # weren't in the list; "local" is the optional key of a local model endpoint.
-        platforms = ("secops", "splunk", "mde", "elastic", "shodan", "securitytrails", "github",
+        platforms = ("secops", "splunk", "mde", "elastic", "shodan", "securitytrails", "hibp", "github",
                      "openai", "anthropic", "google", "deepseek", "qwen", "grok", "local")
         # A cleared field removes its key, but only when the page had loaded the saved
         # keys first: a page that failed to load must not wipe them

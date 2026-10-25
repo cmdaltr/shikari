@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Archer - Companies Catalogue{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<style>
+  .cat-head { margin: 0 0 6px; }
+  .cat-sub { color: var(--text-secondary); margin: 0 0 24px; }
+  .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
+  .cat-card { border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; background: var(--bg-secondary, var(--bg-primary));
+    display: flex; flex-direction: column; gap: 12px; transition: border-color .15s, box-shadow .15s; }
+  .cat-card:hover { border-color: #0284C7; box-shadow: 0 6px 18px rgba(2, 132, 199, .12); }
+  .cat-card h3 { margin: 0; font-size: 1.1rem; }
+  .cat-card h3 a { color: var(--text-primary); text-decoration: none; }
+  .cat-card h3 a:hover { color: #0284C7; }
+  .cat-meta { color: var(--text-secondary); font-size: .88rem; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .cat-stats { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cat-stat { font-size: .82rem; padding: 3px 9px; border-radius: 999px; background: var(--bg-primary); border: 1px solid var(--border-color); }
+  .cat-stat.breach { color: #B91C1C; border-color: #FCA5A5; }
+  [data-theme="dark"] .cat-stat.breach { color: #F87171; border-color: #7f1d1d; }
+  .cat-risk { font-weight: 700; }
+  .cat-risk.low { color: #0D9488; } .cat-risk.med { color: #D97706; } .cat-risk.high { color: #B91C1C; }
+  [data-theme="dark"] .cat-risk.low { color: #2DD4BF; } [data-theme="dark"] .cat-risk.med { color: #FBBF24; } [data-theme="dark"] .cat-risk.high { color: #F87171; }
+  .cat-actions { margin-top: auto; display: flex; gap: 10px; }
+  .cat-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-weight: 600;
+    text-decoration: none; font-size: .9rem; background: #0284C7; color: #fff; }
+  .cat-btn:hover { background: #0369A1; }
+  .cat-empty { color: var(--text-secondary); padding: 40px 0; }
+</style>
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container">
+  <div class="page-header">
+    <h1 class="cat-head">Companies</h1>
+    <p class="cat-sub">Organisations you have profiled, newest first. Each links to its exposure map.</p>
+  </div>
+
+  {% if companies %}
+  <div class="cat-grid">
+    {% for c in companies %}
+    <div class="cat-card" data-card-static>
+      <h3><a href="/exposure?domain={{ c.domain | urlencode }}">{{ c.name }}</a></h3>
+      <div class="cat-meta">
+        <span>{{ c.domain }}</span>
+        {% if c.country %}<span>· {{ c.country }}</span>{% endif %}
+        {% if c.timestamp %}<span>· profiled {{ c.timestamp[:10] }}</span>{% endif %}
+      </div>
+      <div class="cat-stats">
+        <span class="cat-stat">Risk <span class="cat-risk {{ 'high' if c.risk >= 70 else 'med' if c.risk >= 40 else 'low' }}">{{ c.risk }}</span></span>
+        {% if c.ips %}<span class="cat-stat">{{ c.ips }} IP{{ '' if c.ips == 1 else 's' }}</span>{% endif %}
+        {% if c.asns %}<span class="cat-stat">{{ c.asns }} ASN{{ '' if c.asns == 1 else 's' }}</span>{% endif %}
+        {% if c.subdomains %}<span class="cat-stat">{{ c.subdomains }} subdomain{{ '' if c.subdomains == 1 else 's' }}</span>{% endif %}
+        {% if c.groups %}<span class="cat-stat">{{ c.groups }} group{{ '' if c.groups == 1 else 's' }}</span>{% endif %}
+        {% if c.breaches %}<span class="cat-stat breach">{{ c.breaches }} breach{{ '' if c.breaches == 1 else 'es' }}</span>{% endif %}
+      </div>
+      {% if c.hosting %}<div class="cat-meta">Hosted in {{ c.hosting | join(', ') }}</div>{% endif %}
+      <div class="cat-actions">
+        <a class="cat-btn" href="/exposure?domain={{ c.domain | urlencode }}">Exposure map →</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="cat-empty">No organisations profiled yet. Profile a domain on the <a href="/">home page</a> and it will appear here.</p>
+  {% endif %}
+</div>
+{% endblock %}

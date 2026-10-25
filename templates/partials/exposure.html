@@ -1,0 +1,82 @@
+{# Organisation exposure map. Context: exposure (archer.visualization.exposure.build), domain. #}
+{% set icons = {
+  'org': 'M3 21h18M5 21V8l7-5 7 5v13M9 21v-5h6v5M8 11h.01M12 11h.01M16 11h.01',
+  'ip': 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
+  'asn': 'M6 6a2 2 0 1 0 0-.01zM18 6a2 2 0 1 0 0-.01zM12 20a2 2 0 1 0 0-.01zM8 6h8M7 8l4 10M17 8l-4 10',
+  'dns': 'M4 5h16v5H4zM4 14h16v5H4zM7 7.5h.01M7 16.5h.01',
+  'mail': 'M3 6h18v12H3zM3 7l9 6 9-6',
+  'web': 'M12 3a3 3 0 1 0 0 6a3 3 0 1 0 0-6zM5 21a3 3 0 1 0 0-.01zM19 21a3 3 0 1 0 0-.01zM12 9v3M12 12l-6 6M12 12l6 6',
+  'tech': 'M12 3l9 5-9 5-9-5zM3 12l9 5 9-5M3 16l9 5 9-5',
+  'cert': 'M12 3l7 4v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V7zM9 12l2 2 4-4',
+  'service': 'M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 18z',
+  'breach': 'M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7zM12 8v4M12 16h.01',
+  'history': 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM12 7v5l3 2',
+} %}
+<div id="exposure" class="detection-section af-section an-section ex-section">
+  <div class="detection-header">
+    <h2>
+      <div class="card-icon" style="width: 40px; height: 40px; margin-right: 12px; background: transparent;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="18" r="2.5"/>
+          <path d="M11 7.5L6 15.5M13 7.5l5 8M7.5 18h9"/>
+        </svg>
+      </div>
+      Exposure Map
+    </h2>
+  </div>
+
+  <p class="af-stats">
+    What profiling <strong>{{ domain }}</strong> surfaced from public sources, and how each piece links back to the domain &mdash;
+    the attack surface a threat actor can see before acting. Nothing is harvested.
+  </p>
+
+  <div class="af-body">
+    <div class="an-canvas">
+      <svg class="an-svg" id="ex-svg" viewBox="0 0 {{ exposure.width }} {{ exposure.height }}" role="img"
+           aria-label="Exposure map for {{ domain }}">
+        <defs>
+          <filter id="ex-sketch" x="-5%" y="-5%" width="110%" height="110%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7"/>
+            <feDisplacementMap in="SourceGraphic" scale="2.2"/>
+          </filter>
+          <marker id="ex-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M0,1 L9,5 L0,9" class="ex-arrow"/>
+          </marker>
+        </defs>
+        {% for e in exposure.edges %}
+        <g class="an-edge ex-edge" data-edge="{{ loop.index0 }}" data-source="{{ e.source }}" data-target="{{ e.target }}"
+           tabindex="0" role="button" aria-label="{{ e.label or 'Link' }}">
+          <path class="an-hit" d="{{ e.path }}"/>
+          <path class="an-line ex-line" d="{{ e.path }}" marker-end="url(#ex-arrow)" filter="url(#ex-sketch)"/>
+          {% if e.label %}<text class="an-edge-label" x="{{ e.lx }}" y="{{ e.ly }}">{{ e.label }}</text>{% endif %}
+        </g>
+        {% endfor %}
+        {% for n in exposure.nodes %}
+        <g class="an-node an-kind-{{ n.kind }}" data-id="{{ n.id }}" transform="translate({{ n.x }},{{ n.y }})" tabindex="0" role="button"
+           aria-label="{{ n.title }}{% if n.sub %} ({{ n.sub }}){% endif %}">
+          <circle class="an-disc" r="30" filter="url(#ex-sketch)"/>
+          <path class="an-icon" d="{{ icons.get(n.kind, icons['ip']) }}" transform="translate(-12,-12)"/>
+          {% for l in n.lines %}
+          <text class="an-{{ l.cls }}" y="{{ 52 + loop.index0 * 16 }}">{{ l.text }}</text>
+          {% endfor %}
+        </g>
+        {% endfor %}
+      </svg>
+    </div>
+
+    <aside class="af-detail" id="ex-detail" aria-live="polite" hidden>
+      <button type="button" class="af-detail-close" id="ex-detail-close" aria-label="Close details">×</button>
+      <div id="ex-detail-body"></div>
+    </aside>
+  </div>
+
+  <div class="af-legend ex-legend">
+    <span><span class="ex-dot k-infra"></span> DNS &amp; hosting</span>
+    <span><span class="ex-dot k-surface"></span> Public surface</span>
+    <span><span class="ex-dot k-service"></span> Exposed services</span>
+    <span><span class="ex-dot k-breach"></span> Breach &amp; leak surface</span>
+    <span class="af-legend-hint">Select a component for the detail behind it</span>
+  </div>
+
+  <script type="application/json" id="ex-data">{{ exposure|tojson }}</script>
+</div>

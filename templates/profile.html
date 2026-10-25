@@ -532,6 +532,20 @@
 
                 <div class="apikey-item">
                   <label class="apikey-label">
+                    <svg class="siem-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="28" height="28" style="display: inline-block; vertical-align: middle; margin-right: 8px;"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7zM12 8v4M12 16h.01"/></svg>
+                    Have I Been Pwned API Key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="Optional — breach lookups work without it"
+                           id="hibp-key">
+                  </div>
+                  <div class="apikey-hint">Org-level breach metadata for the exposure map. Works without a key; a key raises the rate limit (get one at <a href="https://haveibeenpwned.com/API/Key" target="_blank">haveibeenpwned.com</a>)</div>
+                </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label">
                     <img class="siem-logo logo-mono" src="/static/images/brands/github.png" alt="GitHub" width="28" height="28" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
                     GitHub Token
                   </label>

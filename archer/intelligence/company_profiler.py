@@ -120,6 +120,14 @@ class CompanyProfiler:
         # 2. OSINT reconnaissance
         profile['osint'] = self._gather_osint(domain)
 
+        # Breach/leak surface: the email domain a threat actor would pivot on, plus org-level breach
+        # metadata (names, dates, counts — never accounts). Link-out always; keyless.
+        from archer.intelligence import network_enrichment as net
+        profile['breach_surface'] = net.breach_metadata(domain)
+        profile['breach_surface']['email_domain'] = domain
+        if profile['breach_surface']['count']:
+            print(f"  ✓ {profile['breach_surface']['count']} known breach(es) recorded for {domain}")
+
         # 3. Industry analysis
         if options.get('include_industry'):
             profile['threat_profile']['industry'] = self._analyze_industry(
@@ -714,7 +722,10 @@ class CompanyProfiler:
             'country': None,
             'registrar': None,
             'ip_addresses': [],
-            'nameservers': []
+            'nameservers': [],
+            'mx': [],
+            'mail_provider': None,
+            'networks': {}
         }
 
         # Get IP addresses
@@ -724,6 +735,18 @@ class CompanyProfiler:
             print(f"  ✓ Found {len(info['ip_addresses'])} IP address(es)")
         except socket.gaierror as e:
             print(f"  ⚠ Could not resolve domain: {e}")
+
+        # Networks the IPs sit in (ASN, announced prefix, hosting country) and the mail exchangers —
+        # passive, from Team Cymru and DNS. Best-effort: missing data just leaves these empty.
+        from archer.intelligence import network_enrichment as net
+        if info['ip_addresses']:
+            info['networks'] = net.enrich_ips(info['ip_addresses'])
+            if info['networks'].get('asns'):
+                print(f"  ✓ {len(info['networks']['asns'])} ASN(s), {len(info['networks']['prefixes'])} prefix(es), hosting in {', '.join(info['networks']['hosting_countries']) or '?'}")
+        info['mx'] = net.mx_records(domain)
+        info['mail_provider'] = net.mail_provider(info['mx']) or None
+        if info['mx']:
+            print(f"  ✓ {len(info['mx'])} MX record(s){' — ' + info['mail_provider'] if info['mail_provider'] else ''}")
 
         # Get nameservers
         try:

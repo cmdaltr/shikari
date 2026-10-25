@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Archer - {{ domain }} Exposure Map{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/attack_flow.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/anatomy.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/exposure.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container af-standalone">
+  <div class="page-header">
+    <h1>{{ domain }}</h1>
+    <p>Organisation exposure map{% if exposure %} · <a href="/">New profile →</a>{% endif %}</p>
+  </div>
+  {% if exposure %}
+    {% include "partials/exposure.html" %}
+  {% else %}
+  <section class="detection-section">
+    <p class="af-empty">No profile for <strong>{{ domain }}</strong> yet. Profile the domain on the
+      <a href="/">home page</a> first, and its exposure map will be here.</p>
+  </section>
+  {% endif %}
+</div>
+{% if exposure %}<script src="{{ url_for('static', path='js/exposure.js') }}?v={{ request.app.state.asset_version }}"></script>{% endif %}
+{% endblock %}

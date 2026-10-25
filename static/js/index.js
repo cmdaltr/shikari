@@ -1239,6 +1239,7 @@ function showThreatGroupSelection(domain, recommendedGroups, profile) {
   }
   html += '<p style="margin: 0.3em 0;"><strong>Risk Score:</strong> ' + (profile.risk_score || 0) + '/100</p>';
   html += '<p style="margin: 0.3em 0;"><strong>Recommended Groups:</strong> ' + recommendedGroups.length + '</p>';
+  html += '<p style="margin: 0.8em 0 0;"><a href="/exposure?domain=' + encodeURIComponent(domain) + '" target="_blank" rel="noopener" style="display:inline-block;padding:7px 15px;background:#0284C7;color:#fff;border-radius:4px;text-decoration:none;font-weight:600;">🔎 View exposure map</a> <span style="color:#666;font-size:0.9em;">what\'s publicly exposed, and how it links together</span></p>';
   html += '</div>';
 
   // Threat group checkboxes

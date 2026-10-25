@@ -1,0 +1,57 @@
+/* Organisation exposure map. Builds on anatomy.css (same .an-* node/edge/detail styles); here we
+   colour the component types and make the links solid neutral (they're relationships, not detections). */
+
+.ex-section .ex-line { stroke: var(--an-none); stroke-dasharray: none; stroke-width: 2; }
+.ex-section .ex-arrow { fill: none; stroke: var(--an-none); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.ex-section .an-edge-label { fill: var(--af-muted); }
+
+/* Component colours: infra (blue), public surface (teal), exposed services (amber), breach (red) */
+.ex-section .an-kind-org .an-disc { stroke-width: 2.6; }
+.ex-section .an-kind-org .an-icon { stroke: var(--af-text); }
+
+.ex-section .an-kind-ip .an-icon,
+.ex-section .an-kind-asn .an-icon,
+.ex-section .an-kind-dns .an-icon,
+.ex-section .an-kind-mail .an-icon { stroke: #0284C7; }
+.ex-section .an-kind-ip .an-disc,
+.ex-section .an-kind-asn .an-disc,
+.ex-section .an-kind-dns .an-disc,
+.ex-section .an-kind-mail .an-disc { stroke: #7DD3FC; }
+
+.ex-section .an-kind-web .an-icon,
+.ex-section .an-kind-cert .an-icon,
+.ex-section .an-kind-tech .an-icon { stroke: #0D9488; }
+.ex-section .an-kind-web .an-disc,
+.ex-section .an-kind-cert .an-disc,
+.ex-section .an-kind-tech .an-disc { stroke: #5EEAD4; }
+
+.ex-section .an-kind-service .an-icon { stroke: #D97706; }
+.ex-section .an-kind-service .an-disc { stroke: #FCD34D; }
+
+.ex-section .an-kind-breach .an-icon { stroke: #DC2626; }
+.ex-section .an-kind-breach .an-disc { stroke: #FCA5A5; stroke-width: 2.4; }
+
+.ex-section .an-kind-history .an-icon { stroke: #64748B; }
+
+[data-theme="dark"] .ex-section .an-kind-ip .an-icon,
+[data-theme="dark"] .ex-section .an-kind-asn .an-icon,
+[data-theme="dark"] .ex-section .an-kind-dns .an-icon,
+[data-theme="dark"] .ex-section .an-kind-mail .an-icon { stroke: #7DD3FC; }
+[data-theme="dark"] .ex-section .an-kind-web .an-icon,
+[data-theme="dark"] .ex-section .an-kind-cert .an-icon { stroke: #2DD4BF; }
+[data-theme="dark"] .ex-section .an-kind-service .an-icon { stroke: #FBBF24; }
+[data-theme="dark"] .ex-section .an-kind-breach .an-icon { stroke: #F87171; }
+
+/* Legend swatches */
+.ex-legend .ex-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; vertical-align: -1px; margin-right: 2px; }
+.ex-legend .ex-dot.k-infra { background: #0284C7; }
+.ex-legend .ex-dot.k-surface { background: #0D9488; }
+.ex-legend .ex-dot.k-service { background: #D97706; }
+.ex-legend .ex-dot.k-breach { background: #DC2626; }
+
+/* Breach detail: the lookup link and recorded breaches */
+.ex-breach-link { display: inline-block; margin: 6px 0 10px; font-weight: 600; color: #DC2626; }
+[data-theme="dark"] .ex-breach-link { color: #F87171; }
+.ex-breach-list { list-style: none; padding: 0; margin: 0; }
+.ex-breach-list li { padding: 6px 0; border-top: 1px solid var(--an-ring); font-size: 0.92em; }
+.ex-breach-list .pwn { color: var(--af-muted); }

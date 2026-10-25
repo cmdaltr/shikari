@@ -329,7 +329,7 @@ function toggleApiKeyVisibility(inputId) {
 }
 
 // SIEM and OSINT keys: one input each. AI keys are the provider rows below.
-const API_KEY_FIELDS = ['secops', 'splunk', 'mde', 'elastic', 'shodan', 'securitytrails', 'github'];
+const API_KEY_FIELDS = ['secops', 'splunk', 'mde', 'elastic', 'shodan', 'securitytrails', 'hibp', 'github'];
 const AI_PROVIDERS = [
   { id: 'anthropic', label: 'Anthropic Claude', placeholder: 'sk-ant-...' },
   { id: 'openai', label: 'OpenAI', placeholder: 'sk-...' },
