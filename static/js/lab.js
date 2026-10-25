@@ -51,7 +51,7 @@
     return [...byOs].map(([os, group]) => {
       const g0 = group[0];
       const row = canLab ? `<div class="lab-create-row">${group.map(createButton).join('')}</div>` : '';
-      return `<div class="lab-template"><div class="lab-template-top"><span class="lab-template-name">${osIcon(os)}<strong>${esc(g0.os_name)}</strong></span></div>
+      return `<div class="lab-template"><div class="lab-template-top"><span class="lab-template-name">${osIcon(os, g0.os_name)}<strong>${esc(g0.os_name)}</strong></span></div>
         <p class="lab-template-about">${esc(g0.os_about)}</p>
         <p class="lab-template-records"><span>Records:</span> ${esc(g0.os_records)}</p>${row}</div>`;
     }).join('');
@@ -85,9 +85,11 @@
     return `<button type="button" class="ui-pill lab-create" data-t="${esc(t.id)}" title="${esc(title)}"${t.ready ? '' : ' disabled'}>${engineIcon(t.engine)}<span>Create</span></button>`;
   }
 
-  const OS_ICON = { windows: 'windows.svg', macos: 'macos.png', linux: 'linux.png' };
-  function osIcon(os) {
-    const f = OS_ICON[os];
+  // Tux for Linux generally; the Ubuntu mark only when the build is actually Ubuntu
+  const OS_ICON = { windows: 'windows.svg', macos: 'macos.png', linux: 'tux.svg' };
+  function osIcon(os, name = '') {
+    let f = OS_ICON[os];
+    if (os === 'linux' && /ubuntu/i.test(name)) f = 'ubuntu.png';
     if (!f) return '';
     return `<img class="lab-os-icon is-${esc(os)}" src="/static/images/os/${f}" alt="${esc(os)}" width="18" height="18">`;
   }
@@ -124,7 +126,7 @@
       </div>`;
     }
     return `<li class="lab-machine" data-engine="${esc(m.engine)}" data-name="${esc(m.name)}" data-os="${esc(m.os)}">
-      <div class="lab-machine-head">${dot}${osIcon(m.os)}<strong>${esc(m.name)}</strong></div>
+      <div class="lab-machine-head">${dot}${osIcon(m.os, m.name)}<strong>${esc(m.name)}</strong></div>
       <div class="lab-machine-meta">${meta}${m.detail ? ' · ' + esc(m.detail) : ''}</div>${steps}${actions}</li>`;
   }
 

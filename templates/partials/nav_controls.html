@@ -41,10 +41,10 @@
     ('/mitresaw', 'MITRESaw', false, 'mitresaw', "ATT&CK procedures and their indicators"),
   ]),
   ('Build', 'build', [
+    ('/emulate', 'Emulate', false, 'emulate', 'Which logs record each technique, and your detections against them'),
     ('/manual', 'Manual', false, 'manual', 'Write detections one technique at a time'),
     ('/regex', 'Regex', false, 'regex', 'Test a regex and check it for each SIEM'),
     ('/agents', 'Agents', true, 'agents', 'Models that repair queries and triage reports'),
-    ('/emulate', 'Emulate', false, 'emulate', 'Which logs record each technique, and your detections against them'),
   ]),
 ] %}
 {% macro svg(name) %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ ICON[name] | safe }}</svg>{% endmacro %}

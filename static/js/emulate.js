@@ -36,7 +36,7 @@
   const STATUS = { seen: 'Seen', not_seen: 'Not seen', no_recordings: 'No recordings', no_indicators: 'No indicators', noisy: 'Noisy indicator' };
   const PLATFORM = { windows: 'Windows', linux: 'Linux', macos: 'macOS', esxi: 'ESXi', cloud: 'Cloud' };
   // Platform marks: OS logos where we have them, a cloud glyph otherwise
-  const PLATFORM_IMG = { windows: '/static/images/os/windows.svg', linux: '/static/images/os/linux.png', macos: '/static/images/os/macos.png', esxi: '/static/images/os/vmware.svg' };
+  const PLATFORM_IMG = { windows: '/static/images/os/windows.svg', linux: '/static/images/os/tux.svg', macos: '/static/images/os/macos.png', esxi: '/static/images/os/vmware.svg' };
   const CLOUD_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 18h9a4 4 0 0 0 .5-7.97A6 6 0 0 0 5 9.3 3.5 3.5 0 0 0 6.5 18Z"/></svg>';
   const platIcon = (p) => {
     const name = PLATFORM[p] || p, src = PLATFORM_IMG[p];
