@@ -2,7 +2,7 @@
 
 Step by step: set up disposable Windows, Linux and macOS test machines, run Atomic Red Team on them, and bring each test's logs, and Defender for Endpoint's own rows, into [Emulate](19-emulate.md) as **Your lab**. Public recordings cover Windows well but have nothing recorded by Defender for Endpoint and no macOS unified log; this fills both.
 
-The quickest path is [Emulate → Lab](19-emulate.md#lab-machines-from-inside-archer): create a machine, set logging on and install Atomic Red Team, snapshot it, then **Record** the techniques — Archer runs the atomics in the machine, pulls the logs into `data/telemetry/lab/`, reverts and rebuilds **Your lab** for you. This page is the manual walkthrough of the same steps, and the only path for a machine Archer doesn't manage (an x64 Windows host, physical hardware, or a cloud VM):
+The quickest path is [Emulate → Lab](19-emulate.md#lab-machines-from-inside-archer): create a machine, set logging on and install Atomic Red Team, snapshot it, then **Record** the techniques — Archer runs the atomics in the machine, pulls the logs into `data/telemetry/lab/`, reverts and rebuilds **Your lab** for you. Linux and macOS machines are created from Lab directly; a Windows VM is built once in UTM (part 3) and then managed from Lab the same way. This page is the manual walkthrough of the same steps, and the only path for a machine Archer doesn't manage (physical hardware, a cloud VM, or a VM without the UTM guest tools):
 
 | In Archer | Depends on |
 |---|---|
@@ -16,10 +16,10 @@ The atomics change the machines they run on. Run them only on VMs you can throw 
 
 | | Where | Notes |
 |---|---|---|
-| Windows 11 VM | Apple Silicon or x64 | Windows 11 Enterprise evaluation ISO (free, time-limited). ARM64 on Apple Silicon via UTM/QEMU or VMware Fusion; x64 on the Intel Mac Mini. Archer can't create this one — Tart doesn't run Windows |
+| Windows 11 VM | Apple Silicon (ARM64) | Built once in UTM (part 3), then managed from Lab. Archer can't create it — UTM has no create-from-image and Tart doesn't run Windows |
 | Ubuntu Server 24.04 VM | Any | Or create it from Lab (Docker container or Tart VM) |
 | macOS VM | ARM MacBook | Tart (free) runs macOS VMs on Apple Silicon; create it from Lab |
-| Hypervisor for Windows | | VMware Fusion (free, incl. commercial) or UTM/QEMU (free, open-source); Parallels works but is paid |
+| UTM/QEMU for Windows | Apple Silicon | Free, open-source (`brew install --cask utm`). VMware Fusion (free, incl. commercial) also runs Windows 11 ARM64; Parallels works but is paid |
 | A Defender for Endpoint trial tenant | Microsoft | Only for Defender's own rows; the native logs need nothing |
 | Archer's machine | | Where the runs end up |
 
@@ -42,10 +42,26 @@ export ARCHER_MDE_CLIENT_ID="<application (client) id>"
 export ARCHER_MDE_CLIENT_SECRET="<client secret value>"
 ```
 
-## 3. Windows VM
+## 3. Windows VM (UTM, Apple Silicon)
 
-1. Install Windows 11 Enterprise evaluation. Take a snapshot called `clean`.
-2. Turn on the logging native to Windows that detections rely on (an elevated PowerShell):
+UTM has no create-from-image, so unlike the Linux and macOS machines this one is built by hand once and then managed from Lab. Microsoft ship no ARM64 Windows evaluation ISO; the official UTM gallery is no longer maintained, but a community gallery ([naveenrajm7.github.io/utm-gallery](https://naveenrajm7.github.io/utm-gallery/vms/windows-11.html)) carries a Windows 11 Pro ARM64 box, built with Packer from the Bento template and published as a Vagrant box.
+
+1. Install UTM and fetch the box. The gallery's **Open in UTM** button runs a one-line fetch; the CLI equivalent is:
+
+```bash
+brew install --cask utm
+curl -sSf https://naveenrajm7.github.io/utm-gallery/getbox.sh | sh -s windows-11
+```
+
+   It pulls roughly 5.7 GB and imports the VM into UTM. It's a third-party community image — treat it as untrusted, run it only on a disposable VM, and don't put real credentials in it.
+
+2. In UTM: the box is a headless Vagrant build, so add a **Display** before first boot (Edit → Devices → New → Display), give it 4 GB of RAM, and rename it to a space-free name Archer can address — `archer-win11`. Boot it, log in with the box's default `vagrant` / `vagrant`, and change the password. Snapshot it `clean`.
+
+3. Install the UTM guest tools (the SPICE guest-support package) so Archer can run commands through `utmctl exec`. Without them Archer can still snapshot and revert the VM but can't set it up or record in it, and you fall back to the manual steps below.
+
+4. In Archer, open **Emulate → Lab**. The VM shows under **Your machines**; use **Set OS → Windows** to tell Archer what it is. From there **Set up** turns on audit logging and installs PowerShell 7 and Atomic Red Team (steps 5, 9), and **Record** drives the atomics. Defender onboarding and the antivirus decision (steps 7–8) stay manual either way. The rest of this section is what those buttons do, for a VM Archer can't reach or when you'd rather do it by hand.
+
+5. Turn on the logging native to Windows that detections rely on (an elevated PowerShell):
 
 ```powershell
 auditpol /set /subcategory:"Process Creation" /success:enable /failure:enable
@@ -55,11 +71,11 @@ reg add "HKLM\Software\Policies\Microsoft\Windows\PowerShell\ModuleLogging" /v E
 auditpol /set /category:"Logon/Logoff","Account Management","Object Access","Policy Change","Privilege Use","DS Access" /success:enable /failure:enable
 ```
 
-3. Sysmon is optional. Native logging is what most estates have, and Emulate can count without it, but a recording with Sysmon shows both: install it with a community configuration (SwiftOnSecurity's or Olaf Hartong's sysmon-modular).
-4. To record Defender's rows, run the Windows onboarding script from part 2 and check the device appears under **Assets → Devices**.
-5. Microsoft Defender Antivirus will block many atomics. Either leave it on (the recording then shows what Defender stops, which is realistic) or exclude `C:\AtomicRedTeam` to let the tests run to completion. Decide per run and name the run after it (`-Run win11-av-on`).
-6. Install PowerShell 7 and Atomic Red Team (part 6).
-7. Take a snapshot called `ready`.
+6. Sysmon is optional. Native logging is what most estates have, and Emulate can count without it, but a recording with Sysmon shows both: install it with a community configuration (SwiftOnSecurity's or Olaf Hartong's sysmon-modular).
+7. To record Defender's rows, run the Windows onboarding script from part 2 and check the device appears under **Assets → Devices**.
+8. Microsoft Defender Antivirus will block many atomics. Either leave it on (the recording then shows what Defender stops, which is realistic) or exclude `C:\AtomicRedTeam` to let the tests run to completion. Decide per run and name the run after it (`-Run win11-av-on`).
+9. Install PowerShell 7 and Atomic Red Team (part 6).
+10. Take a snapshot called `ready`.
 
 ## 4. Ubuntu VM
 
