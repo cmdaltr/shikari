@@ -3504,6 +3504,178 @@ async def hunt_technique(
     return JSONResponse({"redirect_url": f"/progress?group_name={quote(group_name)}", "no_detection": doomed})
 
 
+# Technique names too generic to match safely in free text (they are ordinary words, or
+# Reconnaissance sub-techniques whose names are everyday nouns)
+_HYPOTHESIS_NAME_STOPLIST = {
+    "impact", "collection", "discovery", "execution", "phishing", "automated collection",
+    "data manipulation", "network sniffing", "file deletion", "account access removal",
+    "credentials", "email addresses", "employee names", "domains", "software", "malware",
+    "vulnerabilities", "ip addresses", "web services", "exploits", "digital certificates",
+    "code signing", "default accounts", "local account", "domain account", "cloud account",
+}
+
+
+def _technique_name_index() -> dict:
+    """{lowercased technique name: technique ID} from the ATT&CK bundle, built once."""
+    idx = getattr(app.state, "_tech_name_index", None)
+    if idx is not None:
+        return idx
+    idx = {}
+    for obj in (getattr(app.state, "bundle", None) or {}).get("objects", []):
+        if obj.get("type") != "attack-pattern" or obj.get("x_mitre_deprecated") or obj.get("revoked"):
+            continue
+        tid = next((r.get("external_id", "") for r in obj.get("external_references", [])
+                    if r.get("source_name") == "mitre-attack"), "")
+        name = (obj.get("name") or "").strip().lower()
+        if tid and len(name) >= 6 and name not in _HYPOTHESIS_NAME_STOPLIST:
+            idx[name] = tid
+    app.state._tech_name_index = idx
+    return idx
+
+
+def _extract_from_hypothesis(text: str) -> dict:
+    """Deterministically pull ATT&CK out of a free-text hypothesis (no AI).
+
+    Matches explicit T-codes, technique names present in the text, tactics, a named group,
+    and techniques implied by any commands. Returns {technique_ids, tactics, group, named}.
+    """
+    import re as _re
+
+    from archer.parsers.blog_analyzer import (_extract_iocs, _extract_tactics,
+                                              _extract_techniques, _mentions,
+                                              attack_group_names)
+
+    bundle = getattr(app.state, "bundle", None)
+    tids = set(_extract_techniques(text))                       # explicit T1234(.001)
+    low = (text or "").lower()
+    name_hits = {}
+    for name, tid in _technique_name_index().items():           # technique names in the prose
+        if _re.search(r"(?<![a-z0-9])" + _re.escape(name) + r"(?![a-z0-9])", low):
+            tids.add(tid)
+            name_hits[name] = tid
+    iocs = _extract_iocs(text)                                  # techniques implied by commands
+    if bundle is not None and iocs.get("cmd"):
+        from archer.parsers.command_techniques import techniques_for_commands
+        tids |= set(techniques_for_commands(iocs["cmd"]))
+    # Group: the first ATT&CK group whose name or alias is named in the text (whole-word)
+    group = ""
+    if bundle is not None:
+        for alias, canonical in attack_group_names(bundle).items():
+            if _mentions(alias, text):
+                group = canonical
+                break
+    return {
+        "technique_ids": sorted(tids),
+        "tactics": _extract_tactics(text),
+        "group": group,
+        "named": sorted(name_hits.keys()),
+    }
+
+
+@app.post("/hunt/hypothesis")
+async def hunt_hypothesis(
+    request: Request,
+    hypothesis: str = Form(...),
+    scope_group: str = Form(None),
+    use_profile: str = Form(None),
+    use_ai: str = Form(None),
+    ai_provider: str = Form(None),
+    ai_model: str = Form(None),
+    archer_session: Optional[str] = Cookie(None),
+):
+    """Generate detections from a free-text hunting hypothesis.
+
+    Deterministic by default: the hypothesis is mapped to ATT&CK techniques by what it names
+    (T-codes, technique names, a group, commands). Without AI it is used as-is — it can't be
+    refined. Optional scoping narrows to a named group's techniques.
+    """
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    user_id = user.id
+    db.close()
+
+    text = (hypothesis or "").strip()
+    if len(text) < 8:
+        return JSONResponse({"error": "Give a fuller hypothesis — name the techniques, tactics, tools or group you expect."}, status_code=400)
+
+    found = _extract_from_hypothesis(text)
+    technique_id_list = list(found["technique_ids"])
+
+    # Optional: scope to a named threat group. With techniques found, keep only that group's
+    # (intersection); with none, fall back to the group's techniques for the hypothesis's tactics.
+    scope = (scope_group or "").strip()
+    if scope:
+        try:
+            from archer.mitre.procedures import get_group_coverage
+            cov = get_group_coverage(scope, GENERATE_DIR) or {}
+            group_tids = {t.get("technique_id", "").upper()
+                          for key in ("covered", "gaps", "intel_only")
+                          for t in cov.get(key, [])}
+        except Exception:
+            group_tids = set()
+        if group_tids:
+            if technique_id_list:
+                technique_id_list = [t for t in technique_id_list if t in group_tids] or technique_id_list
+            else:
+                technique_id_list = sorted(group_tids)
+
+    if not technique_id_list:
+        return JSONResponse({
+            "error": "Nothing concrete to hunt in that hypothesis. Name techniques (T-codes or names like "
+                     "\"Kerberoasting\"), tactics, tools or a group — or enable AI to refine it.",
+            "extracted": found}, status_code=422)
+
+    genai_mode = _apply_ai_provider_choice(ai_provider, ai_model) if use_ai == "true" else None
+    if genai_mode is None:
+        genai_mode = "heuristic"
+    llm_args = _hunt_llm_args(archer_session, ai_provider, ai_model) if use_ai == "true" else {}
+    siem_args = _siem_args(archer_session)
+
+    slug = re.sub(r"[^A-Za-z0-9]+", "_", text)[:40].strip("_") or "run"
+    group_name = sanitize_group_name(f"Hypothesis_{slug}")
+
+    def _bg():
+        try:
+            write_progress(group_name, {"status": "researching_techniques", "phase": "preparing",
+                                        "stage": "Hypothesis", "created_yaml": 0, "total_yaml": None})
+            tactic_map = {}
+            for n, tech_id in enumerate(technique_id_list):
+                write_progress(group_name, {"research_total": len(technique_id_list), "research_done": n,
+                                            "research_step": "Looking up the technique in ATT&CK", "research_item": tech_id})
+                info = _get_technique_info(tech_id)
+                tactic = info.get("tactic", "Unknown Tactic") if info else "Unknown Tactic"
+                tactic_map.setdefault(tactic, []).extend(_technique_entries(tech_id, info))
+            write_progress(group_name, {"research_done": len(technique_id_list), "research_step": "Research complete", "research_item": None})
+            manual_data = [{"tactic": t, "techniques": te} for t, te in tactic_map.items()]
+            if not manual_data:
+                raise ValueError(f"Could not build detection data for: {technique_id_list}")
+            modified_process_group_wrapper(
+                group_name, hypothesis=text, manual_data=manual_data, genai_mode=genai_mode,
+                run_correlation=True, osint_enhancement=True, osint_comparison=False,
+                lol_datasets=True, merge_by_tactic=False, merge_by_parent=False,
+                **siem_args, **_stack_args(archer_session), **llm_args)
+        except Exception as e:
+            print(f"Hypothesis hunt error: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            try:
+                write_progress(group_name, {"status": "failed", "error": str(e)})
+            except Exception:
+                pass
+
+    try:
+        start_progress(group_name, {"status": "started", "stage": "Hypothesis", "created_yaml": 0,
+                                    "technique_ids": technique_id_list, "user_id": user_id,
+                                    "source_type": "hypothesis", "hypothesis": text})
+    except Exception:
+        pass
+    threading.Thread(target=_bg, daemon=True).start()
+    return JSONResponse({"redirect_url": f"/progress?group_name={quote(group_name)}",
+                         "extracted": found, "techniques": technique_id_list})
+
+
 @app.get("/api/techniques/yield")
 def api_technique_yield(ids: str = "", ai: bool = False, osint: bool = False):
     """
