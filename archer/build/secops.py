@@ -25,12 +25,9 @@ class SecOpsGenerator:
         self.schema = self._load_schema()
 
     def _load_schema(self) -> Dict:
-        """Load Google SecOps UDM schema mappings"""
-        schema_path = Path(__file__).parent.parent.parent / "bespoke" / "mappings" / "schemas" / "schemaGoogleSecOps.json"
-        if schema_path.exists():
-            with open(schema_path, 'r') as f:
-                return json.load(f)
-        return {}
+        """Load Google SecOps UDM schema mappings (the per-tenant override if one is saved, #12)."""
+        from archer.build.schema_overrides import load_active_schema
+        return load_active_schema("secops")
 
     def generate_query(
         self,

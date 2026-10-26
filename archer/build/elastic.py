@@ -54,12 +54,9 @@ class ElasticQueryGenerator:
         self.schema = self._load_schema()
 
     def _load_schema(self) -> Dict:
-        schema_path = Path(__file__).parent.parent.parent / "bespoke" / "mappings" / "schemas" / "schemaElastic.json"
-        try:
-            with open(schema_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except (OSError, ValueError):
-            return {}
+        # The per-tenant override if one is saved, else the base ECS schema (#12).
+        from archer.build.schema_overrides import load_active_schema
+        return load_active_schema("elastic")
 
     def generate_query(
         self,
