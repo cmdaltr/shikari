@@ -10,7 +10,13 @@
   .cat-card { border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; background: var(--bg-secondary, var(--bg-primary));
     display: flex; flex-direction: column; gap: 12px; transition: border-color .15s, box-shadow .15s; }
   .cat-card:hover { border-color: #0284C7; box-shadow: 0 6px 18px rgba(2, 132, 199, .12); }
-  .cat-card h3 { margin: 0; font-size: 1.1rem; }
+  .cat-card-head { display: flex; align-items: center; gap: 12px; }
+  .cat-logo { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 9px; overflow: hidden;
+    background: var(--bg-primary); border: 1px solid var(--border-color);
+    display: flex; align-items: center; justify-content: center; }
+  .cat-logo-img { width: 100%; height: 100%; object-fit: contain; }
+  .cat-logo-mono { font-weight: 800; font-size: 18px; color: #0d9488; font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .cat-card h3 { margin: 0; font-size: 1.1rem; min-width: 0; }
   .cat-card h3 a { color: var(--text-primary); text-decoration: none; }
   .cat-card h3 a:hover { color: #0284C7; }
   .cat-meta { color: var(--text-secondary); font-size: .88rem; display: flex; flex-wrap: wrap; gap: 4px 10px; }
@@ -42,7 +48,15 @@
   <div class="cat-grid">
     {% for c in companies %}
     <div class="cat-card" data-card-static>
-      <h3><a href="/exposure?domain={{ c.domain | urlencode }}">{{ c.name }}</a></h3>
+      <div class="cat-card-head">
+        <span class="cat-logo" aria-hidden="true">
+          <img class="cat-logo-img" alt="" src="https://logo.clearbit.com/{{ c.domain }}?size=128"
+               data-fallback="https://www.google.com/s2/favicons?domain={{ c.domain }}&sz=128"
+               onerror="catLogoError(this)">
+          <span class="cat-logo-mono" hidden>{{ (c.name or c.domain)[:1]|upper }}</span>
+        </span>
+        <h3><a href="/exposure?domain={{ c.domain | urlencode }}">{{ c.name }}</a></h3>
+      </div>
       <div class="cat-meta">
         <span>{{ c.domain }}</span>
         {% if c.country %}<span>· {{ c.country }}</span>{% endif %}
@@ -67,4 +81,14 @@
   <p class="cat-empty">No organisations profiled yet. Profile a domain on the <a href="/">home page</a> and it will appear here.</p>
   {% endif %}
 </div>
+<script>
+  // Company logo fallback chain: Clearbit -> the site's favicon -> a monogram.
+  function catLogoError(img) {
+    const fb = img.getAttribute('data-fallback');
+    if (fb) { img.removeAttribute('data-fallback'); img.src = fb; return; }
+    img.hidden = true;
+    const mono = img.parentElement && img.parentElement.querySelector('.cat-logo-mono');
+    if (mono) mono.hidden = false;
+  }
+</script>
 {% endblock %}
