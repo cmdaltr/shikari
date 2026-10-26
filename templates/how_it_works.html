@@ -790,11 +790,13 @@
                 unless you turn it on.
             </p>
 
-            <div class="diagram">
-                <img src="{{ url_for('static', path='images/architecture/web_diagram.png') }}" alt="Archer architecture: inputs feed a generation pipeline that produces outputs, with config and intelligence sources as context">
+            <div class="diagram" style="padding:0;background:transparent;border:0">
+                <iframe id="arch-frame" src="{{ url_for('static', path='diagrams/architecture.html') }}?v={{ request.app.state.asset_version }}"
+                        title="Archer architecture — web UI and archer-cli" loading="lazy" scrolling="no"
+                        style="width:100%;border:1px solid var(--border-color);border-radius:10px;background:transparent;display:block"></iframe>
                 <div class="diagram-caption">
-                    Inputs on the left feed a six-stage generation pipeline; outputs on the right. Config and the intelligence
-                    sources underneath are context, not inputs.
+                    The web UI (top) and <code>archer-cli</code> (bottom) — the same pipeline. An inline, editable HTML diagram;
+                    open it <a href="{{ url_for('static', path='diagrams/architecture.html') }}" target="_blank" rel="noopener">full size</a> for detail.
                 </div>
             </div>
 
@@ -822,13 +824,6 @@
                 browser. A few surfaces are web-only (the saved Library, the Coverage matrix and Flows); everything else is
                 reachable from the command line.
             </p>
-
-            <div class="diagram">
-                <img src="{{ url_for('static', path='images/architecture/cli_diagram.png') }}" alt="archer-cli: the same pipeline driven from a terminal, with web-only surfaces dimmed">
-                <div class="diagram-caption">
-                    The console and offline commands drive the same six stages; web-only surfaces are dimmed.
-                </div>
-            </div>
 
             <div class="workflow-step">
                 <h4>Without a server at all</h4>
@@ -2177,6 +2172,29 @@ data/APT29/
             const t = (location.hash || '').replace('#', '');
             if (t) activateTab(t, false);
         });
+
+        // Architecture diagram iframe: size it to its content, and refit when the tab opens
+        (function () {
+            const f = document.getElementById('arch-frame');
+            if (!f) return;
+            function setH(h) { if (h && h > 200) f.style.height = h + 'px'; }
+            function calc() { const w = f.clientWidth; if (w) setH(w / 2560 * (1440 * 2 + 24)); }
+            window.addEventListener('message', e => { if (e.data && e.data.archDiagramHeight) setH(e.data.archDiagramHeight); });
+            window.addEventListener('resize', calc);
+            // The diagram self-themes from the shared localStorage on load; push live toggles to it too.
+            function syncTheme() {
+                const t = document.documentElement.getAttribute('data-theme') || 'light';
+                try { f.contentWindow.postMessage({ theme: t }, '*'); } catch (e) {}
+            }
+            f.addEventListener('load', () => { calc(); syncTheme(); });
+            new MutationObserver(syncTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+            calc();
+            const archBtn = document.querySelector('.tab-button[data-tab="architecture"]');
+            if (archBtn) archBtn.addEventListener('click', () => setTimeout(() => {
+                try { f.contentWindow.postMessage({ refit: true }, '*'); } catch (e) {}
+                calc();
+            }, 60));
+        })();
     </script>
     {% include "partials/llm_modal.html" %}
     <script src="{{ url_for('static', path='js/card_collapse.js') }}?v={{ request.app.state.asset_version }}"></script>
