@@ -58,6 +58,8 @@ data/lab/
 data/telemetry/
 # Detections-as-code export (#20): its own git repo, one commit per run
 data/detections_git/
+# Detections-as-code admin config (#20): repo path, optional remote
+data/detections_code.json
 !data/attack_flows/.gitkeep
 
 # Correlations (dynamically generated)

@@ -1079,6 +1079,39 @@
                 <div id="correlation-params-status" style="margin-top: 16px; padding: 12px; border-radius: 6px; display: none;"></div>
               </div>
 
+              {% if user and user.role.value == 'admin' %}
+              <!-- DETECTIONS AS CODE REPO (Admin Only) -->
+              <div class="ui-card" style="padding: 24px; margin-bottom: 32px;">
+                <h3 class="section-title">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                  Detections as code
+                </h3>
+                <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6; margin-bottom: 20px;">
+                  Where <a href="/detections/code">Detections as code</a> commits. A local repository path, and optionally a
+                  git remote to push to after each commit. Credentials aren't stored — a push uses this host's own git auth
+                  (SSH key, credential helper, or a token in the URL).
+                </p>
+                <div style="display: grid; gap: 16px; max-width: 640px;">
+                  <div>
+                    <label style="display:block;font-weight:600;margin-bottom:6px;">Repository path</label>
+                    <input type="text" id="dcfg-path" class="form-input" placeholder="data/detections_git">
+                  </div>
+                  <div>
+                    <label style="display:block;font-weight:600;margin-bottom:6px;">Git remote URL <span style="font-weight:400;color:var(--text-secondary);">(optional)</span></label>
+                    <input type="text" id="dcfg-remote" class="form-input" placeholder="git@github.com:org/detections.git">
+                  </div>
+                  <label style="display:flex;align-items:center;gap:8px;">
+                    <input type="checkbox" id="dcfg-push"> Push to the remote after each commit
+                  </label>
+                </div>
+                <div class="ui-actions" style="margin-top:20px;">
+                  <button id="dcfg-test" class="btn-ghost">Test connectivity</button>
+                  <button id="dcfg-save" class="btn-primary">Save</button>
+                </div>
+                <div id="dcfg-status" style="margin-top:16px;padding:12px;border-radius:6px;display:none;"></div>
+              </div>
+              {% endif %}
+
             </div>
           </div>
 
@@ -2468,6 +2501,48 @@
 
             // Reset button
             document.getElementById('reset-correlation-params')?.addEventListener('click', resetCorrelationParams);
+
+            // Detections as code repo config (admin)
+            (function () {
+                const path = document.getElementById('dcfg-path');
+                if (!path) return;  // not admin
+                const remote = document.getElementById('dcfg-remote');
+                const push = document.getElementById('dcfg-push');
+                const status = document.getElementById('dcfg-status');
+                function show(msg, ok) {
+                    status.style.display = 'block';
+                    status.style.background = ok ? 'rgba(52,168,83,.12)' : 'rgba(217,48,37,.1)';
+                    status.style.color = ok ? '#2e9e4f' : '#d93025';
+                    status.innerHTML = msg;
+                }
+                fetch('/api/detections/code/config').then(r => r.ok ? r.json() : null).then(c => {
+                    if (!c) return;
+                    path.value = c.repo_path || ''; remote.value = c.remote_url || ''; push.checked = !!c.push_enabled;
+                }).catch(() => {});
+                function body() {
+                    const b = new FormData();
+                    b.append('repo_path', path.value); b.append('remote_url', remote.value);
+                    b.append('push_enabled', push.checked ? '1' : '');
+                    return b;
+                }
+                document.getElementById('dcfg-save').addEventListener('click', async () => {
+                    try {
+                        const r = await fetch('/api/detections/code/config', { method: 'POST', body: body() });
+                        const j = await r.json(); if (!r.ok || !j.success) throw new Error(j.error || 'Save failed');
+                        show('Saved.', true);
+                    } catch (e) { show(e.message, false); }
+                });
+                document.getElementById('dcfg-test').addEventListener('click', async () => {
+                    show('Testing…', true);
+                    try {
+                        const r = await fetch('/api/detections/code/config/test', { method: 'POST', body: body() });
+                        const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Test failed');
+                        let msg = `<strong>Path:</strong> ${j.repo_ok ? '✓' : '✗'} ${j.repo_message}`;
+                        if (j.remote_ok !== null) msg += `<br><strong>Remote:</strong> ${j.remote_ok ? '✓' : '✗'} ${j.remote_message}`;
+                        show(msg, j.repo_ok && (j.remote_ok === null || j.remote_ok));
+                    } catch (e) { show(e.message, false); }
+                });
+            })();
         });
     </script>
 

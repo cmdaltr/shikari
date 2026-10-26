@@ -44,7 +44,7 @@
       <select id="dc-ref-a" class="dropdown-styled" aria-label="Older commit">
         {% for c in commits %}<option value="{{ c.sha }}">{{ c.short }} — {{ c.subject }}</option>{% endfor %}
       </select>
-      <span class="dc-arrow">→</span>
+      <span class="dc-arrow">↓</span>
       <select id="dc-ref-b" class="dropdown-styled" aria-label="Newer commit">
         {% for c in commits %}<option value="{{ c.sha }}">{{ c.short }} — {{ c.subject }}</option>{% endfor %}
       </select>
@@ -68,10 +68,13 @@
         <option value="">Select a run…</option>
         {% for g in runs %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
       </select>
-      <select id="dc-push-siem" class="dropdown-styled" aria-label="Target SIEM">
-        <option value="mde">Microsoft Defender XDR</option>
-        <option value="secops">Google SecOps</option>
-      </select>
+      <span class="dc-siem-pick">
+        <img id="dc-push-siem-logo" src="/static/images/siem/mde.png" alt="">
+        <select id="dc-push-siem" class="dropdown-styled" aria-label="Target SIEM">
+          <option value="mde">Microsoft Defender XDR</option>
+          <option value="secops">Google SecOps</option>
+        </select>
+      </span>
       <button type="button" class="btn-primary" id="dc-push">Plan push</button>
       <span class="ms-state" id="dc-push-state" aria-live="polite"></span>
     </div>
@@ -130,6 +133,11 @@
     } catch (e) { state.textContent = e.message; }
   });
 
+  const pushSiem = $('dc-push-siem'), pushSiemLogo = $('dc-push-siem-logo');
+  if (pushSiem && pushSiemLogo) pushSiem.addEventListener('change', () => {
+    pushSiemLogo.src = `/static/images/siem/${pushSiem.value}.png`;
+  });
+
   $('dc-push').addEventListener('click', async () => {
     const g = $('dc-push-group').value, state = $('dc-push-state'), out = $('dc-push-result');
     if (!g) { state.textContent = 'Select a run first.'; return; }
@@ -145,10 +153,14 @@
 })();
 </script>
 <style>
-  .dc-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
-  .dc-actions .form-input, .dc-actions .dropdown-styled { min-width: 180px; }
-  #dc-message { flex: 1 1 220px; }
-  .dc-arrow { color: var(--text-secondary); font-weight: 700; }
+  .dc-actions { display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin-top: 12px; max-width: 460px; }
+  .dc-actions .form-input, .dc-actions .dropdown-styled { width: 100%; box-sizing: border-box; }
+  .dc-actions .btn-primary { width: 100%; }
+  .dc-actions .ms-state { min-height: 1em; }
+  .dc-arrow { color: var(--text-secondary); font-weight: 700; text-align: center; }
+  .dc-siem-pick { display: flex; align-items: center; gap: 8px; }
+  .dc-siem-pick img { width: 22px; height: 22px; object-fit: contain; flex: 0 0 auto; }
+  .dc-siem-pick .dropdown-styled { flex: 1 1 auto; }
   .dc-result { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color); }
   .dc-list { list-style: none; padding: 0; margin: 6px 0; display: flex; flex-direction: column; gap: 3px; }
   .dc-list code { font-size: 0.85em; }

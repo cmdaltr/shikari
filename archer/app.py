@@ -8618,26 +8618,25 @@ def _runs_list():
 @app.get("/detections/code", response_class=HTMLResponse)
 def detections_code_page(request: Request, archer_session: Optional[str] = Cookie(None)):
     """Export detections to a git repo (one commit per run) and diff two commits."""
-    from archer.config import DETECTIONS_REPO_DIR
-    from archer.export import detections_git
+    from archer.export import detections_git, repo_config
 
     auth = require_auth(request, archer_session)
     if isinstance(auth, RedirectResponse):
         return auth
     user, db = auth
     db.close()
-    commits = detections_git.list_commits(DETECTIONS_REPO_DIR, limit=50)
+    repo = repo_config.repo_path()
+    commits = detections_git.list_commits(repo, limit=50)
     return templates.TemplateResponse("detections_code.html", {
         "request": request, "user": user, "runs": _runs_list(), "commits": commits,
-        "repo_path": DETECTIONS_REPO_DIR})
+        "repo_path": repo, "is_admin": user.role.value == "admin"})
 
 
 @app.post("/api/detections/code/export")
 def detections_code_export(request: Request, group: str = Form(...), message: str = Form(""),
                            archer_session: Optional[str] = Cookie(None)):
-    """Commit a group's current detections into the git repo."""
-    from archer.config import DETECTIONS_REPO_DIR
-    from archer.export import detections_git
+    """Commit a group's current detections into the git repo; push if a remote is configured."""
+    from archer.export import detections_git, repo_config
 
     auth = require_auth(request, archer_session)
     if isinstance(auth, RedirectResponse):
@@ -8647,12 +8646,15 @@ def detections_code_export(request: Request, group: str = Form(...), message: st
     safe = sanitize_group_name(group)
     if not group_yaml_files(safe, GENERATE_DIR):
         return JSONResponse({"success": False, "error": f"No detections for {group}. Hunt it first."}, status_code=404)
+    cfg = repo_config.load()
     try:
-        res = detections_git.export_run(safe, GENERATE_DIR, DETECTIONS_REPO_DIR,
+        res = detections_git.export_run(safe, GENERATE_DIR, cfg["repo_path"],
                                         group_yaml_files, message=message.strip() or None)
     except Exception as e:
         return JSONResponse({"success": False, "error": f"Export failed: {e}"}, status_code=500)
     res["success"] = True
+    if res.get("committed") and cfg.get("push_enabled") and cfg.get("remote_url"):
+        res["push"] = repo_config.push(cfg["repo_path"], cfg["remote_url"], res.get("branch", "main"))
     return JSONResponse(res)
 
 
@@ -8660,8 +8662,7 @@ def detections_code_export(request: Request, group: str = Form(...), message: st
 def detections_code_diff(request: Request, ref_a: str = Form(...), ref_b: str = Form(...),
                          group: str = Form(""), archer_session: Optional[str] = Cookie(None)):
     """Added / removed / changed detections between two commits."""
-    from archer.config import DETECTIONS_REPO_DIR
-    from archer.export import detections_git
+    from archer.export import detections_git, repo_config
 
     auth = require_auth(request, archer_session)
     if isinstance(auth, RedirectResponse):
@@ -8671,7 +8672,7 @@ def detections_code_diff(request: Request, ref_a: str = Form(...), ref_b: str = 
     for ref in (ref_a, ref_b):
         if not re.fullmatch(r"[0-9a-fA-F]{7,40}|HEAD(~\d+)?", ref.strip()):
             return JSONResponse({"success": False, "error": "Pick two commits from the list"}, status_code=400)
-    diff = detections_git.diff_runs(DETECTIONS_REPO_DIR, ref_a.strip(), ref_b.strip(),
+    diff = detections_git.diff_runs(repo_config.repo_path(), ref_a.strip(), ref_b.strip(),
                                     group=sanitize_group_name(group) if group else None)
     diff["success"] = True
     return JSONResponse(diff)
@@ -8701,6 +8702,54 @@ def detections_code_push(request: Request, group: str = Form(...), siem: str = F
                      "siem": connector_siem.get(connector, connector)})
     plan = siem_push.plan_push(siem, dets, execute=False)
     return JSONResponse(plan, status_code=200 if plan.get("success") else 400)
+
+
+@app.get("/api/detections/code/config")
+def detections_code_config_get(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """The detections-as-code repo config (admin only)."""
+    from archer.export import repo_config
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in"}, status_code=401)
+    user, db = auth
+    db.close()
+    if user.role != UserRole.ADMIN:
+        return JSONResponse({"error": "Admin access required"}, status_code=403)
+    return JSONResponse(repo_config.load())
+
+
+@app.post("/api/detections/code/config")
+def detections_code_config_save(request: Request, repo_path: str = Form(...), remote_url: str = Form(""),
+                                push_enabled: str = Form(""), archer_session: Optional[str] = Cookie(None)):
+    """Save the detections-as-code repo config (admin only)."""
+    from archer.export import repo_config
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
+    user, db = auth
+    db.close()
+    if user.role != UserRole.ADMIN:
+        return JSONResponse({"success": False, "error": "Admin access required"}, status_code=403)
+    saved = repo_config.save(repo_path, remote_url, push_enabled in ("1", "true", "on", "yes"))
+    return JSONResponse({"success": True, **saved})
+
+
+@app.post("/api/detections/code/config/test")
+def detections_code_config_test(request: Request, repo_path: str = Form(...), remote_url: str = Form(""),
+                                archer_session: Optional[str] = Cookie(None)):
+    """Test the configured path and remote (admin only; remote check is read-only)."""
+    from archer.export import repo_config
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in"}, status_code=401)
+    user, db = auth
+    db.close()
+    if user.role != UserRole.ADMIN:
+        return JSONResponse({"error": "Admin access required"}, status_code=403)
+    return JSONResponse(repo_config.test_connectivity(repo_path, remote_url))
 
 
 # ---------------------------------------------------------------------------
