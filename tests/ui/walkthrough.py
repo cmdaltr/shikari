@@ -120,8 +120,16 @@ def _progress_status(page):
     group = parse_qs(urlparse(page.url).query).get("group_name", [None])[0]
     if not group or "/progress" not in page.url:
         return None
-    resp = page.request.get(f"{BASE}/progress_status", params={"group_name": group})
-    return (resp.json() or {}).get("progress") if resp.ok else None
+    # A single transient reset (ECONNRESET under generation load) shouldn't fail the step;
+    # retry a couple of times before giving up and letting the next poll try again.
+    for attempt in range(3):
+        try:
+            resp = page.request.get(f"{BASE}/progress_status", params={"group_name": group})
+            return (resp.json() or {}).get("progress") if resp.ok else None
+        except Exception:
+            if attempt == 2:
+                return None
+            page.wait_for_timeout(500)
 
 
 _BAR_VALUES = """() => ['yaml-progress', 'genai-progress'].map(id => {
@@ -198,6 +206,40 @@ def wait_for_results(page, label):
             raise RuntimeError(f"run completed with no detections ({shown})")
         page.wait_for_timeout(1000)
     raise TimeoutError(f"no /results after {GEN_TIMEOUT}s (stuck on {page.url})")
+
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_TERMINAL_STATUS = {"complete", "genai_complete", "failed", "profile_complete", "stopped"}
+
+
+def wait_for_runs_settled(page, timeout=120):
+    """Wait (bounded) for any background generation to drain before a load-sensitive step.
+
+    A leftover queue (e.g. the Profile step's group hunts) competing for the LLM can starve
+    an agent run and time it out. A run counts as active if its progress record isn't terminal
+    and was touched in the last 30s; a stale record is treated as drained.
+    """
+    import json as _json
+
+    progress_dir = _REPO_ROOT / "data" / "progress"
+    if not progress_dir.is_dir():
+        return
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        active = []
+        for path in progress_dir.glob("*.json"):
+            try:
+                if time.time() - path.stat().st_mtime > 30:
+                    continue  # stale: the run is long gone
+                status = (_json.loads(path.read_text()) or {}).get("status", "")
+            except Exception:
+                continue
+            if status and status not in _TERMINAL_STATUS:
+                active.append(path.stem)
+        if not active:
+            return
+        caption(page, f"Waiting for {len(active)} in-flight run(s) to settle: {', '.join(active[:3])}")
+        page.wait_for_timeout(2000)
 
 
 def expand_results(page):
@@ -633,6 +675,8 @@ def ask_archer(page):
 def agents(page):
     page.goto(f"{BASE}/agents")
     caption(page, "Agents: a model in a loop with Archer's tools")
+    # Let any leftover generation drain so it can't starve the agent's LLM calls
+    wait_for_runs_settled(page)
     page.wait_for_selector(".ag-pick")
     if page.locator(".ag-start[disabled]").count():
         return "skipped: no AI provider in the profile"
