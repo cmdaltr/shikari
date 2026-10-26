@@ -8856,6 +8856,34 @@ def assessment_create(request: Request, name: str = Form(...), target: str = For
     return JSONResponse({"success": True, "id": aid})
 
 
+@app.get("/api/threat-library/macat-export")
+def threat_library_macat_export(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """The user's threat-library test cases as a MACATable library TOML (MACAT/VECTR interop)."""
+    import json as _json
+
+    from archer.assessments.macat import test_cases_to_macatable
+    from archer.database.models import ThreatTestCase
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in to export"}, status_code=401)
+    user, db = auth
+    try:
+        rows = db.query(ThreatTestCase).filter(ThreatTestCase.user_id == user.id) \
+            .order_by(ThreatTestCase.prevalence.desc(), ThreatTestCase.technique_id).all()
+        cases = [{"signature": c.signature, "technique_id": c.technique_id, "technique_name": c.technique_name,
+                  "tactic": c.tactic, "procedure": c.procedure, "atomic_guid": c.atomic_guid,
+                  "group_name": c.group_name,
+                  "indicators": _json.loads(c.indicators) if c.indicators else {}} for c in rows]
+    finally:
+        db.close()
+    if not cases:
+        return JSONResponse({"error": "No test cases to export. Build some first."}, status_code=404)
+    toml = test_cases_to_macatable(cases)
+    return Response(content=toml, media_type="application/toml",
+                    headers={"Content-Disposition": 'attachment; filename="archer_threat_library.macatable.toml"'})
+
+
 @app.get("/assessments/{assessment_id}", response_class=HTMLResponse)
 def assessment_detail(assessment_id: int, request: Request, archer_session: Optional[str] = Cookie(None)):
     """One campaign: its test cases with red/blue outcomes, the detections and logs for each."""

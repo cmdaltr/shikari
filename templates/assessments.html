@@ -77,7 +77,12 @@
     <section class="ui-card ms-card">
       <div class="tl-head">
         <h2>Test cases <span class="tl-count">{{ cases|length }}</span></h2>
-        {% if cases %}<button type="button" class="btn-secondary" id="tl-clear">Clear all</button>{% endif %}
+        {% if cases %}
+        <div class="tl-head-actions">
+          <a class="btn-secondary" href="/api/threat-library/macat-export" title="MACATable library TOML for MACAT / VECTR">Export for MACAT</a>
+          <button type="button" class="btn-secondary" id="tl-clear">Clear all</button>
+        </div>
+        {% endif %}
       </div>
       {% if cases %}
       <table class="tl-table">
@@ -175,6 +180,7 @@
   .as-actions .form-input { flex: 1 1 160px; min-width: 130px; }
   .tl-or { color: var(--text-secondary); }
   .tl-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .tl-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .tl-count, .tl-prev { display: inline-block; min-width: 22px; text-align: center; background: var(--bg-secondary);
     border: 1px solid var(--border-color); border-radius: 10px; padding: 1px 8px; font-size: 0.85em; font-weight: 700; }
   .tl-prev { background: rgba(94,129,172,.18); border-color: transparent; }

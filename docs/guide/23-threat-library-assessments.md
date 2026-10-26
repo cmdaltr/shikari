@@ -26,6 +26,10 @@ Outcomes export two ways:
 - **CSV** — a flat row per technique with both outcomes, the detection and notes.
 - **ATT&CK Navigator layer** — the matrix scored by blue outcome, shading from "not logged" through "logged" and "alerted" to "prevented".
 
+## Export for MACAT
+
+**Export for MACAT** (Threat library tab) downloads your test cases as a MACATable library TOML — the format [MACAT](https://www.macat.io) imports. Each test case becomes a `[[lib_procedures]]` entry tagged with the technique, tactic and attributing group, with the matching Atomic Red Team GUID noted so MACAT pairs it with the ART procedure it already syncs. Archer's test cases are intelligence, not runnable commands, so the export carries procedure metadata, not executable steps — MACAT runs the Atomic and pushes results to VECTR. It's a one-way, offline file; Archer takes no dependency on MACAT.
+
 ## Notes
 
 - Storage is the existing SQLite database, per user. No organisation data goes into git.
