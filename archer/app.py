@@ -3572,6 +3572,50 @@ def _extract_from_hypothesis(text: str) -> dict:
     }
 
 
+def _ai_refine_hypothesis(text: str, user_id: int, db) -> list:
+    """Ask the user's LLM which ATT&CK techniques a hypothesis implies (empty if none/unavailable).
+
+    This is the refine step: it reads intent the deterministic matcher can't — a vague hypothesis
+    that names no techniques by T-code or name. Falls back silently to nothing if no provider answers.
+    """
+    import re as _re
+
+    from archer import chat
+    try:
+        candidates, assigned = chat._provider_candidates(user_id, db)
+    except Exception:
+        candidates = []
+        assigned = False
+    if not candidates:
+        return []
+    system = ("You map a threat-hunting hypothesis to MITRE ATT&CK. Return only the technique IDs "
+              "(T#### or T####.###) the hypothesis implies, comma-separated, most specific first — "
+              "no prose. Prefer sub-techniques when the hypothesis is specific.")
+    try:
+        resp, _label = chat._generate(candidates, assigned, "hypothesis refine",
+                                      prompt=f"Hypothesis: {text.strip()}", system_prompt=system,
+                                      max_tokens=400, temperature=0)
+    except Exception:
+        return []
+    return sorted(set(_re.findall(r"\bT\d{4}(?:\.\d{3})?\b", (resp.content or "").upper())))
+
+
+def _profile_recommended_techniques(limit: int = 40) -> list:
+    """The most recently profiled organisation's recommended technique IDs (industry/profile scope)."""
+    import glob
+
+    files = sorted(glob.glob(os.path.join("data", "profiles", "*_profile.json")),
+                   key=os.path.getmtime, reverse=True)
+    if not files:
+        return []
+    try:
+        with open(files[0], encoding="utf-8") as fh:
+            d = json.load(fh)
+    except Exception:
+        return []
+    return [t.strip().upper() for t in (d.get("recommended_techniques") or [])[:limit] if str(t).strip()]
+
+
 @app.post("/hunt/hypothesis")
 async def hunt_hypothesis(
     request: Request,
@@ -3586,22 +3630,38 @@ async def hunt_hypothesis(
     """Generate detections from a free-text hunting hypothesis.
 
     Deterministic by default: the hypothesis is mapped to ATT&CK techniques by what it names
-    (T-codes, technique names, a group, commands). Without AI it is used as-is — it can't be
-    refined. Optional scoping narrows to a named group's techniques.
+    (T-codes, technique names, a group, commands). With AI it is also refined — the model reads
+    intent the matcher can't. Optional scoping narrows to a named group, or broadens to the
+    organisation's likely adversaries from the most recent profile.
     """
     auth_result = require_auth(request, archer_session)
     if isinstance(auth_result, RedirectResponse):
         return JSONResponse({"error": "Not authenticated"}, status_code=401)
     user, db = auth_result
     user_id = user.id
-    db.close()
 
     text = (hypothesis or "").strip()
     if len(text) < 8:
+        db.close()
         return JSONResponse({"error": "Give a fuller hypothesis — name the techniques, tactics, tools or group you expect."}, status_code=400)
 
     found = _extract_from_hypothesis(text)
-    technique_id_list = list(found["technique_ids"])
+    technique_id_list = set(found["technique_ids"])
+
+    # Refine with AI: the model maps intent the deterministic matcher can't (needs db for keys)
+    refined = []
+    if use_ai == "true":
+        refined = _ai_refine_hypothesis(text, user_id, db)
+        technique_id_list |= set(refined)
+    db.close()
+
+    # Industry/profile scope: broaden to the most recently profiled org's likely adversaries
+    from_profile = []
+    if use_profile == "true":
+        from_profile = _profile_recommended_techniques()
+        technique_id_list |= set(from_profile)
+
+    technique_id_list = sorted(technique_id_list)
 
     # Optional: scope to a named threat group. With techniques found, keep only that group's
     # (intersection); with none, fall back to the group's techniques for the hypothesis's tactics.
@@ -3626,6 +3686,8 @@ async def hunt_hypothesis(
             "error": "Nothing concrete to hunt in that hypothesis. Name techniques (T-codes or names like "
                      "\"Kerberoasting\"), tactics, tools or a group — or enable AI to refine it.",
             "extracted": found}, status_code=422)
+
+    technique_id_list = technique_id_list[:60]  # keep a widened run from running away
 
     genai_mode = _apply_ai_provider_choice(ai_provider, ai_model) if use_ai == "true" else None
     if genai_mode is None:
@@ -3673,7 +3735,8 @@ async def hunt_hypothesis(
         pass
     threading.Thread(target=_bg, daemon=True).start()
     return JSONResponse({"redirect_url": f"/progress?group_name={quote(group_name)}",
-                         "extracted": found, "techniques": technique_id_list})
+                         "extracted": found, "ai_refined": refined, "from_profile": from_profile,
+                         "techniques": technique_id_list})
 
 
 @app.get("/api/techniques/yield")

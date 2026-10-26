@@ -434,6 +434,7 @@
                 <div class="hypo-opts">
                   <input type="text" id="hypo-group" class="form-input hypo-group" placeholder="Scope to a threat group (optional): APT29, FIN7…" maxlength="120">
                   <label class="option-item hypo-ai"><input type="checkbox" id="hypo-ai"><span class="option-label">Refine with AI</span></label>
+                  <label class="option-item"><input type="checkbox" id="hypo-profile"><span class="option-label">Use my industry &amp; profile</span></label>
                 </div>
                 <div class="hypo-cat">
                   <p class="hypo-cat-title">Starter hypotheses — open one and use it:</p>
@@ -502,6 +503,7 @@
                 body.set('hypothesis',text.value.trim());
                 if(group.value.trim()) body.set('scope_group',group.value.trim());
                 if(ai.checked) body.set('use_ai','true');
+                var prof=document.getElementById('hypo-profile'); if(prof && prof.checked) body.set('use_profile','true');
                 fetch('/hunt/hypothesis',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body})
                   .then(function(r){ return r.json().then(function(d){ return {ok:r.ok,status:r.status,d:d}; }); })
                   .then(function(res){
