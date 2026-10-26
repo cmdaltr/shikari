@@ -8625,11 +8625,13 @@ def detections_code_page(request: Request, archer_session: Optional[str] = Cooki
         return auth
     user, db = auth
     db.close()
-    repo = repo_config.repo_path()
+    cfg = repo_config.load()
+    repo = cfg["repo_path"]
     commits = detections_git.list_commits(repo, limit=50)
     return templates.TemplateResponse("detections_code.html", {
         "request": request, "user": user, "runs": _runs_list(), "commits": commits,
-        "repo_path": repo, "is_admin": user.role.value == "admin"})
+        "repo_path": repo, "remote_url": cfg["remote_url"], "push_enabled": cfg["push_enabled"],
+        "repo_configured": repo_config.is_configured(), "is_admin": user.role.value == "admin"})
 
 
 @app.post("/api/detections/code/export")

@@ -45,6 +45,11 @@ def repo_path() -> str:
     return load()["repo_path"]
 
 
+def is_configured() -> bool:
+    """True once an admin has saved config; false while it's still the built-in default."""
+    return os.path.isfile(_PATH)
+
+
 def test_connectivity(repo_path: str, remote_url: str = "") -> Dict:
     """Check the local path is usable and, if a remote is given, that git can reach it (read-only)."""
     out = {"repo_ok": False, "repo_message": "", "remote_ok": None, "remote_message": ""}

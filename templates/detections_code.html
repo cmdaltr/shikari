@@ -13,8 +13,23 @@
   <div class="page-header">
     <h1>Detections as code</h1>
     <p>Commit a run's detections to a git repository, then diff two commits to see what a Regenerate
-      changed. One tree per group under <code>{{ repo_path }}</code>. No AI involved.</p>
+      changed. One tree per group. No AI involved.</p>
   </div>
+
+  <!-- Configured repository -->
+  {% if repo_configured %}
+  <div class="dc-repo dc-repo-set">
+    <span class="dc-repo-label">Repository</span>
+    <code class="dc-repo-path">{{ repo_path }}</code>
+    {% if remote_url %}<span class="dc-repo-sep">→</span><code class="dc-repo-remote">{{ remote_url }}</code>
+      <span class="dc-repo-flag">{{ 'push on commit' if push_enabled else 'push off' }}</span>{% endif %}
+  </div>
+  {% else %}
+  <div class="dc-repo dc-repo-unset">
+    <span>No repository configured.{% if is_admin %} Set one under <a href="/profile#config">Profile → Config</a>.{% else %} An admin can set one under Profile → Config.{% endif %}
+      Exports go to the built-in default <code>{{ repo_path }}</code>.</span>
+  </div>
+  {% endif %}
 
   <!-- Export -->
   <section class="ui-card ms-card">
@@ -44,7 +59,6 @@
       <select id="dc-ref-a" class="dropdown-styled" aria-label="Older commit">
         {% for c in commits %}<option value="{{ c.sha }}">{{ c.short }} — {{ c.subject }}</option>{% endfor %}
       </select>
-      <span class="dc-arrow">↓</span>
       <select id="dc-ref-b" class="dropdown-styled" aria-label="Newer commit">
         {% for c in commits %}<option value="{{ c.sha }}">{{ c.short }} — {{ c.subject }}</option>{% endfor %}
       </select>
@@ -153,11 +167,23 @@
 })();
 </script>
 <style>
-  .dc-actions { display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin-top: 12px; max-width: 460px; }
+  .dc-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) max-content;
+    align-items: center; gap: 10px; margin-top: 12px; }
   .dc-actions .form-input, .dc-actions .dropdown-styled { width: 100%; box-sizing: border-box; }
-  .dc-actions .btn-primary { width: 100%; }
-  .dc-actions .ms-state { min-height: 1em; }
-  .dc-arrow { color: var(--text-secondary); font-weight: 700; text-align: center; }
+  .dc-actions .btn-primary { white-space: nowrap; }
+  .dc-actions .ms-state { grid-column: 1 / -1; min-height: 1em; }
+  @media (max-width: 640px) { .dc-actions { grid-template-columns: 1fr; } }
+  .dc-repo { margin: 0 0 18px; padding: 10px 14px; border-radius: 10px; font-size: 0.9rem;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .dc-repo code { font-size: 0.85em; }
+  .dc-repo-set { background: rgba(2, 132, 199, .08); border: 1px solid rgba(2, 132, 199, .3); }
+  .dc-repo-unset { background: var(--bg-secondary); border: 1px solid var(--border-color);
+    color: var(--text-secondary); }
+  .dc-repo-label { text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.7em; font-weight: 700;
+    color: var(--text-secondary); }
+  .dc-repo-sep { color: var(--text-secondary); font-weight: 700; }
+  .dc-repo-flag { font-size: 0.72em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 1px 8px; border-radius: 8px; background: var(--bg-secondary); border: 1px solid var(--border-color); }
   .dc-siem-pick { display: flex; align-items: center; gap: 8px; }
   .dc-siem-pick img { width: 22px; height: 22px; object-fit: contain; flex: 0 0 auto; }
   .dc-siem-pick .dropdown-styled { flex: 1 1 auto; }
