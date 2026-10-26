@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from archer.client import ArcherClient
+from archer.telemetry import check as _telemetry_check
 from archer.validation.static_check import check_query as _check_query
 from archer.validation.static_check import mde_table_columns
 
@@ -89,6 +90,10 @@ def build_tools(ctx: ToolContext, names: Optional[List[str]] = None) -> List[Too
 
     def technique_info(technique_id: str) -> Dict:
         return c.technique(technique_id)
+
+    def noisy_indicators(technique_id: str = "", indicators=None, min_techniques: int = 5) -> Dict:
+        return _telemetry_check.noisy(indicators=_list(indicators), technique_id=technique_id,
+                                      min_techniques=max(2, min_techniques))
 
     def technique_coverage(technique_ids: List[str]) -> Dict:
         return c.technique_coverage(_list(technique_ids))
@@ -206,6 +211,15 @@ def build_tools(ctx: ToolContext, names: Optional[List[str]] = None) -> List[Too
              _schema({"table": _str("Table name")}, ["table"]), mde_columns),
         Tool("technique_info", "An ATT&CK technique: name, tactics, platforms, description.",
              _schema({"technique_id": _str("e.g. T1003.001")}, ["technique_id"]), technique_info),
+        Tool("noisy_indicators", "Which indicators are poor discriminators — recorded in many unrelated "
+             "techniques' attack telemetry (a likely false-positive source). Pass indicators to vet a "
+             "detection's own match values, or technique_id for that technique's recorded values shared "
+             "with other techniques. Values also seen in lab background activity are flagged broad.",
+             _schema({"technique_id": _str("e.g. T1059.001 (its own recorded values)"),
+                      "indicators": {"type": "array", "items": {"type": "string"},
+                                     "description": "Match values to vet, e.g. process names, paths, command fragments"},
+                      "min_techniques": {"type": "integer", "description": "Flag at/above this many techniques (default 5)"}}),
+             noisy_indicators),
         Tool("technique_coverage", "Which of these ATT&CK techniques already have a detection in Archer.",
              _schema({"technique_ids": {"type": "array", "items": {"type": "string"}}}, ["technique_ids"]),
              technique_coverage),

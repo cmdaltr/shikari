@@ -86,6 +86,32 @@ def test_check_without_recordings_or_values():
         assert check.check({"technique_id": "T1003.001", "indicators": {"cmd": ["x.exe"]}})["status"] == "no_values"
 
 
+def test_noisy_flags_indicators_shared_across_techniques():
+    a, b = recorded()
+    with a, b:
+        r = check.noisy(indicators=["rundll32.exe", "comsvcs.dll, MiniDump", "never-seen-xyz"],
+                        technique_id="T1003.001", min_techniques=1)
+    assert r["status"] == "ok" and r["checked"] == 3
+    by = {i["indicator"]: i for i in r["noisy"]}
+    # rundll32.exe is recorded for T1003.001 (own) and the six T1059.001 recordings (one other technique)
+    assert by["rundll32.exe"]["other_techniques"] == 1 and by["rundll32.exe"]["in_own_technique"]
+    # distinctive to its own technique, and one never recorded at all: both specific, not noisy
+    assert "comsvcs.dll, MiniDump" in r["specific"] and "never-seen-xyz" in r["specific"]
+
+
+def test_noisy_derives_candidates_from_a_technique():
+    a, b = recorded()
+    with a, b:
+        r = check.noisy(technique_id="T1059.001", min_techniques=5)
+    assert r["derived_from_technique"] and r["status"] == "ok" and r["checked"] >= 1
+
+
+def test_noisy_without_values():
+    with patch.object(ds, "load", return_value=RECORDINGS), patch.object(ds, "values", return_value=None):
+        check._haystack.clear()
+        assert check.noisy(indicators=["x.exe"], technique_id="T1003.001")["status"] == "no_values"
+
+
 def test_technique_view_and_data_sources():
     a, b = recorded()
     with a, b:

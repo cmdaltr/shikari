@@ -266,3 +266,59 @@ def search(text: str, limit: int = 400) -> Optional[Dict[str, List[str]]]:
         if len(out) >= limit:
             break
     return {t: sorted(v) for t, v in sorted(out.items())}
+
+
+def _recorded_values(tid: str, cap: int = 40) -> List[str]:
+    """Distinct field values from a technique's own recordings — candidate indicators to vet."""
+    vals = ds.values() or {}
+    own_ids = {d["id"] for d in ds.for_technique(tid)}
+    out: List[str] = []
+    for did in own_ids:
+        for fields in (vals.get(did) or {}).values():
+            for values in fields.values():
+                for v in values:
+                    v = str(v).strip()
+                    if len(v) >= 4 and not v.isdigit():
+                        out.append(v)
+    return list(dict.fromkeys(out))[:cap]
+
+
+def noisy(indicators: Optional[Iterable[str]] = None, technique_id: str = "",
+          min_techniques: int = NOISY) -> Dict:
+    """Which indicator strings are poor discriminators: recorded while many unrelated techniques ran.
+
+    For each indicator, the distinct techniques whose recorded telemetry contains it (found via
+    ``search``). With a technique_id, its own family is set aside so the count is of *other*
+    techniques, and the indicator is marked for whether its own technique recorded it at all; an
+    indicator in ``min_techniques`` or more other techniques is noisy. Given no indicators but a
+    technique_id, the technique's own recorded field values are vetted — the artefacts too common to
+    key a detection on. A cheap false-positive signal before hit counts against a real SIEM.
+    """
+    base = {"min_techniques": min_techniques,
+            "technique": technique_id.upper() if technique_id else "", "noisy": [], "checked": 0}
+    if _index() is None:
+        return {**base, "status": "no_values"}
+    tid = str(technique_id or "").upper()
+    family = tid.split(".")[0]
+
+    def is_own(t: str) -> bool:
+        return bool(tid) and (t == tid or t == family or t.startswith(family + "."))
+
+    cands = [str(v).strip() for v in (indicators or []) if str(v).strip()]
+    derived = not cands and bool(tid)
+    if derived:
+        cands = _recorded_values(tid)
+    rows = []
+    for value in dict.fromkeys(cands):
+        if len(value.replace(GAP, "")) < MIN_LEN:
+            continue
+        hits = {t for t in (search(value) or {}) if t != "T0000"}
+        others = sorted(t for t in hits if not is_own(t))
+        rows.append({"indicator": value, "techniques": len(hits), "other_techniques": len(others),
+                     "in_own_technique": any(is_own(t) for t in hits), "examples": others[:12],
+                     "noisy": len(others) >= min_techniques})
+    rows.sort(key=lambda r: -r["other_techniques"])
+    status = "no_recordings" if (derived and not rows) else "ok"
+    return {**base, "status": status, "derived_from_technique": derived, "checked": len(rows),
+            "noisy": [r for r in rows if r["noisy"]],
+            "specific": [r["indicator"] for r in rows if not r["noisy"]][:40]}

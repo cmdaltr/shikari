@@ -16,7 +16,7 @@ from .runtime import Agent
 from .tools import build_tools
 
 READ = ["search_library", "get_run_results", "get_detection", "check_query", "mde_columns", "technique_info",
-        "technique_coverage", "group_coverage", "find_actors", "actor_techniques", "run_status"]
+        "noisy_indicators", "technique_coverage", "group_coverage", "find_actors", "actor_techniques", "run_status"]
 
 REPAIR = Agent(
     name="repair",
@@ -165,11 +165,13 @@ is a likely duplicate. For a suspected pair, get_detection on both and compare t
 and indicators is a duplicate; overlapping but not identical is worth consolidating.
 3. technique_coverage (and technique_info) to note lopsided coverage — a technique detected many times \
 over while others have none.
-4. Write the report (Markdown, British English):
+4. noisy_indicators on a detection's match values (or its technique) to flag ones recorded across many \
+unrelated techniques — a detection resting only on those is a likely false-positive source worth noting.
+5. Write the report (Markdown, British English):
    ## Summary: how many detections reviewed, how many duplicate/overlap groups found.
    ## Duplicates: a table — technique, platform, the detections (titles/ids), which to keep and why.
    ## Overlaps: pairs that aren't identical but tread on each other, each with a one-line suggestion.
-   ## Notes: lopsided coverage, or very old entries (created_at).
+   ## Notes: lopsided coverage, noisy-indicator detections, or very old entries (created_at).
 
 Only report what the tools show. Don't call two detections duplicates without comparing their queries. \
 Never claim you removed or changed anything — you have no tool that can.""",
@@ -177,7 +179,8 @@ Never claim you removed or changed anything — you have no tool that can.""",
         "scope": {"label": "Focus",
                   "placeholder": "A platform (mde/secops/splunk/elastic), tag or technique — blank = recent"},
     },
-    tools=lambda ctx: build_tools(ctx, ["search_library", "get_detection", "technique_coverage", "technique_info"]),
+    tools=lambda ctx: build_tools(ctx, ["search_library", "get_detection", "technique_coverage", "technique_info",
+                                        "noisy_indicators"]),
     task=lambda i: ("Audit the detection library for duplicates and overlaps"
                     + (f", focusing on {i['scope'].strip()}" if (i.get("scope") or "").strip() else "")
                     + ". Start with search_library."),
