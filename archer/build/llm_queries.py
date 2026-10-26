@@ -155,6 +155,43 @@ def build_llm_prompt(
 # LLM response parsing
 # ---------------------------------------------------------------------------
 
+def detect_degenerate_response(response_text: str) -> Optional[str]:
+    """A reason string if the answer is a repetition loop or truncated before its JSON closed,
+    else None. Local models (qwen3, deepseek-r1 on CPU) tend to loop a token sequence until the
+    output limit, or stop mid-JSON — either way nothing parseable. Pure text heuristics so the
+    caller can reject the answer and log why rather than retry blind. See #9."""
+    text = re.sub(r"<think>[\s\S]*?</think>", "", response_text or "").strip()
+    if not text:
+        return "empty answer"
+
+    # Repetition loop: a short unit (1–60 chars) repeated back-to-back 10+ times, anywhere in the
+    # tail, spanning at least 300 chars. A backreference finds the unit wherever the loop sits.
+    tail = text[-2000:]
+    loop = re.search(r"(.{1,60}?)\1{9,}", tail, re.S)
+    if loop and len(loop.group(0)) >= 300 and loop.group(1).strip():
+        unit = loop.group(1)
+        reps = len(loop.group(0)) // len(unit)
+        snippet = " ".join(unit.split())[:40]
+        return f"repetition loop ({reps}× {len(unit)}-char sequence '{snippet}')"
+
+    # Truncated JSON: an object was started but the braces never balanced (and no closing brace
+    # follows the last opening one). done_reason=length upstream produces exactly this.
+    first = text.find("{")
+    if first != -1:
+        depth, closed_ok = 0, False
+        for ch in text[first:]:
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    closed_ok = True
+                    break
+        if not closed_ok:
+            return "truncated before the JSON object closed"
+    return None
+
+
 def parse_llm_response(response_text: str) -> List[Dict]:
     """Parse an LLM response into structured query dicts.
 
@@ -458,7 +495,9 @@ def _call_ollama(prompt: str, endpoint: str, config: dict) -> str:
             "model": config.get("model", "default"),
             "stream": False,
             "think": False,  # qwen3 and other reasoning models: the answer, not the reasoning
-            "options": {"num_ctx": num_ctx, "num_predict": max_tokens},
+            # repeat_penalty discourages the token loops local models fall into on CPU (#9)
+            "options": {"num_ctx": num_ctx, "num_predict": max_tokens,
+                        "repeat_penalty": float(config.get("repeat_penalty", 1.15))},
             "messages": [{"role": "user", "content": prompt}],
         },
         timeout=int(config.get("timeout", 1800)),  # a 30k-token prompt on CPU takes minutes
@@ -584,6 +623,13 @@ def generate_llm_queries(
         # None, not []: a failed call says nothing about whether the technique can yield
         print(f"  LLM call failed for {technique_id}: {e}")
         return None
+
+    # Reject a looping or truncated answer before parsing: it writes nothing and logs why,
+    # rather than yielding a half-query or a misleading parse failure (#9).
+    degenerate = detect_degenerate_response(response)
+    if degenerate:
+        _keep_unusable_response(technique_id, f"[rejected: {degenerate}]\n\n{response}")
+        return []
 
     # Contract documents (root key archer_output) are validated and persisted by the
     # contract pipeline; a failing or rejected document returns nothing (fail closed).
