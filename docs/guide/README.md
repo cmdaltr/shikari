@@ -27,7 +27,7 @@ The menu bar has three menus (Detections, Intel, Build), then Profile and Help. 
 | Catalogue | Intel → Catalogue | Every organisation profiled so far; opens each one's exposure map | [Company profile](04-company-profile.md#companies-catalogue) |
 | Feed | Intel → Feed | This week's threat research, tagged; search all research | [Threat Feed](10-threat-feed.md) |
 | Cyber Powers | Intel → Cyber Powers | National cyber capability, attribution and targeting on a map | [Cyber Powers](11-cyber-powers.md) |
-| STIX/TAXII & MISP | Intel → STIX/TAXII & MISP | Import STIX, TAXII or MISP intel as a hunt input; export a run as a STIX 2.1 bundle | [STIX/TAXII & MISP](21-stix-taxii-misp.md) |
+| STIX/TAXII & MISP | Intel → STIX/TAXII & MISP | Import STIX, TAXII or MISP intel (incl. a MISP instance) as a hunt input; export a run as a STIX bundle or MISP event | [STIX/TAXII & MISP](21-stix-taxii-misp.md) |
 | MITRESaw | Intel → MITRESaw | ATT&CK procedures and their indicators; OSINT repository status | [MITRESaw](12-mitresaw.md) |
 | Manual | Build → Manual | Write detections from your own TTPs, one technique at a time | [Manual](13-manual.md) |
 | Emulate | Build → Emulate | Which logs record each technique (native OS logs first); your detections' indicators against recorded attacks; Defender XDR's own alerting | [Emulate](19-emulate.md) |
@@ -36,6 +36,7 @@ The menu bar has three menus (Detections, Intel, Build), then Profile and Help. 
 | Regex | Build → Regex | Test a regex and check it for the SIEM it will run in | [Regex](14-regex.md) |
 | Agents and Ask Archer | Build → Agents; the chat button | AI that repairs queries, answers questions, triages reports | [Agents and Ask Archer](15-agents-and-ask-archer.md) |
 | Profile (settings) | Profile | Your account, SIEMs, industries, country, API keys, MFA, users | [Profile and settings](16-profile-and-settings.md) |
+| SIEM data sources | Profile → Config | Which tables / UDM event types the estate ingests; flags and excludes detections that can't fire | [SIEM data sources](24-siem-data-sources.md) |
 | Console, API and MCP | Terminal | Everything above without the browser | [Console, API and MCP](17-console-api-mcp.md) |
 | Data and updates | — | What Archer downloads, when, and where it keeps it | [Data and updates](18-data-and-updates.md) |
 | Terms | — | ATT&CK, IOC, correlation, OSINT and the rest | [Glossary](glossary.md) |

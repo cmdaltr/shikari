@@ -8,6 +8,8 @@ Pick a run and commit its detections. Each one is written to a stable path — `
 
 Re-exporting rewrites the group's tree, so a detection that a Regenerate dropped disappears from the commit rather than lingering. If nothing changed since the last export, no commit is made.
 
+A detection that needs a data source the estate doesn't ingest is left out of the commit (it can't fire, so there's no point committing it) and listed separately as excluded. This follows what you set under [SIEM data sources](24-siem-data-sources.md); with nothing configured, everything is committed.
+
 The repository is a plain git repo. An admin sets where it lives, and optionally a remote to push to, under **Profile → Config → Detections as code**: a repository path, a git remote URL, and whether to push after each commit. **Test connectivity** checks the path is writable and, if a remote is set, that git can reach it (a read-only `git ls-remote`). Credentials aren't stored — a push uses this host's own git auth (SSH key, credential helper, or a token in the URL). With no remote configured it stays local, and you can `git push` by hand.
 
 ## History and diff
