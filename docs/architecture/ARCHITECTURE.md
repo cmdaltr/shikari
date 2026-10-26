@@ -11,28 +11,23 @@ Complete architecture and design documentation for Archer.
 
 ### System Diagrams
 
+The component architecture (web UI and `archer-cli`) is now a single
+theme-aware inline HTML/SVG diagram at `static/diagrams/architecture.html`,
+rendered on the Help page. The old Graphviz `cli_diagram`/`web_diagram`
+DOT pipeline has been retired.
+
 #### Flow Diagrams
 Located in `diagrams/flow/`:
 - `archer_flow.dot` - System flow (GraphViz source)
 - `archer_flow.pdf` - System flow (PDF)
 - `archer_flow.png` - System flow (PNG)
 
-#### Component Diagrams
-Located in `diagrams/components/`:
-- `cli_diagram.dot/pdf/png` - CLI architecture
-- `web_diagram.dot/pdf/png` - Web interface architecture
-
 ### Updating Diagrams
 
-To regenerate diagrams from .dot files:
+To regenerate the flow diagram from its .dot file:
 
 ```bash
-# Flow diagrams
 cd docs/architecture/diagrams/flow
-python update.py
-
-# Component diagrams
-cd docs/architecture/diagrams/components
 python update.py
 ```
 
@@ -45,8 +40,7 @@ python update.py
 
 ### For Architects
 - [System Flow Diagram](diagrams/flow/archer_flow.pdf) - Overall system flow
-- [CLI Architecture](diagrams/components/cli_diagram.pdf) - Command-line interface
-- [Web Architecture](diagrams/components/web_diagram.pdf) - Web application structure
+- [Component Architecture](../../static/diagrams/architecture.html) - Web UI and `archer-cli` (inline, on the Help page)
 
 ## Directory Structure
 
@@ -57,14 +51,13 @@ docs/architecture/
 ├── PERFORMANCE_ARCHITECTURE.md    # Performance documentation
 ├── SCHEMA_NORMALIZATION.md        # Schema design
 └── diagrams/
-    ├── flow/                      # System flow diagrams
-    │   ├── archer_flow.dot
-    │   ├── archer_flow.pdf
-    │   ├── archer_flow.png
-    │   └── update.py
-    └── components/                # Component diagrams
-        ├── cli_diagram.dot/pdf/png
-        ├── web_diagram.dot/pdf/png
+    └── flow/                      # System flow diagrams
+        ├── archer_flow.dot
+        ├── archer_flow.pdf
+        ├── archer_flow.png
         └── update.py
 ```
+
+The component architecture (web UI and `archer-cli`) lives at
+`static/diagrams/architecture.html`.
 
