@@ -20,6 +20,7 @@ The menu bar has three menus (Detections, Intel, Build), then Profile and Help. 
 | Research | Home → Research | Find groups by keyword and compare their techniques | [Research](05-research.md) |
 | Results | Opens after a run | A run's detections, correlations, attack flow and briefing | [Results](06-results.md) |
 | Library | Detections → Library | Everything you've saved, with filters, tags and exports | [Library](07-library.md) |
+| Detections as code | Detections → Detections as code | Commit a run's detections to git and diff two commits | [Detections as code](22-detections-as-code.md) |
 | Coverage | Detections → Coverage | Which techniques the reference queries and your detections cover | [Coverage](08-coverage.md) |
 | Flows | Detections → Flows | Every saved attack flow: what you can and can't detect | [Flows](09-flows.md) |
 | Anatomy | Detections → Anatomy | Every saved threat group's and CVE's anatomy workflow | [Flows](09-flows.md#anatomy) |

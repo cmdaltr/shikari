@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Archer - Detections as code{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/mitresaw.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container ms-page dc-page">
+  <div class="page-header">
+    <h1>Detections as code</h1>
+    <p>Commit a run's detections to a git repository, then diff two commits to see what a Regenerate
+      changed. One tree per group under <code>{{ repo_path }}</code>. No AI involved.</p>
+  </div>
+
+  <!-- Export -->
+  <section class="ui-card ms-card">
+    <h2>Export a run to git</h2>
+    <p class="ms-note">Each detection is written to a stable path
+      (<code>&lt;group&gt;/&lt;siem&gt;/&lt;technique&gt;_&lt;name&gt;.yaml</code>) and committed. Re-exporting after a
+      Regenerate produces a commit whose diff is exactly the added, removed and changed queries.</p>
+    <div class="dc-actions">
+      <select id="dc-export-group" class="dropdown-styled" aria-label="Run to export">
+        <option value="">Select a run…</option>
+        {% for g in runs %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+      </select>
+      <input type="text" id="dc-message" class="form-input" placeholder="Commit message (optional)">
+      <button type="button" class="btn-primary" id="dc-export">Export to git</button>
+      <span class="ms-state" id="dc-export-state" aria-live="polite"></span>
+    </div>
+    <div id="dc-export-result" class="dc-result" hidden></div>
+    {% if not runs %}<p class="ms-note">No runs yet. Hunt a group, CVE or report first.</p>{% endif %}
+  </section>
+
+  <!-- History + diff -->
+  <section class="ui-card ms-card">
+    <h2>History and diff</h2>
+    {% if commits %}
+    <p class="ms-note">Pick two commits to compare. Older on the left.</p>
+    <div class="dc-actions">
+      <select id="dc-ref-a" class="dropdown-styled" aria-label="Older commit">
+        {% for c in commits %}<option value="{{ c.sha }}">{{ c.short }} — {{ c.subject }}</option>{% endfor %}
+      </select>
+      <span class="dc-arrow">→</span>
+      <select id="dc-ref-b" class="dropdown-styled" aria-label="Newer commit">
+        {% for c in commits %}<option value="{{ c.sha }}">{{ c.short }} — {{ c.subject }}</option>{% endfor %}
+      </select>
+      <button type="button" class="btn-primary" id="dc-diff">Compare</button>
+      <span class="ms-state" id="dc-diff-state" aria-live="polite"></span>
+    </div>
+    <div id="dc-diff-result" class="dc-result" hidden></div>
+    {% else %}
+    <p class="ms-note">No commits yet. Export a run above and it will appear here.</p>
+    {% endif %}
+  </section>
+
+  <!-- Push (dry run) -->
+  <section class="ui-card ms-card">
+    <h2>Push to a SIEM <span class="dc-badge">dry run</span></h2>
+    <p class="ms-note">Build the rule payloads and the API calls a push would make to Defender XDR or
+      Google SecOps. Nothing is sent — rules would be created disabled, and live push stays off until a
+      tenant is wired up.</p>
+    <div class="dc-actions">
+      <select id="dc-push-group" class="dropdown-styled" aria-label="Run to push">
+        <option value="">Select a run…</option>
+        {% for g in runs %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+      </select>
+      <select id="dc-push-siem" class="dropdown-styled" aria-label="Target SIEM">
+        <option value="mde">Microsoft Defender XDR</option>
+        <option value="secops">Google SecOps</option>
+      </select>
+      <button type="button" class="btn-primary" id="dc-push">Plan push</button>
+      <span class="ms-state" id="dc-push-state" aria-live="polite"></span>
+    </div>
+    <div id="dc-push-result" class="dc-result" hidden></div>
+  </section>
+</div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  async function postForm(url, data) {
+    const body = new FormData();
+    Object.entries(data).forEach(([k, v]) => body.append(k, v));
+    const r = await fetch(url, { method: 'POST', body });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.success === false) throw new Error(j.error || ('HTTP ' + r.status));
+    return j;
+  }
+
+  $('dc-export').addEventListener('click', async () => {
+    const g = $('dc-export-group').value, state = $('dc-export-state'), out = $('dc-export-result');
+    if (!g) { state.textContent = 'Select a run first.'; return; }
+    state.textContent = 'Committing…'; out.hidden = true;
+    try {
+      const res = await postForm('/api/detections/code/export',
+        { group: g, message: $('dc-message').value });
+      state.textContent = '';
+      if (!res.committed) {
+        out.innerHTML = `<p class="ms-note">No changes since the last export (<code>${res.commit.slice(0,10)}</code>).</p>`;
+      } else {
+        const rows = (res.changes || []).map(c =>
+          `<li><span class="dc-${c.status}">${c.status}</span> <code>${esc(c.path)}</code></li>`).join('');
+        out.innerHTML = `<p class="ms-note">Committed <code>${res.commit.slice(0,10)}</code> on <code>${esc(res.branch||'')}</code> — ${res.files.length} detections.</p>`
+          + (rows ? `<ul class="dc-list">${rows}</ul>` : '');
+      }
+      out.hidden = false;
+    } catch (e) { state.textContent = e.message; }
+  });
+
+  const diff = $('dc-diff');
+  if (diff) diff.addEventListener('click', async () => {
+    const state = $('dc-diff-state'), out = $('dc-diff-result');
+    state.textContent = 'Diffing…'; out.hidden = true;
+    try {
+      const res = await postForm('/api/detections/code/diff',
+        { ref_a: $('dc-ref-a').value, ref_b: $('dc-ref-b').value });
+      state.textContent = '';
+      const sec = (title, cls, arr) => arr.length
+        ? `<h4 class="dc-h4">${title} (${arr.length})</h4><ul class="dc-list">`
+          + arr.map(p => `<li><span class="dc-${cls}">${cls}</span> <code>${esc(p)}</code></li>`).join('') + '</ul>'
+        : '';
+      const html = sec('Added', 'added', res.added) + sec('Removed', 'removed', res.removed) + sec('Changed', 'changed', res.changed);
+      out.innerHTML = html || '<p class="ms-note">No differences between these commits.</p>';
+      out.hidden = false;
+    } catch (e) { state.textContent = e.message; }
+  });
+
+  $('dc-push').addEventListener('click', async () => {
+    const g = $('dc-push-group').value, state = $('dc-push-state'), out = $('dc-push-result');
+    if (!g) { state.textContent = 'Select a run first.'; return; }
+    state.textContent = 'Planning…'; out.hidden = true;
+    try {
+      const res = await postForm('/api/detections/code/push', { group: g, siem: $('dc-push-siem').value });
+      state.textContent = '';
+      out.innerHTML = `<p class="ms-note"><strong>${esc(res.label)}</strong> — ${res.rule_count} ${esc(res.language)} rule${res.rule_count === 1 ? '' : 's'}, created disabled.</p>`
+        + `<p class="ms-note">${esc(res.note || '')}</p>`;
+      out.hidden = false;
+    } catch (e) { state.textContent = e.message; }
+  });
+})();
+</script>
+<style>
+  .dc-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .dc-actions .form-input, .dc-actions .dropdown-styled { min-width: 180px; }
+  #dc-message { flex: 1 1 220px; }
+  .dc-arrow { color: var(--text-secondary); font-weight: 700; }
+  .dc-result { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color); }
+  .dc-list { list-style: none; padding: 0; margin: 6px 0; display: flex; flex-direction: column; gap: 3px; }
+  .dc-list code { font-size: 0.85em; }
+  .dc-h4 { margin: 12px 0 4px; }
+  .dc-added, .dc-removed, .dc-changed { display: inline-block; min-width: 62px; font-size: 0.72em; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em; padding: 1px 7px; border-radius: 6px; }
+  .dc-added { background: rgba(52,168,83,.16); color: #2e9e4f; }
+  .dc-removed { background: rgba(217,48,37,.16); color: #d93025; }
+  .dc-changed { background: rgba(224,168,0,.18); color: #b58900; }
+  .dc-badge { font-size: 0.6em; vertical-align: middle; text-transform: uppercase; letter-spacing: 0.06em;
+    background: var(--bg-secondary); border: 1px solid var(--border-color); color: var(--text-secondary);
+    padding: 2px 8px; border-radius: 10px; font-weight: 700; }
+</style>
+{% endblock %}

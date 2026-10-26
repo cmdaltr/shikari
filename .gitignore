@@ -56,6 +56,8 @@ data/attack_flows/*
 # Lab recordings (#22): your tenant's and hosts' telemetry, never committed
 data/lab/
 data/telemetry/
+# Detections-as-code export (#20): its own git repo, one commit per run
+data/detections_git/
 !data/attack_flows/.gitkeep
 
 # Correlations (dynamically generated)

@@ -8595,6 +8595,104 @@ def stix_export_run(request: Request, group: str = Query(...), archer_session: O
                     headers={"Content-Disposition": f'attachment; filename="{safe}_stix_bundle.json"'})
 
 
+def _runs_list():
+    """Group names that have a saved run, newest first."""
+    runs_dir = os.path.join(DATA_DIR, "runs")
+    if not os.path.isdir(runs_dir):
+        return []
+    entries = [(os.path.getmtime(os.path.join(runs_dir, n)), n[:-5])
+               for n in os.listdir(runs_dir) if n.endswith(".json")]
+    return [name for _m, name in sorted(entries, reverse=True)]
+
+
+@app.get("/detections/code", response_class=HTMLResponse)
+def detections_code_page(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Export detections to a git repo (one commit per run) and diff two commits."""
+    from archer.config import DETECTIONS_REPO_DIR
+    from archer.export import detections_git
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return auth
+    user, db = auth
+    db.close()
+    commits = detections_git.list_commits(DETECTIONS_REPO_DIR, limit=50)
+    return templates.TemplateResponse("detections_code.html", {
+        "request": request, "user": user, "runs": _runs_list(), "commits": commits,
+        "repo_path": DETECTIONS_REPO_DIR})
+
+
+@app.post("/api/detections/code/export")
+def detections_code_export(request: Request, group: str = Form(...), message: str = Form(""),
+                           archer_session: Optional[str] = Cookie(None)):
+    """Commit a group's current detections into the git repo."""
+    from archer.config import DETECTIONS_REPO_DIR
+    from archer.export import detections_git
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in to export"}, status_code=401)
+    _user, db = auth
+    db.close()
+    safe = sanitize_group_name(group)
+    if not group_yaml_files(safe, GENERATE_DIR):
+        return JSONResponse({"success": False, "error": f"No detections for {group}. Hunt it first."}, status_code=404)
+    try:
+        res = detections_git.export_run(safe, GENERATE_DIR, DETECTIONS_REPO_DIR,
+                                        group_yaml_files, message=message.strip() or None)
+    except Exception as e:
+        return JSONResponse({"success": False, "error": f"Export failed: {e}"}, status_code=500)
+    res["success"] = True
+    return JSONResponse(res)
+
+
+@app.post("/api/detections/code/diff")
+def detections_code_diff(request: Request, ref_a: str = Form(...), ref_b: str = Form(...),
+                         group: str = Form(""), archer_session: Optional[str] = Cookie(None)):
+    """Added / removed / changed detections between two commits."""
+    from archer.config import DETECTIONS_REPO_DIR
+    from archer.export import detections_git
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in to diff"}, status_code=401)
+    _user, db = auth
+    db.close()
+    for ref in (ref_a, ref_b):
+        if not re.fullmatch(r"[0-9a-fA-F]{7,40}|HEAD(~\d+)?", ref.strip()):
+            return JSONResponse({"success": False, "error": "Pick two commits from the list"}, status_code=400)
+    diff = detections_git.diff_runs(DETECTIONS_REPO_DIR, ref_a.strip(), ref_b.strip(),
+                                    group=sanitize_group_name(group) if group else None)
+    diff["success"] = True
+    return JSONResponse(diff)
+
+
+@app.post("/api/detections/code/push")
+def detections_code_push(request: Request, group: str = Form(...), siem: str = Form(...),
+                         archer_session: Optional[str] = Cookie(None)):
+    """Dry-run plan for pushing a group's detections to a SIEM rule store (no live push)."""
+    from archer.export import siem_push
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in to plan a push"}, status_code=401)
+    _user, db = auth
+    db.close()
+    safe = sanitize_group_name(group)
+    connector_siem = {"GoogleSecOps": "secops", "MicrosoftThreatProtection": "mde", "Splunk": "splunk", "Elastic": "elastic"}
+    dets = []
+    for name in group_yaml_files(safe, GENERATE_DIR):
+        doc = load_yaml_file(os.path.join(GENERATE_DIR, os.path.basename(name)))
+        if not doc or not doc.get("technique_id"):
+            continue
+        connector = ((doc.get("requiredDataConnectors") or [{}])[0] or {}).get("connectorId", "")
+        dets.append({"name": doc.get("name"), "technique_id": doc.get("technique_id"),
+                     "query": doc.get("query", ""), "severity": doc.get("severity", "medium"),
+                     "siem": connector_siem.get(connector, connector)})
+    plan = siem_push.plan_push(siem, dets, execute=False)
+    return JSONResponse(plan, status_code=200 if plan.get("success") else 400)
+
+
 @app.get("/catalogue", response_class=HTMLResponse)
 def catalogue_page(request: Request, archer_session: Optional[str] = Cookie(None)):
     """

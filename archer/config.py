@@ -24,6 +24,8 @@ CVE_CACHE_DIR = os.path.join(DATA_DIR, "cache", "cve")
 OSINT_CACHE_DIR = os.path.join(DATA_DIR, "cache", "osint")
 GROUP_METADATA_CACHE = os.path.join(DATA_DIR, "cache", "group_metadata.json")
 OSINT_REPOS_DIR = os.path.join(DATA_DIR, "repos")
+# Detections as code (#20): the git repo each export commits into, one tree per group.
+DETECTIONS_REPO_DIR = os.path.join(DATA_DIR, "detections_git")
 
 # ========== Common Constants ==========
 # Severity order for comparison (highest to lowest priority)
