@@ -23,10 +23,12 @@ On the **Mac Mini** (the model host — the ARM MacBook this repo sits on can't 
 
 ## Part B — Implementation plan (Archer)
 
-1. **Trimmed local prompt** — a compact builder (`build_llm_prompt(use_local=True)` → ~6–8k tokens): the technique, its MITRESaw evidence, the target SIEM's schema snippet, and one or two exemplars — not the full 115k-char master. New `_load_local_prompt_compact()`; the reference material is left out. Unit-test asserts the assembled prompt stays under the token budget.
-2. **Per-run cost cap** — a setting (`ARCHER_LOCAL_LLM_CAP`, default ~10 techniques) with a pre-run estimate shown; a run over the cap asks before spending the time; whole groups route to a cloud model. Unit-test the cap/estimate logic.
-3. **Model smoke test** — `smoke_test_local_model(config)` runs one technique and checks the answer is contract-valid JSON within a time bound, so the UI can mark a model suitable/unsuitable for generation. Harness unit-tested with a mocked model.
-4. **Wiring** — pass the chosen provider through `modified_process_group_wrapper` → `process_group(use_llm="llm", llm_config=…)`, reusing the degenerate-response guard and `repeat_penalty` already in place. (Gated on #10.)
-5. **Tests (offline)** — prompt-size, cap/estimate, smoke-test harness, all with a mocked model. **Live validation** on the Mac Mini confirms the acceptance: `T1003.001` with `qwen3:8b` returns at least one contract-valid query in under 3 minutes, a looping/truncated answer writes nothing and logs why, and a run over the cap asks first.
+The harness is now built and unit-tested with a mocked model — only the wiring and the live acceptance numbers remain.
 
-**Stays deferred until Part A:** anything judged on real model output or timing. The prompt builder, cap and smoke-test *harness* ship and are tested with a mock; the acceptance numbers need the host.
+1. ✅ **Trimmed local prompt** — `llm_queries.build_compact_local_prompt(...)`: the technique, its MITRESaw evidence, the target SIEM's data-source names and one exemplar — not the 115k-char master. Comes out ~500 tokens (budget was 6–8k), so a small CPU model reads it whole. Asks for the legacy JSON shape `parse_llm_response` already understands. Unit-tested for budget, SIEM language and source names.
+2. ✅ **Per-run cost cap** — `local_llm.local_run_cap()` (`ARCHER_LOCAL_LLM_CAP`, default 10) + `local_run_plan(n, cap, seconds_per_call)` returning `will_run`, `over_cap`, `needs_confirmation` and an `est_seconds`. Unit-tested. (UI hook — show the estimate and confirm before a capped run — lands with the wiring in step 4.)
+3. ✅ **Model smoke test** — `local_llm.smoke_test_local_model(config, call_fn=…)` runs the one canned technique through the compact prompt, rejects a degenerate/empty answer or one over the time budget, and reports `seconds_per_call` to feed the estimate. Call is injectable; unit-tested for suitable / loop / empty / slow / call-failure.
+4. **Wiring (remaining)** — pass the chosen provider through `modified_process_group_wrapper` → `process_group(use_llm="llm", llm_config=…)`, using `build_compact_local_prompt` for local providers, enforcing `local_run_cap`, and surfacing the smoke-test verdict + run estimate in the UI. Reuses the degenerate-response guard and `repeat_penalty` already in place. (Gated on #10.)
+5. **Live validation (remaining)** — on the Mac Mini: `T1003.001` with `qwen3:8b` returns at least one contract-valid query in under 3 minutes; a looping/truncated answer writes nothing and logs why (already true); a run over the cap asks first.
+
+**Stays deferred until Part A:** the wiring into generation (needs #10) and the acceptance numbers (need the host). The prompt builder, cap and smoke-test harness are shipped and tested with a mock.

@@ -151,6 +151,88 @@ def build_llm_prompt(
     return full_prompt
 
 
+# A one-line, one-shot exemplar per SIEM, so a local model sees the target language and shape
+# without the full templates. Kept tiny on purpose (#9).
+_LOCAL_EXEMPLARS = {
+    "mde": '{"source_index": "DeviceProcessEvents", "reason": "LSASS access by an unusual process", '
+           '"query": "DeviceProcessEvents | where FileName =~ \\"procdump.exe\\" | where ProcessCommandLine has \\"lsass\\""}',
+    "secops": '{"source_index": "PROCESS_LAUNCH", "reason": "LSASS dump via procdump", '
+              '"query": "metadata.event_type = \\"PROCESS_LAUNCH\\" and target.process.file.full_path = /procdump/ nocase and target.process.command_line = /lsass/ nocase"}',
+    "splunk": '{"source_index": "index=edr", "reason": "LSASS access by procdump", '
+              '"query": "index=edr process_name=procdump.exe CommandLine=*lsass* | stats count by host, user, CommandLine"}',
+    "elastic": '{"source_index": "logs-endpoint.events.process-*", "reason": "LSASS dump via procdump", '
+               '"query": "FROM logs-endpoint.events.process-* | WHERE process.name == \\"procdump.exe\\" AND process.command_line LIKE \\"*lsass*\\""}',
+}
+_LOCAL_SIEM_LANG = {"mde": "Microsoft Defender XDR KQL", "secops": "Google SecOps YARA-L (UDM)",
+                    "splunk": "Splunk SPL", "elastic": "Elastic ES|QL"}
+
+
+def build_compact_local_prompt(
+    technique_id: str,
+    technique_name: str,
+    tactic: str,
+    procedure_example: str,
+    evidence_json: str,
+    platforms: List[str],
+    siem: str,
+    detectable_via: str = "",
+    group_name: str = "",
+    max_sources: int = 30,
+) -> str:
+    """A lean prompt for a local model (#9): the technique, its evidence, the target SIEM's data
+    sources and one exemplar — not the 115k-char master template and every SIEM's templates. Aims
+    for ~6–8k tokens so a small model on CPU reads the whole thing and answers in one shape.
+
+    siem is one of mde / secops / splunk / elastic; the output is the legacy JSON shape
+    parse_llm_response understands."""
+    from archer.build.schema_overrides import load_active_schema
+
+    key = {"googlesecops": "secops", "microsoftthreatprotection": "mde", "defender": "mde"}.get(
+        (siem or "").lower(), (siem or "").lower())
+    lang = _LOCAL_SIEM_LANG.get(key, key)
+    sources = sorted((load_active_schema(key) or {}).keys())[:max_sources]
+    exemplar = _LOCAL_EXEMPLARS.get(key, "")
+
+    lines = [
+        f"You are a detection engineer. Write detection queries in {lang} for the ATT&CK technique below.",
+        "Use only the listed data sources. Output ONLY a JSON object, no prose, in exactly this shape:",
+        '{"technique_id": "...", "technique_name": "...", "queries": ['
+        '{"source_index": "<one of the data sources>", "reason": "<why it detects this>", "query": "<the query>"}]}',
+        "",
+        f"## Technique",
+        f"- {technique_id} {technique_name} (tactic: {tactic}; platforms: {', '.join(platforms)})",
+    ]
+    if group_name:
+        lines.append(f"- Attributed to: {group_name}")
+    if procedure_example:
+        lines += ["", "## How it's done (ATT&CK procedure)", procedure_example[:800]]
+
+    if evidence_json and evidence_json != "{}":
+        try:
+            evidence = json.loads(evidence_json) if isinstance(evidence_json, str) else evidence_json
+            picked = []
+            for ev_type, values in (evidence or {}).items():
+                if not values:
+                    continue
+                flat = []
+                for v in values[:5]:
+                    flat.extend(v.keys() if isinstance(v, dict) else [str(v)])
+                picked.append(f"- {ev_type}: {', '.join(flat)}")
+            if picked:
+                lines += ["", "## Indicators", *picked[:12]]
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    if detectable_via:
+        lines += ["", "## Log sources", detectable_via[:400]]
+    if sources:
+        lines += ["", f"## {lang} data sources (use these names)", ", ".join(sources)]
+    if exemplar:
+        lines += ["", "## Example query object", exemplar]
+    lines += ["", "Now return the JSON for this technique."]
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # LLM response parsing
 # ---------------------------------------------------------------------------
