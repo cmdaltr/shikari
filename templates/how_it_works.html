@@ -711,69 +711,68 @@
             <!-- Overview Tab -->
             <div class="tab-pane active" id="tab-overview">
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                Archer is an <strong>automated threat detection generator</strong> that transforms MITRE ATT&CK threat intelligence
-                into production-ready detection queries for Splunk and Microsoft Defender XDR. It combines <strong>machine learning from community queries</strong>, <strong>MITRE ATT&CK intelligence</strong>,
-                and <strong>optional AI enhancement</strong> to automatically generate comprehensive, correlated detection coverage in minutes.
-                Its architecture prioritizes speed through caching, parallel processing, and async operations, while maintaining
-                high accuracy through intelligent validation and correlation.
+                Archer turns MITRE ATT&CK threat intelligence into detection queries for <strong>Microsoft Defender XDR,
+                Google SecOps, Splunk and Elastic</strong>. Point it at a threat group, a CVE, a report or a company and it
+                generates coverage for every technique involved, chains the detections into correlations, and checks them
+                before you keep them. It is open source and self-hosted, and <strong>works without AI by default</strong> —
+                a model is optional, and off unless you turn it on.
             </p>
 
             <div class="feature-grid">
                 <div class="feature-card">
-                    <h4>What It Does</h4>
+                    <h4>What it does</h4>
                     <ul>
-                        <li>6 generation modes</li>
-                        <li>Multi-vendor queries</li>
-                        <li>Multi-stage attack correlations</li>
-                        <li>Threat Briefing with detection gap analysis</li>
-                        <li>MITRE ATT&CK Flow visualizations</li>
-                        <li>OSINT enhancement</li>
-                        <li>Adversary emulation integration</li>
+                        <li>Detections for four SIEMs from one run</li>
+                        <li>Hunt a group, CVE, report or technique</li>
+                        <li>Cross-tactic attack correlations</li>
+                        <li>IOC sweeps with an expiry</li>
+                        <li>Company profiling and exposure mapping</li>
+                        <li>A weekly, tagged threat feed</li>
                     </ul>
                 </div>
                 <div class="feature-card">
-                    <h4>Why It's Fast</h4>
+                    <h4>How it works</h4>
                     <ul>
-                        <li>Local OSINT repos (no API rate limits)</li>
-                        <li>Template caching (90% faster)</li>
-                        <li>Parallel processing (4x speedup)</li>
-                        <li>Async I/O operations (3x faster)</li>
-                        <li>Pre-compiled regex patterns (10x faster)</li>
-                        <li>Progressive results streaming</li>
+                        <li>ATT&CK procedures via MITRESaw</li>
+                        <li>Indicator hygiene and a stack filter</li>
+                        <li>Per-platform query builders</li>
+                        <li>Static and precision checks before saving</li>
+                        <li>Indicators checked against recorded telemetry</li>
+                        <li>A saved Library, Coverage matrix and Flows</li>
                     </ul>
                 </div>
                 <div class="feature-card">
-                    <h4>How It Works</h4>
+                    <h4>Optional AI</h4>
                     <ul>
-                        <li>5 analysis modes inc. AI (inc. Local LLM)</li>
-                        <li>Real-time MITRE ATT&CK integration</li>
-                        <li>Schema-aware field validation</li>
-                        <li>Detection likelihood scoring</li>
-                        <li>Personal detection library with tagging</li>
-                        <li>Role-based access control with MFA</li>
+                        <li>Off by default — never in the critical path</li>
+                        <li>Local Ollama or a cloud provider</li>
+                        <li>Ask Archer, grounded in your data</li>
+                        <li>Six agents (repair, ask, triage, sweep, audit, tune)</li>
+                        <li>Threat briefings and report triage</li>
+                        <li>Tools shared over MCP</li>
                     </ul>
                 </div>
             </div>
 
             <div class="feature-grid" style="grid-template-columns: repeat(2, 1fr);">
                 <div class="feature-card">
-                    <h4>Use Cases</h4>
+                    <h4>Use it for</h4>
                     <ul>
-                        <li>Threat hunting operations</li>
+                        <li>Threat hunting and detection engineering</li>
                         <li>Incident response preparation</li>
-                        <li>Detection engineering</li>
                         <li>Purple team exercises</li>
                         <li>SIEM content development</li>
+                        <li>Closing coverage gaps against a named actor</li>
                     </ul>
                 </div>
                 <div class="feature-card">
-                    <h4>Future Enhancements</h4>
+                    <h4>Four ways in</h4>
                     <ul>
-                        <li>VECTR integration</li>
-                        <li>Atomic Red Team emulation</li>
-                        <li>Additional SIEM platforms</li>
-                        <li>Real-time threat feeds</li>
-                        <li>Custom query templates</li>
+                        <li>The web UI (server-rendered, no JS framework)</li>
+                        <li><code>archer-cli</code> supervisor and console</li>
+                        <li><code>archer-cli offline</code> — no server needed</li>
+                        <li>MCP, for any MCP client</li>
+                        <li>Accounts, roles and MFA throughout</li>
                     </ul>
                 </div>
             </div>
@@ -1565,111 +1564,56 @@ data/APT29/
             <details class="faq-item">
                 <summary class="faq-question">What is Archer and what does it do?</summary>
                 <div class="faq-answer">
-                    <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Archer is an automated threat detection generator that transforms MITRE ATT&CK threat intelligence into production-ready detection queries for Splunk and Microsoft Defender XDR. It combines machine learning from community queries, MITRE ATT&CK intelligence, and optional AI enhancement to automatically generate comprehensive, correlated detection coverage in minutes.</p>
+                    <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Archer turns MITRE ATT&CK threat intelligence into detection queries for Microsoft Defender XDR, Google SecOps, Splunk and Elastic. Point it at a threat group, a CVE, a report or a company and it generates coverage for every technique involved, chains the detections into correlations, and checks them before you keep them. It is open source and self-hosted, and works without AI by default.</p>
                 </div>
             </details>
 
             <details class="faq-item">
-                <summary class="faq-question">Do I need an OpenAI API key to use Archer?</summary>
+                <summary class="faq-question">Do I need an AI provider to use Archer?</summary>
                 <div class="faq-answer">
-                    <p>No, Archer works perfectly fine without an OpenAI API key. The AI enhancement is entirely optional and only improves certain features like IOC extraction accuracy and semantic understanding. Without AI, Archer uses high-quality regex-based extraction and pattern matching which is fast, free, and privacy-preserving.</p>
+                    <p>No. Archer works without AI by default, and the whole pipeline — generation, correlation and the checks — is deterministic code. AI is opt-in and never in the critical path: it adds Ask Archer, the agents and threat briefings. When you do want it, you can point Archer at a local model through Ollama or a cloud provider (Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok), so nothing has to leave your machine.</p>
                 </div>
             </details>
 
             <details class="faq-item">
                 <summary class="faq-question">Why is Archer so fast? Is it using AI or machine learning?</summary>
                 <div class="faq-answer">
-                    <p><strong>Archer is fast because it uses deterministic algorithms, not AI/ML inference.</strong> Here's exactly how speed is achieved:</p>
+                    <p>Generation is deterministic code, not model inference. The ATT&CK bundle and the OSINT rule index are built once and read from disk; indicators are matched with compiled patterns and dictionary lookups; queries come from per-platform builders, not token-by-token from an LLM; and correlation scoring is arithmetic over the techniques. A full group of 30–50 techniques takes minutes, and a single detection well under a second — and it all runs locally against a SQLite database, offline if you want.</p>
 
-                    <h4>1. Pre-Computed Intelligence (No AI Required)</h4>
-                    <ul>
-                        <li><strong>MITRE ATT&CK Cache:</strong> Downloads and caches the entire STIX bundle once (enterprise-attack.json), then reads from local filesystem</li>
-                        <li><strong>Pattern Matching:</strong> Uses compiled regex patterns and dictionary lookups instead of neural networks</li>
-                        <li><strong>Template-Based Generation:</strong> Queries are generated from predefined templates, not generated token-by-token by LLMs</li>
-                        <li><strong>Rule-Based Logic:</strong> All correlation scoring uses mathematical formulas (0-140 point scale) instead of ML models</li>
-                    </ul>
+                    <p>When you turn AI on, it sits beside this, never inside it: Ask Archer, the agents and briefings call a model you choose (local or cloud), and if one isn't configured the deterministic path is simply what runs. So the speed, the privacy and the repeatability are the default, and AI is something you add when it earns its place.</p>
 
-                    <h4>2. Parallel Processing Architecture</h4>
-                    <ul>
-                        <li><strong>Background Threading:</strong> Detection generation runs in daemon threads, keeping UI responsive</li>
-                        <li><strong>Async I/O:</strong> FastAPI handles concurrent requests without blocking</li>
-                        <li><strong>Lock-Based Deduplication:</strong> Prevents duplicate correlation processing with thread-safe locks</li>
-                        <li><strong>Streaming Progress Updates:</strong> Real-time progress tracking via JSON file updates (no polling delays)</li>
-                    </ul>
-
-                    <h4>3. Smart Filtering (Not Machine Learning)</h4>
-                    <ul>
-                        <li><strong>Attack Progression Filter:</strong> Simple dictionary lookup against 35 predefined tactic pairs</li>
-                        <li><strong>Semantic Overlap:</strong> Set intersection math (Jaccard similarity), not word embeddings</li>
-                        <li><strong>High-Impact Techniques:</strong> Hardcoded set of 30+ critical techniques, O(1) lookups</li>
-                        <li><strong>Correlation Grouping:</strong> Hash-based deduplication using technique IDs as keys</li>
-                    </ul>
-
-                    <h4>4. Efficient Data Structures</h4>
-                    <ul>
-                        <li><strong>In-Memory Caching:</strong> Techniques, tactics, and procedures loaded once at startup (app.state)</li>
-                        <li><strong>Dictionary Lookups:</strong> O(1) average-case complexity for technique/group mapping</li>
-                        <li><strong>Set Operations:</strong> Fast indicator deduplication and overlap calculations</li>
-                        <li><strong>SQLite Database:</strong> Local file-based storage, no network round-trips</li>
-                    </ul>
-
-                    <h4>5. Optional AI Enhancement (When Enabled)</h4>
-                    <p>When you enable "AI-Powered Correlations", Archer CAN use OpenAI GPT models, but this is:</p>
-                    <ul>
-                        <li><strong>Completely Optional:</strong> Disabled by default, requires explicit checkbox + API key</li>
-                        <li><strong>Limited Scope:</strong> Only used for advanced semantic analysis and IOC enrichment</li>
-                        <li><strong>Async Execution:</strong> AI calls don't block main generation pipeline</li>
-                        <li><strong>Fallback Logic:</strong> If AI fails or isn't configured, uses deterministic methods</li>
-                    </ul>
-
-                    <h4>Performance Benchmarks (Typical Hardware)</h4>
-                    <ul>
-                        <li><strong>100 detections generated:</strong> 15-30 seconds (no AI)</li>
-                        <li><strong>500 correlation pairs evaluated:</strong> 2-5 seconds</li>
-                        <li><strong>OSINT comparison (Elastic/Splunk):</strong> 5-10 seconds per technique</li>
-                        <li><strong>Full threat group (30-50 techniques):</strong> 2-5 minutes total</li>
-                    </ul>
-
-                    <h4>What Makes This Different from AI-Based Tools</h4>
                     <table style="width: 100%; border-collapse: collapse; margin-top: 1em;">
-                        <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                        <tr style="background: var(--bg-secondary); border-bottom: 2px solid var(--border);">
                             <th style="padding: 8px; text-align: left;">Aspect</th>
-                            <th style="padding: 8px; text-align: left;">Archer (Deterministic)</th>
-                            <th style="padding: 8px; text-align: left;">AI/ML Tools</th>
+                            <th style="padding: 8px; text-align: left;">Archer's pipeline</th>
+                            <th style="padding: 8px; text-align: left;">An LLM-in-the-loop generator</th>
                         </tr>
-                        <tr style="border-bottom: 1px solid #ddd;">
+                        <tr style="border-bottom: 1px solid var(--border);">
                             <td style="padding: 8px;"><strong>Speed</strong></td>
-                            <td style="padding: 8px;">✅ <1 second per detection</td>
-                            <td style="padding: 8px;">❌ 5-30 seconds per LLM call</td>
+                            <td style="padding: 8px;">Sub-second per detection</td>
+                            <td style="padding: 8px;">Seconds per query, per model call</td>
                         </tr>
-                        <tr style="border-bottom: 1px solid #ddd;">
+                        <tr style="border-bottom: 1px solid var(--border);">
                             <td style="padding: 8px;"><strong>Cost</strong></td>
-                            <td style="padding: 8px;">✅ $0 (runs locally)</td>
-                            <td style="padding: 8px;">❌ $0.01-0.50 per query</td>
+                            <td style="padding: 8px;">None — runs locally</td>
+                            <td style="padding: 8px;">Per-token, per query</td>
                         </tr>
-                        <tr style="border-bottom: 1px solid #ddd;">
+                        <tr style="border-bottom: 1px solid var(--border);">
                             <td style="padding: 8px;"><strong>Privacy</strong></td>
-                            <td style="padding: 8px;">✅ All data stays local</td>
-                            <td style="padding: 8px;">❌ Sends to cloud APIs</td>
+                            <td style="padding: 8px;">Stays on your machine</td>
+                            <td style="padding: 8px;">Sent to the provider (unless local)</td>
                         </tr>
-                        <tr style="border-bottom: 1px solid #ddd;">
-                            <td style="padding: 8px;"><strong>Reliability</strong></td>
-                            <td style="padding: 8px;">✅ Deterministic output</td>
-                            <td style="padding: 8px;">❌ Non-deterministic results</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid #ddd;">
-                            <td style="padding: 8px;"><strong>Offline Use</strong></td>
-                            <td style="padding: 8px;">✅ Works without internet</td>
-                            <td style="padding: 8px;">❌ Requires API connectivity</td>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 8px;"><strong>Repeatability</strong></td>
+                            <td style="padding: 8px;">Same input, same output</td>
+                            <td style="padding: 8px;">Non-deterministic</td>
                         </tr>
                         <tr>
-                            <td style="padding: 8px;"><strong>Explainability</strong></td>
-                            <td style="padding: 8px;">✅ Every decision has clear logic</td>
-                            <td style="padding: 8px;">❌ "Black box" reasoning</td>
+                            <td style="padding: 8px;"><strong>Offline</strong></td>
+                            <td style="padding: 8px;">Works without a network</td>
+                            <td style="padding: 8px;">Needs the API (unless local)</td>
                         </tr>
                     </table>
-
-                    <p style="margin-top: 1em;"><strong>Bottom Line:</strong> Archer achieves speed through intelligent engineering and algorithmic efficiency, not by avoiding AI (though that helps). When AI is optionally enabled, it's used surgically for specific enhancements, not as the core engine.</p>
                 </div>
             </details>
 
@@ -1830,7 +1774,7 @@ data/APT29/
                     <p>Getting started is easy:</p>
                     <ol>
                         <li>Go to the <strong>Generate</strong> tab and enter a threat group name (e.g., "APT29") or MITRE technique ID</li>
-                        <li>Optionally enable AI-Powered Correlations if you have an OpenAI API key</li>
+                        <li>Optionally enable AI, with a local Ollama model or a cloud provider, in Profile → API Keys</li>
                         <li>Click "Generate Detections" and wait for processing to complete</li>
                         <li>Download the generated detections as a ZIP file</li>
                         <li>Review the YAML files and deploy queries to your SIEM</li>
@@ -2037,8 +1981,8 @@ data/APT29/
                         <li><strong>How to invoke:</strong> Check "AI Generators" checkbox in Web UI</li>
                         <li><strong>What it does:</strong> Uses LLMs to enhance detection generation quality</li>
                         <li><strong>Effect on correlations:</strong> AI-enhanced detections → better quality input for correlation engine</li>
-                        <li><strong>AI Providers:</strong> OpenAI GPT (cloud) or local LLMs via Ollama/LM Studio</li>
-                        <li><strong>Requirements:</strong> OPENAI_API_KEY for cloud AI, or local LLM server for offline AI</li>
+                        <li><strong>AI providers:</strong> a local model via Ollama or LM Studio, or a cloud provider (Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok)</li>
+                        <li><strong>Requirements:</strong> a provider configured in Profile → API Keys, or a local LLM endpoint for offline AI</li>
                         <li><strong>When to use:</strong> Experimental AI-enhanced detection quality</li>
                     </ul>
 
@@ -2048,7 +1992,7 @@ data/APT29/
                         <li><strong>What it does:</strong> Uses LLMs to improve correlation JOIN query combination strategies</li>
                         <li><strong>What it does NOT do:</strong> Detection pairing and scoring remain rule-based (6-factor, 0-140 points). AI cannot change which detections get paired or their relevance scores</li>
                         <li><strong>Effect on correlations:</strong> Smarter JOIN query logic for combining detection queries</li>
-                        <li><strong>Requirements:</strong> "AI Generators" enabled + OPENAI_API_KEY</li>
+                        <li><strong>Requirements:</strong> AI enabled, with a provider configured in Profile → API Keys</li>
                         <li><strong>When to use:</strong> Experimental AI-enhanced correlation query combination</li>
                     </ul>
 
