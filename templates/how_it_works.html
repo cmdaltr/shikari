@@ -185,8 +185,8 @@
         }
 
         .tabs-header {
-            display: grid;
-            grid-template-columns: repeat(6, minmax(0, 1fr));
+            display: flex;
+            flex-wrap: wrap;
             background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
             border-bottom: 3px solid var(--accent);
             padding: 0;
@@ -202,11 +202,12 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            padding: 1.2em 1.5em;
+            flex: 1 1 130px;
+            padding: 1.1em 1em;
             border: none;
             background: transparent;
             color: #8B9AA3;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -618,7 +619,7 @@
 
         <!-- Tab Navigation -->
         <div class="tabs-container">
-            <div class="tabs-header" style="grid-template-columns: repeat(6, minmax(0, 1fr));">
+            <div class="tabs-header">
                 <button class="tab-button active" data-tab="overview">
                     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -673,6 +674,35 @@
                         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
                     </svg>
                     <span>Attack Flow</span>
+                </button>
+                <button class="tab-button" data-tab="agents">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="4" y="8" width="16" height="12" rx="2"/>
+                        <path d="M12 8V4"/><circle cx="12" cy="3" r="1"/>
+                        <circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/>
+                    </svg>
+                    <span>Agents</span>
+                </button>
+                <button class="tab-button" data-tab="emulate">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="16" rx="2"/>
+                        <polygon points="10 9 15 12 10 15 10 9"/>
+                    </svg>
+                    <span>Emulate</span>
+                </button>
+                <button class="tab-button" data-tab="profile">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/>
+                        <path d="M9 21v-6h6v6"/><path d="M9 11h.01"/><path d="M15 11h.01"/>
+                    </svg>
+                    <span>Profile</span>
+                </button>
+                <button class="tab-button" data-tab="intel">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/>
+                        <circle cx="5" cy="19" r="1"/>
+                    </svg>
+                    <span>Intel</span>
                 </button>
             </div>
 
@@ -753,76 +783,73 @@
             <!-- Architecture Tab -->
             <div class="tab-pane" id="tab-architecture">
 
-            <h3>CLI/Command-Line Architecture</h3>
+            <h3>How it fits together</h3>
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                The CLI version provides direct programmatic access to Archer's detection generation engine.
-                It's designed for automation, CI/CD integration, and batch processing of threat groups.
+                Archer turns MITRE ATT&amp;CK threat intelligence into detections for Microsoft Defender XDR, Google SecOps,
+                Splunk and Elastic. The same pipeline runs behind every interface — the web UI, the <code>archer-cli</code>
+                supervisor, the console and the MCP server — and it works without AI by default. A model is optional, and off
+                unless you turn it on.
             </p>
 
             <div class="diagram">
-                <img src="{{ url_for('static', path='images/architecture/cli_diagram.png') }}" alt="CLI Architecture Diagram">
+                <img src="{{ url_for('static', path='images/architecture/web_diagram.png') }}" alt="Archer architecture: inputs feed a generation pipeline that produces outputs, with config and intelligence sources as context">
                 <div class="diagram-caption">
-                    Figure 1: CLI architecture showing data flow from user input through processing to output files
+                    Inputs on the left feed a six-stage generation pipeline; outputs on the right. Config and the intelligence
+                    sources underneath are context, not inputs.
                 </div>
             </div>
 
             <div class="workflow-step">
-                <h4>Available CLI Commands</h4>
-                <pre><code># Generate detections for a threat group
-archer-cli offline generate "APT29"
-
-# Generate detections for one technique (name or ID)
-archer-cli offline hunt T1003.001
-
-# Build correlation rules
-archer-cli offline correlate "APT29"
-
-# Adversary emulation (coming soon)
-archer-cli offline emulate "APT29"</code></pre>
-            </div>
-
-            <div class="workflow-step">
-                <h4>CLI Workflow</h4>
+                <h4>The generation pipeline</h4>
+                <p>An input — a threat group, a CVE, a report or a company profile — resolves to ATT&amp;CK techniques, and each
+                stage narrows raw intelligence into a detection that will actually fire:</p>
                 <ol>
-                    <li><strong>Input:</strong> User provides threat group name or technique ID</li>
-                    <li><strong>MITRE Lookup:</strong> Fetches techniques from STIX 2.0 bundle</li>
-                    <li><strong>LOL datasets:</strong> LOLBAS, LOLRMM and LOLDrivers, for tools the group is seen using (ticked by default)</li>
-                    <li><strong>OSINT Enhancement:</strong> Searches local repos (Google SecOps, Azure Sentinel, Splunk, Elastic)</li>
-                    <li><strong>Generation:</strong> Extracts indicators, validates schemas, generates platform queries</li>
-                    <li><strong>Correlation:</strong> Analyzes attack paths, scores relationships (0-140 points)</li>
-                    <li><strong>Validation:</strong> Calculates detection likelihood (0-100), syntax checking</li>
-                    <li><strong>Visualization:</strong> Generates MITRE ATT&CK Flow diagrams</li>
-                    <li><strong>Output:</strong> Writes YAML detections, JSON correlations, flow diagrams to data/</li>
+                    <li><strong>Procedure retrieval</strong> — the techniques and their procedure examples, from the ATT&amp;CK STIX bundle via MITRESaw.</li>
+                    <li><strong>Extraction, hygiene and stack filter</strong> — indicators are pulled and cleaned (placeholders, generic words and known-good values removed), and anything outside the platforms and products you run is dropped.</li>
+                    <li><strong>Query builders</strong> — one per platform: Defender KQL, SecOps YARA-L, Splunk SPL and Elastic.</li>
+                    <li><strong>Validate and save</strong> — queries that parse but can't fire are removed; the rest join the shared YAML library.</li>
+                    <li><strong>Correlation engine</strong> — chains detections across tactics on one host or account within a time window.</li>
+                    <li><strong>IOC sweeps</strong> — a branch off a report or CVE: indicator sweeps with an expiry.</li>
                 </ol>
+                <p>Optional AI sits alongside the pipeline, never in its critical path: Ask Archer and the agents, driven by a
+                local Ollama model or a cloud provider only when you enable them.</p>
             </div>
 
-            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
-            <h3>Web/GUI Architecture</h3>
+            <hr style="border: none; border-top: 1px solid var(--border); margin: 2.5em 0;">
+            <h3>The same pipeline from a terminal</h3>
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                The web interface provides 6 generation modes, personal detection library, user authentication with MFA,
-                and role-based access control. Built with FastAPI for high-performance async operations and real-time progress tracking.
+                <code>archer-cli</code> is the supervisor — <code>start</code>, <code>status</code>, <code>restart</code>,
+                <code>mcp</code>, <code>console</code> — and the console and offline modes run the identical stages without a
+                browser. A few surfaces are web-only (the saved Library, the Coverage matrix and Flows); everything else is
+                reachable from the command line.
             </p>
 
             <div class="diagram">
-                <img src="{{ url_for('static', path='images/architecture/web_diagram.png') }}" alt="Web Architecture Diagram">
+                <img src="{{ url_for('static', path='images/architecture/cli_diagram.png') }}" alt="archer-cli: the same pipeline driven from a terminal, with web-only surfaces dimmed">
                 <div class="diagram-caption">
-                    Figure 2: Web architecture showing frontend-backend separation and async processing
+                    The console and offline commands drive the same six stages; web-only surfaces are dimmed.
                 </div>
             </div>
 
             <div class="workflow-step">
-                <h4>Key Features</h4>
-                <ul>
-                    <li><strong>Authentication:</strong> User registration, login, password reset with email tokens</li>
-                    <li><strong>Multi-Factor Auth:</strong> TOTP-based MFA with backup codes</li>
-                    <li><strong>Detection Library:</strong> Personal storage with tagging, search, export (individual/bulk)</li>
-                    <li><strong>Admin Panel:</strong> User management, role assignment, audit logs (admin-only)</li>
-                    <li><strong>Real-Time Progress:</strong> Progress JSON polled every 500ms for live status updates</li>
-                    <li><strong>Results Page:</strong> Filter by vendor, group, tactic, technique with bulk operations</li>
-                    <li><strong>Individual Query Blocks:</strong> Stacked per-technique queries with "chained with" connectors on the results page</li>
-                    <li><strong>Threat Briefing:</strong> LLM-grounded detection gap analysis — ranks top-N uncovered techniques with priority reasoning and detection approach</li>
-                    <li><strong>Emulation:</strong> Atomic Red Team integration (simulate/live modes, SSH/WinRM support)</li>
-                </ul>
+                <h4>Without a server at all</h4>
+                <pre><code># The pipeline with no server running
+archer-cli offline generate "APT29"      # detections for a threat group
+archer-cli offline hunt T1003.001        # one technique, by name or ID
+archer-cli offline correlate "APT29"     # correlation rules
+
+# The supervisor and interfaces
+archer-cli start | status | restart      # run the server
+archer-cli console                       # the modules interactively
+archer-cli mcp                           # Archer's tools for any MCP client</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Backend and storage</h4>
+                <p>State is a single SQLite database. The intelligence the pipeline draws on is context, not input: the ATT&amp;CK
+                bundle and MITRESaw, NVD and public PoCs, the OSINT rule index (Elastic, Splunk, Sentinel and SecOps public
+                rules with their documented false positives), LOLBAS/LOLDrivers/LOLRMM, known-good lists, recorded attack
+                telemetry and Microsoft's Defender XDR GUIDE grades.</p>
             </div>
             </div>
             <!-- End Architecture Tab -->
@@ -1402,6 +1429,130 @@ data/APT29/
             </div>
             </div>
             <!-- End Attack Flow Tab -->
+
+            <!-- Agents Tab -->
+            <div class="tab-pane" id="tab-agents">
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
+                An agent is a model in a loop with Archer's tools: it picks a tool, reads the result and picks again until it
+                can answer. Every step is shown as it happens and kept, so you can read back what it did. Agents run on any
+                provider in your profile that can call tools; Claude is the most reliable at multi-step tool use, and small
+                local models often stop early. Anything that changes something waits for your approval — read-only tools never do.
+            </p>
+
+            <table class="library-table">
+                <thead>
+                    <tr><th>Agent</th><th>Give it</th><th>What it does</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Detection repair</strong></td><td>A run</td><td>Runs the static and precision checks over the run's queries, fixes only what they flag, re-checks each fix and saves it with a reason. A query that still fails can't be saved.</td></tr>
+                    <tr><td><strong>Ask Archer</strong></td><td>A question</td><td>Answers from your Library, coverage, ATT&amp;CK and hunts — looking things up with tools rather than from memory.</td></tr>
+                    <tr><td><strong>Intel triage</strong></td><td>A report</td><td>Finds your coverage gaps for it, suggests and runs hunts, and writes a briefing.</td></tr>
+                    <tr><td><strong>Coverage sweep</strong></td><td>A group</td><td>Lists the group's undetected techniques, hunts the gaps, and reports what closed and what can't be.</td></tr>
+                    <tr><td><strong>Library audit</strong></td><td>Optional focus</td><td>Reviews the saved library for duplicates and overlaps, and flags detections resting on noisy indicators. Reports only.</td></tr>
+                    <tr><td><strong>Detection tuning</strong></td><td>A run</td><td>Finds detections that pass the checks but rest on noisy indicators, and tightens them to be more specific — only ever narrowing.</td></tr>
+                </tbody>
+            </table>
+
+            <div class="workflow-step">
+                <h4>Console and MCP</h4>
+                <p>The same six agents are in the console (<code>agent/repair</code> … <code>agent/tune</code>) and over MCP:
+                <code>archer-cli mcp</code> gives any MCP client — Claude Code, Claude Desktop or your own agent — Archer's 21
+                tools and the six agents' prompts, with the changing tools marked so the client asks first. It signs in to a
+                running Archer as you, so hunts use your AI settings and your keys stay on the server.</p>
+            </div>
+            </div>
+            <!-- End Agents Tab -->
+
+            <!-- Emulate Tab -->
+            <div class="tab-pane" id="tab-emulate">
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
+                Emulate checks a detection against logs recorded while attacks were actually run in a lab. For each technique it
+                shows whether a detection's indicators appear in real recorded events, and by which log — a cheap first look
+                before testing against your own SIEM. No AI, no infrastructure; it reads values the pipeline already matches on.
+            </p>
+
+            <table class="library-table">
+                <thead>
+                    <tr><th>Status</th><th>What it means</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Seen</strong></td><td>The detection's indicators appear in recordings of its own technique — it would have matched real events, and this says which log it needs.</td></tr>
+                    <tr><td><strong>Not seen</strong></td><td>The technique has recordings, but none contain the indicators. Not proof it's wrong — the recording may have used another tool or procedure.</td></tr>
+                    <tr><td><strong>No recordings</strong></td><td>No source recorded the technique.</td></tr>
+                    <tr><td><strong>Noisy</strong></td><td>An indicator recorded in five or more <em>other</em> techniques too — it matches the lab's ordinary activity as well as the attack.</td></tr>
+                </tbody>
+            </table>
+
+            <div class="workflow-step">
+                <h4>The noisy signal, as a tool</h4>
+                <p>The same noise check is a tool, <code>noisy_indicators</code>, for the agents and any MCP client. The
+                <strong>Library audit</strong> agent uses it to flag weak detections and <strong>Detection tuning</strong> to
+                tighten them; Ask Archer has it too.</p>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Sources</h4>
+                <p>Splunk attack_data, OTRF Security-Datasets, EVTX-ATTACK-SAMPLES and macOS-ATTACK-DATASET, plus Microsoft's
+                Defender XDR GUIDE triage grades. Recording Atomic Red Team in your own lab, with Defender for Endpoint's own
+                rows, is coming soon.</p>
+            </div>
+            </div>
+            <!-- End Emulate Tab -->
+
+            <!-- Profile Tab -->
+            <div class="tab-pane" id="tab-profile">
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
+                Profiling starts from a company instead of a threat: enter a domain and Archer works out who is likely to target
+                it, then generates detections for the groups you choose. It reads Wikidata, the company's homepage and OSINT to
+                establish its sector, where it operates and where its site is hosted, and fingerprints the technology stack for
+                relevant CVEs — all in the background, with a progress page of its seven stages.
+            </p>
+
+            <div class="workflow-step">
+                <h4>The Review page</h4>
+                <p>When profiling finishes it opens a Review page: the company's branding, a profile summary (industry, location,
+                hosting, source, risk score), the exposure map, and the recommended groups laid out in columns — each with a
+                <strong>likelihood</strong> of targeting this organisation (how strongly its sector and region match the group's
+                known targeting), the top three pre-ticked. Tick the groups you want and generate; each gets its own Results page.</p>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Organisation Exposure Map</h4>
+                <p>A node-and-link graph of everything profiling surfaced from public sources and how each piece links back to
+                the domain — the attack surface a threat actor sees before acting. Two hops out: resolved IPs, nameservers, mail,
+                subdomains, technology and historical snapshots off the domain; then the networks, certificates, exposed services,
+                known CVEs and breach surface off those. Nothing is harvested to build it.</p>
+            </div>
+            </div>
+            <!-- End Profile Tab -->
+
+            <!-- Intel Tab -->
+            <div class="tab-pane" id="tab-intel">
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
+                The Intel menu is where threat intelligence comes into Archer before it becomes detections — the weekly feed,
+                the companies you've profiled, and the report and actor research that seeds a hunt.
+            </p>
+
+            <div class="workflow-step">
+                <h4>Threat Feed</h4>
+                <p>This week's threat research, pulled from around 26 vendor and government sources and tagged by industry,
+                nation and motive. Watchlists flag new posts about the groups, sectors or regions you care about, optionally by
+                email, and your technology-stack filter highlights what's relevant to what you run.</p>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Companies Catalogue</h4>
+                <p>Every organisation you've profiled, newest first — a Library for companies. Each card opens that company's
+                exposure map and Review page, so a profile doesn't have to be re-run.</p>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Report and actor research</h4>
+                <p>Extract TTPs and IOCs from a report URL or file and hunt them, or find groups by keyword (country, industry)
+                and consolidate their techniques before generating coverage.</p>
+            </div>
+            </div>
+            <!-- End Intel Tab -->
             </div>
             <!-- End Tab Content -->
         </div>
@@ -2059,22 +2210,28 @@ data/APT29/
             }
         }
 
-        // Tab switching functionality
+        // Tab switching, with deep-linking via the URL hash (e.g. /how-it-works#emulate)
+        function activateTab(tabName, updateHash) {
+            const btn = document.querySelector('.tab-button[data-tab="' + tabName + '"]');
+            const pane = document.getElementById('tab-' + tabName);
+            if (!btn || !pane) return;
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            pane.classList.add('active');
+            if (updateHash) history.replaceState(null, '', '#' + tabName);
+        }
         document.querySelectorAll('.tab-button').forEach(button => {
             button.addEventListener('click', () => {
-                const tabName = button.getAttribute('data-tab');
-
-                // Remove active class from all tabs and panes
-                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-                document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-
-                // Add active class to clicked tab and corresponding pane
-                button.classList.add('active');
-                document.getElementById('tab-' + tabName).classList.add('active');
-
-                // Scroll to top of content smoothly
+                activateTab(button.getAttribute('data-tab'), true);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             });
+        });
+        const initialTab = (location.hash || '').replace('#', '');
+        if (initialTab) activateTab(initialTab, false);
+        window.addEventListener('hashchange', () => {
+            const t = (location.hash || '').replace('#', '');
+            if (t) activateTab(t, false);
         });
     </script>
     {% include "partials/llm_modal.html" %}
