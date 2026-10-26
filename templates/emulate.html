@@ -41,29 +41,37 @@
           <symbol id="ic-target" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.2"/><circle cx="8" cy="8" r="2"/></symbol>
           <symbol id="ic-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/></symbol>
           <symbol id="ic-chart" viewBox="0 0 16 16"><path d="M3 13h10"/><path d="M5 12V8.5M8 12V5.5M11 12V7"/></symbol>
+          <symbol id="ic-create" viewBox="0 0 16 16"><rect x="2.5" y="3.5" width="11" height="8" rx="1.2"/><path d="M5.5 13.5h5M8 6v3.5M6.25 7.75h3.5"/></symbol>
+          <symbol id="ic-camera" viewBox="0 0 16 16"><rect x="2.3" y="4.8" width="11.4" height="7.4" rx="1.6"/><circle cx="8" cy="8.5" r="2.1"/><path d="M6.1 4.8l1-1.5h1.8l1 1.5"/></symbol>
+          <symbol id="ic-gear" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2"/><path d="M8 2.6v2.1M8 11.3v2.1M2.6 8h2.1M11.3 8h2.1M4.2 4.2l1.5 1.5M10.3 10.3l1.5 1.5M11.8 4.2l-1.5 1.5M5.7 10.3l-1.5 1.5"/></symbol>
+          <symbol id="ic-play" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.3"/><path d="M6.6 5.5l4 2.5-4 2.5z"/></symbol>
         </defs>
 
-        <!-- Lab lane: build & record your own machine -->
-        <rect x="196" y="20" width="476" height="72" rx="12" class="em-dg-lane-box"/>
+        <!-- Lab lane: build & record your own machine (wider, spaced like the pipeline below) -->
+        <rect x="196" y="20" width="564" height="72" rx="12" class="em-dg-lane-box"/>
         <text x="208" y="38" class="em-dg-lane">LAB — build &amp; record a machine</text>
-        <rect x="208" y="48" width="100" height="38" rx="8" class="em-dg-loop"/>
-        <text x="258" y="71" class="em-dg-t">Create</text>
-        <rect x="320" y="48" width="100" height="38" rx="8" class="em-dg-loop"/>
-        <text x="370" y="71" class="em-dg-t">Snapshot</text>
-        <rect x="432" y="48" width="100" height="38" rx="8" class="em-dg-loop"/>
-        <text x="482" y="65" class="em-dg-t">Set up</text>
-        <text x="482" y="79" class="em-dg-s">logging + atomics</text>
-        <rect x="544" y="48" width="100" height="38" rx="8" class="em-dg-loop"/>
-        <text x="594" y="65" class="em-dg-t">Record</text>
-        <text x="594" y="79" class="em-dg-s">run atomics</text>
-        <path d="M308,67 L318,67" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
-        <path d="M420,67 L430,67" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
-        <path d="M532,67 L542,67" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
+        <rect x="212" y="48" width="120" height="40" rx="8" class="em-dg-loop"/>
+        <use href="#ic-create" x="223" y="60" width="16" height="16" class="em-ic em-ic-teal"/>
+        <text x="245" y="72" class="em-dg-t em-dg-start">Create</text>
+        <rect x="350" y="48" width="120" height="40" rx="8" class="em-dg-loop"/>
+        <use href="#ic-camera" x="361" y="60" width="16" height="16" class="em-ic em-ic-teal"/>
+        <text x="383" y="72" class="em-dg-t em-dg-start">Snapshot</text>
+        <rect x="488" y="48" width="120" height="40" rx="8" class="em-dg-loop"/>
+        <use href="#ic-gear" x="499" y="60" width="16" height="16" class="em-ic em-ic-teal"/>
+        <text x="521" y="65" class="em-dg-t em-dg-start">Set up</text>
+        <text x="521" y="78" class="em-dg-s em-dg-start">logs &amp; atomics</text>
+        <rect x="626" y="48" width="120" height="40" rx="8" class="em-dg-loop"/>
+        <use href="#ic-play" x="637" y="60" width="16" height="16" class="em-ic em-ic-teal"/>
+        <text x="659" y="65" class="em-dg-t em-dg-start">Record</text>
+        <text x="659" y="78" class="em-dg-s em-dg-start">run atomics</text>
+        <path d="M332,68 L348,68" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
+        <path d="M470,68 L486,68" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
+        <path d="M608,68 L624,68" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
 
-        <!-- The LAB lane is the "Your lab" source, expanded: a zoom callout fanning up from the card -->
-        <polygon points="16,120 176,120 672,92 196,92" class="em-dg-expand"/>
-        <path d="M16,120 L196,92" class="em-dg-expand-edge"/>
-        <path d="M176,120 L672,92" class="em-dg-expand-edge"/>
+        <!-- The LAB lane is the "Your lab" source, expanded: a zoom callout fanning up from the card to its top-left corner -->
+        <polygon points="16,120 176,120 760,92 196,20" class="em-dg-expand"/>
+        <path d="M16,120 L196,20" class="em-dg-expand-edge"/>
+        <path d="M176,120 L760,92" class="em-dg-expand-edge"/>
 
         <!-- Feeders (telemetry sources) -->
         <rect x="16" y="120" width="160" height="48" rx="8" class="em-dg-origin"/>
