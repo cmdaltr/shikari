@@ -23,6 +23,40 @@ from pathlib import Path
 import mimetypes
 
 
+# A dotted quad (8.28.2.0) is identical in shape to a four-part software version, so octet-range
+# validity alone can't tell an IP from a version string. These catch the common false positives.
+# A defanged separator between two numbers: ".", "[.]" or "[[.]]"
+_DOT_SEP = r"(?:\[\[?\.\]\]?|\.)"
+# The quad sits inside a longer dotted-numeric run (…2.0.1, 1.8.28.…): a version, not an IPv4
+_RUN_AFTER = re.compile(r"^\s*" + _DOT_SEP + r"\d")
+_RUN_BEFORE = re.compile(r"\d" + _DOT_SEP + r"\s*$")
+# A version/build keyword just before it ("version 8.28.2.0", "build 1.2.3.4")
+_VERSION_PREFIX = re.compile(
+    r"(?:\bv|\bver|\bversion|\brelease|\brev|\bbuild|\bupdate[sd]?|\bupgrade[sd]?|\bpatch|\bfirmware|\bbios)"
+    r"\.?\s*$", re.I)
+
+
+def _ip_is_version_like(text: str, start: int, end: int, clean_ip: str) -> bool:
+    """
+    True when a dotted quad matched in text is really a version number or a slice of a longer
+    dotted run, not an IPv4 host indicator. Checked by context, since the quad alone is ambiguous:
+    - part of a longer dotted-numeric run on either side (8.28.2.0.1, 1.8.28.2);
+    - immediately preceded by a version/build keyword (version 8.28.2.0);
+    - a bare network/broadcast address (ends .0 or .255) that isn't written as a CIDR (…/24):
+      real host IOCs are host addresses, and version strings very often end in .0.
+    """
+    before = text[max(0, start - 24):start]
+    after = text[end:end + 6]
+    if _RUN_AFTER.match(after) or _RUN_BEFORE.search(before):
+        return True
+    if _VERSION_PREFIX.search(before):
+        return True
+    last = clean_ip.split(".")[-1]
+    if last in ("0", "255") and not after.lstrip().startswith("/"):
+        return True
+    return False
+
+
 # Sentence words that never belong to a command line; two of them after its last
 # argument mean the match ran on into prose
 _PROSE_WORDS = {"a", "an", "the", "and", "or", "of", "to", "in", "on", "near", "against", "with",
@@ -455,12 +489,15 @@ class FileIntelligenceParser:
 
         # Extract IP addresses (including defanged with [.] or [[.]])
         ip_pattern = r'\b(?:\d{1,3}(?:\[\[?\.\]\]?|\.)){3}\d{1,3}\b'
-        ip_matches = re.findall(ip_pattern, text)
-        for ip in ip_matches:
+        for m in re.finditer(ip_pattern, text):
+            ip = m.group(0)
             # Clean up to check validity (remove all bracket variations)
             clean_ip = ip.replace('[[.]]', '.').replace('[.]', '.').replace('[', '').replace(']', '')
             parts = clean_ip.split('.')
             if len(parts) == 4 and all(part.isdigit() and 0 <= int(part) <= 255 for part in parts):
+                # Drop version numbers and dotted runs masquerading as IPs (8.28.2.0 et al)
+                if _ip_is_version_like(text, m.start(), m.end(), clean_ip):
+                    continue
                 # Exclude common false positives
                 if not clean_ip.startswith(('127.', '0.0.0.', '192.168.', '10.', '169.254.')):
                     # Keep original defanging format if already defanged, otherwise add [.]
