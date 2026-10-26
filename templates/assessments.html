@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Archer - Assessments{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/mitresaw.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container ms-page as-page">
+  <div class="page-header">
+    <h1>Assessments</h1>
+    <p>A campaign groups test cases from the <a href="/threat-library">threat library</a> and records,
+      per technique, what the attack did and what the defence saw. No AI involved.</p>
+  </div>
+
+  <section class="ui-card ms-card">
+    <h2>New assessment</h2>
+    <div class="as-actions">
+      <input type="text" id="as-name" class="form-input" placeholder="Name, e.g. Q4 Scattered Spider" aria-label="Name">
+      <input type="text" id="as-target" class="form-input" placeholder="Target (optional)" aria-label="Target">
+      <input type="text" id="as-operator" class="form-input" placeholder="Operator (optional)" aria-label="Operator">
+      <input type="date" id="as-date" class="form-input" aria-label="Run date">
+      <button type="button" class="btn-primary" id="as-create">Create</button>
+      <span class="ms-state" id="as-create-state" aria-live="polite"></span>
+    </div>
+  </section>
+
+  <section class="ui-card ms-card">
+    <h2>Campaigns <span class="tl-count">{{ assessments|length }}</span></h2>
+    {% if assessments %}
+    <table class="tl-table">
+      <thead><tr><th>Name</th><th>Target</th><th>Operator</th><th>Run date</th><th>Test cases</th><th></th></tr></thead>
+      <tbody>
+      {% for a in assessments %}
+        <tr data-id="{{ a.id }}"><td><a href="/assessments/{{ a.id }}"><strong>{{ a.name }}</strong></a></td>
+          <td><small>{{ a.target or '—' }}</small></td><td><small>{{ a.operator or '—' }}</small></td>
+          <td><small>{{ a.run_date or '—' }}</small></td><td>{{ a.cases }}</td>
+          <td><button type="button" class="tl-del" data-id="{{ a.id }}" title="Delete" aria-label="Delete">×</button></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="ms-note">No assessments yet. Create one above, then add test cases from the threat library.</p>
+    {% endif %}
+  </section>
+</div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  $('as-create').addEventListener('click', async () => {
+    const state = $('as-create-state');
+    if (!$('as-name').value.trim()) { state.textContent = 'Name it first.'; return; }
+    state.textContent = 'Creating…';
+    const body = new FormData();
+    body.append('name', $('as-name').value); body.append('target', $('as-target').value);
+    body.append('operator', $('as-operator').value); body.append('run_date', $('as-date').value);
+    try {
+      const r = await fetch('/api/assessments/create', { method: 'POST', body });
+      const j = await r.json();
+      if (!r.ok || !j.success) throw new Error(j.error || 'HTTP ' + r.status);
+      window.location = '/assessments/' + j.id;
+    } catch (e) { state.textContent = e.message; }
+  });
+
+  document.querySelectorAll('.tl-del').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Delete this assessment and its results?')) return;
+    const r = await fetch('/api/assessments/' + b.dataset.id + '/delete', { method: 'POST' });
+    if (r.ok) document.querySelector(`tr[data-id="${b.dataset.id}"]`).remove(); else alert('Delete failed');
+  }));
+})();
+</script>
+<style>
+  .as-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .as-actions .form-input { flex: 1 1 160px; min-width: 130px; }
+  .tl-del { background: none; border: none; color: var(--text-secondary); font-size: 1.2em; cursor: pointer; }
+  .tl-del:hover { color: #d93025; }
+</style>
+{% endblock %}

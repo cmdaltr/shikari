@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Archer - Threat library{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/mitresaw.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container ms-page tl-page">
+  <div class="page-header">
+    <h1>Threat library</h1>
+    <p>Intelligence-led test cases: one per procedure, built from the groups a profile ranks and
+      sorted by how many of them use the technique. Run them in an
+      <a href="/assessments">assessment</a>. No AI involved.</p>
+  </div>
+
+  <section class="ui-card ms-card">
+    <h2>Build test cases</h2>
+    <p class="ms-note">From a company profile's ranked groups, or from a single group you name.
+      Procedures and indicators come from MITRESaw; nothing is executed here.</p>
+    <div class="tl-actions">
+      <select id="tl-profile" class="dropdown-styled" aria-label="Profile">
+        <option value="">A profile…</option>
+        {% for p in profiles %}<option value="profile:{{ p }}">{{ p }}</option>{% endfor %}
+      </select>
+      <span class="tl-or">or</span>
+      <input type="text" id="tl-group" class="form-input" placeholder="a group, e.g. APT41" aria-label="Group name">
+      <button type="button" class="btn-primary" id="tl-build">Build</button>
+      <span class="ms-state" id="tl-build-state" aria-live="polite"></span>
+    </div>
+  </section>
+
+  <section class="ui-card ms-card">
+    <div class="tl-head">
+      <h2>Test cases <span class="tl-count">{{ cases|length }}</span></h2>
+      {% if cases %}<button type="button" class="btn-secondary" id="tl-clear">Clear all</button>{% endif %}
+    </div>
+    {% if cases %}
+    <table class="tl-table">
+      <thead><tr><th>Groups</th><th>Technique</th><th>Tactic</th><th>Source group</th><th>Detections</th><th>Atomic</th><th></th></tr></thead>
+      <tbody>
+      {% for c in cases %}
+        <tr data-id="{{ c.id }}">
+          <td><span class="tl-prev" title="Ranked groups using this technique">{{ c.prevalence }}</span></td>
+          <td><strong>{{ c.technique_id }}</strong><br><small>{{ c.technique_name }}</small>
+            {% if c.procedure %}<details><summary>procedure</summary><p class="tl-proc">{{ c.procedure }}</p></details>{% endif %}</td>
+          <td><small>{{ c.tactic }}</small></td>
+          <td><small>{{ c.group_name }}</small></td>
+          <td>{% if c.detections %}<a href="/library?q={{ c.technique_id }}" class="tl-badge tl-have">{{ c.detections }}</a>{% else %}<span class="tl-badge tl-gap">0</span>{% endif %}</td>
+          <td><small>{{ c.atomic_guid[:8] if c.atomic_guid else '—' }}</small></td>
+          <td><button type="button" class="tl-del" data-id="{{ c.id }}" title="Remove" aria-label="Remove">×</button></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="ms-note">No test cases yet. Build some from a profile or a group above.</p>
+    {% endif %}
+  </section>
+</div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  async function postForm(url, data) {
+    const body = new FormData();
+    Object.entries(data).forEach(([k, v]) => body.append(k, v));
+    const r = await fetch(url, { method: 'POST', body });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.success === false) throw new Error(j.error || ('HTTP ' + r.status));
+    return j;
+  }
+
+  $('tl-build').addEventListener('click', async () => {
+    const source = $('tl-profile').value || ($('tl-group').value.trim() ? 'group:' + $('tl-group').value.trim() : '');
+    const state = $('tl-build-state');
+    if (!source) { state.textContent = 'Pick a profile or name a group.'; return; }
+    state.textContent = 'Building…';
+    try {
+      const res = await postForm('/api/threat-library/build', { source });
+      state.textContent = `Added ${res.added} of ${res.candidates}.`;
+      if (res.added) setTimeout(() => location.reload(), 700);
+    } catch (e) { state.textContent = e.message; }
+  });
+
+  document.querySelectorAll('.tl-del').forEach(b => b.addEventListener('click', async () => {
+    try { await postForm('/api/threat-library/delete', { case_id: b.dataset.id });
+      document.querySelector(`tr[data-id="${b.dataset.id}"]`).remove(); } catch (e) { alert(e.message); }
+  }));
+
+  const clear = $('tl-clear');
+  if (clear) clear.addEventListener('click', async () => {
+    if (!confirm('Clear every test case?')) return;
+    try { await postForm('/api/threat-library/delete', { clear: '1' }); location.reload(); } catch (e) { alert(e.message); }
+  });
+})();
+</script>
+<style>
+  .tl-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .tl-or { color: var(--text-secondary); }
+  .tl-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .tl-count, .tl-prev { display: inline-block; min-width: 22px; text-align: center; background: var(--bg-secondary);
+    border: 1px solid var(--border-color); border-radius: 10px; padding: 1px 8px; font-size: 0.85em; font-weight: 700; }
+  .tl-prev { background: rgba(94,129,172,.18); border-color: transparent; }
+  .tl-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  .tl-table th, .tl-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+  .tl-table th { font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); }
+  .tl-proc { white-space: pre-wrap; font-size: 0.85em; color: var(--text-secondary); max-width: 540px; }
+  .tl-badge { display: inline-block; min-width: 26px; text-align: center; border-radius: 8px; padding: 1px 8px; font-weight: 700; font-size: 0.85em; text-decoration: none; }
+  .tl-have { background: rgba(52,168,83,.16); color: #2e9e4f; }
+  .tl-gap { background: rgba(217,48,37,.14); color: #d93025; }
+  .tl-del { background: none; border: none; color: var(--text-secondary); font-size: 1.2em; cursor: pointer; line-height: 1; }
+  .tl-del:hover { color: #d93025; }
+</style>
+{% endblock %}

@@ -429,3 +429,85 @@ class ActivityLog(Base):
 
     def __repr__(self):
         return f"<ActivityLog(id={self.id}, user_id={self.user_id}, activity_type='{self.activity_type}', title='{self.title}')>"
+
+
+# ---------------------------------------------------------------------------
+# Threat library and assessments (#24): intelligence-led test cases with red
+# and blue outcomes. Per user, like the Library; no org data in git.
+# ---------------------------------------------------------------------------
+
+class ThreatTestCase(Base):
+    """
+    One test case: a procedure (from MITRESaw) for a technique, built from the groups a
+    profile ranks. Prevalence is how many of those groups use the technique. The matching
+    Atomic Red Team test is recorded where one exists. No test is run here (see #22).
+    """
+    __tablename__ = "threat_test_cases"
+    __table_args__ = (UniqueConstraint("user_id", "signature", name="uq_test_case_user_sig"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    signature = Column(String(40), nullable=False)  # sha1(technique_id|procedure)[:40], dedupe key
+    technique_id = Column(String(20), nullable=False, index=True)
+    technique_name = Column(String(255), nullable=False)
+    tactic = Column(String(255), nullable=True)
+    group_name = Column(String(255), nullable=True)   # a representative attributing group
+    procedure = Column(Text, nullable=True)
+    indicators = Column(Text, nullable=True)          # JSON: {kind: [values]}
+    prevalence = Column(Integer, nullable=False, default=1)  # ranked groups using this technique
+    atomic_guid = Column(String(64), nullable=True)
+    source = Column(String(255), nullable=True)       # "profile:tesco.com" or "group:APT41"
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User", backref="threat_test_cases")
+
+    def __repr__(self):
+        return f"<ThreatTestCase(id={self.id}, tech='{self.technique_id}', user_id={self.user_id})>"
+
+
+class Assessment(Base):
+    """A campaign that groups test cases: run date, operator, target."""
+    __tablename__ = "assessments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    target = Column(String(255), nullable=True)
+    operator = Column(String(255), nullable=True)
+    run_date = Column(String(20), nullable=True)   # ISO date string
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    user = relationship("User", backref="assessments")
+
+    def __repr__(self):
+        return f"<Assessment(id={self.id}, name='{self.name}', user_id={self.user_id})>"
+
+
+class AssessmentResult(Base):
+    """
+    A test case's outcome within an assessment: the red outcome (what the attack did),
+    the blue outcome (what the defence saw), the detection that fired, and notes.
+    """
+    __tablename__ = "assessment_results"
+    __table_args__ = (UniqueConstraint("assessment_id", "test_case_id", name="uq_result_assessment_case"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    assessment_id = Column(Integer, ForeignKey("assessments.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    test_case_id = Column(Integer, ForeignKey("threat_test_cases.id"), nullable=True)
+    technique_id = Column(String(20), nullable=False)       # denormalised for export
+    technique_name = Column(String(255), nullable=True)
+    tactic = Column(String(255), nullable=True)
+    red_outcome = Column(String(20), nullable=False, default="not_run")   # not_run|executed|failed|blocked
+    blue_outcome = Column(String(20), nullable=False, default="not_assessed")  # not_assessed|not_logged|logged|alerted|prevented
+    detection_file = Column(String(500), nullable=True)
+    notes = Column(Text, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    assessment = relationship("Assessment", backref="results")
+    test_case = relationship("ThreatTestCase")
+
+    def __repr__(self):
+        return f"<AssessmentResult(id={self.id}, assessment={self.assessment_id}, tech='{self.technique_id}')>"

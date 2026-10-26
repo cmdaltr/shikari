@@ -8693,6 +8693,319 @@ def detections_code_push(request: Request, group: str = Form(...), siem: str = F
     return JSONResponse(plan, status_code=200 if plan.get("success") else 400)
 
 
+# ---------------------------------------------------------------------------
+# Threat library and assessments (#24)
+# ---------------------------------------------------------------------------
+
+def _profile_groups(domain: str):
+    """A saved profile's ranked group names."""
+    import json as _json
+
+    path = os.path.join(DATA_DIR, "profiles", f"{sanitize_filename(domain)}_profile.json")
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = _json.load(fh)
+    except (OSError, ValueError):
+        return []
+    return [g for g in (data.get("recommended_groups") or []) if g]
+
+
+@app.get("/threat-library", response_class=HTMLResponse)
+def threat_library_page(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Intelligence-led test cases built from the groups a profile ranks (#24)."""
+    import json as _json
+
+    from archer.database.models import ThreatTestCase
+    from archer.visualization.navigator import detection_files_for
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return auth
+    user, db = auth
+    try:
+        rows = db.query(ThreatTestCase).filter(ThreatTestCase.user_id == user.id) \
+            .order_by(ThreatTestCase.prevalence.desc(), ThreatTestCase.technique_id).all()
+        cases = []
+        for c in rows:
+            cases.append({
+                "id": c.id, "technique_id": c.technique_id, "technique_name": c.technique_name,
+                "tactic": c.tactic, "group_name": c.group_name, "prevalence": c.prevalence,
+                "procedure": c.procedure, "atomic_guid": c.atomic_guid, "source": c.source,
+                "indicators": _json.loads(c.indicators) if c.indicators else {},
+                "detections": len(detection_files_for(GENERATE_DIR, c.technique_id)),
+            })
+        profiles_dir = os.path.join(DATA_DIR, "profiles")
+        profiles = sorted(n[:-13] for n in os.listdir(profiles_dir)) if os.path.isdir(profiles_dir) else []
+    finally:
+        db.close()
+    return templates.TemplateResponse("threat_library.html", {
+        "request": request, "user": user, "cases": cases, "profiles": profiles})
+
+
+@app.post("/api/threat-library/build")
+def threat_library_build(request: Request, source: str = Form(...),
+                         archer_session: Optional[str] = Cookie(None)):
+    """Build test cases from a profile (source=profile:<domain>) or a group (source=group:<name>)."""
+    import json as _json
+
+    from archer.assessments.library import build_test_cases
+    from archer.database.models import ThreatTestCase
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in to build test cases"}, status_code=401)
+    user, db = auth
+    try:
+        kind, _, value = source.partition(":")
+        if kind == "profile":
+            groups = _profile_groups(value)
+            label = f"profile:{value}"
+        elif kind == "group":
+            groups = [value]
+            label = f"group:{value}"
+        else:
+            return JSONResponse({"success": False, "error": "Pick a profile or name a group"}, status_code=400)
+        if not groups:
+            return JSONResponse({"success": False, "error": "No ranked groups for that source"}, status_code=404)
+
+        cases = build_test_cases(groups)
+        if not cases:
+            return JSONResponse({"success": False, "error": "No procedures found (is the MITRESaw CSV built?)"}, status_code=404)
+        existing = {s for (s,) in db.query(ThreatTestCase.signature).filter(ThreatTestCase.user_id == user.id)}
+        added = 0
+        for c in cases:
+            if c["signature"] in existing:
+                continue
+            db.add(ThreatTestCase(
+                user_id=user.id, signature=c["signature"], technique_id=c["technique_id"],
+                technique_name=c["technique_name"], tactic=c["tactic"], group_name=c["group_name"],
+                procedure=c["procedure"], indicators=_json.dumps(c["indicators"]),
+                prevalence=c["prevalence"], atomic_guid=c["atomic_guid"], source=label))
+            existing.add(c["signature"])
+            added += 1
+        db.commit()
+    finally:
+        db.close()
+    return JSONResponse({"success": True, "added": added, "candidates": len(cases)})
+
+
+@app.post("/api/threat-library/delete")
+def threat_library_delete(request: Request, case_id: str = Form(""), clear: str = Form(""),
+                          archer_session: Optional[str] = Cookie(None)):
+    """Remove one test case, or clear the whole library."""
+    from archer.database.models import ThreatTestCase
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
+    user, db = auth
+    try:
+        q = db.query(ThreatTestCase).filter(ThreatTestCase.user_id == user.id)
+        if clear:
+            n = q.delete()
+        elif case_id.isdigit():
+            n = q.filter(ThreatTestCase.id == int(case_id)).delete()
+        else:
+            return JSONResponse({"success": False, "error": "Nothing to delete"}, status_code=400)
+        db.commit()
+    finally:
+        db.close()
+    return JSONResponse({"success": True, "deleted": n})
+
+
+@app.get("/assessments", response_class=HTMLResponse)
+def assessments_page(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """A user's assessment campaigns (#24)."""
+    from archer.database.models import Assessment, AssessmentResult
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return auth
+    user, db = auth
+    try:
+        rows = db.query(Assessment).filter(Assessment.user_id == user.id) \
+            .order_by(Assessment.created_at.desc()).all()
+        items = []
+        for a in rows:
+            total = db.query(AssessmentResult).filter(AssessmentResult.assessment_id == a.id).count()
+            items.append({"id": a.id, "name": a.name, "target": a.target, "operator": a.operator,
+                          "run_date": a.run_date, "cases": total})
+    finally:
+        db.close()
+    return templates.TemplateResponse("assessments.html", {"request": request, "user": user, "assessments": items})
+
+
+@app.post("/api/assessments/create")
+def assessment_create(request: Request, name: str = Form(...), target: str = Form(""),
+                      operator: str = Form(""), run_date: str = Form(""),
+                      archer_session: Optional[str] = Cookie(None)):
+    from archer.database.models import Assessment
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
+    user, db = auth
+    try:
+        a = Assessment(user_id=user.id, name=name.strip() or "Untitled assessment",
+                       target=target.strip(), operator=operator.strip(), run_date=run_date.strip())
+        db.add(a)
+        db.commit()
+        aid = a.id
+    finally:
+        db.close()
+    return JSONResponse({"success": True, "id": aid})
+
+
+@app.get("/assessments/{assessment_id}", response_class=HTMLResponse)
+def assessment_detail(assessment_id: int, request: Request, archer_session: Optional[str] = Cookie(None)):
+    """One campaign: its test cases with red/blue outcomes, the detections and logs for each."""
+    from archer.database.models import Assessment, AssessmentResult
+    from archer.visualization.navigator import detection_files_for
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return auth
+    user, db = auth
+    try:
+        a = db.query(Assessment).filter(Assessment.id == assessment_id, Assessment.user_id == user.id).first()
+        if not a:
+            db.close()
+            return RedirectResponse("/assessments", status_code=303)
+        results = db.query(AssessmentResult).filter(AssessmentResult.assessment_id == a.id) \
+            .order_by(AssessmentResult.technique_id).all()
+        rows = []
+        for r in results:
+            rows.append({
+                "id": r.id, "technique_id": r.technique_id, "technique_name": r.technique_name,
+                "tactic": r.tactic, "red_outcome": r.red_outcome, "blue_outcome": r.blue_outcome,
+                "detection_file": r.detection_file, "notes": r.notes,
+                "detections": len(detection_files_for(GENERATE_DIR, r.technique_id)),
+            })
+        meta = {"id": a.id, "name": a.name, "target": a.target, "operator": a.operator, "run_date": a.run_date}
+    finally:
+        db.close()
+    return templates.TemplateResponse("assessment_detail.html", {
+        "request": request, "user": user, "assessment": meta, "results": rows})
+
+
+@app.post("/api/assessments/{assessment_id}/add")
+def assessment_add_cases(assessment_id: int, request: Request, tactic: str = Form(""),
+                         archer_session: Optional[str] = Cookie(None)):
+    """Add the library's test cases (optionally one tactic) to an assessment as not-run results."""
+    from archer.database.models import Assessment, AssessmentResult, ThreatTestCase
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
+    user, db = auth
+    try:
+        a = db.query(Assessment).filter(Assessment.id == assessment_id, Assessment.user_id == user.id).first()
+        if not a:
+            return JSONResponse({"success": False, "error": "No such assessment"}, status_code=404)
+        q = db.query(ThreatTestCase).filter(ThreatTestCase.user_id == user.id)
+        if tactic.strip():
+            q = q.filter(ThreatTestCase.tactic.like(f"%{tactic.strip()}%"))
+        have = {tid for (tid,) in db.query(AssessmentResult.test_case_id)
+                .filter(AssessmentResult.assessment_id == a.id) if tid}
+        added = 0
+        for c in q.all():
+            if c.id in have:
+                continue
+            db.add(AssessmentResult(assessment_id=a.id, user_id=user.id, test_case_id=c.id,
+                                    technique_id=c.technique_id, technique_name=c.technique_name,
+                                    tactic=c.tactic))
+            added += 1
+        db.commit()
+    finally:
+        db.close()
+    return JSONResponse({"success": True, "added": added})
+
+
+@app.post("/api/assessments/result/{result_id}")
+def assessment_update_result(result_id: int, request: Request, red_outcome: str = Form(None),
+                             blue_outcome: str = Form(None), detection_file: str = Form(None),
+                             notes: str = Form(None), archer_session: Optional[str] = Cookie(None)):
+    """Record a test case's red and blue outcome."""
+    from archer.database.models import AssessmentResult
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
+    user, db = auth
+    try:
+        r = db.query(AssessmentResult).filter(AssessmentResult.id == result_id,
+                                              AssessmentResult.user_id == user.id).first()
+        if not r:
+            return JSONResponse({"success": False, "error": "No such result"}, status_code=404)
+        reds = {"not_run", "executed", "failed", "blocked"}
+        blues = {"not_assessed", "not_logged", "logged", "alerted", "prevented"}
+        if red_outcome is not None and red_outcome in reds:
+            r.red_outcome = red_outcome
+        if blue_outcome is not None and blue_outcome in blues:
+            r.blue_outcome = blue_outcome
+        if detection_file is not None:
+            r.detection_file = detection_file.strip() or None
+        if notes is not None:
+            r.notes = notes.strip() or None
+        db.commit()
+    finally:
+        db.close()
+    return JSONResponse({"success": True})
+
+
+@app.post("/api/assessments/{assessment_id}/delete")
+def assessment_delete(assessment_id: int, request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Delete an assessment and its results."""
+    from archer.database.models import Assessment, AssessmentResult
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
+    user, db = auth
+    try:
+        a = db.query(Assessment).filter(Assessment.id == assessment_id, Assessment.user_id == user.id).first()
+        if not a:
+            return JSONResponse({"success": False, "error": "No such assessment"}, status_code=404)
+        db.query(AssessmentResult).filter(AssessmentResult.assessment_id == a.id).delete()
+        db.delete(a)
+        db.commit()
+    finally:
+        db.close()
+    return JSONResponse({"success": True})
+
+
+@app.get("/api/assessments/{assessment_id}/export")
+def assessment_export(assessment_id: int, request: Request, fmt: str = Query("csv"),
+                      archer_session: Optional[str] = Cookie(None)):
+    """Download a campaign's outcomes as CSV or an ATT&CK Navigator layer."""
+    from archer.assessments.export import results_to_csv, results_to_navigator
+    from archer.database.models import Assessment, AssessmentResult
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in"}, status_code=401)
+    user, db = auth
+    try:
+        a = db.query(Assessment).filter(Assessment.id == assessment_id, Assessment.user_id == user.id).first()
+        if not a:
+            return JSONResponse({"error": "No such assessment"}, status_code=404)
+        results = [{"technique_id": r.technique_id, "technique_name": r.technique_name, "tactic": r.tactic,
+                    "red_outcome": r.red_outcome, "blue_outcome": r.blue_outcome,
+                    "detection_file": r.detection_file, "notes": r.notes}
+                   for r in db.query(AssessmentResult).filter(AssessmentResult.assessment_id == a.id)
+                   .order_by(AssessmentResult.technique_id)]
+        name = sanitize_filename(a.name) or f"assessment_{a.id}"
+    finally:
+        db.close()
+    if fmt == "navigator":
+        return Response(content=results_to_navigator(a.name, results), media_type="application/json",
+                        headers={"Content-Disposition": f'attachment; filename="{name}_navigator.json"'})
+    return Response(content=results_to_csv(results), media_type="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="{name}.csv"'})
+
+
 @app.get("/catalogue", response_class=HTMLResponse)
 def catalogue_page(request: Request, archer_session: Optional[str] = Cookie(None)):
     """

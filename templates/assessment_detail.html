@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Archer - {{ assessment.name }}{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/mitresaw.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container ms-page ad-page" data-id="{{ assessment.id }}">
+  <div class="page-header">
+    <h1>{{ assessment.name }}</h1>
+    <p>{% if assessment.target %}Target <strong>{{ assessment.target }}</strong>. {% endif %}
+       {% if assessment.operator %}Operator {{ assessment.operator }}. {% endif %}
+       {% if assessment.run_date %}Run {{ assessment.run_date }}.{% endif %}
+       <a href="/assessments">← all assessments</a></p>
+  </div>
+
+  <section class="ui-card ms-card">
+    <div class="ad-toolbar">
+      <div class="ad-add">
+        <input type="text" id="ad-tactic" class="form-input" placeholder="tactic filter (optional)" aria-label="Tactic filter">
+        <button type="button" class="btn-primary" id="ad-add">Add from threat library</button>
+        <span class="ms-state" id="ad-add-state" aria-live="polite"></span>
+      </div>
+      <div class="ad-export">
+        <a class="btn-secondary" href="/api/assessments/{{ assessment.id }}/export?fmt=csv">CSV</a>
+        <a class="btn-secondary" href="/api/assessments/{{ assessment.id }}/export?fmt=navigator">Navigator layer</a>
+      </div>
+    </div>
+
+    {% if results %}
+    <table class="ad-table">
+      <thead><tr><th>Technique</th><th>Tactic</th><th>Red</th><th>Blue</th><th>Detection</th><th>Notes</th></tr></thead>
+      <tbody>
+      {% for r in results %}
+        <tr data-id="{{ r.id }}">
+          <td><strong>{{ r.technique_id }}</strong><br><small>{{ r.technique_name }}</small>
+            <div class="ad-links"><a href="/emulate" title="Which logs record this">logs</a>
+              {% if r.detections %}· <a href="/library?q={{ r.technique_id }}">{{ r.detections }} detection{{ 's' if r.detections != 1 }}</a>{% endif %}
+              <span class="ad-hunt" data-tech="{{ r.technique_id }}" hidden>· <a href="/manual">hunt this</a></span></div></td>
+          <td><small>{{ r.tactic }}</small></td>
+          <td><select class="ad-f" data-f="red_outcome">
+            {% for o in ['not_run','executed','failed','blocked'] %}<option value="{{ o }}" {{ 'selected' if r.red_outcome == o }}>{{ o.replace('_',' ') }}</option>{% endfor %}
+          </select></td>
+          <td><select class="ad-f ad-blue" data-f="blue_outcome">
+            {% for o in ['not_assessed','not_logged','logged','alerted','prevented'] %}<option value="{{ o }}" {{ 'selected' if r.blue_outcome == o }}>{{ o.replace('_',' ') }}</option>{% endfor %}
+          </select></td>
+          <td><input type="text" class="ad-f form-input" data-f="detection_file" value="{{ r.detection_file or '' }}" placeholder="file that fired"></td>
+          <td><input type="text" class="ad-f form-input" data-f="notes" value="{{ r.notes or '' }}" placeholder="notes"></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="ms-note">No test cases yet. Build some in the <a href="/threat-library">threat library</a>,
+      then add them here.</p>
+    {% endif %}
+  </section>
+</div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const aid = document.querySelector('.ad-page').dataset.id;
+
+  // "logged, no alert" offers a detection hunt
+  function syncHunt(row) {
+    const blue = row.querySelector('.ad-blue').value;
+    const hunt = row.querySelector('.ad-hunt');
+    if (hunt) hunt.hidden = (blue !== 'logged');
+  }
+  document.querySelectorAll('.ad-table tbody tr').forEach(syncHunt);
+
+  async function save(row) {
+    const body = new FormData();
+    row.querySelectorAll('.ad-f').forEach(el => body.append(el.dataset.f, el.value));
+    const r = await fetch('/api/assessments/result/' + row.dataset.id, { method: 'POST', body });
+    if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || 'HTTP ' + r.status); }
+  }
+  document.querySelectorAll('.ad-f').forEach(el => el.addEventListener('change', async () => {
+    const row = el.closest('tr');
+    el.classList.add('ad-saving');
+    try { await save(row); syncHunt(row); el.classList.remove('ad-saving'); el.classList.add('ad-saved');
+      setTimeout(() => el.classList.remove('ad-saved'), 600); }
+    catch (e) { el.classList.remove('ad-saving'); alert(e.message); }
+  }));
+
+  $('ad-add').addEventListener('click', async () => {
+    const state = $('ad-add-state'); state.textContent = 'Adding…';
+    const body = new FormData(); body.append('tactic', $('ad-tactic').value);
+    try {
+      const r = await fetch('/api/assessments/' + aid + '/add', { method: 'POST', body });
+      const j = await r.json(); if (!r.ok || !j.success) throw new Error(j.error || 'HTTP ' + r.status);
+      state.textContent = `Added ${j.added}.`; if (j.added) setTimeout(() => location.reload(), 600);
+    } catch (e) { state.textContent = e.message; }
+  });
+})();
+</script>
+<style>
+  .ad-toolbar { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .ad-add, .ad-export { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .ad-table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+  .ad-table th, .ad-table td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+  .ad-table th { font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); }
+  .ad-table select.ad-f, .ad-table input.ad-f { width: 100%; box-sizing: border-box; font: inherit; }
+  .ad-links { font-size: 0.78em; margin-top: 4px; color: var(--text-secondary); }
+  .ad-saving { opacity: 0.5; }
+  .ad-saved { outline: 2px solid rgba(52,168,83,.5); }
+</style>
+{% endblock %}
