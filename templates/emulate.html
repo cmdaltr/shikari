@@ -13,9 +13,42 @@
 <div class="results-container ms-page em-page" data-signed-in="{{ 'true' if user else 'false' }}" data-admin="{{ 'true' if user and user.role.value == 'admin' else 'false' }}" data-can-operate="{{ 'true' if user and user.role.value in ['admin', 'operator'] else 'false' }}" data-siem="{{ siem }}">
   <div class="page-header">
     <h1>Emulate</h1>
-    <p>Which logs record each technique, from attacks emulated and recorded in labs, and whether your detections' indicators appear in them</p>
+    <p>Plan an emulation from a target, then validate it against recorded telemetry: which logs record each technique, and whether your detections' indicators appear in them.</p>
     <p class="emulate-xref">Record what you tested in an <a href="/assessments">assessment</a>, from test cases built in its threat library.</p>
   </div>
+
+  <!-- Planner (#25): target -> dataset, platforms, logs to collect, SIEMs -> deploy -->
+  <section class="ui-card ms-card ep-card" id="emulate-planner">
+    <h2>Plan an emulation</h2>
+    <p class="ms-note">Pick a target and Archer builds the plan: the dataset to validate each technique against, the Atomic test, the logs to collect and where to validate. Review it, then deploy.</p>
+    <div class="ep-pick">
+      <div class="ep-seg" role="tablist">
+        <button type="button" class="ep-kind is-active" data-kind="group" role="tab">Group</button>
+        <button type="button" class="ep-kind" data-kind="cve" role="tab">CVE</button>
+        <button type="button" class="ep-kind" data-kind="technique" role="tab">Technique</button>
+      </div>
+      <input type="text" id="ep-value" class="form-input" placeholder="e.g. Scattered Spider" aria-label="Target">
+      <button type="button" class="btn-primary" id="ep-build">Build plan</button>
+      <span class="ms-state" id="ep-state" aria-live="polite"></span>
+    </div>
+
+    <div id="ep-plan" hidden>
+      <div class="ep-summary" id="ep-summary"></div>
+      <div class="ep-table-wrap">
+        <table class="ep-table">
+          <thead><tr><th>Technique</th><th>Tactic</th><th>Platforms</th><th>Atomic</th><th>Collect (logs)</th><th>Validate dataset</th></tr></thead>
+          <tbody id="ep-rows"></tbody>
+        </table>
+      </div>
+      <div class="ep-deploy">
+        <div class="ep-deploy-head"><strong>Deploy</strong><span class="ms-note">Archer can't run atomics in-app yet (<a href="https://github.com/cmdaltr/archer/issues/22" target="_blank" rel="noopener">#22</a>). Export the plan, run it on your lab, and record outcomes in an <a href="/assessments">assessment</a>.</span></div>
+        <div class="ep-deploy-actions">
+          <a class="btn-primary" id="ep-runsheet" href="#">Download run sheet</a>
+          <a class="btn-secondary" id="ep-macat" href="#">Export for MACAT</a>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- Summary cards: the Coverage page's; the indicator check's colour is its state -->
   <div class="em-tiles" id="em-stats">
@@ -227,6 +260,81 @@
     <div class="lab-modal-body" id="lab-modal-body"></div>
   </div>
 </div>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  let kind = 'group';
+  const PLACEHOLDER = {group: 'e.g. Scattered Spider', cve: 'e.g. CVE-2024-3400', technique: 'e.g. T1059.001'};
+
+  document.querySelectorAll('.ep-kind').forEach(b => b.addEventListener('click', () => {
+    kind = b.dataset.kind;
+    document.querySelectorAll('.ep-kind').forEach(x => x.classList.toggle('is-active', x === b));
+    $('ep-value').placeholder = PLACEHOLDER[kind];
+  }));
+
+  function collectChips(list) {
+    return (list || []).map(c => `<span class="ep-log ep-${esc(c.collection || 'other')}" title="${esc(c.collection || '')}">${esc(c.log)}</span>`).join(' ') || '<span class="ep-muted">—</span>';
+  }
+
+  async function build() {
+    const value = $('ep-value').value.trim();
+    const state = $('ep-state');
+    if (!value) { state.textContent = 'Name a target first.'; return; }
+    state.textContent = 'Building…'; $('ep-plan').hidden = true;
+    try {
+      const body = new FormData(); body.append('kind', kind); body.append('value', value);
+      const r = await fetch('/api/emulate/plan', { method: 'POST', body });
+      const j = await r.json();
+      if (!r.ok || !j.success) throw new Error(j.error || ('HTTP ' + r.status));
+      state.textContent = '';
+      const s = j.summary;
+      $('ep-summary').innerHTML = `<strong>${esc(j.target.value)}</strong> — ${s.techniques} techniques · `
+        + `<span class="ep-ok">${s.recordable} validatable</span>` + (s.gaps ? ` · <span class="ep-gap">${s.gaps} gap${s.gaps===1?'':'s'}</span>` : '')
+        + (s.with_atomic ? ` · ${s.with_atomic} with an Atomic` : '') + ` · validate in ${esc((j.siems||[]).join(', '))}`;
+      $('ep-rows').innerHTML = j.techniques.map(t => {
+        const ds = t.dataset ? `${esc(ds_label(t.dataset))}` : '<span class="ep-gap">no dataset</span>';
+        return `<tr>
+          <td><strong>${esc(t.technique_id)}</strong><br><small>${esc(t.technique_name)}</small></td>
+          <td><small>${esc(t.tactic) || '—'}</small></td>
+          <td>${(t.platforms||[]).map(p=>`<span class="ep-plat">${esc(p)}</span>`).join(' ') || '<span class="ep-muted">—</span>'}</td>
+          <td><small>${t.atomic_guid ? esc(String(t.atomic_guid).slice(0,8)) : '—'}</small></td>
+          <td>${collectChips(t.collect)}</td>
+          <td><small>${ds}</small></td></tr>`;
+      }).join('');
+      const q = `kind=${encodeURIComponent(kind)}&value=${encodeURIComponent(value)}`;
+      $('ep-runsheet').href = `/api/emulate/plan/export?${q}&fmt=runsheet`;
+      $('ep-macat').href = `/api/emulate/plan/export?${q}&fmt=macat`;
+      $('ep-plan').hidden = false;
+    } catch (e) { state.textContent = e.message; }
+  }
+  function ds_label(d) { return [d.source, d.title].filter(Boolean).join(' '); }
+
+  $('ep-build').addEventListener('click', build);
+  $('ep-value').addEventListener('keydown', e => { if (e.key === 'Enter') build(); });
+})();
+</script>
+<style>
+  .ep-card h2 { margin-bottom: 4px; }
+  .ep-pick { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .ep-seg { display: inline-flex; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+  .ep-kind { border: none; background: var(--bg-secondary); color: var(--text-secondary); padding: 7px 16px; cursor: pointer; font: inherit; }
+  .ep-kind.is-active { background: var(--accent); color: #fff; font-weight: 600; }
+  .ep-pick .form-input { flex: 1 1 220px; min-width: 180px; }
+  .ep-summary { margin: 16px 0 10px; font-size: 0.95em; }
+  .ep-ok { color: #2e9e4f; font-weight: 600; } .ep-gap { color: #d93025; font-weight: 600; }
+  .ep-table-wrap { overflow-x: auto; }
+  .ep-table { width: 100%; border-collapse: collapse; }
+  .ep-table th, .ep-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+  .ep-table th { font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); }
+  .ep-log { display: inline-block; font-size: 0.78em; border-radius: 6px; padding: 1px 7px; margin: 1px 2px 1px 0; background: var(--bg-primary); border: 1px solid var(--border-color); }
+  .ep-log.ep-native { border-color: rgba(52,168,83,.5); } .ep-log.ep-sysmon { border-color: rgba(79,143,232,.5); } .ep-log.ep-edr { border-color: rgba(224,168,0,.5); }
+  .ep-plat, .ep-muted { font-size: 0.8em; color: var(--text-secondary); }
+  .ep-plat { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 1px 7px; }
+  .ep-deploy { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-color); }
+  .ep-deploy-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-bottom: 10px; }
+  .ep-deploy-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+</style>
 <script src="{{ url_for('static', path='js/role-watch.js') }}?v={{ request.app.state.asset_version }}"></script>
 <script src="{{ url_for('static', path='js/emulate.js') }}?v={{ request.app.state.asset_version }}"></script>
 <script src="{{ url_for('static', path='js/lab.js') }}?v={{ request.app.state.asset_version }}"></script>

@@ -2,6 +2,14 @@
 
 **Build → Emulate** shows which logs record each ATT&CK technique, taken from attacks emulated and recorded in public labs, and checks your detections' indicators against those recordings. No AI is involved and nothing is sent to your SIEM.
 
+## Plan an emulation
+
+The page opens on a planner. Pick a target — a **group**, a **CVE** or a **technique** — and Archer assembles a plan to review before you act: for each technique, the most appropriate recorded dataset to validate against, the matching Atomic Red Team test (where a local atomics checkout is configured), the log sources to collect (native OS logs first, then Sysmon and EDR), the OS platforms to run on, and the SIEMs to validate in (your Profile SIEMs).
+
+**Deploy** doesn't run anything in-app yet — running atomics and collecting telemetry is [recording a lab](20-recording-a-lab.md) (coming soon). For now it exports the plan two ways: a **run sheet** (a Markdown table of what to run, collect and validate) and a **MACATable TOML** for [MACAT](https://www.macat.io) to run on your lab and push to VECTR. Record the outcomes in an [assessment](23-threat-library-assessments.md).
+
+The recorded-telemetry views below the planner are the evidence layer: they're where you confirm which logs actually captured each technique, and whether your detections' indicators appear in them.
+
 ## Where the recordings come from
 
 | Source | Licence | What it is |

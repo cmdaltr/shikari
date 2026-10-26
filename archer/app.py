@@ -8884,6 +8884,56 @@ def threat_library_macat_export(request: Request, archer_session: Optional[str] 
                     headers={"Content-Disposition": 'attachment; filename="archer_threat_library.macatable.toml"'})
 
 
+def _plan_siems(user) -> list:
+    """The user's SIEM keys to validate in; all of them if none chosen."""
+    return _user_siems(user) or list(SIEM_PLATFORMS.keys())
+
+
+@app.post("/api/emulate/plan")
+def emulate_plan(request: Request, kind: str = Form(...), value: str = Form(...),
+                 archer_session: Optional[str] = Cookie(None)):
+    """Build an emulation plan for a group, CVE or technique (#25)."""
+    from archer.telemetry.planner import build_plan
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in to plan an emulation"}, status_code=401)
+    user, db = auth
+    db.close()
+    v = value.strip()
+    if not v:
+        return JSONResponse({"success": False, "error": "Name a group, CVE or technique"}, status_code=400)
+    target = sanitize_group_name(v) if kind in ("group", "cve") else v
+    plan = build_plan(kind, target, _plan_siems(user), GENERATE_DIR)
+    return JSONResponse(plan, status_code=200 if plan.get("success") else 404)
+
+
+@app.get("/api/emulate/plan/export")
+def emulate_plan_export(request: Request, kind: str = Query(...), value: str = Query(...),
+                        fmt: str = Query("runsheet"), archer_session: Optional[str] = Cookie(None)):
+    """Export an emulation plan as a Markdown run sheet or a MACATable library TOML."""
+    from archer.telemetry.planner import build_plan, plan_to_runsheet, plan_to_test_cases
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in to export"}, status_code=401)
+    user, db = auth
+    db.close()
+    target = sanitize_group_name(value.strip()) if kind in ("group", "cve") else value.strip()
+    plan = build_plan(kind, target, _plan_siems(user), GENERATE_DIR)
+    if not plan.get("success"):
+        return JSONResponse({"error": plan.get("error", "No plan")}, status_code=404)
+    safe = sanitize_filename(value.strip()) or kind
+    if fmt == "macat":
+        from archer.assessments.macat import test_cases_to_macatable
+
+        body = test_cases_to_macatable(plan_to_test_cases(plan))
+        return Response(content=body, media_type="application/toml",
+                        headers={"Content-Disposition": f'attachment; filename="{safe}_emulation.macatable.toml"'})
+    return Response(content=plan_to_runsheet(plan), media_type="text/markdown",
+                    headers={"Content-Disposition": f'attachment; filename="{safe}_runsheet.md"'})
+
+
 @app.get("/assessments/{assessment_id}", response_class=HTMLResponse)
 def assessment_detail(assessment_id: int, request: Request, archer_session: Optional[str] = Cookie(None)):
     """One campaign: its test cases with red/blue outcomes, the detections and logs for each."""
