@@ -6,7 +6,7 @@
 
 <br>
 
-Archer automates threat hunting and detection engineering from MITRE ATT&CK. Give it a threat group, CVE or threat report and it generates, validates and correlates detections for Google SecOps (YARA-L) and Microsoft Defender (KQL), with coverage mapping, attack flows and MITRESaw procedure intel. AI is optional.
+Archer automates threat hunting and detection engineering from MITRE ATT&CK. Give it a threat group, CVE or threat report and it generates, validates and correlates detections for Google SecOps (YARA-L), Microsoft Defender (KQL) and Elastic (ES\|QL), with coverage mapping, attack flows and MITRESaw procedure intel. AI is optional.
 
 ## 🛠️ Setup and Usage
 
@@ -45,7 +45,10 @@ archer-cli stop
 - 🧱 **Technology stack** - Group hunts leave out techniques and procedures for platforms and products you don't run (Profile → Technology stack)
 - 🪚 **MITRESaw** - Every group's ATT&CK procedures and the indicators in them, rebuilt as ATT&CK changes ([guide](docs/guide/12-mitresaw.md))
 - 🗺️ **Attack Flows** - Every flow saved to your library on one page: pick a group, report or CVE to open its ATT&CK flow
-- 🔍 **Multi-Platform Support** - Google SecOps (YARA-L) and Microsoft Defender (KQL); Splunk and Elastic are switched off for now ([onboarding](docs/SIEM_ONBOARDING.md))
+- 🔍 **Multi-Platform Support** - Google SecOps (YARA-L), Microsoft Defender (KQL) and Elastic (ES\|QL); Splunk is switched off for now ([onboarding](docs/SIEM_ONBOARDING.md))
+- 🔗 **STIX / TAXII & MISP** - Import a STIX 2.1 bundle, a TAXII collection or a MISP event as a hunt input, and export a run as a STIX 2.1 bundle ([guide](docs/guide/21-stix-taxii-misp.md))
+- 🧾 **Detections as code** - Commit a run's detections to a git repo and diff two commits to see what a Regenerate changed; dry-run push to Defender XDR / SecOps ([guide](docs/guide/22-detections-as-code.md))
+- 🎛️ **Threat library & assessments** - Intelligence-led test cases from a profile's ranked groups, run in assessments that record red and blue outcomes, with CSV and ATT&CK Navigator export ([guide](docs/guide/23-threat-library-assessments.md))
 - 🧠 **Heuristic and AI-Powered Correlations** - Semantic analysis and query correlation with per-technique chained queries; each correlation carries its detections' OSINT enrichment and says when a part's query has changed since
 - 🛡️ **Threat Briefing** - ATT&CK prioritisation grounded in real MITRE data and your detection coverage gaps
 - 🧹 **IOC sweeps** - Report and CVE indicators as sweep queries: a known-good list, files in system folders matched only when written, and IPs and domains that expire after 90 days ([details](docs/guide/03-analyse.md#what-the-ioc-sweep-leaves-out-or-narrows))
@@ -66,7 +69,7 @@ archer-cli stop
 - **CVE Hunting** - Generate detections from CVE IDs with NVD enrichment
 - **Query Execution** - Splunk API client (code implemented, see [UNTESTED.md](docs/other/UNTESTED.md)); Defender XDR planned with hit counts (#16)
 - **Running atomics from Archer** - Coming soon; [record a lab](docs/guide/20-recording-a-lab.md) on your own VMs for now (#22)
-- **Threat library with red and blue outcomes (VECTR-style), CALDERA, MACAT** - Planned (see [FUTURE.md](docs/other/FUTURE.md) and #24)
+- **Threat library with red and blue outcomes (VECTR-style)** - Built (Build → Assessments, #24); CALDERA and MACAT integration planned (see [FUTURE.md](docs/other/FUTURE.md))
 
 ### Security & User Management
 - 🔐 **Enterprise Authentication** - Bcrypt password hashing, session management, MFA support (TOTP)

@@ -8712,36 +8712,10 @@ def _profile_groups(domain: str):
     return [g for g in (data.get("recommended_groups") or []) if g]
 
 
-@app.get("/threat-library", response_class=HTMLResponse)
-def threat_library_page(request: Request, archer_session: Optional[str] = Cookie(None)):
-    """Intelligence-led test cases built from the groups a profile ranks (#24)."""
-    import json as _json
-
-    from archer.database.models import ThreatTestCase
-    from archer.visualization.navigator import detection_files_for
-
-    auth = require_auth(request, archer_session)
-    if isinstance(auth, RedirectResponse):
-        return auth
-    user, db = auth
-    try:
-        rows = db.query(ThreatTestCase).filter(ThreatTestCase.user_id == user.id) \
-            .order_by(ThreatTestCase.prevalence.desc(), ThreatTestCase.technique_id).all()
-        cases = []
-        for c in rows:
-            cases.append({
-                "id": c.id, "technique_id": c.technique_id, "technique_name": c.technique_name,
-                "tactic": c.tactic, "group_name": c.group_name, "prevalence": c.prevalence,
-                "procedure": c.procedure, "atomic_guid": c.atomic_guid, "source": c.source,
-                "indicators": _json.loads(c.indicators) if c.indicators else {},
-                "detections": len(detection_files_for(GENERATE_DIR, c.technique_id)),
-            })
-        profiles_dir = os.path.join(DATA_DIR, "profiles")
-        profiles = sorted(n[:-13] for n in os.listdir(profiles_dir)) if os.path.isdir(profiles_dir) else []
-    finally:
-        db.close()
-    return templates.TemplateResponse("threat_library.html", {
-        "request": request, "user": user, "cases": cases, "profiles": profiles})
+@app.get("/threat-library")
+def threat_library_page(request: Request):
+    """Folded into the Assessments page's Threat library tab (#24)."""
+    return RedirectResponse("/assessments#library", status_code=307)
 
 
 @app.post("/api/threat-library/build")
@@ -8817,8 +8791,11 @@ def threat_library_delete(request: Request, case_id: str = Form(""), clear: str 
 
 @app.get("/assessments", response_class=HTMLResponse)
 def assessments_page(request: Request, archer_session: Optional[str] = Cookie(None)):
-    """A user's assessment campaigns (#24)."""
-    from archer.database.models import Assessment, AssessmentResult
+    """Threat library and assessment campaigns on one page, two tabs (#24)."""
+    import json as _json
+
+    from archer.database.models import Assessment, AssessmentResult, ThreatTestCase
+    from archer.visualization.navigator import detection_files_for
 
     auth = require_auth(request, archer_session)
     if isinstance(auth, RedirectResponse):
@@ -8832,9 +8809,20 @@ def assessments_page(request: Request, archer_session: Optional[str] = Cookie(No
             total = db.query(AssessmentResult).filter(AssessmentResult.assessment_id == a.id).count()
             items.append({"id": a.id, "name": a.name, "target": a.target, "operator": a.operator,
                           "run_date": a.run_date, "cases": total})
+        case_rows = db.query(ThreatTestCase).filter(ThreatTestCase.user_id == user.id) \
+            .order_by(ThreatTestCase.prevalence.desc(), ThreatTestCase.technique_id).all()
+        cases = []
+        for c in case_rows:
+            cases.append({"id": c.id, "technique_id": c.technique_id, "technique_name": c.technique_name,
+                          "tactic": c.tactic, "group_name": c.group_name, "prevalence": c.prevalence,
+                          "procedure": c.procedure, "atomic_guid": c.atomic_guid,
+                          "detections": len(detection_files_for(GENERATE_DIR, c.technique_id))})
+        profiles_dir = os.path.join(DATA_DIR, "profiles")
+        profiles = sorted(n[:-13] for n in os.listdir(profiles_dir)) if os.path.isdir(profiles_dir) else []
     finally:
         db.close()
-    return templates.TemplateResponse("assessments.html", {"request": request, "user": user, "assessments": items})
+    return templates.TemplateResponse("assessments.html", {
+        "request": request, "user": user, "assessments": items, "cases": cases, "profiles": profiles})
 
 
 @app.post("/api/assessments/create")
