@@ -728,6 +728,9 @@
                         <li>IOC sweeps with an expiry</li>
                         <li>Company profiling and exposure mapping</li>
                         <li>A weekly, tagged threat feed</li>
+                        <li>STIX, TAXII and MISP in and out</li>
+                        <li>Detections as code, versioned in git</li>
+                        <li>Threat library and red/blue assessments</li>
                     </ul>
                 </div>
                 <div class="feature-card">
@@ -836,6 +839,15 @@ archer-cli offline correlate "APT29"     # correlation rules
 archer-cli start | status | restart      # run the server
 archer-cli console                       # the modules interactively
 archer-cli mcp                           # Archer's tools for any MCP client</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Detections as code</h4>
+                <p>A run's detections are files, so they belong in version control. Detections &rarr; Detections as code commits a
+                group's detections to a git repository at stable paths, so a Regenerate after an ATT&amp;CK release becomes a commit
+                whose diff is exactly the queries that were added, removed or changed. Point a remote at it and push anywhere.
+                Pushing into a SIEM's own rule store (Defender XDR, Google SecOps) is a dry run for now — the payloads are built,
+                nothing is sent, and a rule would be created disabled.</p>
             </div>
 
             <div class="workflow-step">
@@ -1490,6 +1502,16 @@ data/APT29/
                 Defender XDR GUIDE triage grades. Recording Atomic Red Team in your own lab, with Defender for Endpoint's own
                 rows, is coming soon.</p>
             </div>
+
+            <div class="workflow-step">
+                <h4>From checking logs to recording tests</h4>
+                <p>Emulate tells you which logs <em>could</em> record a technique; <strong>Assessments</strong> (Build &rarr;
+                Assessments) record what actually happened when you tested. Build a threat library of test cases from a profile's
+                ranked groups — one per MITRESaw procedure, sorted by how many of those groups use the technique — then run them in
+                a campaign, logging a red outcome (executed, failed, blocked) and a blue outcome (not logged, logged, alerted,
+                prevented) per technique. A logged-but-no-alert result links straight to a detection hunt; outcomes export as CSV
+                or an ATT&amp;CK Navigator layer. VECTR-style, per user, no AI.</p>
+            </div>
             </div>
             <!-- End Emulate Tab -->
 
@@ -1532,6 +1554,14 @@ data/APT29/
                 <p>This week's threat research, pulled from around 26 vendor and government sources and tagged by industry,
                 nation and motive. Watchlists flag new posts about the groups, sectors or regions you care about, optionally by
                 email, and your technology-stack filter highlights what's relevant to what you run.</p>
+            </div>
+
+            <div class="workflow-step">
+                <h4>STIX / TAXII &amp; MISP</h4>
+                <p>Intelligence arrives as STIX bundles, TAXII collections and MISP events as often as blog posts, so Archer takes
+                those as a hunt input too: attack-patterns become techniques, indicator patterns and observables become IOCs, and
+                an intrusion-set names the group — the same review-then-generate path as a report. A finished run exports the
+                other way, as a STIX 2.1 bundle with the detections carried as <code>x-archer-detection</code> objects. No AI.</p>
             </div>
 
             <div class="workflow-step">
