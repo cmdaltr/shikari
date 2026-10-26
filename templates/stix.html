@@ -28,17 +28,25 @@
     </div>
 
     <div class="sx-pane" id="sx-pane-file">
-      <input type="file" id="sx-file" accept=".json,application/json" aria-label="STIX bundle or MISP event JSON">
+      <label class="sx-well sx-drop" id="sx-drop">
+        <input type="file" id="sx-file" accept=".json,application/json" aria-label="STIX bundle or MISP event JSON" hidden>
+        <span class="sx-drop-icon" aria-hidden="true">⤓</span>
+        <span class="sx-drop-text">Drop a STIX bundle or MISP event here, or <u>choose a file</u></span>
+        <span class="sx-drop-name" id="sx-file-name"></span>
+      </label>
       <p class="ms-note">A STIX bundle (<code>objects</code>) or a MISP event (<code>Event</code>) — Archer detects which.</p>
     </div>
     <div class="sx-pane" id="sx-pane-paste" hidden>
-      <textarea id="sx-paste" rows="8" class="form-input" placeholder='{"type":"bundle","objects":[ ... ]}  or  {"Event":{ ... }}'></textarea>
+      <textarea id="sx-paste" class="form-input sx-well" placeholder='{"type":"bundle","objects":[ ... ]}  or  {"Event":{ ... }}'></textarea>
+      <p class="ms-note">A STIX&nbsp;2.1 bundle or a MISP event as raw JSON.</p>
     </div>
     <div class="sx-pane" id="sx-pane-taxii" hidden>
-      <input type="url" id="sx-taxii-url" class="form-input" placeholder="https://taxii.example/api/collections/&lt;id&gt;/" aria-label="TAXII 2.1 collection URL">
-      <div class="sx-row">
-        <input type="text" id="sx-taxii-user" class="form-input" placeholder="username (optional)" autocomplete="off">
-        <input type="password" id="sx-taxii-pass" class="form-input" placeholder="password (optional)" autocomplete="off">
+      <div class="sx-well sx-well-form">
+        <input type="url" id="sx-taxii-url" class="form-input" placeholder="https://taxii.example/api/collections/&lt;id&gt;/" aria-label="TAXII 2.1 collection URL">
+        <div class="sx-row">
+          <input type="text" id="sx-taxii-user" class="form-input" placeholder="username (optional)" autocomplete="off">
+          <input type="password" id="sx-taxii-pass" class="form-input" placeholder="password (optional)" autocomplete="off">
+        </div>
       </div>
       <p class="ms-note">The collection's <code>…/collections/&lt;id&gt;/</code> URL. Credentials, if any, are used for this request only and not stored.</p>
     </div>
@@ -88,6 +96,18 @@
     document.querySelectorAll('.sx-pane').forEach(p => p.hidden = p.id !== 'sx-pane-' + btn.dataset.pane);
   }));
   const activePane = () => document.querySelector('.sx-tab.is-active').dataset.pane;
+
+  // File tab: drag-and-drop dropzone + filename display.
+  const drop = $('sx-drop'), fileInput = $('sx-file'), fileName = $('sx-file-name');
+  const showName = () => { fileName.textContent = fileInput.files[0] ? fileInput.files[0].name : ''; };
+  fileInput.addEventListener('change', showName);
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); drop.classList.add('is-over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); drop.classList.remove('is-over'); }));
+  drop.addEventListener('drop', e => {
+    if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; showName(); }
+  });
 
   let groupName = '';
   async function postForm(url, data) {
@@ -147,7 +167,19 @@
   .sx-tab.is-active { border-color: var(--accent); color: var(--text-primary); font-weight: 600; }
   .sx-pane { margin-bottom: 12px; }
   .sx-pane textarea, .sx-pane input[type=url], .sx-row input { width: 100%; box-sizing: border-box; }
-  .sx-row { display: flex; gap: 8px; margin-top: 8px; }
+  .sx-row { display: flex; gap: 8px; }
+  /* Every input tab fills the same box, so File / Paste / TAXII share one footprint. */
+  .sx-well { width: 100%; height: 180px; box-sizing: border-box; display: block; resize: none; }
+  textarea.sx-well { height: 180px; }
+  .sx-well-form { display: flex; flex-direction: column; justify-content: center; gap: 10px;
+    padding: 16px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-secondary); }
+  .sx-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    text-align: center; padding: 16px; cursor: pointer; border: 2px dashed var(--border-color); border-radius: 10px;
+    background: var(--bg-secondary); color: var(--text-secondary); transition: border-color .15s, background .15s; }
+  .sx-drop:hover, .sx-drop.is-over { border-color: var(--accent); background: var(--bg-primary); }
+  .sx-drop-icon { font-size: 1.8rem; line-height: 1; color: var(--accent); }
+  .sx-drop-text u { color: var(--text-primary); }
+  .sx-drop-name { font-size: .85rem; font-weight: 600; color: var(--text-primary); word-break: break-all; }
   .sx-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
   .sx-review { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); }
   .sx-opts { display: flex; gap: 18px; flex-wrap: wrap; margin: 10px 0 14px; }
