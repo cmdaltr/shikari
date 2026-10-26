@@ -8577,6 +8577,58 @@ def taxii_import(request: Request, url: str = Form(...), username: str = Form(""
     return JSONResponse(_save_stix_extraction(result, "TAXII"))
 
 
+@app.post("/api/intel/misp/import")
+def misp_instance_import(request: Request, url: str = Form(...), api_key: str = Form(...),
+                         last: str = Form("30d"), archer_session: Optional[str] = Cookie(None)):
+    """Pull recent events from a MISP instance (URL + API key) and import them as a hunt input."""
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in to import intelligence"}, status_code=401)
+    _user, db = auth
+    db.close()
+    if not api_key.strip():
+        return JSONResponse({"success": False, "error": "A MISP API key is required"}, status_code=400)
+    try:
+        from archer.parsers.misp_client import import_events
+
+        result = import_events(url.strip(), api_key.strip(), last=last.strip() or "30d")
+    except Exception as e:
+        return JSONResponse({"success": False, "error": f"MISP fetch failed: {e}"}, status_code=502)
+    if not result.get("success"):
+        return JSONResponse({"success": False, "error": result.get("error", "Could not read the instance")}, status_code=422)
+    if not result.get("techniques") and not any(result.get("iocs", {}).values()):
+        return JSONResponse({"success": False, "error": "No techniques or IOCs in the returned events"}, status_code=422)
+    return JSONResponse(_save_stix_extraction(result, "MISP"))
+
+
+@app.get("/api/intel/misp/export")
+def misp_export_run(request: Request, group: str = Query(...), archer_session: Optional[str] = Cookie(None)):
+    """A saved run's techniques and IOCs → a downloadable MISP event (JSON)."""
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in to export"}, status_code=401)
+    _user, db = auth
+    db.close()
+    safe = sanitize_group_name(group)
+    connector_siem = {"GoogleSecOps": "secops", "MicrosoftThreatProtection": "mde", "Splunk": "splunk", "Elastic": "elastic"}
+    dets = []
+    for name in group_yaml_files(safe, GENERATE_DIR):
+        doc = load_yaml_file(os.path.join(GENERATE_DIR, os.path.basename(name)))
+        if not doc or not doc.get("technique_id"):
+            continue
+        connector = ((doc.get("requiredDataConnectors") or [{}])[0] or {}).get("connectorId", "")
+        dets.append({"name": doc.get("name"), "technique_id": doc.get("technique_id"),
+                     "query": doc.get("query", ""), "siem": connector_siem.get(connector, connector),
+                     "indicators": doc.get("indicators") or {}})
+    if not dets:
+        return JSONResponse({"error": f"No detections found for {group}"}, status_code=404)
+    from archer.parsers.misp_export import run_to_misp
+
+    event = run_to_misp(safe, dets)
+    return Response(content=event, media_type="application/json",
+                    headers={"Content-Disposition": f'attachment; filename="{safe}_misp_event.json"'})
+
+
 @app.get("/api/intel/stix/export")
 def stix_export_run(request: Request, group: str = Query(...), archer_session: Optional[str] = Cookie(None)):
     """A saved run's detections → a downloadable STIX 2.1 bundle."""

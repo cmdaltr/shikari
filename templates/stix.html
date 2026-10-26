@@ -26,6 +26,7 @@
         <button type="button" class="sx-tab is-active" data-pane="file" role="tab">File upload</button>
         <button type="button" class="sx-tab" data-pane="paste" role="tab">Paste JSON</button>
         <button type="button" class="sx-tab" data-pane="taxii" role="tab">TAXII collection</button>
+        <button type="button" class="sx-tab" data-pane="misp" role="tab">MISP instance</button>
       </div>
       <button type="button" class="btn-primary sx-import-btn" id="sx-import">Import</button>
     </div>
@@ -53,6 +54,16 @@
       </div>
       <p class="ms-note">The collection's <code>…/collections/&lt;id&gt;/</code> URL. Credentials, if any, are used for this request only and not stored.</p>
     </div>
+    <div class="sx-pane" id="sx-pane-misp" hidden>
+      <div class="sx-well sx-well-form">
+        <input type="url" id="sx-misp-url" class="form-input" placeholder="https://misp.example" aria-label="MISP instance URL">
+        <div class="sx-row">
+          <input type="password" id="sx-misp-key" class="form-input" placeholder="API key" autocomplete="off" aria-label="MISP API key">
+          <input type="text" id="sx-misp-last" class="form-input" placeholder="published since (e.g. 30d)" value="30d" aria-label="Published since">
+        </div>
+      </div>
+      <p class="ms-note">Pulls recent events via <code>/events/restSearch</code>. The API key is used for this request only and not stored.</p>
+    </div>
 
     <p class="ms-state sx-import-state" id="sx-import-state" aria-live="polite"></p>
 
@@ -72,15 +83,17 @@
 
   <!-- Export -->
   <section class="ui-card ms-card">
-    <h2>Export a run as STIX</h2>
-    <p class="ms-note">A saved run becomes a STIX&nbsp;2.1 bundle — an intrusion-set, an attack-pattern per technique,
-      indicators from the IOCs, and the detections as <code>x-archer-detection</code> objects.</p>
+    <h2>Export a run</h2>
+    <p class="ms-note">A saved run becomes a STIX&nbsp;2.1 bundle (intrusion-set, an attack-pattern per technique,
+      IOC indicators, and the detections as <code>x-archer-detection</code> objects) or a MISP event
+      (the group, techniques as ATT&amp;CK galaxy clusters, and the IOCs as attributes).</p>
     <div class="sx-export-row">
       <select id="sx-export-group" class="dropdown-styled sx-export-select" aria-label="Run to export">
         <option value="">Select a run…</option>
         {% for g in runs %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
       </select>
-      <button type="button" class="btn-primary sx-export-btn" id="sx-export">Download STIX bundle</button>
+      <button type="button" class="btn-primary sx-export-btn" id="sx-export">STIX bundle</button>
+      <button type="button" class="btn-primary sx-export-btn" id="sx-export-misp">MISP event</button>
     </div>
     <p class="ms-state sx-import-state" id="sx-export-state" aria-live="polite"></p>
     {% if not runs %}<p class="ms-note">No runs yet. Hunt a group, CVE or report first.</p>{% endif %}
@@ -131,9 +144,12 @@
         res = await r.json(); if (!r.ok || res.success === false) throw new Error(res.error || res.message || ('HTTP ' + r.status));
       } else if (activePane() === 'paste') {
         res = await postForm('/api/intel/stix/import', { text: $('sx-paste').value });
-      } else {
+      } else if (activePane() === 'taxii') {
         res = await postForm('/api/intel/taxii/import', {
           url: $('sx-taxii-url').value, username: $('sx-taxii-user').value, password: $('sx-taxii-pass').value });
+      } else {
+        res = await postForm('/api/intel/misp/import', {
+          url: $('sx-misp-url').value, api_key: $('sx-misp-key').value, last: $('sx-misp-last').value });
       }
       groupName = res.synthetic_group_name;
       $('sx-summary').innerHTML = `<strong>${res.group_name || groupName}</strong> — ${res.ttps_count} technique${res.ttps_count === 1 ? '' : 's'}, ${res.iocs_count} IOC${res.iocs_count === 1 ? '' : 's'}.`;
@@ -154,11 +170,14 @@
     } catch (e) { state.textContent = e.message; }
   });
 
-  $('sx-export').addEventListener('click', () => {
+  function downloadExport(path) {
     const g = $('sx-export-group').value;
     if (!g) { $('sx-export-state').textContent = 'Select a run first.'; return; }
-    window.location = '/api/intel/stix/export?group=' + encodeURIComponent(g);
-  });
+    $('sx-export-state').textContent = '';
+    window.location = path + '?group=' + encodeURIComponent(g);
+  }
+  $('sx-export').addEventListener('click', () => downloadExport('/api/intel/stix/export'));
+  $('sx-export-misp').addEventListener('click', () => downloadExport('/api/intel/misp/export'));
 })();
 </script>
 <style>
@@ -187,7 +206,7 @@
   .sx-drop-text u { color: var(--text-primary); }
   .sx-drop-name { font-size: .85rem; font-weight: 600; color: var(--text-primary); word-break: break-all; }
   /* Export: select fills the row, button anchored right so it isn't left looking spaced. */
-  .sx-export-row { display: grid; grid-template-columns: 1fr max-content; gap: 12px; align-items: center; margin-top: 8px; }
+  .sx-export-row { display: grid; grid-template-columns: 1fr max-content max-content; gap: 12px; align-items: center; margin-top: 8px; }
   .sx-export-select { width: 100%; box-sizing: border-box; }
   @media (max-width: 560px) { .sx-export-row { grid-template-columns: 1fr; } }
   .sx-review { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); }
