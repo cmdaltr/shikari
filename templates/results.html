@@ -1117,6 +1117,80 @@
     </div>
 
 
+    <!-- Cross-vendor playbooks (#8): a chain's stages re-expressed across SIEMs, with join keys -->
+    {% if cross_vendor %}
+    <div id="cross-vendor" class="detection-section">
+      <div class="section-header" style="display:flex;align-items:center;gap:12px;">
+        <div class="card-icon correlation" style="width:40px;height:40px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </div>
+        <div>
+          <h2 style="margin:0;">Cross-vendor playbooks</h2>
+          <p style="margin:4px 0 0;color:var(--text-secondary);font-size:0.9em;">A chain whose stages can be followed across SIEMs — run each stage where its telemetry lives and join on the keys. Not one query: different query languages don't splice.</p>
+        </div>
+      </div>
+
+      <div class="xv-list">
+        {% for pb in cross_vendor %}
+        <div class="xv-card">
+          <div class="xv-head">
+            <div class="xv-chain">
+              {% for st in pb.stages %}
+                <span class="xv-stage-pill" title="{{ st.technique_name }}">{{ st.technique_id or st.technique_name }}</span>{% if not loop.last %}<span class="xv-arrow">→</span>{% endif %}
+              {% endfor %}
+            </div>
+            <div class="xv-badges">
+              {% for v in pb.vendor_labels %}<span class="xv-badge">{{ v }}</span>{% endfor %}
+              <span class="xv-badge xv-muted">{{ pb.attack_chain_length }} stages</span>
+              <span class="xv-badge xv-muted">{{ (pb.relevance_score * 100) | round }}%</span>
+            </div>
+          </div>
+          <div class="xv-meta">
+            <span><strong>Join on:</strong>
+              {% for k in pb.join_keys %}<span class="xv-key" title="{% for v,f in k.fields.items() %}{{ v }}: {{ f }}{% if not loop.last %} · {% endif %}{% endfor %}">{{ k.entity.replace('_',' ') }}</span>{% endfor %}
+            </span>
+            <span><strong>Window:</strong> {{ pb.time_window }}</span>
+          </div>
+          <details class="xv-stages">
+            <summary>Per-stage queries</summary>
+            {% for st in pb.stages %}
+            <div class="xv-stage">
+              <div class="xv-stage-title"><strong>{{ st.technique_id }}</strong> {{ st.technique_name }}{% if st.tactic %} <span class="xv-tactic">{{ st.tactic }}</span>{% endif %}</div>
+              {% for vkey, v in st.vendors.items() %}
+              <details class="xv-q">
+                <summary>{{ v.label }}</summary>
+                <pre><code>{{ v.query }}</code></pre>
+              </details>
+              {% endfor %}
+            </div>
+            {% endfor %}
+          </details>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <style>
+      .xv-list{display:flex;flex-direction:column;gap:12px;margin-top:14px;}
+      .xv-card{border:1px solid var(--border-color);border-radius:10px;padding:14px 16px;background:var(--bg-secondary);}
+      .xv-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;}
+      .xv-chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+      .xv-stage-pill{background:rgba(94,129,172,.18);border-radius:6px;padding:2px 9px;font-weight:700;font-size:0.85em;}
+      .xv-arrow{color:var(--text-secondary);font-weight:700;}
+      .xv-badges{display:flex;gap:6px;flex-wrap:wrap;}
+      .xv-badge{font-size:0.72em;font-weight:700;border-radius:10px;padding:2px 9px;background:rgba(0,212,170,.15);color:#2e9e7f;}
+      .xv-badge.xv-muted{background:var(--bg-primary);color:var(--text-secondary);border:1px solid var(--border-color);}
+      .xv-meta{display:flex;gap:22px;flex-wrap:wrap;margin-top:10px;font-size:0.88em;color:var(--text-secondary);}
+      .xv-key{display:inline-block;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:6px;padding:1px 8px;margin-left:4px;cursor:help;}
+      .xv-stages{margin-top:10px;}
+      .xv-stages>summary{cursor:pointer;color:var(--accent);font-size:0.9em;}
+      .xv-stage{margin:10px 0 0 6px;padding-left:10px;border-left:2px solid var(--border-color);}
+      .xv-stage-title{font-size:0.9em;margin-bottom:4px;}
+      .xv-tactic{color:var(--text-secondary);font-size:0.85em;}
+      .xv-q>summary{cursor:pointer;font-size:0.82em;color:var(--text-secondary);margin:3px 0;}
+      .xv-q pre{max-height:220px;overflow:auto;font-size:0.8em;}
+    </style>
+    {% endif %}
+
     <!-- ATT&CK Flow: kill-chain lanes, coverage and correlation links -->
     {% include "partials/attack_flow.html" %}
 

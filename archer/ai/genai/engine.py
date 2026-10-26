@@ -1116,9 +1116,9 @@ def _score_and_filter_correlations(
 
 def generate_correlations(group_name: str, yaml_dir: str, progress_prefix: str = "genai") -> Dict:
     """
-    Scan YAMLs and produce vendor correlations (cross-vendor correlations disabled).
+    Scan YAMLs and produce vendor correlations plus cross-vendor playbooks.
     - vendor_correlations: list of dicts where multiple queries from same vendor are paired
-    - cross_vendor_correlations: empty list (disabled)
+    - cross_vendor_correlations: playbooks re-expressing a chain across SIEMs (archer.correlation.cross_vendor)
 
     Progress updates are written using `write_progress` with keys under the
     provided `group_name` progress JSON.
@@ -2359,9 +2359,15 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
 
     print(f"📊 Final correlation count: {len(vendor_corr)} correlations")
 
-    # No cross-vendor correlations - explicitly create an empty list
-    cross_corr = []
-    # print(f"GenAI: Cross-vendor Correlations disabled")
+    # Cross-vendor playbooks (#8): the vendor chains re-expressed across SIEMs, with join keys.
+    try:
+        from archer.correlation.cross_vendor import build_cross_vendor_playbooks
+
+        cross_corr = build_cross_vendor_playbooks(vendor_corr, file_info)
+        print(f"🔀 Cross-vendor playbooks: {len(cross_corr)}")
+    except Exception as e:
+        print(f"GenAI: cross-vendor playbook generation failed: {e}")
+        cross_corr = []
 
     # Write results to correlation JSON file
     results = {

@@ -7242,6 +7242,15 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
     no_detection = _no_detection(group_name)
     briefing = briefing_lib.build(attack_flow, no_detection)
 
+    # Cross-vendor playbooks (#8): a chain's stages re-expressed across SIEMs, with join keys
+    cross_vendor = []
+    if os.path.exists(correlation_file):
+        try:
+            with open(correlation_file, encoding="utf-8") as fh:
+                cross_vendor = json.load(fh).get("cross_vendor_correlations", []) or []
+        except (OSError, ValueError):
+            cross_vendor = []
+
     return templates.TemplateResponse(
         "results.html",
         {
@@ -7276,6 +7285,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
             "no_detection": no_detection,
             "briefing": briefing,
             "briefing_ai": briefing_lib.load_summary(safe_group, briefing),
+            "cross_vendor": cross_vendor,
         },
     )
 
