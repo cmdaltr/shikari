@@ -71,6 +71,28 @@ def test_export_excludes_unavailable(tmp_path, monkeypatch):
     assert res["excluded"] and res["excluded"][0]["missing"] == ["PROCESS_LAUNCH"]
 
 
+def test_udm_catalogue_default_and_override(tmp_path, monkeypatch):
+    monkeypatch.setattr(av, "_UDM_REF_FILE", tmp_path / "none.json")
+    default = av.udm_event_type_catalogue()
+    assert "PROCESS_LAUNCH" in default and "NETWORK_DNS" in default and len(default) > 50
+    ref = tmp_path / "udm.json"
+    ref.write_text('["PROCESS_LAUNCH", "CUSTOM_EVENT"]')
+    monkeypatch.setattr(av, "_UDM_REF_FILE", ref)
+    assert av.udm_event_type_catalogue() == ["PROCESS_LAUNCH", "CUSTOM_EVENT"]
+
+
+def test_source_catalogue_unions_runs_and_docs(tmp_path, monkeypatch):
+    import yaml
+    monkeypatch.setattr(av, "_UDM_REF_FILE", tmp_path / "udm.json")
+    (tmp_path / "udm.json").write_text('["PROCESS_LAUNCH"]')
+    gen = tmp_path / "gen"
+    gen.mkdir()
+    # A run emits an event type not in the override list -> it must still appear.
+    (gen / "x_UDM.yaml").write_text(yaml.safe_dump(_secops("SERVICE_CREATION")))
+    cat = av.source_catalogue(str(gen))
+    assert set(cat["secops"]) == {"PROCESS_LAUNCH", "SERVICE_CREATION"}
+
+
 def test_export_keeps_all_when_exclude_off(tmp_path, monkeypatch):
     import yaml
     from archer.export import detections_git as dg

@@ -13,7 +13,7 @@ Each detection already names what it needs in `requiredDataConnectors.dataTypes`
 Admin only, under **Profile → Config → SIEM data sources**:
 
 - **Microsoft Defender XDR** — tick the Advanced Hunting tables the estate ingests (the documented set of twelve).
-- **Google SecOps** — tick the UDM event types the estate receives. The list is drawn from what your runs actually emit.
+- **Google SecOps** — tick the UDM event types the estate receives. The list is the documented UDM `metadata.event_type` set, unioned with whatever your runs emit (so nothing in use is missing). To use your own authoritative list, drop a JSON array of event-type strings at `bespoke/mappings/udm_event_types.json` and it replaces the built-in default.
 
 Tick only what you ingest. A SIEM you leave untouched is not gated — every source counts as ingested — so with nothing configured, nothing is flagged and behaviour is unchanged. The config lives gitignored at `bespoke/mappings/availability.json`.
 

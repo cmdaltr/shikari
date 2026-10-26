@@ -22,6 +22,40 @@ from archer.build.schema_overrides import load_active_schema
 
 _MAPPINGS_DIR = Path(__file__).resolve().parent.parent.parent / "bespoke" / "mappings"
 _PATH = _MAPPINGS_DIR / "availability.json"
+# Drop the authoritative UDM metadata.event_type list here (a JSON array of strings) to offer the
+# full set in the config checklist. Absent, the curated default below is used, unioned with whatever
+# the current runs emit, so nothing in use is ever missing from the list.
+_UDM_REF_FILE = _MAPPINGS_DIR / "udm_event_types.json"
+
+# A documented-subset default of SecOps UDM metadata.event_type values. Overridable by the file above.
+_DEFAULT_UDM_EVENT_TYPES = [
+    "PROCESS_LAUNCH", "PROCESS_OPEN", "PROCESS_TERMINATION", "PROCESS_INJECTION",
+    "PROCESS_MODULE_LOAD", "PROCESS_PRIVILEGE_ESCALATION", "PROCESS_UNCATEGORIZED",
+    "FILE_CREATION", "FILE_DELETION", "FILE_MODIFICATION", "FILE_READ", "FILE_OPEN",
+    "FILE_COPY", "FILE_MOVE", "FILE_SYNC", "FILE_UNCATEGORIZED",
+    "REGISTRY_CREATION", "REGISTRY_DELETION", "REGISTRY_MODIFICATION", "REGISTRY_UNCATEGORIZED",
+    "NETWORK_CONNECTION", "NETWORK_FLOW", "NETWORK_DNS", "NETWORK_HTTP", "NETWORK_DHCP",
+    "NETWORK_FTP", "NETWORK_SMTP", "NETWORK_UNCATEGORIZED",
+    "USER_LOGIN", "USER_LOGOUT", "USER_CREATION", "USER_DELETION", "USER_CHANGE_PASSWORD",
+    "USER_CHANGE_PERMISSIONS", "USER_RESOURCE_ACCESS", "USER_RESOURCE_CREATION",
+    "USER_RESOURCE_DELETION", "USER_RESOURCE_UPDATE_CONTENT", "USER_RESOURCE_UPDATE_PERMISSIONS",
+    "USER_COMMUNICATION", "USER_BADGE_IN", "USER_STATS", "USER_UNCATEGORIZED",
+    "EMAIL_TRANSACTION", "EMAIL_URL_CLICK",
+    "SCAN_FILE", "SCAN_HOST", "SCAN_NETWORK", "SCAN_PROCESS", "SCAN_VULN_HOST",
+    "SCAN_VULN_NETWORK", "SCAN_UNCATEGORIZED",
+    "SCHEDULED_TASK_CREATION", "SCHEDULED_TASK_DELETION", "SCHEDULED_TASK_ENABLE",
+    "SCHEDULED_TASK_DISABLE", "SCHEDULED_TASK_MODIFICATION", "SCHEDULED_TASK_UNCATEGORIZED",
+    "SERVICE_CREATION", "SERVICE_DELETION", "SERVICE_MODIFICATION", "SERVICE_START",
+    "SERVICE_STOP", "SERVICE_UNCATEGORIZED",
+    "SETTING_CREATION", "SETTING_DELETION", "SETTING_MODIFICATION", "SETTING_UNCATEGORIZED",
+    "MUTEX_CREATION", "MUTEX_UNCATEGORIZED",
+    "RESOURCE_CREATION", "RESOURCE_DELETION", "RESOURCE_PERMISSIONS_CHANGE", "RESOURCE_READ",
+    "RESOURCE_WRITTEN", "RESOURCE_UNCATEGORIZED",
+    "GROUP_CREATION", "GROUP_DELETION", "GROUP_MODIFICATION", "GROUP_UNCATEGORIZED",
+    "STATUS_HEARTBEAT", "STATUS_STARTUP", "STATUS_SHUTDOWN", "STATUS_UPDATE",
+    "SYSTEM_AUDIT_LOG_UNCATEGORIZED", "SYSTEM_AUDIT_LOG_WIPE",
+    "ALLOW_STRONG_AUTHENTICATION", "ENFORCE_STRONG_AUTHENTICATION", "GENERIC_EVENT",
+]
 
 # connectorId in a detection's requiredDataConnectors -> SIEM key
 CONNECTOR_SIEM = {
@@ -85,17 +119,27 @@ def is_available(doc: Dict, cfg: Optional[Dict] = None) -> bool:
     return not missing_sources(doc, cfg)
 
 
+def udm_event_type_catalogue() -> List[str]:
+    """The documented UDM metadata.event_type values to offer. The override file if present (the
+    authoritative set an operator drops in), else the curated default."""
+    try:
+        with open(_UDM_REF_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list) and data:
+            return [str(v) for v in data]
+    except (OSError, ValueError):
+        pass
+    return list(_DEFAULT_UDM_EVENT_TYPES)
+
+
 def source_catalogue(generate_dir: str) -> Dict[str, List[str]]:
     """The universe of gate-able sources to offer in the config UI, per SIEM.
 
-    MDE: the documented Advanced Hunting tables from the base schema. SecOps: the UDM event types
-    that actually appear across generated detections (so the list reflects what Archer emits)."""
+    MDE: the documented Advanced Hunting tables from the base schema. SecOps: the documented UDM
+    event types (override file or default), unioned with whatever the current runs emit, so the list
+    is complete and nothing in use is missing."""
     mde = sorted((load_active_schema("mde") or {}).keys())
-    secops: set = set()
-    try:
-        from archer.config import GENERATE_DIR  # noqa: F401
-    except Exception:
-        pass
+    secops: set = set(udm_event_type_catalogue())
     try:
         import yaml
 
