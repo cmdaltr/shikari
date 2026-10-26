@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Archer - STIX / TAXII & MISP{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/mitresaw.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container ms-page sx-page">
+  <div class="page-header">
+    <h1>STIX / TAXII &amp; MISP</h1>
+    <p>Import threat intelligence as a hunt input, or export a run as a STIX&nbsp;2.1 bundle. No AI involved.</p>
+  </div>
+
+  <!-- Import -->
+  <section class="ui-card ms-card">
+    <h2>Import intelligence</h2>
+    <p class="ms-note">A STIX&nbsp;2.1 bundle or a MISP event becomes techniques and IOCs, the same as analysing a report.
+      Upload a file, paste JSON, or poll a TAXII&nbsp;2.1 collection; then review and generate detections.</p>
+
+    <div class="sx-tabs" role="tablist">
+      <button type="button" class="sx-tab is-active" data-pane="file" role="tab">File</button>
+      <button type="button" class="sx-tab" data-pane="paste" role="tab">Paste JSON</button>
+      <button type="button" class="sx-tab" data-pane="taxii" role="tab">TAXII collection</button>
+    </div>
+
+    <div class="sx-pane" id="sx-pane-file">
+      <input type="file" id="sx-file" accept=".json,application/json" aria-label="STIX bundle or MISP event JSON">
+      <p class="ms-note">A STIX bundle (<code>objects</code>) or a MISP event (<code>Event</code>) — Archer detects which.</p>
+    </div>
+    <div class="sx-pane" id="sx-pane-paste" hidden>
+      <textarea id="sx-paste" rows="8" class="form-input" placeholder='{"type":"bundle","objects":[ ... ]}  or  {"Event":{ ... }}'></textarea>
+    </div>
+    <div class="sx-pane" id="sx-pane-taxii" hidden>
+      <input type="url" id="sx-taxii-url" class="form-input" placeholder="https://taxii.example/api/collections/&lt;id&gt;/" aria-label="TAXII 2.1 collection URL">
+      <div class="sx-row">
+        <input type="text" id="sx-taxii-user" class="form-input" placeholder="username (optional)" autocomplete="off">
+        <input type="password" id="sx-taxii-pass" class="form-input" placeholder="password (optional)" autocomplete="off">
+      </div>
+      <p class="ms-note">The collection's <code>…/collections/&lt;id&gt;/</code> URL. Credentials, if any, are used for this request only and not stored.</p>
+    </div>
+
+    <div class="sx-actions">
+      <button type="button" class="btn-primary" id="sx-import">Import</button>
+      <span class="ms-state" id="sx-import-state" aria-live="polite"></span>
+    </div>
+
+    <!-- Review (shown after a successful import) -->
+    <div class="sx-review" id="sx-review" hidden>
+      <h3 class="ui-subtitle">Extracted</h3>
+      <p id="sx-summary" class="ms-note"></p>
+      <div class="sx-opts">
+        <label><input type="checkbox" id="sx-osint" checked> OSINT enhancement</label>
+        <label><input type="checkbox" id="sx-lol" checked> LOLBAS / LOLDrivers</label>
+        <label><input type="checkbox" id="sx-correlate" checked> Correlate</label>
+      </div>
+      <button type="button" class="btn-primary" id="sx-generate">Generate detections</button>
+      <span class="ms-state" id="sx-generate-state" aria-live="polite"></span>
+    </div>
+  </section>
+
+  <!-- Export -->
+  <section class="ui-card ms-card">
+    <h2>Export a run as STIX</h2>
+    <p class="ms-note">A saved run becomes a STIX&nbsp;2.1 bundle — an intrusion-set, an attack-pattern per technique,
+      indicators from the IOCs, and the detections as <code>x-archer-detection</code> objects.</p>
+    <div class="sx-actions">
+      <select id="sx-export-group" class="dropdown-styled" aria-label="Run to export">
+        <option value="">Select a run…</option>
+        {% for g in runs %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+      </select>
+      <button type="button" class="btn-primary" id="sx-export">Download STIX bundle</button>
+      <span class="ms-state" id="sx-export-state" aria-live="polite"></span>
+    </div>
+    {% if not runs %}<p class="ms-note">No runs yet. Hunt a group, CVE or report first.</p>{% endif %}
+  </section>
+</div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  // Tabs
+  document.querySelectorAll('.sx-tab').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.sx-tab').forEach(b => b.classList.toggle('is-active', b === btn));
+    document.querySelectorAll('.sx-pane').forEach(p => p.hidden = p.id !== 'sx-pane-' + btn.dataset.pane);
+  }));
+  const activePane = () => document.querySelector('.sx-tab.is-active').dataset.pane;
+
+  let groupName = '';
+  async function postForm(url, data) {
+    const body = new FormData();
+    Object.entries(data).forEach(([k, v]) => body.append(k, v));
+    const r = await fetch(url, { method: 'POST', body });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.success === false) throw new Error(j.error || j.message || ('HTTP ' + r.status));
+    return j;
+  }
+
+  $('sx-import').addEventListener('click', async () => {
+    const state = $('sx-import-state'); state.textContent = 'Importing…';
+    try {
+      let res;
+      if (activePane() === 'file') {
+        const f = $('sx-file').files[0];
+        if (!f) throw new Error('Choose a file first.');
+        const body = new FormData(); body.append('file', f);
+        const r = await fetch('/api/intel/stix/import', { method: 'POST', body });
+        res = await r.json(); if (!r.ok || res.success === false) throw new Error(res.error || res.message || ('HTTP ' + r.status));
+      } else if (activePane() === 'paste') {
+        res = await postForm('/api/intel/stix/import', { text: $('sx-paste').value });
+      } else {
+        res = await postForm('/api/intel/taxii/import', {
+          url: $('sx-taxii-url').value, username: $('sx-taxii-user').value, password: $('sx-taxii-pass').value });
+      }
+      groupName = res.synthetic_group_name;
+      $('sx-summary').innerHTML = `<strong>${res.group_name || groupName}</strong> — ${res.ttps_count} technique${res.ttps_count === 1 ? '' : 's'}, ${res.iocs_count} IOC${res.iocs_count === 1 ? '' : 's'}.`;
+      $('sx-review').hidden = false;
+      state.textContent = 'Imported.';
+    } catch (e) { state.textContent = e.message; }
+  });
+
+  $('sx-generate').addEventListener('click', async () => {
+    const state = $('sx-generate-state'); state.textContent = 'Starting…';
+    try {
+      const res = await postForm('/blog/generate', {
+        synthetic_group_name: groupName,
+        osint_enhancement: $('sx-osint').checked ? 'true' : '',
+        lol_datasets: $('sx-lol').checked ? 'true' : '',
+      });
+      window.location = res.redirect_url || res.redirect || ('/progress?group_name=' + encodeURIComponent(groupName));
+    } catch (e) { state.textContent = e.message; }
+  });
+
+  $('sx-export').addEventListener('click', () => {
+    const g = $('sx-export-group').value;
+    if (!g) { $('sx-export-state').textContent = 'Select a run first.'; return; }
+    window.location = '/api/intel/stix/export?group=' + encodeURIComponent(g);
+  });
+})();
+</script>
+<style>
+  .sx-tabs { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+  .sx-tab { padding: 6px 14px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary); color: var(--text-secondary); cursor: pointer; font: inherit; }
+  .sx-tab.is-active { border-color: var(--accent); color: var(--text-primary); font-weight: 600; }
+  .sx-pane { margin-bottom: 12px; }
+  .sx-pane textarea, .sx-pane input[type=url], .sx-row input { width: 100%; box-sizing: border-box; }
+  .sx-row { display: flex; gap: 8px; margin-top: 8px; }
+  .sx-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+  .sx-review { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); }
+  .sx-opts { display: flex; gap: 18px; flex-wrap: wrap; margin: 10px 0 14px; }
+</style>
+{% endblock %}

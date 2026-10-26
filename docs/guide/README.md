@@ -26,6 +26,7 @@ The menu bar has three menus (Detections, Intel, Build), then Profile and Help. 
 | Catalogue | Intel → Catalogue | Every organisation profiled so far; opens each one's exposure map | [Company profile](04-company-profile.md#companies-catalogue) |
 | Feed | Intel → Feed | This week's threat research, tagged; search all research | [Threat Feed](10-threat-feed.md) |
 | Cyber Powers | Intel → Cyber Powers | National cyber capability, attribution and targeting on a map | [Cyber Powers](11-cyber-powers.md) |
+| STIX/TAXII & MISP | Intel → STIX/TAXII & MISP | Import STIX, TAXII or MISP intel as a hunt input; export a run as a STIX 2.1 bundle | [STIX/TAXII & MISP](21-stix-taxii-misp.md) |
 | MITRESaw | Intel → MITRESaw | ATT&CK procedures and their indicators; OSINT repository status | [MITRESaw](12-mitresaw.md) |
 | Manual | Build → Manual | Write detections from your own TTPs, one technique at a time | [Manual](13-manual.md) |
 | Emulate | Build → Emulate | Which logs record each technique (native OS logs first); your detections' indicators against recorded attacks; Defender XDR's own alerting | [Emulate](19-emulate.md) |

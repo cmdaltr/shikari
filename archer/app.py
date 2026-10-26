@@ -8465,6 +8465,136 @@ def exposure_page(request: Request, domain: str, archer_session: Optional[str] =
                                                         "domain": safe, "exposure": expo})
 
 
+# ---------------------------------------------------------------- STIX / TAXII & MISP (#19)
+
+def _save_stix_extraction(result: dict, source_label: str) -> dict:
+    """Save an import's extraction in the blog-analysis shape (so /blog/generate can use it) and
+    return the review payload the STIX page shows."""
+    import hashlib
+    import json as _json
+
+    ttps = result.get("techniques", []) or []
+    iocs = {k: v for k, v in (result.get("iocs") or {}).items() if v}
+    group_name = result.get("group_name") or ""
+    title = re.sub(r"\s*[(\[][^)\]]*[)\]]", "", result.get("title") or "")
+    title_words = re.sub(r"[^\w-]+", "_", title).strip("_")[:60].strip("_")
+    digest = hashlib.md5(_json.dumps(result, sort_keys=True).encode()).hexdigest()[:8]
+    raw = group_name or (f"{source_label}_{title_words}" if title_words else f"{source_label}_{digest}")
+    name = sanitize_group_name(raw)
+    os.makedirs(BLOG_DIR, exist_ok=True)
+    with open(os.path.join(BLOG_DIR, f"{name}_extraction.json"), "w") as fh:
+        _json.dump({
+            "url": result.get("taxii_collection") or source_label, "filename": source_label,
+            "group_name": group_name, "ttps": ttps, "iocs": iocs,
+            "ioc_mentions": result.get("ioc_mentions") or {}, "procedures": result.get("procedures", []),
+            "synthetic_group_name": name, "ai_provider": "", "ai_model": "", "run_correlation": True,
+        }, fh, indent=2)
+    return {"success": True, "show_extraction": True, "synthetic_group_name": name,
+            "group_name": group_name, "ttps": ttps, "iocs": iocs,
+            "ttps_count": len(ttps), "iocs_count": sum(len(v) for v in iocs.values())}
+
+
+@app.get("/intel/stix", response_class=HTMLResponse)
+def stix_page(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Import STIX/TAXII/MISP intel as a hunt input, or export a run as a STIX bundle."""
+    from archer.config import DATA_DIR
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return auth
+    user, db = auth
+    db.close()
+    runs_dir = os.path.join(DATA_DIR, "runs")
+    runs = sorted((n[:-5] for n in os.listdir(runs_dir) if n.endswith(".json")), key=str.lower) \
+        if os.path.isdir(runs_dir) else []
+    return templates.TemplateResponse("stix.html", {"request": request, "user": user, "runs": runs})
+
+
+@app.post("/api/intel/stix/import")
+async def stix_import(request: Request, file: UploadFile = File(None), text: str = Form(None),
+                      archer_session: Optional[str] = Cookie(None)):
+    """A STIX 2.1 bundle or a MISP event (upload or pasted) → the extraction the generator uses."""
+    import json as _json
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in to import intelligence"}, status_code=401)
+    _user, db = auth
+    db.close()
+    try:
+        if file is not None:
+            raw = (await file.read()).decode("utf-8", "replace")
+            label = file.filename or "import.json"
+        elif text:
+            raw, label = text, "pasted.json"
+        else:
+            return JSONResponse({"success": False, "error": "Provide a file or paste JSON"}, status_code=400)
+        data = _json.loads(raw)
+    except ValueError:
+        return JSONResponse({"success": False, "error": "Not valid JSON"}, status_code=400)
+
+    from archer.parsers.misp_import import parse_misp_event
+    from archer.parsers.stix_import import parse_stix_bundle
+
+    is_misp = isinstance(data, dict) and ("Event" in data or data.get("Attribute") or ("info" in data and "objects" not in data))
+    result = parse_misp_event(data) if is_misp else parse_stix_bundle(data)
+    if not result.get("success"):
+        return JSONResponse({"success": False, "error": result.get("error", "Could not parse")}, status_code=422)
+    if not result.get("techniques") and not any(result.get("iocs", {}).values()):
+        return JSONResponse({"success": False, "error": "No techniques or IOCs found in the input"}, status_code=422)
+    return JSONResponse(_save_stix_extraction(result, "MISP" if is_misp else "STIX"))
+
+
+@app.post("/api/intel/taxii/import")
+def taxii_import(request: Request, url: str = Form(...), username: str = Form(""), password: str = Form(""),
+                 archer_session: Optional[str] = Cookie(None)):
+    """Poll a TAXII 2.1 collection and import its objects as a hunt input."""
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in to import intelligence"}, status_code=401)
+    _user, db = auth
+    db.close()
+    try:
+        from archer.parsers.taxii_client import import_collection
+
+        result = import_collection(url.strip(), username=username.strip(), password=password)
+    except Exception as e:
+        return JSONResponse({"success": False, "error": f"TAXII fetch failed: {e}"}, status_code=502)
+    if not result.get("success"):
+        return JSONResponse({"success": False, "error": result.get("error", "Could not parse the collection")}, status_code=422)
+    if not result.get("techniques") and not any(result.get("iocs", {}).values()):
+        return JSONResponse({"success": False, "error": "The collection held no techniques or IOCs"}, status_code=422)
+    return JSONResponse(_save_stix_extraction(result, "TAXII"))
+
+
+@app.get("/api/intel/stix/export")
+def stix_export_run(request: Request, group: str = Query(...), archer_session: Optional[str] = Cookie(None)):
+    """A saved run's detections → a downloadable STIX 2.1 bundle."""
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in to export"}, status_code=401)
+    _user, db = auth
+    db.close()
+    safe = sanitize_group_name(group)
+    connector_siem = {"GoogleSecOps": "secops", "MicrosoftThreatProtection": "mde", "Splunk": "splunk", "Elastic": "elastic"}
+    dets = []
+    for name in group_yaml_files(safe, GENERATE_DIR):
+        doc = load_yaml_file(os.path.join(GENERATE_DIR, os.path.basename(name)))
+        if not doc or not doc.get("technique_id"):
+            continue
+        connector = ((doc.get("requiredDataConnectors") or [{}])[0] or {}).get("connectorId", "")
+        dets.append({"name": doc.get("name"), "technique_id": doc.get("technique_id"),
+                     "query": doc.get("query", ""), "siem": connector_siem.get(connector, connector),
+                     "indicators": doc.get("indicators") or {}})
+    if not dets:
+        return JSONResponse({"error": f"No detections found for {group}"}, status_code=404)
+    from archer.parsers.stix_export import run_to_stix
+
+    bundle = run_to_stix(safe, dets)
+    return Response(content=bundle, media_type="application/json",
+                    headers={"Content-Disposition": f'attachment; filename="{safe}_stix_bundle.json"'})
+
+
 @app.get("/catalogue", response_class=HTMLResponse)
 def catalogue_page(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
