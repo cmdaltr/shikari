@@ -529,23 +529,41 @@
 
   // ---------- Loading ----------
   let loading = 0;
+  // The element that actually scrolls (body has its own overflow here, not the viewport).
+  function scroller() {
+    for (let el = $('em-results'); el; el = el.parentElement) {
+      const s = getComputedStyle(el);
+      if ((s.overflowY === 'auto' || s.overflowY === 'scroll') && el.scrollHeight - el.clientHeight > 1) return el;
+    }
+    return document.scrollingElement || document.documentElement;
+  }
+
   function reload() {
+    // Hold the results area at its current height and keep the scroll position, so swapping the
+    // SIEM/collection/platform doesn't collapse the page and jump the view to the top.
+    const sc = scroller();
+    const y = sc.scrollTop;
+    const results = $('em-results');
+    if (results) results.style.minHeight = results.offsetHeight + 'px';
     data.details = {}; data.search = {};
     const mine = ++loading;
     const q = `?${collectionsParam()}`;
     data.techniques = data.sources = null;
     render();
+    sc.scrollTop = y;
+    const restore = () => { if (results) results.style.minHeight = ''; sc.scrollTop = y; };
     return Promise.all([
       json(`/api/telemetry/techniques${q}`).then(r => { if (mine === loading) data.techniques = r.techniques; }).catch(() => { data.techniques = []; }),
       json(`/api/telemetry/data-sources${q}`).then(r => { if (mine === loading) data.sources = r; }).catch(() => { data.sources = { mde: [], udm: [] }; }),
     ]).then(() => {
-      if (mine !== loading) return;
+      if (mine !== loading) { if (results) results.style.minHeight = ''; return; }
       const logs = new Set();
       data.techniques.forEach(t => t.logs.forEach(l => logs.add(l)));
       setOptions('log', [...logs].sort().map(l => ({ value: l, label: l })));
       techniqueOptions();
       sourceOptions();
       render();
+      restore();
     });
   }
 
