@@ -1,118 +1,71 @@
-#!/usr/bin/env python3
-"""
-Test script for Elastic query generator
-"""
-
-import os
-import sys
-
-# Add archer to path
-sys.path.insert(0, os.path.dirname(__file__))
+"""Elastic ES|QL detection generator (archer.build.elastic)."""
 
 from archer.build.elastic import ElasticQueryGenerator
 
-def test_elastic_generator():
-    """Test generating an Elastic query for a sample technique"""
 
-    print("Testing Elastic Query Generator...")
-    print("=" * 60)
+def gen():
+    return ElasticQueryGenerator()
 
-    # Check for API key
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        print("⚠ ANTHROPIC_API_KEY not set - skipping API call test")
-        print("Testing initialization and validation logic only...")
 
-        # Create generator
-        try:
-            generator = ElasticQueryGenerator()
-            print("✓ Generator initialized successfully")
-        except Exception as e:
-            print(f"✗ Failed to initialize generator: {e}")
-            return False
+def test_basic_shape():
+    r = gen().generate_query("T1003.001", "LSASS Memory", "Credential Access", "dump lsass",
+                             indicators={"cmd": ["mimikatz"]})
+    q = r["query"]
+    assert q.startswith("FROM ")
+    assert "| WHERE @timestamp >= NOW() - 1 day" in q
+    assert "| STATS " in q and "| SORT " in q
+    assert gen().validate_query(q) == (True, "")
+    assert r["query_name"] == "T1003.001_LSASS_Memory"
 
-        # Test validation logic
-        print("\nTesting query validation...")
 
-        # Valid query
-        valid_query = {
-            "query": {
-                "bool": {
-                    "must": [
-                        {"match": {"process.name": "lsass.exe"}}
-                    ]
-                }
-            }
-        }
-        is_valid, error = generator.validate_query(valid_query)
-        print(f"  Valid query test: {'✓ PASS' if is_valid else '✗ FAIL'}")
+def test_cmd_indicator_is_case_insensitive_substring():
+    q = gen().generate_query("T1059", "Cmd", "Execution", "", indicators={"cmd": ["Mimikatz"]})["query"]
+    # lower-cased pattern against TO_LOWER(field)
+    assert 'TO_LOWER(process.command_line) RLIKE ".*mimikatz.*"' in q
 
-        # Invalid query (missing 'query' key)
-        invalid_query = {"match": {"field": "value"}}
-        is_valid, error = generator.validate_query(invalid_query)
-        print(f"  Invalid query test: {'✓ PASS' if not is_valid else '✗ FAIL'}")
-        if not is_valid:
-            print(f"    Expected error: {error}")
 
-        print("\n✓ Basic tests completed successfully!")
-        return True
+def test_backslash_path_is_escaped_not_lost():
+    q = gen().generate_query("T1003.001", "LSASS", "Credential Access", "",
+                             indicators={"file": [r"C:\Windows\System32\lsass.exe"]})["query"]
+    # one source backslash -> regex \\ -> ES|QL string \\\\, and the '.' is regex-escaped
+    assert r".*c:\\\\windows\\\\system32\\\\lsass\\.exe.*" in q
 
-    # Create generator
-    try:
-        generator = ElasticQueryGenerator()
-        print("✓ Generator initialized successfully")
-    except Exception as e:
-        print(f"✗ Failed to initialize generator: {e}")
-        return False
 
-    # Test query generation
-    try:
-        print("\nGenerating query for T1003.001 - OS Credential Dumping: LSASS Memory")
-        result = generator.generate_query(
-            technique_id="T1003.001",
-            technique_name="OS Credential Dumping: LSASS Memory",
-            tactic="Credential Access",
-            description="Adversaries may attempt to access credential material stored in the process memory of the Local Security Authority Subsystem Service (LSASS).",
-            osint_data=None,
-            group_name="Test Group"
-        )
+def test_ip_and_port_are_exact_matches():
+    q = gen().generate_query("T1071", "C2", "Command and Control", "",
+                             indicators={"ip": ["10.0.0.5"], "port": ["445"]})["query"]
+    assert 'destination.ip == "10.0.0.5"' in q
+    assert "destination.port == 445" in q
+    assert "RLIKE" not in q.split("| STATS")[0] or "10.0.0.5" not in q.split("RLIKE")[0:1]
 
-        print("\n" + "=" * 60)
-        print("Query Generation Result:")
-        print("=" * 60)
-        print(f"Query Name: {result.get('query_name', 'N/A')}")
-        print(f"Severity: {result.get('severity', 'N/A')}")
-        print(f"ECS Fields: {', '.join(result.get('ecs_fields', []))}")
-        print(f"Data Streams: {', '.join(result.get('data_streams', []))}")
-        print(f"Description: {result.get('description', 'N/A')}")
 
-        # Validate query
-        is_valid, error = generator.validate_query(result.get('query_dsl', {}))
-        print(f"\nQuery Validation: {'✓ VALID' if is_valid else '✗ INVALID'}")
-        if not is_valid:
-            print(f"  Error: {error}")
+def test_single_stream_uses_specific_index():
+    r = gen().generate_query("T1059", "Cmd", "Execution", "", indicators={"cmd": ["x"], "sw": ["y.exe"]})
+    assert r["index_pattern"] == "logs-endpoint.events.process-*"
 
-        # Display formatted query
-        if result.get('query_dsl'):
-            print("\nQuery DSL:")
-            print("-" * 60)
-            formatted_query = generator.format_query_for_display(result['query_dsl'])
-            print(formatted_query)
 
-        if result.get('detection_notes'):
-            print("\nDetection Notes:")
-            print("-" * 60)
-            print(result['detection_notes'])
+def test_mixed_streams_use_broad_index():
+    r = gen().generate_query("T1003.001", "LSASS", "Credential Access", "",
+                             indicators={"cmd": ["mimikatz"], "ip": ["10.0.0.5"]})
+    assert r["index_pattern"] == "logs-endpoint.events.*"
 
-        print("\n" + "=" * 60)
-        print("✓ Test completed successfully!")
-        return True
 
-    except Exception as e:
-        print(f"\n✗ Test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+def test_no_indicators_still_valid():
+    r = gen().generate_query("T1082", "Discovery", "Discovery", "", indicators={})
+    assert gen().validate_query(r["query"]) == (True, "")
 
-if __name__ == "__main__":
-    success = test_elastic_generator()
-    sys.exit(0 if success else 1)
+
+def test_validate_rejects_bad_queries():
+    g = gen()
+    assert g.validate_query("")[0] is False
+    assert g.validate_query("WHERE x == 1")[0] is False          # no FROM
+    assert g.validate_query("FROM logs")[0] is False             # no pipe
+    assert g.validate_query('FROM logs | WHERE (a == "b"')[0] is False  # unbalanced paren
+
+
+def test_correlation_query_valid():
+    c = gen().generate_correlation_query(
+        [{"indicators": {"cmd": ["mimikatz"]}}, {"indicators": {"reg": ["Run"]}}], "APT29")
+    assert gen().validate_query(c["query"]) == (True, "")
+    assert c["query_name"] == "APT29_correlation"
+    assert "STATS" in c["query"]

@@ -74,4 +74,5 @@ def test_library_lists_every_siem_in_order():
                                   "detections")
     assert [s["display_name"] for s in slots] == ["Google SecOps", "Defender XDR", "Splunk", "Elastic"]
     assert slots[0].get("empty_state") and not slots[0].get("coming_soon")
-    assert slots[1]["count"] == 2 and slots[3].get("coming_soon")
+    # Elastic now generates ES|QL — live, no longer Coming Soon
+    assert slots[1]["count"] == 2 and not slots[3].get("coming_soon")

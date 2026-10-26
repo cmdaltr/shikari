@@ -14,7 +14,7 @@ import re
 from pathlib import Path
 
 
-ALL_SIEMS = frozenset({"mde", "secops"})  # splunk disabled -- Stage 1 soft-disable, see docs/SIEM_ONBOARDING.md  # elastic disabled — Stage 1 soft-disable, see docs/SIEM_ONBOARDING.md
+ALL_SIEMS = frozenset({"mde", "secops", "elastic"})  # splunk disabled -- Stage 1 soft-disable, see docs/SIEM_ONBOARDING.md
 
 # Display labels for each SIEM key
 _SIEM_LABELS = {
@@ -374,10 +374,10 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
                         technique_id=tid, technique_name=name, tactic=tactic,
                         description=tdesc, indicators=identifiers, group_name=tag
                     )
-                    if result and result.get("query_dsl"):
-                        valid, _ = eg.validate_query(result["query_dsl"])
+                    if result and result.get("query"):
+                        valid, _ = eg.validate_query(result["query"])
                         if valid:
-                            elastic_queries = [eg.format_query_for_display(result["query_dsl"])]
+                            elastic_queries = [eg.format_query_for_display(result["query"])]
                 except Exception as e:
                     print(f"  ⚠️  Elastic preview failed: {e}")
 

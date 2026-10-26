@@ -44,7 +44,7 @@ The menu bar has three menus (Detections, Intel, Build), then Profile and Help. 
 | Google SecOps | YARA-L 2.0 | Generated |
 | Microsoft Defender XDR | KQL (advanced hunting) | Generated |
 | Splunk | SPL | Switched off for now; reference queries and coverage still shown |
-| Elastic | EQL / ES\|QL | Switched off for now |
+| Elastic | ES\|QL | Generated (ECS fields; `archer.build.elastic`) |
 
 To generate for fewer SIEMs, tick the ones you want under Profile → SIEM platforms. Adding a SIEM is covered in [SIEM onboarding](../SIEM_ONBOARDING.md).
 

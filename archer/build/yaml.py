@@ -278,8 +278,9 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
     tactic = str(list(tactic))[2:-2].replace("', '", "\n  - ")
 
     # Indent ALL query lines properly for YAML literal block
-    # Split query into lines, indent each non-empty line with 2 spaces
-    # IMPORTANT: For JSON queries (Elastic), preserve internal indentation structure
+    # Split query into lines, indent each non-empty line with 2 spaces.
+    # A JSON-bodied query (legacy) keeps its internal indentation; piped languages (KQL, SPL,
+    # Elastic ES|QL) are newline-tolerant within a command, so lines are left-aligned to the pipes.
     query_lines = query.split("\n")
     indented_lines = []
 
@@ -1003,9 +1004,8 @@ def construct_yaml(
         # Google SecOps generation is optional - don't fail if it errors
         print(f"  ⚠️  Google SecOps generation failed for {name}: {e}")
 
-    # Writing Elastic YAML file — DISABLED (Stage 1 soft-disable, see docs/SIEM_ONBOARDING.md)
-    # Elastic uses template-based Query DSL with ECS field mappings
-    if False:  # was: if not excluded_vendors or "elastic" not in excluded_vendors:
+    # Writing Elastic YAML file (ES|QL detection over ECS fields) — see archer.build.elastic
+    if not excluded_vendors or "elastic" not in excluded_vendors:
       try:
         from archer.build.elastic import ElasticQueryGenerator
 
@@ -1020,14 +1020,10 @@ def construct_yaml(
             group_name=tag
         )
 
-        if elastic_query_result and elastic_query_result.get("query_dsl"):
-            # Validate the query
-            is_valid, error = elastic_gen.validate_query(elastic_query_result["query_dsl"])
+        if elastic_query_result and elastic_query_result.get("query"):
+            is_valid, error = elastic_gen.validate_query(elastic_query_result["query"])
 
             if is_valid:
-                # Format query as JSON string for YAML
-                elastic_query_str = elastic_gen.format_query_for_display(elastic_query_result["query_dsl"])
-
                 # Create Elastic YAML file
                 yamlfile = os.path.join(GENERATE_DIR, f"{name_safe}_{LANGUAGE_SUFFIX['Elastic']}.yaml")
                 rewrite = detection_action(yamlfile, tag)
@@ -1040,8 +1036,8 @@ def construct_yaml(
                         "Elastic",
                         all_tactics,
                         tag,
-                        elastic_query_str,
-                        datatype="logs-*-*",
+                        elastic_query_result["query"],
+                        datatype=elastic_query_result.get("index_pattern", "logs-endpoint.events.*"),
                         indicators=identifiers,
                         osint_data=osint_enhancement_data,
                         osint_enhanced=osint_enhancement,
@@ -1049,7 +1045,7 @@ def construct_yaml(
                         reference_sources=reference_sources,
                         **rewrite,
                     )
-                    print(f"  ✅ Generated Elastic Query DSL: {elastic_query_result['query_name']}")
+                    print(f"  ✅ Generated Elastic ES|QL detection: {elastic_query_result['query_name']}")
             else:
                 print(f"  ⚠️  Elastic query validation failed for {name}: {error}")
       except Exception as e:

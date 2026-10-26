@@ -1771,10 +1771,10 @@ def _hunt_llm_args(archer_session: Optional[str], ai_provider: Optional[str], ai
 
 
 # SIEMs a user can choose in Profile, and the vendor key process_group excludes them by
-SIEM_PLATFORMS = {"secops": "googlesecops", "mde": "mde", "splunk": "splunk"}
-SIEM_LABELS = {"secops": "Google SecOps", "mde": "Defender XDR", "splunk": "Splunk"}
-# Listed in Profile but not choosable: build.yaml doesn't generate Elastic queries yet
-SIEM_COMING_SOON = {"elastic": "Elastic"}
+SIEM_PLATFORMS = {"secops": "googlesecops", "mde": "mde", "splunk": "splunk", "elastic": "elastic"}
+SIEM_LABELS = {"secops": "Google SecOps", "mde": "Defender XDR", "splunk": "Splunk", "elastic": "Elastic"}
+# Elastic now generates ES|QL detections (archer.build.elastic); nothing is Coming Soon
+SIEM_COMING_SOON = {}
 
 
 def _user_siems(user) -> list:
@@ -8587,8 +8587,8 @@ def review_page(request: Request, domain: str, archer_session: Optional[str] = C
 
 
 LIBRARY_VENDORS = (("googlesecops", "Google SecOps"), ("mde", "Defender XDR"), ("splunk", "Splunk"), ("elastic", "Elastic"))
-# Not generated yet: shown, marked Coming Soon (as on the Profile page)
-LIBRARY_COMING_SOON = {"elastic"}
+# Elastic is generated (ES|QL); nothing is Coming Soon
+LIBRARY_COMING_SOON = set()
 
 
 def _library_vendor_key(name: str) -> str:
