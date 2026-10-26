@@ -1,5 +1,8 @@
 // Results page: anatomy workflow (templates/partials/anatomy.html, archer/visualization/anatomy.py)
-(function () {
+// Exposed as initAnatomy so the Anatomy page can re-wire it after swapping in another group's
+// diagram in place. All listeners are on nodes inside #anatomy, so re-running after a swap binds
+// the new nodes and lets the old ones (and their listeners) be discarded.
+window.initAnatomy = function () {
   const root = document.getElementById('anatomy');
   const dataEl = document.getElementById('an-data');
   if (!root || !dataEl) return;
@@ -89,4 +92,7 @@
     if (ev.key === 'Escape' && selected) select(null);
   });
   document.getElementById('an-detail-close').addEventListener('click', () => select(null));
-})();
+};
+
+// Loaded at end of body, so the DOM is ready; the Anatomy page calls initAnatomy again after a swap.
+window.initAnatomy();

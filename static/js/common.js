@@ -274,3 +274,27 @@ document.addEventListener('mouseover', e => {
   tip.style.setProperty('--arrow-x', `${r.left + r.width / 2 - left}px`);
   tip.classList.toggle('is-below', !above);
 });
+
+// Keep the scroll position stable when a filter re-renders part of a page, so changing a
+// filter updates only the affected area instead of jumping the view to the top. `update` does
+// the re-render (sync, or returns a Promise for an async reload); `hold` is the element that
+// shrinks/reloads — it's pinned at its current height across the update so the page can't
+// collapse and clamp the scroll. Works whichever element actually scrolls (the viewport, or a
+// container with its own overflow, as on the app's body).
+window.archerPreserveScroll = function (update, hold) {
+  const scroller = (function (el) {
+    for (; el; el = el.parentElement) {
+      const s = getComputedStyle(el);
+      if ((s.overflowY === 'auto' || s.overflowY === 'scroll') && el.scrollHeight - el.clientHeight > 1) return el;
+    }
+    return document.scrollingElement || document.documentElement;
+  })(hold || document.body);
+  const y = scroller.scrollTop;
+  if (hold) hold.style.minHeight = hold.offsetHeight + 'px';
+  const restore = () => { if (hold) hold.style.minHeight = ''; scroller.scrollTop = y; };
+  let result;
+  try { result = update(); } catch (e) { restore(); throw e; }
+  if (result && typeof result.then === 'function') return result.then(v => { restore(); return v; }, e => { restore(); throw e; });
+  restore();
+  return result;
+};

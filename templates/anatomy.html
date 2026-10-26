@@ -23,36 +23,67 @@
       <a href="/library">library</a>: open its results and use <strong>Save to Library</strong>.</p>
   </section>
   {% else %}
-  <!-- One row: the anatomy to show, what it is, and its results (the Flows page's bar) -->
-  <div class="fl-bar">
-    <form class="fl-pick" method="get" action="/anatomy">
-      <label for="an-group">Anatomy</label>
-      <select id="an-group" name="group" onchange="this.form.submit()">
-        {% for kind, entries in kinds.items() %}
-        <optgroup label="{{ kind }}{{ 's' if entries|length != 1 }}">
-          {% for f in entries %}
-          <option value="{{ f.group }}" {% if chosen and f.group == chosen.group %}selected{% endif %}>{{ f.label }}</option>
+  <!-- Picking an anatomy swaps this block in place (no full reload); the form is the noscript fallback -->
+  <div id="an-swap">
+    <!-- One row: the anatomy to show, what it is, and its results (the Flows page's bar) -->
+    <div class="fl-bar">
+      <form class="fl-pick" method="get" action="/anatomy">
+        <label for="an-group">Anatomy</label>
+        <select id="an-group" name="group">
+          {% for kind, entries in kinds.items() %}
+          <optgroup label="{{ kind }}{{ 's' if entries|length != 1 }}">
+            {% for f in entries %}
+            <option value="{{ f.group }}" {% if chosen and f.group == chosen.group %}selected{% endif %}>{{ f.label }}</option>
+            {% endfor %}
+          </optgroup>
           {% endfor %}
-        </optgroup>
-        {% endfor %}
-      </select>
-      <noscript><button type="submit">Open</button></noscript>
-    </form>
-    {% if chosen %}
-    <span class="fl-kind">{{ chosen.kind }}</span>
-    <a class="fl-open" href="/results?group_name={{ chosen.group|urlencode }}">Open results →</a>
+        </select>
+        <noscript><button type="submit">Open</button></noscript>
+      </form>
+      {% if chosen %}
+      <span class="fl-kind">{{ chosen.kind }}</span>
+      <a class="fl-open" href="/results?group_name={{ chosen.group|urlencode }}">Open results →</a>
+      {% endif %}
+    </div>
+
+    {% if anatomy %}
+      {% set anatomy_scope = "" %}
+      {% include "partials/anatomy.html" %}
+    {% elif chosen %}
+    <section class="fl-empty">
+      <p>There isn't enough in ATT&amp;CK or the CVE's research to draw this one yet.</p>
+    </section>
     {% endif %}
   </div>
-
-  {% if anatomy %}
-    {% set anatomy_scope = "" %}
-    {% include "partials/anatomy.html" %}
-  {% elif chosen %}
-  <section class="fl-empty">
-    <p>There isn't enough in ATT&amp;CK or the CVE's research to draw this one yet.</p>
-  </section>
-  {% endif %}
   {% endif %}
 </div>
-{% if anatomy %}<script src="{{ url_for('static', path='js/anatomy.js') }}?v={{ request.app.state.asset_version }}"></script>{% endif %}
+{% if kinds %}
+<script src="{{ url_for('static', path='js/anatomy.js') }}?v={{ request.app.state.asset_version }}"></script>
+<script>
+  // Swap another group's anatomy in place instead of reloading the whole page, keeping scroll.
+  (function () {
+    function wire() {
+      const sel = document.getElementById('an-group');
+      if (!sel) return;
+      sel.addEventListener('change', () => {
+        const url = '/anatomy?group=' + encodeURIComponent(sel.value);
+        const swap = document.getElementById('an-swap');
+        window.archerPreserveScroll(async () => {
+          let next;
+          try {
+            const html = await (await fetch(url, { headers: { 'X-Requested-With': 'fetch' } })).text();
+            next = new DOMParser().parseFromString(html, 'text/html').getElementById('an-swap');
+          } catch (e) { /* fall through to a normal load */ }
+          if (!next) { window.location = url; return; }
+          swap.innerHTML = next.innerHTML;
+          history.replaceState(null, '', url);
+          if (window.initAnatomy) window.initAnatomy();
+          wire();  // re-bind the recreated select
+        }, swap);
+      });
+    }
+    wire();
+  })();
+</script>
+{% endif %}
 {% endblock %}
