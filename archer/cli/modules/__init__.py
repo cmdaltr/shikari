@@ -7,7 +7,8 @@ from .hunts import CveHuntModule, GroupHuntModule, TechniqueHuntModule
 from .intel import CompanyModule, FeedModule, ReportModule
 from .research import ResearchModule
 from .ai import AISettingsModule, AskModule, BriefingModule, ResultsModule
-from .agents import AgentHistoryModule, AskAgentModule, RepairAgentModule, TriageAgentModule
+from .agents import (AgentHistoryModule, AskAgentModule, AuditAgentModule, RepairAgentModule,
+                     SweepAgentModule, TriageAgentModule)
 from archer.config import EMULATION_ENABLED
 
 # generate, correlate, hunt and emulate run in this process; the rest drive a running
@@ -30,6 +31,8 @@ MODULE_REGISTRY = {
     "agent/repair": RepairAgentModule,
     "agent/ask": AskAgentModule,
     "agent/triage": TriageAgentModule,
+    "agent/sweep": SweepAgentModule,
+    "agent/audit": AuditAgentModule,
     "agent/history": AgentHistoryModule,
 }
 

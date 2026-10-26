@@ -1,11 +1,13 @@
 """
-Archer's three agents. Each is the same loop (runtime.py) with different instructions
+Archer's agents. Each is the same loop (runtime.py) with different instructions
 and a different subset of tools, which is most of what distinguishes one agent from
 another.
 
   repair   evaluator-optimiser: check a run's queries, fix what fails, re-check, save
   ask      Ask Archer with tools: looks things up instead of answering from memory
   triage   planner: report → techniques and IOCs → coverage gaps → hunts → briefing
+  sweep    coverage: a group's gap techniques → hunt the gaps → report what closed
+  audit    librarian: review the saved library for duplicate and overlapping detections
 """
 
 from typing import Dict
@@ -113,4 +115,73 @@ Don't invent detections or results you didn't get from a tool.""",
     max_tokens=12000,
 )
 
-AGENTS: Dict[str, Agent] = {a.name: a for a in (REPAIR, ASK, TRIAGE)}
+SWEEP = Agent(
+    name="sweep",
+    title="Coverage sweep",
+    summary="Finds a threat group's techniques with no detection yet, hunts the gaps, and reports what closed.",
+    system="""You close a threat group's detection-coverage gaps using Archer.
+
+Work in this order:
+1. group_coverage for the group — its techniques and which have no detection (the gaps). If the user \
+named a tactic, filter by it.
+2. If there are no gaps, say so and stop. Don't hunt when there's nothing to close.
+3. Decide what to hunt. Usually one hunt_techniques call with every gap technique_id; use hunt_group \
+only if the user wants the whole group regenerated. Say the decision in a sentence first. Use \
+technique_info for any gap you need to understand. Don't set use_ai unless the user asks — it spends \
+their LLM budget.
+4. wait_for_run, then get_run_results.
+5. Write the report (Markdown, British English):
+   ## Summary: the group, how many techniques, how many were gaps, how many now have a detection.
+   ## Closed: a table — technique ID, name, tactic, the detection(s) now generated.
+   ## Still open: gaps with no detection and why (e.g. pre-compromise activity no telemetry sees).
+
+Don't invent coverage or results you didn't get from a tool. Some gaps can't be closed (no indicator, \
+no telemetry); say so rather than forcing a weak detection.""",
+    inputs={
+        "group": {"label": "Group", "required": True, "placeholder": "Scattered Spider, FIN7, G0046…"},
+        "tactic": {"label": "Tactic", "placeholder": "Only this tactic, e.g. Credential Access (blank = all)"},
+    },
+    tools=lambda ctx: build_tools(ctx, ["group_coverage", "technique_coverage", "technique_info",
+                                        "hunt_techniques", "hunt_group", "wait_for_run", "get_run_results",
+                                        "run_status"]),
+    task=lambda i: ("Close the detection gaps for " + i["group"].strip()
+                    + (f", in the {i['tactic'].strip()} tactic" if (i.get("tactic") or "").strip() else "")
+                    + ". Start with group_coverage."),
+    max_turns=30,
+)
+
+AUDIT = Agent(
+    name="audit",
+    title="Library audit",
+    summary="Reviews the saved library for duplicate and overlapping detections and says what to consolidate.",
+    system="""You audit a detection engineer's saved library in Archer for duplication and overlap. You \
+report only — you cannot and must not delete or change anything.
+
+Work in this order:
+1. search_library to gather saved detections (blank lists the most recent; search by a platform or tag \
+to see more). Each has id, title, detection_type, platform, tags and created_at.
+2. Group them by what they detect — the same ATT&CK technique (from the tags/title) on the same platform \
+is a likely duplicate. For a suspected pair, get_detection on both and compare the queries: same logic \
+and indicators is a duplicate; overlapping but not identical is worth consolidating.
+3. technique_coverage (and technique_info) to note lopsided coverage — a technique detected many times \
+over while others have none.
+4. Write the report (Markdown, British English):
+   ## Summary: how many detections reviewed, how many duplicate/overlap groups found.
+   ## Duplicates: a table — technique, platform, the detections (titles/ids), which to keep and why.
+   ## Overlaps: pairs that aren't identical but tread on each other, each with a one-line suggestion.
+   ## Notes: lopsided coverage, or very old entries (created_at).
+
+Only report what the tools show. Don't call two detections duplicates without comparing their queries. \
+Never claim you removed or changed anything — you have no tool that can.""",
+    inputs={
+        "scope": {"label": "Focus",
+                  "placeholder": "A platform (mde/secops/splunk/elastic), tag or technique — blank = recent"},
+    },
+    tools=lambda ctx: build_tools(ctx, ["search_library", "get_detection", "technique_coverage", "technique_info"]),
+    task=lambda i: ("Audit the detection library for duplicates and overlaps"
+                    + (f", focusing on {i['scope'].strip()}" if (i.get("scope") or "").strip() else "")
+                    + ". Start with search_library."),
+    max_turns=30,
+)
+
+AGENTS: Dict[str, Agent] = {a.name: a for a in (REPAIR, ASK, TRIAGE, SWEEP, AUDIT)}

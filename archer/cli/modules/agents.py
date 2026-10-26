@@ -124,6 +124,27 @@ class TriageAgentModule(AgentModule):
     fields = {"URL": ModuleOption(name="URL", description="Report URL", required=True)}
 
 
+class SweepAgentModule(AgentModule):
+    name = "agent/sweep"
+    description = "Agent: close a group's coverage gaps: find undetected techniques, hunt them, report"
+    author = "Archer Team"
+    agent = "sweep"
+    fields = {
+        "GROUP": ModuleOption(name="GROUP", description="Threat group (e.g. Scattered Spider, FIN7, G0046)", required=True),
+        "TACTIC": ModuleOption(name="TACTIC", description="Only this tactic, e.g. Credential Access (blank = all)"),
+    }
+
+
+class AuditAgentModule(AgentModule):
+    name = "agent/audit"
+    description = "Agent: review the saved library for duplicate and overlapping detections (reports only)"
+    author = "Archer Team"
+    agent = "audit"
+    fields = {
+        "SCOPE": ModuleOption(name="SCOPE", description="A platform, tag or technique to focus on (blank = recent)"),
+    }
+
+
 class AgentHistoryModule(ServerModule):
     name = "agent/history"
     description = "Recent agent runs (kept across restarts); SESSION shows one, CONTINUE carries it on"
