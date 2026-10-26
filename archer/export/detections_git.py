@@ -38,14 +38,21 @@ def _siem_of(doc: dict) -> str:
     return CONNECTOR_SIEM.get(connector, _slug(connector).lower() or "other")
 
 
-def export_run(group: str, generate_dir: str, repo: str, list_files, message: Optional[str] = None) -> Dict:
+def export_run(group: str, generate_dir: str, repo: str, list_files, message: Optional[str] = None,
+               exclude_unavailable: bool = True) -> Dict:
     """Write a group's current detections into the repo under <group>/ and commit.
 
     list_files(group, generate_dir) -> [yaml paths] (inject group_yaml_files). Returns the commit
-    sha, the paths written, and the name-status against the previous commit."""
+    sha, the paths written, and the name-status against the previous commit. With
+    exclude_unavailable, a detection that needs a data source the estate doesn't ingest (#12) is
+    left out of the commit rather than pushed as a rule that can never fire; the excluded ones are
+    returned in `excluded`."""
     import yaml
 
+    from archer.build.availability import load as _load_avail, missing_sources
+
     ensure_repo(repo)
+    avail = _load_avail() if exclude_unavailable else {}
     group_dir = os.path.join(repo, _slug(group))
     # Rewrite the group's tree each export so removed detections disappear from the diff
     if os.path.isdir(group_dir):
@@ -55,6 +62,7 @@ def export_run(group: str, generate_dir: str, repo: str, list_files, message: Op
             for f in files:
                 os.remove(os.path.join(root, f))
     written = []
+    excluded = []
     for name in list_files(group, generate_dir):
         path = os.path.join(generate_dir, os.path.basename(name))
         try:
@@ -63,6 +71,12 @@ def export_run(group: str, generate_dir: str, repo: str, list_files, message: Op
             doc = yaml.safe_load(text) or {}
         except (OSError, ValueError, yaml.YAMLError):
             continue
+        if exclude_unavailable and avail:
+            miss = missing_sources(doc, avail)
+            if miss:
+                excluded.append({"file": os.path.basename(name),
+                                 "missing": sorted({m["dataType"] for m in miss})})
+                continue
         tid = _slug(doc.get("technique_id") or "T0000")
         siem = _siem_of(doc)
         # Keep the original filename (it encodes the technique and the data table) so several
@@ -79,13 +93,13 @@ def export_run(group: str, generate_dir: str, repo: str, list_files, message: Op
     status = _run(repo, "status", "--porcelain", "--", _slug(group)).stdout.strip()
     if not status:
         head = _run(repo, "rev-parse", "HEAD").stdout.strip()
-        return {"committed": False, "commit": head, "files": written, "changes": []}
+        return {"committed": False, "commit": head, "files": written, "changes": [], "excluded": excluded}
     msg = message or f"{group}: {len(written)} detections"
     _run(repo, *_GIT_ID, "commit", "-q", "-m", msg, "--", _slug(group))
     head = _run(repo, "rev-parse", "HEAD").stdout.strip()
     name_status = _run(repo, "diff", "--name-status", "--no-renames", "HEAD~1", "HEAD", "--", _slug(group), check=False).stdout
     return {"committed": True, "commit": head, "branch": _branch(repo), "files": written,
-            "changes": _parse_name_status(name_status)}
+            "changes": _parse_name_status(name_status), "excluded": excluded}
 
 
 def _branch(repo: str) -> str:

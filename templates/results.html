@@ -67,6 +67,7 @@
 .card-right { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; flex-shrink: 0; margin-left: auto; font-size: 0.9rem; }
 .osint-details-btn { display: inline-flex; align-items: center; gap: 6px; background: #f0f7ff; border: 1px solid #3b82f6; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: .85em; color: #1e40af; white-space: nowrap; }
 .rating-badge { padding: 4px 10px; border-radius: 6px; font-size: .85em; font-weight: 600; white-space: nowrap; }
+.unavailable-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #b45309 0%, #d97706 100%); color: #fff; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(180, 83, 9, 0.3); cursor: help; }
 .corr-foot { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0 16px; margin-top: 10px; }
 .corr-foot > details { flex: 0 1 auto; }
 .corr-foot > details[open] { flex-basis: 100%; }
@@ -690,6 +691,15 @@
                       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                     </svg>
                     Referenced
+                  </span>
+                  {% endif %}
+                  {% if detection.unavailable_sources %}
+                  <span class="unavailable-badge" title="This detection needs data sources this estate doesn't ingest ({{ detection.unavailable_sources | join(', ') }}), so it can't fire. It's shown for visibility but excluded from the detections-as-code export and SIEM push. Set what the estate ingests under Profile → Config → SIEM data sources.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
+                      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                      <path d="M12 9v4M12 17h.01"/>
+                    </svg>
+                    Source not ingested: {{ detection.unavailable_sources | join(', ') }}
                   </span>
                   {% endif %}
                 </div>

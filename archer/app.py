@@ -6512,6 +6512,8 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "rule_name": attack_rule_name(query_text),  # SecOps rule, renamable with the mapping
                     # Revoked/deprecated in ATT&CK since the detection was built: tagged, upgradable
                     "legacy": legacy_techniques.get(str(yaml_data.get("technique_id") or "")),
+                    # Data sources this detection needs — used to flag it if the estate doesn't ingest them (#12)
+                    "required_data_connectors": yaml_data.get("requiredDataConnectors") or [],
                 }
             )
 
@@ -6520,6 +6522,10 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
     detections = []
     total_detections = 0
 
+    # Per-tenant availability (#12): load once, flag detections needing an un-ingested data source
+    from archer.build.availability import load as _load_avail, missing_sources as _missing_sources
+    _avail_cfg = _load_avail()
+
     for vendor, files in detection_files.items():
         # Group files by technique + description for display
         grouped = {}
@@ -6527,6 +6533,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
             key = (file_data["technique"], file_data["description"])
             if key not in grouped:
                 grouped[key] = {
+                    "required_data_connectors": [],
                     "technique": file_data["technique"],
                     "technique_display": file_data.get("technique_display", file_data["technique"]),
                     "titles": [],
@@ -6566,6 +6573,9 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                         grouped[key]["osint_data"].update(file_data["osint_data"])
             grouped[key]["titles"].append(file_data["title"])
             grouped[key]["files"].append(file_data["file"])
+            for _conn in file_data.get("required_data_connectors") or []:
+                if _conn not in grouped[key]["required_data_connectors"]:
+                    grouped[key]["required_data_connectors"].append(_conn)
             if file_data.get("attack_override") and not grouped[key]["attack_override"]:
                 grouped[key]["attack_override"] = file_data["attack_override"]
             if len(file_data.get("attack_mapping_history") or []) > len(grouped[key]["attack_mapping_history"]):
@@ -6609,6 +6619,11 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "attack_mapping_history": data["attack_mapping_history"],
                     "rule_name": data["rule_name"],
                     "legacy": data["legacy"],
+                    # Data sources the estate doesn't ingest, so this detection can't fire (#12)
+                    "unavailable_sources": sorted({
+                        m["dataType"] for m in _missing_sources(
+                            {"requiredDataConnectors": data.get("required_data_connectors") or []}, _avail_cfg)
+                    }) if _avail_cfg else [],
                 }
             )
 
@@ -8745,16 +8760,25 @@ def detections_code_push(request: Request, group: str = Form(...), siem: str = F
     db.close()
     safe = sanitize_group_name(group)
     connector_siem = {"GoogleSecOps": "secops", "MicrosoftThreatProtection": "mde", "Splunk": "splunk", "Elastic": "elastic"}
+    from archer.build.availability import load as _load_avail, missing_sources
+    avail = _load_avail()
     dets = []
+    excluded = 0
     for name in group_yaml_files(safe, GENERATE_DIR):
         doc = load_yaml_file(os.path.join(GENERATE_DIR, os.path.basename(name)))
         if not doc or not doc.get("technique_id"):
+            continue
+        # Don't plan a push for a rule that can't fire on this estate (#12)
+        if avail and missing_sources(doc, avail):
+            excluded += 1
             continue
         connector = ((doc.get("requiredDataConnectors") or [{}])[0] or {}).get("connectorId", "")
         dets.append({"name": doc.get("name"), "technique_id": doc.get("technique_id"),
                      "query": doc.get("query", ""), "severity": doc.get("severity", "medium"),
                      "siem": connector_siem.get(connector, connector)})
     plan = siem_push.plan_push(siem, dets, execute=False)
+    if excluded:
+        plan["excluded_unavailable"] = excluded
     return JSONResponse(plan, status_code=200 if plan.get("success") else 400)
 
 
@@ -8804,6 +8828,46 @@ def detections_code_config_test(request: Request, repo_path: str = Form(...), re
     if user.role != UserRole.ADMIN:
         return JSONResponse({"error": "Admin access required"}, status_code=403)
     return JSONResponse(repo_config.test_connectivity(repo_path, remote_url))
+
+
+@app.get("/api/siem-mappings/availability")
+def siem_availability_get(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """What the estate ingests per SIEM, plus the catalogue of gate-able sources (admin only, #12)."""
+    from archer.build import availability
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in"}, status_code=401)
+    user, db = auth
+    db.close()
+    if user.role != UserRole.ADMIN:
+        return JSONResponse({"error": "Admin access required"}, status_code=403)
+    return JSONResponse({"ingested": availability.load(),
+                         "catalogue": availability.source_catalogue(GENERATE_DIR)})
+
+
+@app.post("/api/siem-mappings/availability")
+async def siem_availability_save(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Save the per-SIEM ingested-source lists (admin only, #12).
+
+    Body is JSON {"mde": [...tables...], "secops": [...UDM event types...]}. A SIEM omitted here is
+    left ungated (all its sources count as ingested)."""
+    from archer.build import availability
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
+    user, db = auth
+    db.close()
+    if user.role != UserRole.ADMIN:
+        return JSONResponse({"success": False, "error": "Admin access required"}, status_code=403)
+    try:
+        body = await request.json()
+    except ValueError:
+        return JSONResponse({"success": False, "error": "Invalid JSON body"}, status_code=400)
+    ingested = {k: v for k, v in (body or {}).items() if isinstance(v, list)}
+    saved = availability.save(ingested)
+    return JSONResponse({"success": True, "ingested": saved})
 
 
 # ---------------------------------------------------------------------------

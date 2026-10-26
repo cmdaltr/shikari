@@ -1110,6 +1110,27 @@
                 </div>
                 <div id="dcfg-status" style="margin-top:16px;padding:12px;border-radius:6px;display:none;"></div>
               </div>
+
+              <!-- SIEM DATA SOURCES / AVAILABILITY (Admin Only) -->
+              <div class="ui-card" style="padding: 24px; margin-bottom: 32px;">
+                <h3 class="section-title">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
+                  SIEM data sources
+                </h3>
+                <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6; margin-bottom: 20px;">
+                  Which data sources this estate actually ingests. A detection that needs a source you don't collect
+                  can't fire — it's shown on Results with a <strong>Source not ingested</strong> badge and left out of the
+                  detections-as-code export and SIEM push. Tick only what you ingest; leave a SIEM untouched to gate nothing
+                  (everything counts as ingested). Field names are vendor-fixed, so this is availability only.
+                </p>
+                <div id="avail-body" style="display:grid;gap:24px;max-width:720px;">
+                  <p style="color:var(--text-secondary);">Loading…</p>
+                </div>
+                <div class="ui-actions" style="margin-top:20px;">
+                  <button id="avail-save" class="btn-primary">Save data sources</button>
+                </div>
+                <div id="avail-status" style="margin-top:16px;padding:12px;border-radius:6px;display:none;"></div>
+              </div>
               {% endif %}
 
             </div>
@@ -2541,6 +2562,68 @@
                         if (j.remote_ok !== null) msg += `<br><strong>Remote:</strong> ${j.remote_ok ? '✓' : '✗'} ${j.remote_message}`;
                         show(msg, j.repo_ok && (j.remote_ok === null || j.remote_ok));
                     } catch (e) { show(e.message, false); }
+                });
+            })();
+
+            // SIEM data-source availability (admin, #12)
+            (function () {
+                const bodyEl = document.getElementById('avail-body');
+                if (!bodyEl) return;  // not admin
+                const statusEl = document.getElementById('avail-status');
+                const LABEL = { mde: 'Microsoft Defender XDR tables', secops: 'Google SecOps UDM event types' };
+                const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+                function note(msg, ok) {
+                    statusEl.style.display = 'block';
+                    statusEl.style.background = ok ? 'rgba(52,168,83,.12)' : 'rgba(217,48,37,.1)';
+                    statusEl.style.color = ok ? '#2e9e4f' : '#d93025';
+                    statusEl.textContent = msg;
+                }
+                function render(catalogue, ingested) {
+                    const siems = ['mde', 'secops'];
+                    bodyEl.innerHTML = siems.map(siem => {
+                        const all = catalogue[siem] || [];
+                        if (!all.length) return '';
+                        const gated = Object.prototype.hasOwnProperty.call(ingested, siem);
+                        const on = new Set(ingested[siem] || []);
+                        const rows = all.map(src =>
+                            `<label style="display:flex;align-items:center;gap:8px;font-size:0.9em;">
+                               <input type="checkbox" data-siem="${siem}" value="${esc(src)}" ${(!gated || on.has(src)) ? 'checked' : ''}>
+                               <code>${esc(src)}</code></label>`).join('');
+                        return `<div data-siem-group="${siem}">
+                          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                            <strong>${LABEL[siem]}</strong>
+                            <span style="font-size:0.8em;">
+                              <a href="#" data-all="${siem}">all</a> · <a href="#" data-none="${siem}">none</a>
+                            </span>
+                          </div>
+                          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px;">${rows}</div>
+                        </div>`;
+                    }).join('') || '<p style="color:var(--text-secondary);">No gate-able sources found yet — generate a run first.</p>';
+                    bodyEl.querySelectorAll('[data-all]').forEach(a => a.addEventListener('click', e => {
+                        e.preventDefault();
+                        bodyEl.querySelectorAll(`input[data-siem="${a.dataset.all}"]`).forEach(c => c.checked = true);
+                    }));
+                    bodyEl.querySelectorAll('[data-none]').forEach(a => a.addEventListener('click', e => {
+                        e.preventDefault();
+                        bodyEl.querySelectorAll(`input[data-siem="${a.dataset.none}"]`).forEach(c => c.checked = false);
+                    }));
+                }
+                fetch('/api/siem-mappings/availability').then(r => r.ok ? r.json() : null).then(d => {
+                    if (!d) { bodyEl.innerHTML = '<p style="color:var(--text-secondary);">Unavailable.</p>'; return; }
+                    render(d.catalogue || {}, d.ingested || {});
+                }).catch(() => { bodyEl.innerHTML = '<p style="color:var(--text-secondary);">Unavailable.</p>'; });
+                document.getElementById('avail-save').addEventListener('click', async () => {
+                    const out = {};
+                    bodyEl.querySelectorAll('[data-siem-group]').forEach(g => {
+                        const siem = g.dataset.siemGroup;
+                        out[siem] = Array.from(g.querySelectorAll('input:checked')).map(c => c.value);
+                    });
+                    try {
+                        const r = await fetch('/api/siem-mappings/availability', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(out) });
+                        const j = await r.json(); if (!r.ok || !j.success) throw new Error(j.error || 'Save failed');
+                        note('Saved. Detections for un-ingested sources are now flagged and excluded at deploy.', true);
+                    } catch (e) { note(e.message, false); }
                 });
             })();
         });
