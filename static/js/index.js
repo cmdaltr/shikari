@@ -570,17 +570,14 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function (data) {
         hideLoading();
 
+        // Profiling runs in the background now; follow the redirect to the progress page,
+        // which then opens the Review page (summary, exposure map, groups) when it finishes.
         if (typeof data === 'object' && data.redirect_url) {
           window.location = data.redirect_url;
           return;
         }
-        if (typeof data === 'object' && data.success) {
-          // Show threat group selection if auto-generate was checked
-          if (data.show_selection && data.recommended_groups && data.recommended_groups.length > 0) {
-            showThreatGroupSelection(domainInput.value.trim(), data.recommended_groups, data.profile);
-          } else {
-            alert('Profile created successfully! Saved to: ' + data.profile_path);
-          }
+        if (typeof data === 'object') {
+          alert(data.error ? 'Could not start profiling: ' + data.error : 'Profiling started.');
           return;
         }
         var parser = new DOMParser();
@@ -1173,195 +1170,6 @@ window.clearFileSelection = function () {
   if (uploadBtn) uploadBtn.disabled = true;
 };
 
-// Profile: how many recommended groups start ticked
-var PROFILE_PRESELECT = 3;
-
-// Measured per group: ~15s preparing and loading, ~0.03s per procedure, ~20s to
-// correlate and build the flow. Groups run one after another. Unknown sizes count as
-// a typical 250.
-function estimateProfileTime(sizes, correlate) {
-  var secs = sizes.reduce(function(sum, n) {
-    return sum + 15 + 0.03 * (n || 250) + (correlate ? 20 : 0);
-  }, 0);
-  var low = Math.max(1, Math.round(secs * 0.8 / 60));
-  var high = Math.max(low + 1, Math.ceil(secs * 1.5 / 60));
-  return 'Estimated time: about ' + low + '\u2013' + high + ' min for ' + sizes.length +
-    ' group' + (sizes.length === 1 ? '' : 's');
-}
-
-// Threat Group Selection Modal
-function showThreatGroupSelection(domain, recommendedGroups, profile) {
-  // Create modal overlay
-  var overlay = document.createElement('div');
-  overlay.id = 'threat-group-selection-overlay';
-  overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; display: flex; align-items: center; justify-content: center;';
-
-  // Create modal
-  var modal = document.createElement('div');
-  modal.style.cssText = 'background: white; border-radius: 8px; padding: 2em; max-width: 700px; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.3);';
-
-  // Modal content
-  var html = '<h2 style="margin-top: 0;">🎯 Select Threat Groups for Detection Generation</h2>';
-  html += '<p style="color: #666; margin-bottom: 1.5em;">Profile complete for <strong>' + escapeHtml(domain) + '</strong>. Select which threat groups you want to generate detections for:</p>';
-
-  // Profile summary
-  html += '<div style="background: #f8f9fa; padding: 1em; border-radius: 4px; margin-bottom: 1.5em;">';
-  html += '<h3 style="margin: 0 0 0.5em 0; font-size: 1em;">Profile Summary</h3>';
-
-  // Values come from Wikidata and the target's own site, so escape everything
-  var info = profile.company_info || {};
-  if (info.company_name) {
-    html += '<p style="margin: 0.3em 0;"><strong>Company:</strong> ' + escapeHtml(info.company_name) + '</p>';
-  }
-  if (profile.threat_profile && profile.threat_profile.industry) {
-    var ind = profile.threat_profile.industry;
-    html += '<p style="margin: 0.3em 0;"><strong>Industry:</strong> ' + escapeHtml(ind.sector || 'Unknown') +
-      (ind.subsector ? ' <span style="color:#666;">(' + escapeHtml(ind.subsector) + ')</span>' : '') + '</p>';
-  }
-  if (profile.threat_profile && profile.threat_profile.geography) {
-    var geo = profile.threat_profile.geography;
-    var where = [geo.region, geo.country].filter(Boolean).join(', ') || 'Unknown';
-    html += '<p style="margin: 0.3em 0;"><strong>Location:</strong> ' + escapeHtml(where) + '</p>';
-    if (geo.hosting_country && geo.hosting_country !== geo.country) {
-      html += '<p style="margin: 0.3em 0;color:#666;"><strong>Hosted from:</strong> ' +
-        escapeHtml([geo.hosting_region, geo.hosting_country].filter(Boolean).join(', ')) + '</p>';
-    }
-  }
-  var evidence = (info.identity && info.identity.evidence) || [];
-  if (evidence.length) {
-    html += '<p style="margin: 0.3em 0;color:#666;font-size:0.9em;"><strong>Source:</strong> ' + escapeHtml(evidence.join('; ')) + '</p>';
-  }
-  var detected = profile.detected_stack || [];
-  if (detected.length) {
-    html += '<p style="margin: 0.3em 0;"><strong>Products seen:</strong> ' + escapeHtml(detected.map(function(p) { return p.label; }).join(', ')) +
-      ' <button type="button" id="profile-add-stack" style="margin-left:0.5em;padding:2px 10px;border:1px solid #ccc;border-radius:4px;background:white;cursor:pointer;" title="Add them to Profile → Technology stack (only if this is your organisation)">Add to my technology stack</button>' +
-      ' <span id="profile-add-stack-status" role="status" style="color:#555;font-size:0.9em;"></span></p>';
-  }
-  html += '<p style="margin: 0.3em 0;"><strong>Risk Score:</strong> ' + (profile.risk_score || 0) + '/100</p>';
-  html += '<p style="margin: 0.3em 0;"><strong>Recommended Groups:</strong> ' + recommendedGroups.length + '</p>';
-  html += '<p style="margin: 0.8em 0 0;"><a href="/exposure?domain=' + encodeURIComponent(domain) + '" target="_blank" rel="noopener" style="display:inline-block;padding:7px 15px;background:#0284C7;color:#fff;border-radius:4px;text-decoration:none;font-weight:600;">🔎 View exposure map</a> <span style="color:#666;font-size:0.9em;">what\'s publicly exposed, and how it links together</span></p>';
-  html += '</div>';
-
-  // Threat group checkboxes
-  html += '<div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 1em;">';
-  html += '<label style="display: block; margin-bottom: 0.5em;"><input type="checkbox" id="select-all-groups" style="margin-right: 0.5em;"><strong>Select All</strong></label>';
-  html += '<hr style="margin: 0.5em 0;">';
-
-  // Only the top recommendations start ticked: each group is a full generation run
-  recommendedGroups.forEach(function(group, index) {
-    html += '<label style="display: block; padding: 0.5em; margin: 0.3em 0; background: ' + (index % 2 === 0 ? '#f8f9fa' : 'white') + '; border-radius: 3px; cursor: pointer;">';
-    html += '<input type="checkbox" class="group-checkbox" value="' + escapeHtml(group) + '"' + (index < PROFILE_PRESELECT ? ' checked' : '') + ' style="margin-right: 0.5em;">';
-    html += '<span style="font-weight: 500;">' + escapeHtml(group) + '</span>';
-    html += '</label>';
-  });
-  html += '</div>';
-
-  // Correlation option
-  html += '<div style="margin-top: 1em;">';
-  html += '<label style="display: block;"><input type="checkbox" id="run-correlation" checked style="margin-right: 0.5em;"><strong>Generate correlations</strong> (recommended)</label>';
-  html += '</div>';
-
-  // Buttons
-  html += '<div style="margin-top: 1.5em; display: flex; gap: 1em; justify-content: flex-end; align-items: center;">';
-  html += '<span id="profile-estimate" aria-live="polite" style="margin-right: auto; color: #555; font-size: 0.95em;"></span>';
-  html += '<button id="cancel-generation" style="padding: 0.7em 1.5em; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>';
-  html += '<button id="confirm-generation" style="padding: 0.7em 1.5em; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate Detections</button>';
-  html += '</div>';
-
-  modal.innerHTML = html;
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
-
-  // Products seen on the site join the user's stack (it's added to, never replaced)
-  var addStack = document.getElementById('profile-add-stack');
-  if (addStack) addStack.addEventListener('click', function() {
-    var status = document.getElementById('profile-add-stack-status');
-    addStack.disabled = true;
-    fetch('/api/profile/stack').then(function(r) { return r.json(); }).then(function(cur) {
-      var stack = (cur.stack || []).slice();
-      detected.forEach(function(p) { if (stack.indexOf(p.id) < 0) stack.push(p.id); });
-      return fetch('/api/profile/stack', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stack: stack }) });
-    }).then(function(r) { return r.json(); }).then(function(res) {
-      status.textContent = res.success ? 'Added: your stack has ' + res.stack.length + ' product' + (res.stack.length === 1 ? '' : 's') : (res.error || 'Not saved');
-    }).catch(function(e) { status.textContent = e.message; addStack.disabled = false; });
-  });
-
-  // Time estimate from each group's ATT&CK procedure count
-  var groupSizes = {};
-  function updateEstimate() {
-    var el = document.getElementById('profile-estimate');
-    if (!el) return;
-    var picked = Array.prototype.filter.call(document.querySelectorAll('.group-checkbox'), function(cb) { return cb.checked; });
-    var correlate = document.getElementById('run-correlation').checked;
-    el.textContent = picked.length ? estimateProfileTime(picked.map(function(cb) { return groupSizes[cb.value]; }), correlate) : '';
-  }
-  fetch('/api/group-sizes?groups=' + encodeURIComponent(recommendedGroups.join(',')))
-    .then(function(r) { return r.json(); })
-    .then(function(j) { groupSizes = j.sizes || {}; updateEstimate(); })
-    .catch(function() {});
-  updateEstimate();
-  modal.addEventListener('change', updateEstimate);
-
-  // Event handlers
-  document.getElementById('select-all-groups').addEventListener('change', function(e) {
-    var checkboxes = document.querySelectorAll('.group-checkbox');
-    checkboxes.forEach(function(cb) {
-      cb.checked = e.target.checked;
-    });
-    updateEstimate();
-  });
-
-  document.getElementById('cancel-generation').addEventListener('click', function() {
-    document.body.removeChild(overlay);
-  });
-
-  document.getElementById('confirm-generation').addEventListener('click', function() {
-    var selectedGroups = [];
-    document.querySelectorAll('.group-checkbox:checked').forEach(function(cb) {
-      selectedGroups.push(cb.value);
-    });
-
-    if (selectedGroups.length === 0) {
-      alert('Please select at least one threat group');
-      return;
-    }
-
-    var runCorrelation = document.getElementById('run-correlation').checked;
-
-    // Close modal
-    document.body.removeChild(overlay);
-
-    // Show loading
-    showLoading('generating detections for ' + selectedGroups.length + ' threat group(s)');
-
-    // Submit to new endpoint
-    var formData = new FormData();
-    formData.append('domain', domain);
-    formData.append('selected_groups', selectedGroups.join(','));
-    formData.append('run_correlation', runCorrelation ? 'true' : 'false');
-
-    fetch('/profile/generate-detections', {
-      method: 'POST',
-      body: formData,
-      headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(function(response) {
-      return response.json();
-    })
-    .then(function(data) {
-      if (data.success && data.redirect_url) {
-        window.location = data.redirect_url;
-      } else if (data.error) {
-        hideLoading();
-        alert('Error: ' + data.error);
-      }
-    })
-    .catch(function(error) {
-      hideLoading();
-      alert('Error generating detections: ' + error);
-    });
-  });
-}
 
 
 // Profile → Technology stack: say when group hunts are filtered by it, with a way out

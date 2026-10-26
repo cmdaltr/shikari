@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Archer - {{ summary.company }} Review{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/attack_flow.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/anatomy.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/exposure.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/review.css') }}?v={{ request.app.state.asset_version }}">
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container af-standalone rv-page" data-domain="{{ domain }}">
+
+  <!-- Branding header -->
+  <header class="rv-brand">
+    <div class="rv-logo" aria-hidden="true">
+      <img class="rv-logo-img" alt="" src="https://logo.clearbit.com/{{ domain }}?size=128"
+           data-fallback="https://www.google.com/s2/favicons?domain={{ domain }}&sz=128"
+           onerror="rvLogoError(this)">
+      <span class="rv-logo-mono" hidden>{{ (summary.company or domain)[:1]|upper }}</span>
+    </div>
+    <div class="rv-brand-text">
+      <h1>{{ summary.company }}</h1>
+      <p class="rv-domain">{{ domain }} · <a href="/">New profile →</a></p>
+    </div>
+    <div class="rv-risk" title="Overall risk score for this organisation">
+      <span class="rv-risk-n">{{ summary.risk_score }}</span><span class="rv-risk-d">/100</span>
+      <span class="rv-risk-l">risk</span>
+    </div>
+  </header>
+
+  <!-- Profile summary -->
+  <section class="detection-section rv-summary">
+    <h2>Profile summary</h2>
+    <dl class="rv-sum-grid">
+      {% if summary.industry %}<div><dt>Industry</dt><dd>{{ summary.industry }}{% if summary.subsector %} <span class="rv-muted">({{ summary.subsector }})</span>{% endif %}</dd></div>{% endif %}
+      {% if summary.location %}<div><dt>Location</dt><dd>{{ summary.location }}</dd></div>{% endif %}
+      {% if summary.hosting %}<div><dt>Hosted from</dt><dd>{{ summary.hosting }}</dd></div>{% endif %}
+      <div><dt>Recommended groups</dt><dd>{{ group_count }}</dd></div>
+      {% if summary.products %}<div class="rv-sum-wide"><dt>Products seen</dt><dd>{{ summary.products|map(attribute='label')|join(', ') }}
+        <button type="button" id="rv-add-stack" class="rv-stack-btn" data-stack-ids="{{ summary.products|map(attribute='id')|join(',') }}" title="Add to Profile → Technology stack (only if this is your organisation)">Add to my technology stack</button>
+        <span id="rv-add-stack-status" role="status" class="rv-muted"></span></dd></div>{% endif %}
+      {% if summary.source %}<div class="rv-sum-wide"><dt>Source</dt><dd class="rv-muted">{{ summary.source }}</dd></div>{% endif %}
+    </dl>
+  </section>
+
+  <!-- Exposure map -->
+  {% if exposure %}
+    {% include "partials/exposure.html" %}
+  {% endif %}
+
+  <!-- Detection generation -->
+  <section class="detection-section rv-groups">
+    <div class="rv-groups-head">
+      <h2>Generate detections</h2>
+      <p class="rv-muted">Each group is a full generation run. The likelihood is how strongly this organisation's sector and region match the group's known targeting. The top three are pre-selected.</p>
+      <label class="rv-selectall"><input type="checkbox" id="rv-select-all"> Select all</label>
+    </div>
+
+    <div class="rv-grid" role="group" aria-label="Recommended threat groups">
+      {% for g in groups %}
+      <label class="rv-group{% if g.band %} rv-band-{{ g.band|lower }}{% endif %}">
+        <input type="checkbox" class="rv-group-cb" value="{{ g.name }}"{% if loop.index0 < 3 %} checked{% endif %}>
+        <span class="rv-group-name">{{ g.name }}</span>
+        {% if g.likelihood is not none %}
+        <span class="rv-like" title="{{ g.band }} likelihood{% if g.sources %} — matched on {{ g.sources|join(' and ') }}{% endif %}">
+          <span class="rv-like-bar"><span class="rv-like-fill" style="width: {{ g.likelihood }}%"></span></span>
+          <span class="rv-like-n">{{ g.likelihood }}%</span>
+        </span>
+        {% endif %}
+      </label>
+      {% endfor %}
+    </div>
+
+    <div class="rv-actions">
+      <label class="rv-corr"><input type="checkbox" id="rv-correlation" checked> Generate correlations <span class="rv-muted">(recommended)</span></label>
+      <span class="rv-estimate" id="rv-estimate" aria-live="polite"></span>
+      <button type="button" class="hp-btn rv-generate" id="rv-generate">Generate detections</button>
+    </div>
+  </section>
+
+</div>
+{% if exposure %}<script src="{{ url_for('static', path='js/exposure.js') }}?v={{ request.app.state.asset_version }}"></script>{% endif %}
+<script src="{{ url_for('static', path='js/review.js') }}?v={{ request.app.state.asset_version }}"></script>
+{% endblock %}

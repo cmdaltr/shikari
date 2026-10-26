@@ -4,17 +4,17 @@
 
 ## How it works
 
-1. **Look the company up.** Archer reads Wikidata, the company's homepage and OSINT sources to establish its name, sector, where it operates and where its site is hosted. It also looks at its technology stack for relevant CVEs.
+1. **Look the company up.** Profiling runs in the background with a progress page of its seven stages (domain, OSINT, industry, geography, technology, supply chain, recommendations), the same as a hunt. Archer reads Wikidata, the company's homepage and OSINT sources to establish its name, sector, where it operates and where its site is hosted. It also looks at its technology stack for relevant CVEs.
    Wikidata lists a company's industries with its main one first, and the sector follows that order: Rolls-Royce's "aerospace industry, energy industry, weapons industry" is defence. The other sectors are noted in the profile's evidence ("Also in: energy") but don't choose the groups.
 2. **Recommend threat groups.** Groups whose ATT&CK descriptions say they target that sector or region are ranked, and the profile gets a risk score.
-3. **Choose.** A window shows the profile summary (company, industry, location, hosting, source, risk score) and the recommended groups, the top three ticked. Tick or untick any. If the profile saw products (the web server banner, WordPress, the email provider from the MX records), **Add to my technology stack** adds them to Profile → [Technology stack](16-profile-and-settings.md#technology-stack). Use it only when the company is your own.
+3. **Review.** When profiling finishes it opens a **Review** page: the company's branding, the profile summary (company, industry, location, hosting, source, risk score), the [exposure map](#exposure-map), and the recommended groups laid out in columns — each with a **likelihood** of targeting this organisation (how strongly its sector and region match the group's known targeting), the top three ticked. Tick or untick any. If the profile saw products (the web server banner, WordPress, the email provider from the MX records), **Add to my technology stack** adds them to Profile → [Technology stack](16-profile-and-settings.md#technology-stack). Use it only when the company is your own.
 4. **Generate.** Archer runs a [Hunt](02-hunt.md) for each ticked group. Each gets its own [Results](06-results.md) page.
 
-The profile is saved, so the same company doesn't have to be re-run, and its exposure map and catalogue entry are built from it.
+The profile is saved, so the same company doesn't have to be re-run; the Review page, exposure map and catalogue entry are all built from it. Open the Review page again any time from the [Catalogue](#companies-catalogue).
 
 ## Exposure map
 
-**View exposure map** on the profile summary (or `/exposure?domain=…`) opens the **Organisation Exposure Map** — a node-and-link graph, in the same style as the attack anatomy on a Results page, of everything profiling surfaced from public sources and how each piece links back to the domain. It answers "what can a threat actor see before they act", and nothing is harvested to build it.
+The **Organisation Exposure Map** is shown on the Review page (and standalone at `/exposure?domain=…`) — a node-and-link graph, in the same style as the attack anatomy on a Results page, of everything profiling surfaced from public sources and how each piece links back to the domain. It answers "what can a threat actor see before they act", and nothing is harvested to build it.
 
 Two hops out from the organisation:
 

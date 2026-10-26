@@ -5117,35 +5117,41 @@ def profile_company(
         except Exception:
             pass
 
-        # Profile the company
-        print(f"\nProfiling domain: {domain}")
-        profile = do_profile(domain, options, use_openai=use_ai, group_name=group_name)
-
-        # Save profile to data/profiles/
+        # Profiling runs in the background so the browser can follow it on a progress page,
+        # the same as a hunt, instead of holding a blocking request open. The profiler emits
+        # its own stage updates through write_progress; we seed a fresh record first so a
+        # previous profile of this domain doesn't make the page redirect straight away.
+        safe_domain = domain.replace(".", "_").replace("/", "_")
         profile_dir = Path("data") / "profiles"
         profile_dir.mkdir(parents=True, exist_ok=True)
-
-        # Use domain as filename (sanitized)
-        safe_domain = domain.replace(".", "_").replace("/", "_")
         profile_path = profile_dir / f"{safe_domain}_profile.json"
 
-        with open(profile_path, "w", encoding="utf-8") as f:
-            json.dump(profile, f, indent=2)
+        write_progress(group_name, {"status": "profiling", "stage": 1, "total_stages": 7,
+                                    "message": "Starting profile…", "source_type": "profile",
+                                    "error": None})
 
-        print(f"Profile saved to: {profile_path}")
+        def _profile_bg():
+            try:
+                print(f"\nProfiling domain: {domain}")
+                profile = do_profile(domain, options, use_openai=use_ai, group_name=group_name)
+                with open(profile_path, "w", encoding="utf-8") as f:
+                    json.dump(profile, f, indent=2)
+                print(f"Profile saved to: {profile_path}")
+                write_progress(group_name, {"status": "profile_complete", "stage": 7,
+                                            "total_stages": 7, "message": "Profile complete"})
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                write_progress(group_name, {"status": "failed", "error": str(e)})
 
-        # Always return profile for user review first
-        # User can then select which threat groups to generate detections for
-        return JSONResponse(
-            {
-                "success": True,
-                "profile": profile,
-                "message": "Company profile complete",
-                "profile_path": str(profile_path),
-                "recommended_groups": profile.get("recommended_groups", []),
-                "show_selection": auto_generate,  # Show selection UI if auto-generate was checked
-            }
-        )
+        import threading
+        threading.Thread(target=_profile_bg, daemon=True).start()
+
+        return JSONResponse({
+            "success": True,
+            "redirect_url": "/profile-progress?" + urlencode({"domain": domain, "group_name": group_name}),
+            "message": "Profiling started",
+        })
 
     except Exception as e:
         import traceback
@@ -8266,6 +8272,83 @@ def catalogue_page(request: Request, archer_session: Optional[str] = Cookie(None
             })
     companies.sort(key=lambda c: c["timestamp"] or "", reverse=True)
     return templates.TemplateResponse("catalogue.html", {"request": request, "user": user, "companies": companies})
+
+
+@app.get("/profile-progress", response_class=HTMLResponse)
+def profile_progress_page(request: Request, domain: str = "", group_name: str = "",
+                          archer_session: Optional[str] = Cookie(None)):
+    """While a company profile runs in the background, the same style of progress page as a hunt.
+    When the profiler finishes it redirects to the Review page for the domain."""
+    user = None
+    if archer_session:
+        db = next(get_db())
+        try:
+            user = get_user_from_session_id(archer_session, db)
+        finally:
+            db.close()
+    return templates.TemplateResponse("profile_progress.html",
+                                      {"request": request, "user": user, "domain": domain, "group_name": group_name})
+
+
+def _load_profile(domain: str):
+    """A saved profile for a domain and its sanitised name, or (None, safe) if there isn't one."""
+    safe = (domain or "").strip().lower().replace("http://", "").replace("https://", "").split("/")[0]
+    safe_file = re.sub(r"[^a-z0-9._-]", "_", safe).replace(".", "_")
+    profiles_dir = Path("data") / "profiles"
+    path = profiles_dir / f"{safe_file}_profile.json"
+    if safe_file and os.path.dirname(os.path.abspath(path)) == os.path.abspath(profiles_dir) and path.is_file():
+        try:
+            with open(path, encoding="utf-8") as fh:
+                return json.load(fh), safe
+        except (OSError, ValueError):
+            pass
+    return None, safe
+
+
+@app.get("/review", response_class=HTMLResponse)
+def review_page(request: Request, domain: str, archer_session: Optional[str] = Cookie(None)):
+    """
+    The Review page for a profiled company: its branding, the profile summary, the exposure map and
+    the recommended threat groups (each with a likelihood of targeting the organisation) to generate
+    detections for. Replaces the old selection modal. Reads the saved profile under data/profiles/.
+    """
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return auth_result
+    user, db = auth_result
+    db.close()
+
+    profile, safe = _load_profile(domain)
+    if not profile:
+        # No profile yet: send them back to start one
+        return RedirectResponse(url="/", status_code=303)
+
+    from archer.visualization import exposure as exposure_mod
+    expo = exposure_mod.build(profile)
+
+    ci = profile.get("company_info") or {}
+    tp = profile.get("threat_profile") or {}
+    ind = tp.get("industry") or {}
+    geo = tp.get("geography") or {}
+    details = profile.get("recommended_group_details")
+    if not details:  # older profiles have only the flat name list
+        details = [{"name": g, "likelihood": None, "band": None, "sources": []}
+                   for g in (profile.get("recommended_groups") or [])]
+    hosted = ", ".join(x for x in (geo.get("hosting_region"), geo.get("hosting_country")) if x)
+    summary = {
+        "company": ci.get("company_name") or safe,
+        "industry": ind.get("sector"),
+        "subsector": ind.get("subsector"),
+        "location": ", ".join(x for x in (geo.get("region"), geo.get("country")) if x),
+        "hosting": hosted if geo.get("hosting_country") and geo.get("hosting_country") != geo.get("country") else "",
+        "source": "; ".join((ci.get("identity") or {}).get("evidence") or []),
+        "products": profile.get("detected_stack") or [],
+        "risk_score": profile.get("risk_score") or 0,
+    }
+    return templates.TemplateResponse("review.html", {
+        "request": request, "user": user, "domain": safe, "exposure": expo,
+        "summary": summary, "groups": details, "group_count": len(details),
+    })
 
 
 LIBRARY_VENDORS = (("googlesecops", "Google SecOps"), ("mde", "Defender XDR"), ("splunk", "Splunk"), ("elastic", "Elastic"))

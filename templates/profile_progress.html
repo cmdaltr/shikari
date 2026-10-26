@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Archer - Profiling {{ domain }}{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<style>
+  .pp-wrap { max-width: 640px; margin: 40px auto; }
+  .pp-head { text-align: center; margin-bottom: 26px; }
+  .pp-head h1 { margin: 0 0 6px; font-size: 1.5rem; }
+  .pp-head .pp-domain { color: #8B0000; font-weight: 700; font-family: "JetBrains Mono", ui-monospace, monospace; }
+  [data-theme="dark"] .pp-head .pp-domain { color: #f87171; }
+  .pp-steps { list-style: none; margin: 0; padding: 0; }
+  .pp-step { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 8px;
+    border: 1px solid rgba(100,116,139,.2); margin-bottom: 8px; background: var(--bg-secondary, #f8fafc);
+    transition: border-color .2s, background .2s; }
+  .pp-step[data-state="active"] { border-color: #0d9488; background: rgba(13,148,136,.08); }
+  .pp-step[data-state="done"] { opacity: .75; }
+  .pp-step[data-state="failed"] { border-color: #dc2626; background: rgba(220,38,38,.08); }
+  .pp-ic { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: .8rem; font-weight: 800; color: #fff; background: #94a3b8; }
+  .pp-step[data-state="done"] .pp-ic { background: #16a34a; }
+  .pp-step[data-state="active"] .pp-ic { background: #0d9488; }
+  .pp-step[data-state="failed"] .pp-ic { background: #dc2626; }
+  .pp-step[data-state="waiting"] .pp-ic { background: transparent; border: 2px solid rgba(100,116,139,.35); color: var(--text-secondary,#64748b); }
+  .pp-label { flex: 1 1 auto; font-weight: 600; }
+  .pp-spin { width: 16px; height: 16px; border: 2px solid rgba(13,148,136,.3); border-top-color: #0d9488;
+    border-radius: 50%; animation: pp-spin 0.8s linear infinite; }
+  @keyframes pp-spin { to { transform: rotate(360deg); } }
+  .pp-foot { text-align: center; margin-top: 22px; color: var(--text-secondary,#64748b); }
+  .pp-error { display: none; margin-top: 18px; padding: 14px; border-radius: 8px;
+    background: rgba(220,38,38,.08); border: 1px solid rgba(220,38,38,.3); color: #b91c1c; }
+  [data-theme="dark"] .pp-error { color: #fca5a5; }
+</style>
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="pp-wrap" data-domain="{{ domain }}" data-group="{{ group_name }}">
+  <div class="pp-head">
+    <h1>Profiling <span class="pp-domain">{{ domain }}</span></h1>
+    <p class="pp-muted">Open-source intelligence, then the threat groups likely to target this organisation.</p>
+  </div>
+
+  <ul class="pp-steps" id="pp-steps">
+    <li class="pp-step" data-stage="1"><span class="pp-ic">1</span><span class="pp-label">Gathering domain information</span></li>
+    <li class="pp-step" data-stage="2"><span class="pp-ic">2</span><span class="pp-label">Gathering OSINT intelligence</span></li>
+    <li class="pp-step" data-stage="3"><span class="pp-ic">3</span><span class="pp-label">Analysing industry sector</span></li>
+    <li class="pp-step" data-stage="4"><span class="pp-ic">4</span><span class="pp-label">Analysing geographic threats</span></li>
+    <li class="pp-step" data-stage="5"><span class="pp-ic">5</span><span class="pp-label">Analysing technology stack</span></li>
+    <li class="pp-step" data-stage="6"><span class="pp-ic">6</span><span class="pp-label">Analysing supply chain exposure</span></li>
+    <li class="pp-step" data-stage="7"><span class="pp-ic">7</span><span class="pp-label">Recommending threat groups</span></li>
+  </ul>
+
+  <p class="pp-foot" id="pp-foot">Working… this usually takes a minute or two.</p>
+  <div class="pp-error" id="pp-error"></div>
+</div>
+<script src="{{ url_for('static', path='js/profile_progress.js') }}?v={{ request.app.state.asset_version }}"></script>
+{% endblock %}

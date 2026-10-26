@@ -1373,6 +1373,24 @@ class CompanyProfiler:
                 risk_score += 10
 
         profile['recommended_groups'] = list(recommended_groups)
+        # Per-group likelihood of targeting this organisation, for the Review page. There's no
+        # single score, so derive one from the evidence: a group named for both the sector and the
+        # region is a stronger match than one named for only one, and a group ranked higher in its
+        # list (sorted by how well it matches) outranks one further down.
+        sector_rank = {g: i for i, g in enumerate(industry.get('threat_groups') or [])}
+        region_rank = {g: i for i, g in enumerate(geography.get('threat_actors') or [])}
+        details = []
+        for group in recommended_groups:
+            in_sector, in_region = group in sector_rank, group in region_rank
+            sources = (['sector'] if in_sector else []) + (['region'] if in_region else [])
+            base = 85 if (in_sector and in_region) else 70 if in_sector else 55
+            # Lower the confidence the further down its list the group sits (max 20 off)
+            rank = min(sector_rank.get(group, 99), region_rank.get(group, 99))
+            likelihood = max(30, min(95, base - min(rank * 2, 20)))
+            band = 'High' if likelihood >= 75 else 'Medium' if likelihood >= 55 else 'Low'
+            details.append({'name': group, 'likelihood': likelihood, 'band': band, 'sources': sources})
+        details.sort(key=lambda d: -d['likelihood'])
+        profile['recommended_group_details'] = details
         profile['recommended_techniques'] = list(recommended_techniques)
         profile['risk_score'] = min(risk_score, 100)  # Cap at 100
 

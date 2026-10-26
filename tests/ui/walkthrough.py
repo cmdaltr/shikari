@@ -582,26 +582,30 @@ def profile(page):
     shot(page, "profile_form")
     page.wait_for_function("!document.getElementById('profile_btn').disabled", timeout=10000)
     page.click("#profile_btn")
+    # Profiling runs in the background: a 7-stage progress page, then the Review page
+    page.wait_for_url("**/profile-progress**", timeout=15000)
     caption(page, "Profiling tesco.com (Wikidata, homepage, OSINT)…")
-    modal = page.locator("#threat-group-selection-overlay")
-    modal.wait_for(state="visible", timeout=300000)
-    summary = modal.inner_text()
-    caption(page, "Profile summary: company, sector, location and recommended groups")
-    shot(page, "profile_summary")
-    expected = {"Tesco": "Tesco", "United Kingdom": "United Kingdom", "retail": "retail", "Scattered Spider": "Scattered Spider"}
-    missing = [label for label, text in expected.items() if text not in summary]
+    page.wait_for_url("**/review**", timeout=300000)
+    page.wait_for_load_state("domcontentloaded")
+    page.wait_for_selector(".rv-group", timeout=15000)
+    caption(page, "Review: branding, summary, exposure map and the recommended groups")
+    shot(page, "profile_review")
+    body = page.inner_text("body")
+    expected = ("Tesco", "United Kingdom", "retail", "Scattered Spider")
+    missing = [label for label in expected if label not in body]
     if missing:
-        raise RuntimeError(f"profile summary missing: {', '.join(missing)}")
-    ticked = page.locator(".group-checkbox:checked").count()
+        raise RuntimeError(f"review page missing: {', '.join(missing)}")
+    # Each group carries a likelihood, and only the top three start ticked
+    if not page.locator(".rv-like-n").count():
+        raise RuntimeError("no per-group likelihoods on the review page")
+    ticked = page.locator(".rv-group-cb:checked").count()
     if ticked > 3:
         raise RuntimeError(f"{ticked} groups pre-ticked; only the top 3 should be")
-    page.wait_for_function("/Estimated time/.test(document.getElementById('profile-estimate').textContent)", timeout=10000)
-    caption(page, f"{ticked} groups pre-ticked; {page.inner_text('#profile-estimate')}")
     # Two groups: enough to follow the queue from one group to the next
-    page.locator(".group-checkbox").evaluate_all(
+    page.locator(".rv-group-cb").evaluate_all(
         "els => els.forEach((e, i) => { e.checked = i < 2; e.dispatchEvent(new Event('change', {bubbles: true})); })")
-    caption(page, f"Two groups ticked; {page.inner_text('#profile-estimate')}")
-    page.click("#confirm-generation")
+    caption(page, f"Two groups ticked; {page.inner_text('#rv-estimate')}")
+    page.click("#rv-generate")
     wait_for_results(page, "tesco.com")
     return tour_results(page, "tesco.com")
 
