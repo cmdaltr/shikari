@@ -21,10 +21,13 @@
     <p class="ms-note">A STIX&nbsp;2.1 bundle or a MISP event becomes techniques and IOCs, the same as analysing a report.
       Upload a file, paste JSON, or poll a TAXII&nbsp;2.1 collection; then review and generate detections.</p>
 
-    <div class="sx-tabs" role="tablist">
-      <button type="button" class="sx-tab is-active" data-pane="file" role="tab">File</button>
-      <button type="button" class="sx-tab" data-pane="paste" role="tab">Paste JSON</button>
-      <button type="button" class="sx-tab" data-pane="taxii" role="tab">TAXII collection</button>
+    <div class="sx-tabbar">
+      <div class="sx-tabs" role="tablist">
+        <button type="button" class="sx-tab is-active" data-pane="file" role="tab">File upload</button>
+        <button type="button" class="sx-tab" data-pane="paste" role="tab">Paste JSON</button>
+        <button type="button" class="sx-tab" data-pane="taxii" role="tab">TAXII collection</button>
+      </div>
+      <button type="button" class="btn-primary sx-import-btn" id="sx-import">Import</button>
     </div>
 
     <div class="sx-pane" id="sx-pane-file">
@@ -51,10 +54,7 @@
       <p class="ms-note">The collection's <code>…/collections/&lt;id&gt;/</code> URL. Credentials, if any, are used for this request only and not stored.</p>
     </div>
 
-    <div class="sx-actions">
-      <button type="button" class="btn-primary" id="sx-import">Import</button>
-      <span class="ms-state" id="sx-import-state" aria-live="polite"></span>
-    </div>
+    <p class="ms-state sx-import-state" id="sx-import-state" aria-live="polite"></p>
 
     <!-- Review (shown after a successful import) -->
     <div class="sx-review" id="sx-review" hidden>
@@ -75,14 +75,14 @@
     <h2>Export a run as STIX</h2>
     <p class="ms-note">A saved run becomes a STIX&nbsp;2.1 bundle — an intrusion-set, an attack-pattern per technique,
       indicators from the IOCs, and the detections as <code>x-archer-detection</code> objects.</p>
-    <div class="sx-actions">
-      <select id="sx-export-group" class="dropdown-styled" aria-label="Run to export">
+    <div class="sx-export-row">
+      <select id="sx-export-group" class="dropdown-styled sx-export-select" aria-label="Run to export">
         <option value="">Select a run…</option>
         {% for g in runs %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
       </select>
-      <button type="button" class="btn-primary" id="sx-export">Download STIX bundle</button>
-      <span class="ms-state" id="sx-export-state" aria-live="polite"></span>
+      <button type="button" class="btn-primary sx-export-btn" id="sx-export">Download STIX bundle</button>
     </div>
+    <p class="ms-state sx-import-state" id="sx-export-state" aria-live="polite"></p>
     {% if not runs %}<p class="ms-note">No runs yet. Hunt a group, CVE or report first.</p>{% endif %}
   </section>
 </div>
@@ -162,9 +162,15 @@
 })();
 </script>
 <style>
-  .sx-tabs { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
-  .sx-tab { padding: 6px 14px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary); color: var(--text-secondary); cursor: pointer; font: inherit; }
-  .sx-tab.is-active { border-color: var(--accent); color: var(--text-primary); font-weight: 600; }
+  /* Tab choices sit left, Import anchored right; tabs match the Import button's size but stay white. */
+  .sx-tabbar { display: flex; align-items: center; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+  .sx-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sx-tab { padding: 12px 24px; border: 2px solid var(--border-color); border-radius: 6px;
+    background: var(--bg-primary); color: var(--text-secondary); cursor: pointer;
+    font: inherit; font-size: 1rem; font-weight: 600; line-height: 1.2; white-space: nowrap; }
+  .sx-tab.is-active { border-color: var(--accent); color: var(--text-primary); }
+  .sx-import-btn { margin-left: auto; }
+  .sx-import-state { min-height: 1em; margin: 0 0 4px; text-align: right; }
   .sx-pane { margin-bottom: 12px; }
   .sx-pane textarea, .sx-pane input[type=url], .sx-row input { width: 100%; box-sizing: border-box; }
   .sx-row { display: flex; gap: 8px; }
@@ -180,7 +186,10 @@
   .sx-drop-icon { font-size: 1.8rem; line-height: 1; color: var(--accent); }
   .sx-drop-text u { color: var(--text-primary); }
   .sx-drop-name { font-size: .85rem; font-weight: 600; color: var(--text-primary); word-break: break-all; }
-  .sx-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+  /* Export: select fills the row, button anchored right so it isn't left looking spaced. */
+  .sx-export-row { display: grid; grid-template-columns: 1fr max-content; gap: 12px; align-items: center; margin-top: 8px; }
+  .sx-export-select { width: 100%; box-sizing: border-box; }
+  @media (max-width: 560px) { .sx-export-row { grid-template-columns: 1fr; } }
   .sx-review { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color); }
   .sx-opts { display: flex; gap: 18px; flex-wrap: wrap; margin: 10px 0 14px; }
 </style>
