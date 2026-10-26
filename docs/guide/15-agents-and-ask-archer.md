@@ -19,6 +19,7 @@ It uses the provider assigned to Ask Archer in Profile → API Keys → AI Assig
 | Intel triage | A threat report | Finds your coverage gaps for it, suggests hunts, and writes a briefing |
 | Coverage sweep | A group (optionally one tactic) | Lists the group's techniques with no detection, hunts the gaps, and reports what closed and what can't be |
 | Library audit | Optional focus (platform, tag or technique) | Reviews the saved library for duplicate and overlapping detections, and flags ones resting on noisy indicators (recorded across many unrelated techniques — a likely false-positive source). Reports only — it changes nothing |
+| Detection tuning | A run | Finds detections that pass the checks but rest on noisy indicators, and tightens them to be more specific — only ever narrowing, never broadening, and leaving a detection untouched when there's nothing specific to anchor on. Changes wait for your approval |
 
 | Control | What it does |
 |---|---|
@@ -29,4 +30,4 @@ It uses the provider assigned to Ask Archer in Profile → API Keys → AI Assig
 
 **How this agent is built** shows each agent's instructions, its tools, and which tools need approval.
 
-The same agents are in the console (`agent/repair`, `agent/ask`, `agent/triage`, `agent/sweep`, `agent/audit`) and in any MCP client through `archer-cli mcp`. The design, the loop and the checks are explained in [Agents in Archer](../agents/README.md).
+The same agents are in the console (`agent/repair`, `agent/ask`, `agent/triage`, `agent/sweep`, `agent/audit`, `agent/tune`) and in any MCP client through `archer-cli mcp`. The design, the loop and the checks are explained in [Agents in Archer](../agents/README.md).

@@ -187,4 +187,47 @@ Never claim you removed or changed anything — you have no tool that can.""",
     max_turns=30,
 )
 
-AGENTS: Dict[str, Agent] = {a.name: a for a in (REPAIR, ASK, TRIAGE, SWEEP, AUDIT)}
+TUNE = Agent(
+    name="tune",
+    title="Detection tuning",
+    summary="Finds detections that pass the checks but rest on broad or empirically noisy indicators, and tightens them.",
+    system="""You tighten SIEM detections that parse and run but fire too widely. Repair fixes queries that \
+fail the static checks; you work on the ones that pass those checks yet rest on weak indicators, so they \
+would bury a real hit in false positives. You change a query only to make it more specific, never broader.
+
+Work through a run's detections. For each:
+1. get_detection to read it: its technique_id, its query, and the literal values it matches on (the \
+indicators block, and any literals in the query — process names, paths, command-line fragments, domains).
+2. noisy_indicators with those literal values and the detection's technique_id. An indicator it calls \
+noisy is recorded while many unrelated techniques ran — on its own, a likely false-positive source. The \
+'specific' list and a low other_techniques count are the indicators worth anchoring on.
+3. Decide. A detection needs tuning when its match rests mainly on noisy indicators. If it already pairs a \
+noisy indicator with a specific one, it's probably fine — leave it. If everything it matches is noisy and \
+there's nothing specific to anchor on, leave it and say so: you can't invent precision the telemetry \
+doesn't show.
+4. Tighten conservatively. Add a companion condition that scopes the noisy indicator — require the specific \
+indicator alongside it, bind the parent process, add a distinctive command-line fragment or path, or scope \
+to the technique's context (use mde_columns for the right KQL column, technique_info for what the technique \
+actually does). Keep the detection's intent, platform and logic. Never drop the last indicator, never widen \
+what it matches, never restyle working parts.
+5. check_query your change (it must stay error-free), then save_query_fix with a reason a reviewer can \
+follow ("ProcessName endswith powershell.exe is recorded in 190+ techniques; now also requires the \
+Invoke-Expression download-cradle fragment from the procedure"). A query that still has errors can't be saved.
+
+Recorded telemetry is a signal, not proof: it's four labs' background, not the user's estate, so a noisy \
+indicator is a reason to look, not a verdict. When in doubt, leave the detection and note it rather than \
+weaken a real detection. Finish with a table: file, the noisy indicator(s), what you added (or why you left \
+it untouched).""",
+    inputs={
+        "run": {"label": "Run", "required": True, "placeholder": "CVE-2024-3400, FIN7, Hunt_T1003.001…"},
+        "limit": {"label": "Max detections", "placeholder": "10"},
+    },
+    tools=lambda ctx: build_tools(ctx, ["get_run_results", "get_detection", "noisy_indicators", "technique_info",
+                                        "mde_columns", "check_query", "save_query_fix"]),
+    task=lambda i: (f"Tune the detections of run '{i['run'].strip()}'. For each, check its indicators with "
+                    f"noisy_indicators and tighten only the ones resting on noisy indicators, leaving the rest; "
+                    f"stop after {int(i.get('limit') or 10)} detections. Start with get_run_results."),
+    max_turns=60,
+)
+
+AGENTS: Dict[str, Agent] = {a.name: a for a in (REPAIR, ASK, TRIAGE, SWEEP, AUDIT, TUNE)}

@@ -145,6 +145,17 @@ class AuditAgentModule(AgentModule):
     }
 
 
+class TuneAgentModule(AgentModule):
+    name = "agent/tune"
+    description = "Agent: tighten a run's detections that pass the checks but rest on noisy indicators"
+    author = "Archer Team"
+    agent = "tune"
+    fields = {
+        "RUN": ModuleOption(name="RUN", description="Run whose detections to tune (e.g. CVE-2024-3400, FIN7)", required=True),
+        "LIMIT": ModuleOption(name="LIMIT", description="Max detections to tune", default="10"),
+    }
+
+
 class AgentHistoryModule(ServerModule):
     name = "agent/history"
     description = "Recent agent runs (kept across restarts); SESSION shows one, CONTINUE carries it on"

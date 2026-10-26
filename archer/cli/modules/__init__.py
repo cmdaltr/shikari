@@ -8,7 +8,7 @@ from .intel import CompanyModule, FeedModule, ReportModule
 from .research import ResearchModule
 from .ai import AISettingsModule, AskModule, BriefingModule, ResultsModule
 from .agents import (AgentHistoryModule, AskAgentModule, AuditAgentModule, RepairAgentModule,
-                     SweepAgentModule, TriageAgentModule)
+                     SweepAgentModule, TriageAgentModule, TuneAgentModule)
 from archer.config import EMULATION_ENABLED
 
 # generate, correlate, hunt and emulate run in this process; the rest drive a running
@@ -33,6 +33,7 @@ MODULE_REGISTRY = {
     "agent/triage": TriageAgentModule,
     "agent/sweep": SweepAgentModule,
     "agent/audit": AuditAgentModule,
+    "agent/tune": TuneAgentModule,
     "agent/history": AgentHistoryModule,
 }
 

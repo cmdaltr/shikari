@@ -2,13 +2,13 @@
 
 An agent is a model in a loop with tools. You give it a task; it picks a tool, reads what comes back, and picks again until it can answer. That's the whole idea. The rest is about which tools it gets, what its instructions say, and what it's allowed to do without asking.
 
-Archer has five agents, an MCP server that gives the same tools to any MCP client, and a one-file example you can read in five minutes.
+Archer has six agents, an MCP server that gives the same tools to any MCP client, and a one-file example you can read in five minutes.
 
 | Where | What |
 |---|---|
 | Web | **Agents** page (robot icon in the top bar) |
-| Console | `archer-cli console` → `use agent/repair`, `agent/ask`, `agent/triage`, `agent/sweep`, `agent/audit` |
-| MCP | `archer-cli mcp`: Archer's tools and the five agents' prompts in Claude Code, Claude Desktop or your own agent |
+| Console | `archer-cli console` → `use agent/repair`, `agent/ask`, `agent/triage`, `agent/sweep`, `agent/audit`, `agent/tune` |
+| MCP | `archer-cli mcp`: Archer's tools and the six agents' prompts in Claude Code, Claude Desktop or your own agent |
 | Example | [`examples/agents/minimal_agent.py`](../../examples/agents/minimal_agent.py): about 100 lines, no Archer dependency |
 
 Agents run on any provider in your profile that can call tools (Profile → API Keys): Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok, or a local endpoint (Ollama, LM Studio, llama.cpp). Pick one on the Agents page or with `set PROVIDER` in the console. Without a choice, Claude is used if you have an Anthropic key (it's the most reliable at multi-step tool use), otherwise your Ask Archer provider.
@@ -39,9 +39,9 @@ python examples/agents/minimal_agent.py data/groups "Do we have a detection for 
 
 It searched for `comsvcs`, `MiniDump` and `T1003.001`, read the two LSASS Memory files, and pointed out that the SecOps regex expects the literal text `PID`, so it can never match a real command line. A grep would have found the files; the agent also judged them.
 
-## Archer's five agents
+## Archer's six agents
 
-All five are the same runtime ([`archer/agents/runtime.py`](../../archer/agents/runtime.py)) with different instructions and tool sets ([`definitions.py`](../../archer/agents/definitions.py)). Each shows a different pattern.
+All six are the same runtime ([`archer/agents/runtime.py`](../../archer/agents/runtime.py)) with different instructions and tool sets ([`definitions.py`](../../archer/agents/definitions.py)). Each shows a different pattern.
 
 ### Detection repair: check, fix, check again
 
@@ -90,6 +90,14 @@ It gathers the saved library, groups detections by what they detect, compares th
 
 `noisy_indicators` is the recorded-telemetry false-positive check ([Emulate](../guide/19-emulate.md)) as a tool: give it a detection's match values, or a technique whose own recorded values it should vet, and it says which appear in enough other techniques' recordings to be poor discriminators. Ask Archer has it too.
 
+### Detection tuning: specific, not broader
+
+The tools are `get_run_results`, `get_detection`, `noisy_indicators`, `technique_info`, `mde_columns`, `check_query` and `save_query_fix`.
+
+This is repair's evaluator-optimiser pattern again, with a different evaluator. Repair's checker is the static and precision checks ([`static_check.py`](../../archer/validation/static_check.py), which folds in [`precision.py`](../../archer/validation/precision.py)): they catch queries that won't parse, reference a column that isn't there, or are structurally over-broad — a bare generic word, a numeric column matched as a string. Tuning starts where those stop: a query can pass every one of them and still rest on `ProcessName endswith "powershell.exe"`, which `precision.py` can't fault because nothing is wrong with it structurally. `noisy_indicators` supplies the evidence the static checks can't — that literal is recorded while 190-odd unrelated techniques run — so the agent has a reason to tighten it.
+
+For each detection it reads the indicators, runs `noisy_indicators` on them with the technique, and tightens only the ones resting on noisy indicators: it requires a specific indicator alongside the noisy one, binds the parent process, or adds a distinctive command-line fragment, then checks the result with `check_query` and saves it with a reason. It only ever makes a query more specific. The guard rails matter here: recorded telemetry is four labs' background, not the user's estate, so a noisy indicator is a reason to look, not a verdict. When a detection has nothing specific to anchor on, the agent leaves it and says so rather than weaken a real detection, and `save_query_fix` keeps the previous query in `repair_history` either way. Changing a query waits for your approval, as every changing tool does.
+
 ## Two APIs, one loop
 
 [`llm.py`](../../archer/agents/llm.py) adapts the loop to Anthropic's Messages API and to the OpenAI-compatible Chat Completions API that every other provider speaks. The differences are only in shape: where the system prompt goes, how a tool request is marked up (a `tool_use` content block, or `tool_calls` with the arguments as a JSON string), and how results go back (one user message of `tool_result` blocks, or one `tool` message per result). The loop, the tools and the approvals don't change.
@@ -126,7 +134,7 @@ claude mcp add archer --env ARCHER_TOKEN=arch_... -- /path/to/archer/.venv/bin/p
 
 Create the token in Profile → Security → API Tokens. It's shown once, works with MFA, and revoking it signs out whatever uses it; `ARCHER_EMAIL` and `ARCHER_PASSWORD` still work for accounts without MFA.
 
-`archer-cli mcp` exposes the same 21 tools the agents use, with the 5 changing tools marked as not read-only so the client asks first, plus the five agents' instructions as prompts (`repair`, `ask`, `triage`, `sweep`, `audit`). It signs in to a running Archer as you, so hunts use your AI settings and your keys stay on the server.
+`archer-cli mcp` exposes the same 21 tools the agents use, with the 5 changing tools marked as not read-only so the client asks first, plus the six agents' instructions as prompts (`repair`, `ask`, `triage`, `sweep`, `audit`, `tune`). It signs in to a running Archer as you, so hunts use your AI settings and your keys stay on the server.
 
 ## Building your own
 
