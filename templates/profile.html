@@ -1131,6 +1131,36 @@
                 </div>
                 <div id="avail-status" style="margin-top:16px;padding:12px;border-radius:6px;display:none;"></div>
               </div>
+
+              <!-- SIEM FIELD MAPPING (Admin Only) -->
+              <div class="ui-card" style="padding: 24px; margin-bottom: 32px;">
+                <h3 class="section-title">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v4H3z"/><path d="M3 10h18v4H3z"/><path d="M3 17h18v4H3z"/></svg>
+                  SIEM field mapping
+                </h3>
+                <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6; margin-bottom: 16px;">
+                  Per-environment index, sourcetype and field names used when queries are generated. This matters for
+                  <strong>Splunk</strong> (index/sourcetype/field names vary by deployment) and <strong>Elastic</strong>
+                  (index patterns, non-ECS overrides). MDE columns and SecOps UDM paths are vendor-fixed, so overriding
+                  those is rarely needed. Saving an override replaces the base schema; <strong>Reset</strong> restores it.
+                  Changing a mapping affects newly generated queries — regenerate affected runs to apply it.
+                </p>
+                <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+                  <select id="sfm-siem" class="form-input" style="max-width:220px;">
+                    <option value="splunk">Splunk (SPL)</option>
+                    <option value="elastic">Elastic (ES|QL / ECS)</option>
+                    <option value="mde">Microsoft Defender XDR (KQL)</option>
+                    <option value="secops">Google SecOps (UDM)</option>
+                  </select>
+                  <span id="sfm-state" style="font-size:0.85em;color:var(--text-secondary);"></span>
+                </div>
+                <textarea id="sfm-editor" class="form-input" spellcheck="false" style="width:100%;box-sizing:border-box;min-height:300px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:0.82em;white-space:pre;"></textarea>
+                <div class="ui-actions" style="margin-top:16px;">
+                  <button id="sfm-reset" class="btn-ghost">Reset to base</button>
+                  <button id="sfm-save" class="btn-primary">Save override</button>
+                </div>
+                <div id="sfm-status" style="margin-top:16px;padding:12px;border-radius:6px;display:none;"></div>
+              </div>
               {% endif %}
 
             </div>
@@ -2623,6 +2653,57 @@
                             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(out) });
                         const j = await r.json(); if (!r.ok || !j.success) throw new Error(j.error || 'Save failed');
                         note('Saved. Detections for un-ingested sources are now flagged and excluded at deploy.', true);
+                    } catch (e) { note(e.message, false); }
+                });
+            })();
+
+            // SIEM field-mapping editor (admin, #12)
+            (function () {
+                const sel = document.getElementById('sfm-siem');
+                if (!sel) return;  // not admin
+                const editor = document.getElementById('sfm-editor');
+                const state = document.getElementById('sfm-state');
+                const statusEl = document.getElementById('sfm-status');
+                function note(msg, ok) {
+                    statusEl.style.display = 'block';
+                    statusEl.style.background = ok ? 'rgba(52,168,83,.12)' : 'rgba(217,48,37,.1)';
+                    statusEl.style.color = ok ? '#2e9e4f' : '#d93025';
+                    statusEl.innerHTML = msg;
+                }
+                async function loadSiem() {
+                    statusEl.style.display = 'none';
+                    state.textContent = 'Loading…';
+                    try {
+                        const r = await fetch('/api/siem-mappings/schema?siem=' + encodeURIComponent(sel.value));
+                        const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Load failed');
+                        editor.value = JSON.stringify(j.schema, null, 2);
+                        state.textContent = j.has_override
+                            ? `Custom override in place (${j.custom_filename}, ${j.keys.length} keys).`
+                            : `Base schema (${j.base_filename}, ${j.keys.length} keys) — no override yet.`;
+                    } catch (e) { state.textContent = e.message; }
+                }
+                sel.addEventListener('change', loadSiem);
+                loadSiem();
+                document.getElementById('sfm-save').addEventListener('click', async () => {
+                    let parsed;
+                    try { parsed = JSON.parse(editor.value); }
+                    catch (e) { note('Not valid JSON: ' + e.message, false); return; }
+                    try {
+                        const r = await fetch('/api/siem-mappings/schema', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ siem: sel.value, schema: parsed }) });
+                        const j = await r.json(); if (!r.ok || !j.success) throw new Error(j.error || 'Save failed');
+                        note(`Saved ${j.keys}-key override.` + (j.runs ? ` Regenerate the ${j.runs} saved run(s) to apply it.` : ''), true);
+                        loadSiem();
+                    } catch (e) { note(e.message, false); }
+                });
+                document.getElementById('sfm-reset').addEventListener('click', async () => {
+                    try {
+                        const b = new FormData(); b.append('siem', sel.value);
+                        const r = await fetch('/api/siem-mappings/schema/reset', { method: 'POST', body: b });
+                        const j = await r.json(); if (!r.ok || !j.success) throw new Error(j.error || 'Reset failed');
+                        note(j.removed ? 'Override removed — base schema restored.' : 'No override was set.', true);
+                        loadSiem();
                     } catch (e) { note(e.message, false); }
                 });
             })();

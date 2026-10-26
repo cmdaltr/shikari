@@ -25,3 +25,11 @@ The flag is derived live from the config, so changing what you ingest re-badges 
 - **At deploy** — the two deployment paths leave flagged detections out. **Detections → Detections as code** doesn't commit them (they're listed under `excluded`), and the **Push to a SIEM** plan skips them. A rule that can't fire is never pushed into the SIEM.
 
 So the full picture stays on Results and in Coverage, and only deployable detections reach git or the SIEM.
+
+## Field mapping
+
+Availability is about *which* sources you collect; field mapping is about *what they're called*. **Profile → Config → SIEM field mapping** edits the per-environment schema a SIEM's queries are generated from — index, sourcetype and field names — and saves it as `schema<SIEM>_custom.json` (gitignored), which the generator reads in place of the base.
+
+This matters for **Splunk** (index/sourcetype/field names vary by deployment; CIM/CEF is encouraged but not enforced) and **Elastic** (index patterns, non-ECS overrides). MDE columns and SecOps UDM paths are vendor-fixed, so overriding those is rarely needed — they're offered for completeness. Edit the schema, **Save override** to apply it, or **Reset to base** to drop it. Because a field mapping changes the generated query text (unlike availability, which only re-badges), regenerate affected runs after a change.
+
+The live "does this index/table exist, does this query parse" test against the real SIEM is a later addition — it needs a tenant (see the [hit counts](../implementation-plans/16-hit-counts.md) plan, which it shares credentials with).

@@ -66,3 +66,39 @@ def load_active_schema(siem: str, schemas_dir: Optional[os.PathLike] = None) -> 
             return json.load(f)
     except (OSError, ValueError, KeyError):
         return {}
+
+
+def save_override(siem: str, data: Dict, schemas_dir: Optional[os.PathLike] = None) -> Dict:
+    """Write a per-tenant override (schema<SIEM>_custom.json). data must be a non-empty object —
+    generation reads it in place of the base, so an empty or non-object value is rejected."""
+    if not isinstance(data, dict) or not data:
+        raise ValueError("A schema override must be a non-empty JSON object")
+    d = Path(schemas_dir) if schemas_dir else _SCHEMAS_DIR
+    os.makedirs(d, exist_ok=True)
+    path = d / custom_filename(siem)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+    return {"siem": _key(siem), "path": str(path), "keys": len(data)}
+
+
+def reset_override(siem: str, schemas_dir: Optional[os.PathLike] = None) -> bool:
+    """Remove the override so the base schema applies again. True if one was removed."""
+    d = Path(schemas_dir) if schemas_dir else _SCHEMAS_DIR
+    path = d / custom_filename(siem)
+    if path.exists():
+        os.remove(path)
+        return True
+    return False
+
+
+def override_info(siem: str, schemas_dir: Optional[os.PathLike] = None) -> Dict:
+    """Status + the active schema for the config UI: whether an override is in place and its content."""
+    active = load_active_schema(siem, schemas_dir)
+    return {
+        "siem": _key(siem),
+        "base_filename": base_filename(siem),
+        "custom_filename": custom_filename(siem),
+        "has_override": has_override(siem, schemas_dir),
+        "keys": sorted(active.keys()) if isinstance(active, dict) else [],
+        "schema": active,
+    }

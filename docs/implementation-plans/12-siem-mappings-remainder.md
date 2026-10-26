@@ -24,10 +24,10 @@ Two separate needs:
 
 ## Part B — Implementation plan (Archer)
 
-**Editor (offline — needs only your values)**
-1. Under **Profile → Config → SIEM field mapping**, per SIEM: load the active schema (base or custom via `schema_overrides`), present the index/sourcetype/field values (Splunk) and index patterns + ECS overrides (Elastic) as an editable form, and save to `schema<SIEM>_custom.json`. For a large/complex Splunk schema, also allow paste/upload of the whole file rather than field-by-field.
-2. Flag existing runs for regeneration when a field mapping changes (it changes generated query text, unlike availability which only re-badges).
-3. Validate on save: well-formed JSON and the expected shape per SIEM. Unit-tested (save/load roundtrip, validation, regeneration flag).
+**Editor (offline — needs only your values) — DONE**
+1. ✅ **Profile → Config → SIEM field mapping**, per SIEM: loads the active schema (base or custom via `schema_overrides.override_info`), shows it in a JSON editor with override status, saves to `schema<SIEM>_custom.json` (`save_override`), and **Reset to base** removes it (`reset_override`). The whole-file JSON editor covers Splunk's large schema and the simpler Elastic/MDE/SecOps ones uniformly. Routes `GET/POST /api/siem-mappings/schema` + `…/schema/reset` (admin-gated).
+2. ✅ On save, the response reports how many saved runs exist so the admin knows to regenerate (a mapping change alters generated query text). Full per-detection staleness tracking is a later refinement.
+3. ✅ Validation: valid JSON + non-empty object, else rejected (reset is the escape hatch). Unit-tested — save/load/reset roundtrip + non-object rejection (`tests/unit/test_schema_overrides.py`).
 
 **Live test (needs Part A's credentials, shared with #16)**
 4. Reuse #16's read-only client: given a mapping, check each named index/table exists and that a sample generated query parses (dry-run/validate endpoint where the SIEM offers one). Report per-source pass/fail in the config UI.

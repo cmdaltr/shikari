@@ -8870,6 +8870,72 @@ async def siem_availability_save(request: Request, archer_session: Optional[str]
     return JSONResponse({"success": True, "ingested": saved})
 
 
+_SCHEMA_SIEMS = ("splunk", "elastic", "mde", "secops")
+
+
+@app.get("/api/siem-mappings/schema")
+def siem_schema_get(request: Request, siem: str = Query(...), archer_session: Optional[str] = Cookie(None)):
+    """The active field schema for a SIEM and whether an override is in place (admin only, #12)."""
+    from archer.build import schema_overrides
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in"}, status_code=401)
+    user, db = auth
+    db.close()
+    if user.role != UserRole.ADMIN:
+        return JSONResponse({"error": "Admin access required"}, status_code=403)
+    if siem.lower() not in _SCHEMA_SIEMS:
+        return JSONResponse({"error": f"Unknown SIEM '{siem}'"}, status_code=400)
+    return JSONResponse(schema_overrides.override_info(siem))
+
+
+@app.post("/api/siem-mappings/schema")
+async def siem_schema_save(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Save a per-tenant field-schema override (admin only, #12).
+
+    Body JSON {"siem": "splunk", "schema": {…}}. The schema replaces the base at generation time."""
+    from archer.build import schema_overrides
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
+    user, db = auth
+    db.close()
+    if user.role != UserRole.ADMIN:
+        return JSONResponse({"success": False, "error": "Admin access required"}, status_code=403)
+    try:
+        body = await request.json()
+    except ValueError:
+        return JSONResponse({"success": False, "error": "Invalid JSON body"}, status_code=400)
+    siem = str((body or {}).get("siem", "")).lower()
+    if siem not in _SCHEMA_SIEMS:
+        return JSONResponse({"success": False, "error": f"Unknown SIEM '{siem}'"}, status_code=400)
+    try:
+        saved = schema_overrides.save_override(siem, (body or {}).get("schema"))
+    except ValueError as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=422)
+    return JSONResponse({"success": True, **saved, "runs": len(_runs_list())})
+
+
+@app.post("/api/siem-mappings/schema/reset")
+def siem_schema_reset(request: Request, siem: str = Form(...), archer_session: Optional[str] = Cookie(None)):
+    """Remove a SIEM's override so the base schema applies again (admin only, #12)."""
+    from archer.build import schema_overrides
+
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
+    user, db = auth
+    db.close()
+    if user.role != UserRole.ADMIN:
+        return JSONResponse({"success": False, "error": "Admin access required"}, status_code=403)
+    if siem.lower() not in _SCHEMA_SIEMS:
+        return JSONResponse({"success": False, "error": f"Unknown SIEM '{siem}'"}, status_code=400)
+    removed = schema_overrides.reset_override(siem)
+    return JSONResponse({"success": True, "removed": removed, "runs": len(_runs_list())})
+
+
 # ---------------------------------------------------------------------------
 # Threat library and assessments (#24)
 # ---------------------------------------------------------------------------

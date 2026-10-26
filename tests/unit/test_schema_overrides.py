@@ -47,6 +47,28 @@ def test_unknown_siem():
     assert so.load_active_schema("qradar") == {}
 
 
+def test_save_reset_override_roundtrip(tmp_path):
+    (tmp_path / "schemaSplunk.json").write_text('{"cmd": {"index=main": "x"}}')
+    assert so.override_info("splunk", tmp_path)["has_override"] is False
+
+    saved = so.save_override("splunk", {"cmd": {"index=edr": "y"}}, tmp_path)
+    assert saved["keys"] == 1
+    info = so.override_info("splunk", tmp_path)
+    assert info["has_override"] is True
+    assert info["schema"] == {"cmd": {"index=edr": "y"}}
+    assert so.load_active_schema("splunk", tmp_path) == {"cmd": {"index=edr": "y"}}
+
+    assert so.reset_override("splunk", tmp_path) is True
+    assert so.override_info("splunk", tmp_path)["has_override"] is False
+    assert so.reset_override("splunk", tmp_path) is False  # already gone
+
+
+def test_save_override_rejects_non_object(tmp_path):
+    for bad in ({}, [], "x", 3, None):
+        with pytest.raises(ValueError):
+            so.save_override("elastic", bad, tmp_path)
+
+
 def test_secops_elastic_builders_still_load_base():
     # With no override committed, the builders read the shipped base schema unchanged.
     from archer.build.secops import SecOpsGenerator
