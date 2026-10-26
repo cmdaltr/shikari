@@ -2,13 +2,13 @@
 
 An agent is a model in a loop with tools. You give it a task; it picks a tool, reads what comes back, and picks again until it can answer. That's the whole idea. The rest is about which tools it gets, what its instructions say, and what it's allowed to do without asking.
 
-Archer has three agents, an MCP server that gives the same tools to any MCP client, and a one-file example you can read in five minutes.
+Archer has five agents, an MCP server that gives the same tools to any MCP client, and a one-file example you can read in five minutes.
 
 | Where | What |
 |---|---|
 | Web | **Agents** page (robot icon in the top bar) |
-| Console | `archer-cli console` → `use agent/repair`, `agent/ask`, `agent/triage` |
-| MCP | `archer-cli mcp`: Archer's tools and the three agents' prompts in Claude Code, Claude Desktop or your own agent |
+| Console | `archer-cli console` → `use agent/repair`, `agent/ask`, `agent/triage`, `agent/sweep`, `agent/audit` |
+| MCP | `archer-cli mcp`: Archer's tools and the five agents' prompts in Claude Code, Claude Desktop or your own agent |
 | Example | [`examples/agents/minimal_agent.py`](../../examples/agents/minimal_agent.py): about 100 lines, no Archer dependency |
 
 Agents run on any provider in your profile that can call tools (Profile → API Keys): Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok, or a local endpoint (Ollama, LM Studio, llama.cpp). Pick one on the Agents page or with `set PROVIDER` in the console. Without a choice, Claude is used if you have an Anthropic key (it's the most reliable at multi-step tool use), otherwise your Ask Archer provider.
@@ -39,9 +39,9 @@ python examples/agents/minimal_agent.py data/groups "Do we have a detection for 
 
 It searched for `comsvcs`, `MiniDump` and `T1003.001`, read the two LSASS Memory files, and pointed out that the SecOps regex expects the literal text `PID`, so it can never match a real command line. A grep would have found the files; the agent also judged them.
 
-## Archer's three agents
+## Archer's five agents
 
-All three are the same runtime ([`archer/agents/runtime.py`](../../archer/agents/runtime.py)) with different instructions and tool sets ([`definitions.py`](../../archer/agents/definitions.py)). Each shows a different pattern.
+All five are the same runtime ([`archer/agents/runtime.py`](../../archer/agents/runtime.py)) with different instructions and tool sets ([`definitions.py`](../../archer/agents/definitions.py)). Each shows a different pattern.
 
 ### Detection repair: check, fix, check again
 
@@ -75,6 +75,20 @@ The tools are `analyse_report`, `technique_coverage`, `technique_info`, `find_ac
 Given a report URL, it extracts the techniques and IOCs, checks coverage, works out who the actor is, decides what to hunt, runs the hunt, waits, reads the results and writes a briefing (summary, technique table, IOCs, gaps, next steps). Here the model chooses the order and stops when it has enough; the instructions give it a plan, but nothing forces the sequence.
 
 On CISA AA23-320A (Scattered Spider) it found 35 of 43 techniques uncovered, hunted them with the IOC sweeps, and called out that the run created no technique detections rather than inventing results. That was a pipeline gap, since fixed: technique hunts now borrow indicators from ATT&CK procedure examples.
+
+### Coverage sweep: find the gaps, close them
+
+The tools are `group_coverage`, `technique_coverage`, `technique_info`, `hunt_techniques`, `hunt_group`, `wait_for_run`, `get_run_results` and `run_status`.
+
+Given a group (optionally one tactic), it lists the techniques with no detection, hunts those gaps, waits, and reports what closed and what couldn't. Triage starts from a report; this starts from a group you already care about and works the gap list to the end. The hunts need your approval like any changing tool.
+
+### Library audit: duplicates, overlaps and noise
+
+The tools are `search_library`, `get_detection`, `technique_coverage`, `technique_info` and `noisy_indicators`. It reports only — it has no tool that changes or deletes anything.
+
+It gathers the saved library, groups detections by what they detect, compares the queries of suspected pairs (same technique and platform, same logic and indicators is a duplicate), notes lopsided coverage, and flags detections resting on indicators that `noisy_indicators` shows recorded across many unrelated techniques — a likely false-positive source. The output is a report: duplicates to consolidate, overlaps to reconcile, and notes.
+
+`noisy_indicators` is the recorded-telemetry false-positive check ([Emulate](../guide/19-emulate.md)) as a tool: give it a detection's match values, or a technique whose own recorded values it should vet, and it says which appear in enough other techniques' recordings to be poor discriminators. Ask Archer has it too.
 
 ## Two APIs, one loop
 
@@ -112,7 +126,7 @@ claude mcp add archer --env ARCHER_TOKEN=arch_... -- /path/to/archer/.venv/bin/p
 
 Create the token in Profile → Security → API Tokens. It's shown once, works with MFA, and revoking it signs out whatever uses it; `ARCHER_EMAIL` and `ARCHER_PASSWORD` still work for accounts without MFA.
 
-`archer-cli mcp` exposes the same 20 tools the agents use, with the 5 changing tools marked as not read-only so the client asks first, plus the three agents' instructions as prompts (`repair`, `ask`, `triage`). It signs in to a running Archer as you, so hunts use your AI settings and your keys stay on the server.
+`archer-cli mcp` exposes the same 21 tools the agents use, with the 5 changing tools marked as not read-only so the client asks first, plus the five agents' instructions as prompts (`repair`, `ask`, `triage`, `sweep`, `audit`). It signs in to a running Archer as you, so hunts use your AI settings and your keys stay on the server.
 
 ## Building your own
 

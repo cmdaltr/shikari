@@ -18,7 +18,7 @@ It uses the provider assigned to Ask Archer in Profile → API Keys → AI Assig
 | Ask Archer with tools | A question | Answers from your Library, coverage, ATT&CK and hunts, not only the model's memory |
 | Intel triage | A threat report | Finds your coverage gaps for it, suggests hunts, and writes a briefing |
 | Coverage sweep | A group (optionally one tactic) | Lists the group's techniques with no detection, hunts the gaps, and reports what closed and what can't be |
-| Library audit | Optional focus (platform, tag or technique) | Reviews the saved library for duplicate and overlapping detections and says what to consolidate. Reports only — it changes nothing |
+| Library audit | Optional focus (platform, tag or technique) | Reviews the saved library for duplicate and overlapping detections, and flags ones resting on noisy indicators (recorded across many unrelated techniques — a likely false-positive source). Reports only — it changes nothing |
 
 | Control | What it does |
 |---|---|

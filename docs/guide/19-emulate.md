@@ -123,7 +123,7 @@ Your detections for the chosen SIEM, for the groups picked in Filters (your late
 | No recordings | No source recorded the technique |
 | No indicators | The detection has no literal indicators to look for |
 
-An indicator is **noisy** when recordings of five or more other techniques contain it too: it matches the lab's ordinary activity as well as the attack.
+An indicator is **noisy** when recordings of five or more other techniques contain it too: it matches the lab's ordinary activity as well as the attack. The same check is a tool, `noisy_indicators`, for the [agents](15-agents-and-ask-archer.md) and any MCP client: give it a detection's match values, or a technique whose own recorded values it should vet, and it says which are poor discriminators. The Library audit agent uses it; Ask Archer has it too.
 
 Not seen isn't proof a detection is wrong: the recording may have used another tool or procedure. It's a cheap first look before testing against your own SIEM.
 

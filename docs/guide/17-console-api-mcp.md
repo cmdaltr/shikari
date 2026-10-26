@@ -32,7 +32,7 @@ archer-cli (hunt/group) > run
 | `research/actors` | Find groups by keyword and consolidate their techniques |
 | `results` | Show a run's detections, correlations and IOC flow; save them as a zip |
 | `ai/ask`, `ai/briefing`, `ai/settings` | Ask Archer, a threat briefing, and the AI assignment |
-| `agent/repair`, `agent/ask`, `agent/triage`, `agent/history` | The [agents](15-agents-and-ask-archer.md) |
+| `agent/repair`, `agent/ask`, `agent/triage`, `agent/sweep`, `agent/audit`, `agent/history` | The [agents](15-agents-and-ask-archer.md) |
 | `generate`, `correlate`, `hunt` | Run the pipeline locally, without the server |
 | `emulate` | Adversary emulation (coming soon) |
 
@@ -60,7 +60,7 @@ Every page works through the HTTP API. The full, live reference is at `http://lo
 
 ## MCP server (`archer-cli mcp`)
 
-Gives any MCP client (Claude Code, Claude Desktop, your own agent) Archer's tools and the three agents' instructions as prompts. Tools that change something are marked so the client asks first. Your AI keys stay on the Archer server.
+Gives any MCP client (Claude Code, Claude Desktop, your own agent) Archer's tools and the five agents' instructions as prompts. Tools that change something are marked so the client asks first. Your AI keys stay on the Archer server.
 
 ```bash
 claude mcp add archer --env ARCHER_TOKEN=arch_... -- archer-cli mcp
