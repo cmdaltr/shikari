@@ -11,12 +11,12 @@ Integrate with VECTR rather than rebuild it: push Archer's threat-library test c
 
 ## Part A — Setup you provide
 
-1. **Stand up VECTR** — the SecurityRiskAdvisors/VECTR docker-compose, reachable on a URL (the homelab is fine; it's Tomcat + MongoDB, a couple of GB).
-2. **Create an API key** in VECTR's admin UI, scoped to the environment/DB you'll push into.
-3. **Confirm the GraphQL surface** — this is the real unknown. VECTR's GraphQL schema shifts between releases, so before I write mutations I need, from *your* instance: the GraphQL endpoint path, the VECTR version, and (via introspection or the docs for that version) the mutations for creating/selecting an assessment and loading test cases, plus the queries for reading test-case outcomes. An introspection dump from the running instance is ideal.
-4. **A target** — an environment/assessment (or DB) to push into, and agreement on how an Archer run maps to it (one assessment per group? per campaign?).
+1. **Stand up VECTR** — run `scripts/deployment/install-vectr.sh` on an **x86-64** Docker host (ARM is unsupported, so the Intel Mac Mini homelab or a Linux VM, not the ARM MacBook; 8 GB+ RAM, 100 GB+ SSD). It fetches VECTR CE, generates the `.env` secrets, and brings the stack up over HTTPS (default `:8081`). Then change the `admin` password.
+2. **Create an API key** — Profile → API Key → Create. Copy the ID and Secret (the secret shows once). Archer will send `Authorization: VEC1 <id>:<secret>`.
+3. **Confirm the mutation/query shapes** — the endpoint and auth are known: GraphQL at `https://<host>:<port>/sra-purpletools-rest/graphql`, each operation takes a `db` argument (e.g. `FS_THREAT_INDEX`). What still varies by version is the exact mutations/queries. From your running instance, give me an **introspection dump** (GET the endpoint, or the version's schema docs) so I build against the real schema rather than guess.
+4. **A target** — an environment/DB and assessment to push into, and how an Archer run maps to it (one assessment per group? per campaign?).
 
-**Expected outcome:** a reachable VECTR, an API key, the confirmed GraphQL endpoint + version + the relevant mutation/query shapes, and a target to push into.
+**Expected outcome:** a reachable VECTR (via the script), an API key, an introspection dump of its GraphQL schema, and a target DB/assessment to push into. (Note: the archived `_archive/vectr/` client assumed a REST `/api/v1/` API — that was wrong; the real API is GraphQL, so it's reference only.)
 
 ## Part B — Implementation plan (Archer)
 
