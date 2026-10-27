@@ -606,6 +606,24 @@
 .tech-stack-group[hidden], .tech-stack-group .industry-option[hidden] { display: none; }
 .tech-stack-platforms { margin: 14px 0 0; }
 
+/* Per-tab "On this page" table of contents (mirrors the Help page) */
+.tab-toc {
+  display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center;
+  margin: 0 0 24px; padding: 12px 14px;
+  background: var(--bg-secondary, rgba(0, 212, 170, .05));
+  border: 1px solid var(--border-color); border-left: 4px solid #00D4AA; border-radius: 8px;
+}
+.tab-toc .toc-label {
+  font-size: .72rem; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-secondary); margin-right: 4px;
+}
+.tab-toc a {
+  font-size: .85rem; color: var(--text-primary); text-decoration: none;
+  padding: 3px 10px; border: 1px solid var(--border-color); border-radius: 20px;
+  cursor: pointer; transition: border-color .15s, color .15s;
+}
+.tab-toc a:hover { border-color: #00D4AA; color: #00D4AA; }
+
 /* Profile: Full Name with Save Changes on the input's row, the same height */
 .pf-name-row { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); column-gap: 16px; margin-top: 16px; }
 .pf-name-label { grid-column: 1 / -1; }

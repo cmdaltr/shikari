@@ -214,7 +214,8 @@
         <div class="tabs-content">
           <!-- PROFILE TAB -->
           <div class="tab-pane active" id="tab-profile">
-            <div class="tab-description" style="margin-bottom: 16px;">
+            <nav class="tab-toc" aria-label="On this page"><span class="toc-label">On this page</span><a href="#pf-details">Details</a><a href="#siems">SIEM platforms</a><a href="#industries">Threat Feed industries</a><a href="#tech-stack">Technology stack</a></nav>
+            <div class="tab-description" style="margin-bottom: 16px;" id="pf-details">
               Profile information and preferences
             </div>
 
@@ -691,6 +692,7 @@
 
           <!-- SECURITY TAB -->
           <div class="tab-pane" id="tab-security">
+            <nav class="tab-toc" aria-label="On this page"><span class="toc-label">On this page</span><a href="#sec-password">Change password</a><a href="#sec-mfa">Two-factor (MFA)</a><a href="#sec-backup-codes">Backup codes</a><a href="#sec-api-tokens">API tokens</a><a href="#sec-access">Access &amp; elevation</a></nav>
             <div class="tab-description">
               Manage your account security settings
             </div>
@@ -700,7 +702,7 @@
 
               <!-- LEFT COLUMN: Change Password -->
               <div class="security-section">
-                <h3 class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Change Password</h3>
+                <h3 class="section-title" id="sec-password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Change Password</h3>
 
                 <form id="password-change-form">
                   <div class="form-section">
@@ -757,7 +759,7 @@
 
                 <!-- MFA Section -->
                 <div class="security-section">
-                  <h3 class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Two-Factor Authentication (MFA)</h3>
+                  <h3 class="section-title" id="sec-mfa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Two-Factor Authentication (MFA)</h3>
 
                   <div id="mfa-status-section">
                     <p style="color: var(--text-secondary); margin-bottom: 16px;">
@@ -829,7 +831,7 @@
 
                 <!-- Backup Codes Section -->
                 <div class="security-section">
-                  <h3 class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Backup Codes</h3>
+                  <h3 class="section-title" id="sec-backup-codes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>Backup Codes</h3>
 
                   <p style="color: var(--text-secondary); margin-bottom: 16px;">
                     Generate backup codes to access your account if you lose your MFA device. Each code can only be used once.
@@ -901,7 +903,7 @@
             <!-- API tokens (archer/auth/tokens.py) -->
             <div class="security-section api-tokens">
               <div style="height: 1px; background: var(--border-color); margin: 32px 0 24px;"></div>
-              <h3 class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>API Tokens</h3>
+              <h3 class="section-title" id="sec-api-tokens"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>API Tokens</h3>
               <p style="color: var(--text-secondary); margin-bottom: 16px;">
                 For the console (<code>archer-cli console</code>), the MCP server and your own scripts: set
                 <code>ARCHER_TOKEN</code> instead of a password. Works with MFA. A token acts as you, so treat it
@@ -926,7 +928,7 @@
             <!-- Access & elevation (archer/elevation.py) -->
             <div class="security-section access-section" id="access-section">
               <div style="height: 1px; background: var(--border-color); margin: 32px 0 24px;"></div>
-              <h3 class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l7 4v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>Access &amp; elevation</h3>
+              <h3 class="section-title" id="sec-access"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l7 4v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>Access &amp; elevation</h3>
               <p style="color: var(--text-secondary); margin-bottom: 20px;">
                 Request a higher role for a set time. Another analyst at that level or above approves it here &mdash; no email.
                 The grant activates one minute after approval and expires on its own. You, the approver or any admin can end it early.
@@ -978,13 +980,14 @@
 
           <!-- CONFIG TAB (formerly Mappings) -->
           <div class="tab-pane" id="tab-mappings">
+            <nav class="tab-toc" aria-label="On this page"><span class="toc-label">On this page</span><a href="#cfg-correlation">Correlation parameters</a><a href="#cfg-detections-code">Detections as code</a><a href="#cfg-data-sources">SIEM data sources</a><a href="#cfg-field-mapping">SIEM field mapping</a></nav>
             <div class="tab-description">
               System-wide configuration settings
             </div>
 
             <div style="margin-top: 24px;">
               <!-- CORRELATION PARAMETERS SECTION -->
-              <div class="ui-card" style="padding: 24px; margin-bottom: 32px;">
+              <div class="ui-card" id="cfg-correlation" style="padding: 24px; margin-bottom: 32px;">
                 <h3 class="section-title">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2">
                     <circle cx="12" cy="12" r="3"/>
@@ -1087,7 +1090,7 @@
 
               {% if user and user.role.value == 'admin' %}
               <!-- DETECTIONS AS CODE REPO (Admin Only) -->
-              <div class="ui-card" style="padding: 24px; margin-bottom: 32px;">
+              <div class="ui-card" id="cfg-detections-code" style="padding: 24px; margin-bottom: 32px;">
                 <h3 class="section-title">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                   Detections as code
@@ -1118,7 +1121,7 @@
               </div>
 
               <!-- SIEM DATA SOURCES / AVAILABILITY (Admin Only) -->
-              <div class="ui-card" style="padding: 24px; margin-bottom: 32px;">
+              <div class="ui-card" id="cfg-data-sources" style="padding: 24px; margin-bottom: 32px;">
                 <h3 class="section-title">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
                   SIEM data sources
@@ -1139,7 +1142,7 @@
               </div>
 
               <!-- SIEM FIELD MAPPING (Admin Only) -->
-              <div class="ui-card" style="padding: 24px; margin-bottom: 32px;">
+              <div class="ui-card" id="cfg-field-mapping" style="padding: 24px; margin-bottom: 32px;">
                 <h3 class="section-title">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v4H3z"/><path d="M3 10h18v4H3z"/><path d="M3 17h18v4H3z"/></svg>
                   SIEM field mapping
@@ -1175,6 +1178,7 @@
           <!-- USERS TAB (Admin Only) -->
           {% if user and user.role.value == 'admin' %}
           <div class="tab-pane" id="tab-users">
+            <nav class="tab-toc" aria-label="On this page"><span class="toc-label">On this page</span><a href="#sample-data-card">Sample data</a><a href="#users-list">User accounts</a></nav>
             <div class="tab-description">
               User account management
             </div>

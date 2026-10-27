@@ -1,5 +1,18 @@
 // Profile Page JavaScript
 
+// Per-tab "On this page" TOC: smooth-scroll to the section without touching tab routing
+(function () {
+  document.querySelectorAll('.tab-toc a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const el = document.getElementById(a.getAttribute('href').slice(1));
+      if (!el) return;
+      e.preventDefault();
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      history.replaceState(null, '', a.getAttribute('href'));
+    });
+  });
+})();
+
 // Profile Picture Upload
 function handleProfilePictureChange(event) {
   const file = event.target.files[0];
