@@ -861,20 +861,13 @@ document.head.appendChild(style);
   const status = document.getElementById('tech-stack-status');
   const platformsLine = document.getElementById('tech-stack-platforms');
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-  // Fixed 4:4:3 layout: rows 1-2 hold four categories, the last row three (wider columns).
+  // Fixed 4:4:4 layout. Each row's four categories are of similar size so columns stay even.
   const TS_ROWS = [
-    ['Operating systems', 'Virtualisation', 'Cloud and containers', 'Identity'],
-    ['Productivity and email', 'Backup and security', 'Servers', 'SaaS/Apps'],
-    ['Network and VPN appliances', 'Remote management and IT tools', 'Development and collaboration'],
+    ['Remote mgmt & endpoints', 'Apps & file transfer', 'Servers & databases', 'OS & virtualisation'],
+    ['Productivity & email', 'Development & CI/CD', 'Firewalls & network', 'VPN & edge access'],
+    ['Collaboration & SaaS', 'Backup & security', 'Identity & access', 'Cloud & containers'],
   ];
-  const TS_LABEL = {
-    'Operating systems': 'Operating systems', 'Virtualisation': 'Virtualisation',
-    'Cloud and containers': 'Cloud & containers', 'Identity': 'Identity',
-    'Productivity and email': 'Productivity & email', 'Backup and security': 'Backup & security',
-    'Servers': 'Servers', 'SaaS/Apps': 'SaaS & apps',
-    'Network and VPN appliances': 'Network & VPN', 'Remote management and IT tools': 'Remote management',
-    'Development and collaboration': 'Dev & collaboration',
-  };
+  const TS_LABEL = {}; // catalogue names are already concise; legend falls back to the category name
   let choices = [];
   const showPlatforms = () => {
     const ticked = new Set(Array.from(grid.querySelectorAll('input:checked')).map(i => i.value));
