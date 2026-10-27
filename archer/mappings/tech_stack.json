@@ -74,7 +74,6 @@
     {"id": "iis", "label": "Microsoft IIS", "category": "Servers & databases", "platforms": ["Windows"], "aliases": ["IIS", "Internet Information Services", "w3wp"], "cpe": ["microsoft:internet_information_services*", "microsoft:iis"]},
     {"id": "apache_httpd", "label": "Apache HTTP Server", "category": "Servers & databases", "platforms": ["Linux", "Windows"], "aliases": ["Apache HTTP Server", "httpd"], "cpe": ["apache:http_server"]},
     {"id": "nginx", "label": "nginx", "category": "Servers & databases", "platforms": ["Linux"], "aliases": ["nginx"], "cpe": ["nginx:*", "f5:nginx*"]},
-    {"id": "tomcat", "label": "Apache Tomcat", "category": "Servers & databases", "platforms": ["Linux", "Windows"], "aliases": ["Tomcat"], "cpe": ["apache:tomcat"]},
     {"id": "struts", "label": "Apache Struts", "category": "Apps & file transfer", "platforms": ["Linux", "Windows"], "aliases": ["Struts"], "cpe": ["apache:struts"]},
     {"id": "log4j", "label": "Apache Log4j (Java applications)", "category": "Apps & file transfer", "platforms": ["Linux", "Windows"], "aliases": ["Log4j", "Log4Shell"], "cpe": ["apache:log4j"]},
     {"id": "weblogic", "label": "Oracle WebLogic", "category": "Servers & databases", "platforms": ["Linux", "Windows"], "aliases": ["WebLogic"], "cpe": ["oracle:weblogic_server"]},
