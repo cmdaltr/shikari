@@ -1173,6 +1173,28 @@
               User account management
             </div>
 
+            <div id="sample-data-card" style="margin-top: 24px; padding: 20px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;">
+                <div style="min-width: 0;">
+                  <h3 style="margin: 0 0 6px; color: var(--text-primary); font-size: 1rem;">Sample data</h3>
+                  <p style="margin: 0; color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5;">
+                    Seeds a labelled <strong>SampleSpider</strong> scenario — detections, a run, correlations,
+                    a company profile and a purple-team assessment — so every surface has something to show.
+                    Everything is tagged <code>[SAMPLE]</code> and sits alongside your real data; the toggle
+                    removes exactly what it added and leaves real work untouched.
+                  </p>
+                </div>
+                <label class="switch" style="flex: none; position: relative; display: inline-block; width: 46px; height: 26px;">
+                  <input type="checkbox" id="sample-data-toggle" style="opacity: 0; width: 0; height: 0;">
+                  <span id="sample-data-slider" style="position: absolute; cursor: pointer; inset: 0; background: var(--border-color); border-radius: 26px; transition: .2s;">
+                    <span id="sample-data-knob" style="position: absolute; height: 20px; width: 20px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s;"></span>
+                  </span>
+                </label>
+              </div>
+              <div id="sample-data-status" style="margin-top: 12px; font-size: 0.8rem; color: var(--text-tertiary);">Checking…</div>
+              <pre id="sample-data-log" style="display: none; margin: 10px 0 0; padding: 10px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.75rem; color: var(--text-secondary); white-space: pre-wrap; max-height: 180px; overflow: auto;"></pre>
+            </div>
+
             <div id="users-list" style="margin-top: 24px;">
               <!-- Users will be loaded dynamically via JavaScript -->
               <p style="color: var(--text-secondary); text-align: center; padding: 40px 0;">
@@ -1182,6 +1204,64 @@
           </div>
 
           <script>
+          // ---- Sample data toggle (admin) ----
+          let sampleDataBusy = false;
+          function renderSampleData(state) {
+            const toggle = document.getElementById('sample-data-toggle');
+            const slider = document.getElementById('sample-data-slider');
+            const knob = document.getElementById('sample-data-knob');
+            const status = document.getElementById('sample-data-status');
+            if (!toggle) return;
+            const on = !!state.present;
+            toggle.checked = on;
+            toggle.disabled = sampleDataBusy;
+            slider.style.background = on ? '#00D4AA' : 'var(--border-color)';
+            knob.style.left = on ? '23px' : '3px';
+            slider.style.opacity = sampleDataBusy ? '0.6' : '1';
+            if (sampleDataBusy) { status.textContent = on ? 'Removing sample data…' : 'Adding sample data…'; return; }
+            if (on) {
+              const when = state.created_at ? new Date(state.created_at * 1000).toLocaleString() : '';
+              const db = state.db_counts ? Object.entries(state.db_counts).map(([k, v]) => `${v} ${k.replace(/_/g, ' ')}`).join(', ') : '';
+              status.innerHTML = `Present${when ? ' — added ' + escapeHtml(when) : ''}. `
+                + `${state.files_present}/${state.files_recorded} files` + (db ? ', ' + escapeHtml(db) : '') + '.';
+            } else {
+              status.textContent = 'Not present. Flip the switch to seed the labelled SampleSpider scenario.';
+            }
+          }
+          function showSampleLog(text) {
+            const pre = document.getElementById('sample-data-log');
+            if (!pre) return;
+            if (text && text.trim()) { pre.textContent = text.trim(); pre.style.display = 'block'; }
+            else { pre.style.display = 'none'; }
+          }
+          async function loadSampleDataStatus() {
+            try {
+              const r = await fetch('/api/test-data/status');
+              const d = await r.json();
+              if (d.success) renderSampleData(d);
+              else document.getElementById('sample-data-status').textContent = d.error || 'Unavailable';
+            } catch (e) { document.getElementById('sample-data-status').textContent = 'Error checking status'; }
+          }
+          async function toggleSampleData() {
+            if (sampleDataBusy) return;
+            const toggle = document.getElementById('sample-data-toggle');
+            const adding = toggle.checked;
+            sampleDataBusy = true;
+            renderSampleData({ present: !adding }); // show in-flight state for the action direction
+            showSampleLog('');
+            try {
+              const r = await fetch('/api/test-data/' + (adding ? 'populate' : 'depopulate'), { method: 'POST' });
+              const d = await r.json();
+              sampleDataBusy = false;
+              if (d.success) { showSampleLog(d.log); renderSampleData(d); }
+              else { document.getElementById('sample-data-status').textContent = d.error || 'Action failed'; showSampleLog(d.log); loadSampleDataStatus(); }
+            } catch (e) {
+              sampleDataBusy = false;
+              document.getElementById('sample-data-status').textContent = 'Error — see server log';
+              loadSampleDataStatus();
+            }
+          }
+
           // Load users when the Users tab is clicked
           async function loadUsers() {
             try {
@@ -1447,8 +1527,11 @@
                 if (document.getElementById('users-list').querySelector('table') === null) {
                   loadUsers();
                 }
+                loadSampleDataStatus();
               });
             }
+            const sampleToggle = document.getElementById('sample-data-toggle');
+            if (sampleToggle) sampleToggle.addEventListener('change', toggleSampleData);
 
             // Load timeline when Timeline tab is clicked
             const timelineTab = document.querySelector('[data-tab="timeline"]');

@@ -8870,6 +8870,74 @@ async def siem_availability_save(request: Request, archer_session: Optional[str]
     return JSONResponse({"success": True, "ingested": saved})
 
 
+def _test_data_admin(request, archer_session):
+    """Shared auth for the sample-data toggle. Returns (user, db) or a JSONResponse."""
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
+    user, db = auth
+    db.close()
+    if user.role != UserRole.ADMIN:
+        return JSONResponse({"success": False, "error": "Admin access required"}, status_code=403)
+    return user, db
+
+
+@app.get("/api/test-data/status")
+def test_data_status(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Is the labelled sample scenario currently seeded? (admin only)."""
+    from archer.cli import test_data
+    res = _test_data_admin(request, archer_session)
+    if isinstance(res, JSONResponse):
+        return res
+    return JSONResponse({"success": True, **test_data.state()})
+
+
+@app.post("/api/test-data/populate")
+def test_data_populate(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Seed the labelled SampleSpider scenario alongside real data (admin only).
+
+    Additive and manifest-tracked: everything it writes is tagged [SAMPLE] and removed exactly by
+    depopulate, so it never mixes with real work."""
+    import contextlib
+    import io
+    from archer.cli import test_data
+
+    res = _test_data_admin(request, archer_session)
+    if isinstance(res, JSONResponse):
+        return res
+    user, _ = res
+    if test_data.state().get("present"):
+        return JSONResponse({"success": True, "already_present": True, **test_data.state()})
+    buf = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buf):
+            test_data.populate(force=False, email=user.email or "")
+    except Exception as e:  # noqa: BLE001 — surface seeding failures to the admin
+        logger.error(f"Sample data populate failed: {e}")
+        return JSONResponse({"success": False, "error": str(e), "log": buf.getvalue()}, status_code=500)
+    return JSONResponse({"success": True, "log": buf.getvalue(), **test_data.state()})
+
+
+@app.post("/api/test-data/depopulate")
+def test_data_depopulate(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Remove exactly what populate created — real data is untouched (admin only)."""
+    import contextlib
+    import io
+    from archer.cli import test_data
+
+    res = _test_data_admin(request, archer_session)
+    if isinstance(res, JSONResponse):
+        return res
+    buf = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buf):
+            test_data.depopulate()
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Sample data depopulate failed: {e}")
+        return JSONResponse({"success": False, "error": str(e), "log": buf.getvalue()}, status_code=500)
+    return JSONResponse({"success": True, "log": buf.getvalue(), **test_data.state()})
+
+
 _SCHEMA_SIEMS = ("splunk", "elastic", "mde", "secops")
 
 

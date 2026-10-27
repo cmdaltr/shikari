@@ -368,6 +368,25 @@ def status():
     return 0
 
 
+def state():
+    """Structured presence summary for the web toggle (no printing)."""
+    m = _load_manifest()
+    if not m:
+        return {"present": False, "group": GROUP, "domain": DOMAIN}
+    files = m.get("files", [])
+    db = m.get("db") or {}
+    return {
+        "present": True,
+        "group": m.get("group", GROUP),
+        "domain": m.get("domain", DOMAIN),
+        "created_at": m.get("created_at"),
+        "files_recorded": len(files),
+        "files_present": sum(1 for p in files if os.path.exists(p)),
+        "db_counts": {k: len(v) for k, v in db.items()},
+        "db_user_id": m.get("db_user_id"),
+    }
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     parser = argparse.ArgumentParser(prog="archer-cli test",
