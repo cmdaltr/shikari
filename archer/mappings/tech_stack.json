@@ -17,8 +17,6 @@
     {"id": "exchange_server", "label": "Microsoft Exchange Server", "category": "Productivity & email", "platforms": ["Windows", "Office Suite"], "aliases": ["Exchange Server", "Microsoft Exchange", "Outlook Web Access", "ProxyShell", "ProxyLogon", "ProxyNotShell"], "cpe": ["microsoft:exchange_server"]},
     {"id": "sharepoint_server", "label": "SharePoint Server", "category": "Productivity & email", "platforms": ["Windows"], "aliases": ["SharePoint Server", "ToolShell"], "cpe": ["microsoft:sharepoint_server*", "microsoft:sharepoint_enterprise_server"]},
     {"id": "google_workspace", "attacker_used": true, "label": "Google Workspace", "category": "Productivity & email", "platforms": ["Office Suite", "SaaS", "Identity Provider"], "aliases": ["Google Workspace", "G Suite", "Gmail", "Google Drive"], "cpe": ["google:workspace*"]},
-    {"id": "zimbra", "label": "Zimbra", "category": "Productivity & email", "platforms": ["Linux"], "aliases": ["Zimbra"], "cpe": ["zimbra:*", "synacor:zimbra*"]},
-    {"id": "roundcube", "label": "Roundcube", "category": "Productivity & email", "platforms": ["Linux"], "aliases": ["Roundcube"], "cpe": ["roundcube:*"]},
 
     {"id": "aws", "attacker_used": true, "label": "Amazon Web Services", "category": "Cloud & containers", "platforms": ["IaaS"], "aliases": ["AWS", "Amazon Web Services", "EC2", "S3 bucket", "CloudTrail", "AWS IAM"], "cpe": ["amazon:*"]},
     {"id": "azure", "attacker_used": true, "label": "Microsoft Azure", "category": "Cloud & containers", "platforms": ["IaaS"], "aliases": ["Azure", "Azure VM", "Azure Storage", "Azure Key Vault"], "cpe": ["microsoft:azure*"]},
@@ -64,8 +62,6 @@
     {"id": "gitlab", "attacker_used": true, "label": "GitLab", "category": "Development & CI/CD", "platforms": ["SaaS", "Linux"], "aliases": ["GitLab"], "cpe": ["gitlab:*"]},
     {"id": "jenkins", "label": "Jenkins", "category": "Development & CI/CD", "platforms": ["Linux", "Windows"], "aliases": ["Jenkins"], "cpe": ["jenkins:*"]},
     {"id": "teamcity", "label": "JetBrains TeamCity", "category": "Development & CI/CD", "platforms": ["Linux", "Windows"], "aliases": ["TeamCity"], "cpe": ["jetbrains:teamcity"]},
-    {"id": "npm", "attacker_used": true, "label": "npm and Node.js packages", "category": "Development & CI/CD", "platforms": ["Linux", "Windows", "macOS"], "aliases": ["npm package", "npm packages", "Node.js"], "cpe": ["nodejs:*", "npmjs:*"]},
-    {"id": "pypi", "attacker_used": true, "label": "PyPI and Python packages", "category": "Development & CI/CD", "platforms": ["Linux", "Windows", "macOS"], "aliases": ["PyPI"], "cpe": ["python:*"]},
     {"id": "slack", "attacker_used": true, "label": "Slack", "category": "Collaboration & SaaS", "platforms": ["SaaS"], "aliases": ["Slack"], "cpe": ["slack:*"]},
     {"id": "zoom", "attacker_used": true, "label": "Zoom", "category": "Collaboration & SaaS", "platforms": ["SaaS", "Windows", "macOS"], "aliases": ["Zoom"], "cpe": ["zoom:*"]},
     {"id": "salesforce", "label": "Salesforce", "category": "Collaboration & SaaS", "platforms": ["SaaS"], "aliases": ["Salesforce"], "cpe": ["salesforce:*"]},
