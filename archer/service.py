@@ -574,6 +574,7 @@ HANDOVER = {
     "preview": ("archer.cli.preview", False),
     "mcp": ("archer.mcp_server", False),
     "offline": ("archer.cli.offline", False),
+    "test": ("archer.cli.test_data", False),
 }
 
 
@@ -616,7 +617,8 @@ def main(argv=None):
     docker = sub.add_parser("docker", help="docker compose with the project's compose file")
     docker.add_argument("args", nargs=argparse.REMAINDER)
     parser.epilog = ("Also: serve [--port N] (foreground, no supervisor) · clear-cache · console (interactive) · "
-                     "preview <group> · mcp (MCP server on stdio) · offline generate|correlate|hunt|emulate")
+                     "preview <group> · mcp (MCP server on stdio) · offline generate|correlate|hunt|emulate · "
+                     "test populate|depopulate|status (sample data for a guided tour)")
 
     args = parser.parse_args(argv)
     commands = {"start": cmd_start, "stop": cmd_stop, "restart": cmd_restart, "status": cmd_status,
