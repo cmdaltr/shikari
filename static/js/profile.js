@@ -863,9 +863,9 @@ document.head.appendChild(style);
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   // Fixed 4:4:4 layout. Each row's four categories are of similar size so columns stay even.
   const TS_ROWS = [
-    ['Remote mgmt & endpoints', 'Apps & file transfer', 'Servers & databases', 'OS & virtualisation'],
-    ['Productivity & email', 'Development & CI/CD', 'Firewalls & network', 'VPN & edge access'],
-    ['Collaboration & SaaS', 'Backup & security', 'Identity & access', 'Cloud & containers'],
+    ['OS & virtualisation', 'Servers & databases', 'Firewalls & network', 'VPN & edge access'],
+    ['Productivity & email', 'Cloud & containers', 'Development & CI/CD', 'Identity & access'],
+    ['Collaboration & SaaS', 'Backup & security', 'Remote mgmt & endpoints', 'Apps & file transfer'],
   ];
   const TS_LABEL = {}; // catalogue names are already concise; legend falls back to the category name
   let choices = [];
