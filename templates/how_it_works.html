@@ -191,22 +191,19 @@
             color: #0D1B2A; background: #00D4AA; padding: 3px 9px; border-radius: 5px;
             opacity: .9; box-shadow: 0 2px 6px rgba(0,0,0,.25);
         }
-        .diagram-previews { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+        .diagram-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+        .diagram-grid .arch-cell { grid-column: 1; grid-row: 1 / span 2; }
+        .diagram-cell { display: flex; flex-direction: column; }
+        .diagram-cell .diagram-click { flex: none; }
         .diagram-thumb {
             width: 100%; height: 300px; border: 1px solid var(--border-color);
             border-radius: 10px; background: #0D1B2A; display: block;
         }
-        @media (max-width: 720px) { .diagram-previews { grid-template-columns: 1fr; } }
-
-        /* FAQ list */
-        .faq-list { display: grid; gap: 14px; margin: .4em 0 0; }
-        .faq-item {
-            padding: 14px 16px; border: 1px solid var(--border-color);
-            border-left: 3px solid #00D4AA; border-radius: 8px;
-            background: var(--bg-secondary, rgba(0,0,0,.015));
+        @media (max-width: 720px) {
+            .diagram-grid { grid-template-columns: 1fr; }
+            .diagram-grid .arch-cell { grid-column: 1; grid-row: auto; }
         }
-        .faq-item .faq-q { font-weight: 600; color: var(--text-primary); margin: 0 0 .5em; }
-        .faq-item .faq-a { color: var(--text-secondary); font-size: .93em; line-height: 1.6; margin: 0; }
+
 
         .section h3 {
             color: var(--text-primary);
@@ -721,12 +718,6 @@
                     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
                     <span>Intel &amp; Profile</span>
                 </button>
-                <button class="tab-button" data-tab="faq">
-                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                    </svg>
-                    <span>FAQ</span>
-                </button>
             </div>
 
             <!-- Tab Content Panes -->
@@ -802,6 +793,532 @@
                     </ul>
                 </div>
             </div>
+            
+<div class="section" style="margin-top: 3em;">
+            <h2 class="hiw-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Frequently Asked Questions</h2>
+
+            <details class="faq-item">
+                <summary class="faq-question">What is Archer and what does it do?</summary>
+                <div class="faq-answer">
+                    <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Archer turns MITRE ATT&CK threat intelligence into detection queries for Microsoft Defender XDR, Google SecOps, Splunk and Elastic. Point it at a threat group, a CVE, a report or a company and it generates coverage for every technique involved, chains the detections into correlations, and checks them before you keep them. It is open source and self-hosted, and works without AI by default.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">Do I need an AI provider to use Archer?</summary>
+                <div class="faq-answer">
+                    <p>No. Archer works without AI by default, and the whole pipeline — generation, correlation and the checks — is deterministic code. AI is opt-in and never in the critical path: it adds Ask Archer, the agents and threat briefings. When you do want it, you can point Archer at a local model through Ollama or a cloud provider (Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok), so nothing has to leave your machine.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">Why is Archer so fast? Is it using AI or machine learning?</summary>
+                <div class="faq-answer">
+                    <p>Generation is deterministic code, not model inference. The ATT&CK bundle and the OSINT rule index are built once and read from disk; indicators are matched with compiled patterns and dictionary lookups; queries come from per-platform builders, not token-by-token from an LLM; and correlation scoring is arithmetic over the techniques. A full group of 30–50 techniques takes minutes, and a single detection well under a second — and it all runs locally against a SQLite database, offline if you want.</p>
+
+                    <p>When you turn AI on, it sits beside this, never inside it: Ask Archer, the agents and briefings call a model you choose (local or cloud), and if one isn't configured the deterministic path is simply what runs. So the speed, the privacy and the repeatability are the default, and AI is something you add when it earns its place.</p>
+
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 1em;">
+                        <tr style="background: var(--bg-secondary); border-bottom: 2px solid var(--border);">
+                            <th style="padding: 8px; text-align: left;">Aspect</th>
+                            <th style="padding: 8px; text-align: left;">Archer's pipeline</th>
+                            <th style="padding: 8px; text-align: left;">An LLM-in-the-loop generator</th>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 8px;"><strong>Speed</strong></td>
+                            <td style="padding: 8px;">Sub-second per detection</td>
+                            <td style="padding: 8px;">Seconds per query, per model call</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 8px;"><strong>Cost</strong></td>
+                            <td style="padding: 8px;">None — runs locally</td>
+                            <td style="padding: 8px;">Per-token, per query</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 8px;"><strong>Privacy</strong></td>
+                            <td style="padding: 8px;">Stays on your machine</td>
+                            <td style="padding: 8px;">Sent to the provider (unless local)</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 8px;"><strong>Repeatability</strong></td>
+                            <td style="padding: 8px;">Same input, same output</td>
+                            <td style="padding: 8px;">Non-deterministic</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px;"><strong>Offline</strong></td>
+                            <td style="padding: 8px;">Works without a network</td>
+                            <td style="padding: 8px;">Needs the API (unless local)</td>
+                        </tr>
+                    </table>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What's the difference between OSINT Enhancement and OSINT Comparison?</summary>
+                <div class="faq-answer">
+                    <p><strong>OSINT Enhancement:</strong> Automatically incorporates battle-tested detection patterns from OSINT sources (Elastic, Splunk community rules) directly into your queries. This is enabled by default on the Hunt and Analyse tabs. What LOLBAS, LOLRMM and LOLDrivers document about binaries, RMM tools and drivers the group is seen using is a separate option, <strong>LOL datasets</strong>, also ticked by default.</p>
+                    <p><strong>OSINT Comparison:</strong> Compares techniques against OSINT databases and adds metadata to YAML files (visible in the "Show Details" button). This is reference-only and doesn't modify the queries themselves. Either option adds the known false positives that Elastic and Splunk rules document for the technique (LoFP-style).</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How do correlations work?</summary>
+                <div class="faq-answer">
+                    <p><strong>Correlations:</strong> Combines queries for the same SIEM (Google SecOps, Defender XDR, Splunk or Elastic) into multi-stage detections. This is enabled by default and helps create detection chains that track attack progressions within a single SIEM platform.</p>
+                    <p>The results page shows each technique in a correlation as an <strong>individual query block</strong>, stacked with "chained with" connectors. The combined JOIN query is available via "Show Combined Query" below the stack.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How does Semantic Analysis work?</summary>
+                <div class="faq-answer">
+                    <p>Semantic Analysis groups queries by behavioral categories (authentication, network, file activity, process execution, etc.) rather than just by technique ID. This is enabled by default and helps organize detections logically, making them easier to review, deploy, and maintain. It includes advanced query parsing for intelligent syntax-aware merging.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What file formats can Analyse read?</summary>
+                <div class="faq-answer">
+                    <p>The Analyse tab reads multiple threat intelligence file formats including: PDF, TXT, Markdown (MD), JSON, CSV, Excel (XLSX/XLS), Word (DOCX/DOC), and YARA rules (.yar/.yara). Archer automatically extracts TTPs (Tactics, Techniques, and Procedures) and IOCs (Indicators of Compromise) from these files.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What is the Profile tab used for?</summary>
+                <div class="faq-answer">
+                    <p>The Profile tab lets you analyze an organization's threat landscape based on their domain. It automatically identifies industry-specific threats, geographic threat actors, technology stack vulnerabilities, and optionally supply chain dependencies. It then recommends relevant threat groups and can auto-generate detection queries for them.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What is Threat Briefing and how is it different from the AI Ask feature?</summary>
+                <div class="faq-answer">
+                    <p><strong>Threat Briefing</strong> generates a grounded, prioritised detection plan for a threat group. It is different from the Ask feature in a critical way:</p>
+                    <ul>
+                        <li><strong>Ask:</strong> Sends only the group name to the LLM — the LLM draws on its training data, which may be incomplete or outdated</li>
+                        <li><strong>Threat Briefing:</strong> Sends the actual MITRE ATT&CK technique list (all three attribution paths: direct, via software, via campaign) <em>plus</em> your current detection coverage — the LLM prioritises based on real data</li>
+                    </ul>
+                    <h4>What it produces</h4>
+                    <ul>
+                        <li><strong>Coverage stats:</strong> How many techniques are already covered by your detection library vs. gaps</li>
+                        <li><strong>Top-N priority list:</strong> Ranked techniques with priority reasoning and specific detection approach per technique</li>
+                        <li><strong>Attack chain:</strong> Kill chain tactic progression for the group</li>
+                        <li><strong>Executive summary:</strong> 2–3 sentence briefing for SOC leadership</li>
+                    </ul>
+                    <h4>How to use it</h4>
+                    <ol>
+                        <li>Enter a threat group name in the Generate tab (e.g., "Scattered Spider")</li>
+                        <li>Click <strong>Threat Briefing</strong> (the button below Generate Detections)</li>
+                        <li>Select the number of top techniques to prioritise (5 or 10)</li>
+                        <li>The briefing panel loads with coverage statistics, the ranked technique cards, and the attack chain</li>
+                    </ol>
+                    <p><strong>Requires:</strong> An LLM configured (Anthropic, OpenAI, or local Ollama). The briefing uses <code>POST /api/threat-briefing</code> and passes the complete technique/coverage context to the model.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What are the individual query blocks on the results page?</summary>
+                <div class="faq-answer">
+                    <p>After generating detections and correlations, the results page now shows <strong>individual detection queries per technique</strong> within each correlation, stacked visually with "chained with" connectors between them. This replaces the previous single combined-query view.</p>
+                    <h4>What you see</h4>
+                    <ul>
+                        <li><strong>Technique name</strong> — the MITRE ATT&CK technique name</li>
+                        <li><strong>ATT&CK ID badge</strong> — e.g., <code>T1078</code> in a blue pill</li>
+                        <li><strong>Tactic badge</strong> — e.g., <code>Initial Access</code> in a green pill</li>
+                        <li><strong>Query block</strong> — the individual Splunk SPL or KQL query for that technique</li>
+                        <li><strong>Copy button</strong> — copies the individual query to clipboard</li>
+                        <li><strong>"chained with" connector</strong> — visual divider between techniques in a correlation</li>
+                    </ul>
+                    <h4>Combined query</h4>
+                    <p>The JOIN query that combines all techniques is still available — click <strong>Show Combined Query</strong> below the stacked blocks to expand it. This is the query you deploy to your SIEM as a single multi-stage alert.</p>
+                    <h4>Why this matters</h4>
+                    <p>Previously you could only see the combined JOIN query. The individual blocks let you understand exactly which technique each sub-query detects, copy individual queries for testing, and understand the attack chain before deploying the combined rule.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How fast is Archer at generating detections?</summary>
+                <div class="faq-answer">
+                    <p>Archer is optimized for speed with template caching, parallel processing, and async operations. Generating 200 detection queries for a threat group like APT29 takes approximately 30 seconds with caching enabled (compared to 4-5 minutes without optimization). First-time runs take about 45 seconds while subsequent cached runs complete in about 5 seconds.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What output formats does Archer generate?</summary>
+                <div class="faq-answer">
+                    <p>Archer generates multiple output formats:</p>
+                    <ul>
+                        <li><strong>YAML files:</strong> Individual detection rules in standardized YAML format</li>
+                        <li><strong>Vendor queries:</strong> Splunk SPL and Microsoft KQL queries</li>
+                        <li><strong>Correlation JSON:</strong> Multi-stage detection relationships</li>
+                        <li><strong>Attack Flow diagrams:</strong> JSON and HTML visualizations following the MITRE ATT&CK Flow specification</li>
+                        <li><strong>Library view:</strong> Interactive web interface to browse and export detections</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">Can I customize the generated detection queries?</summary>
+                <div class="faq-answer">
+                    <p>Yes! All generated detections are saved as YAML files that you can review, modify, and customize before deploying to your SIEM. The queries are designed to be production-ready but should always be tested in your environment and tuned to reduce false positives based on your specific infrastructure.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How do I customize mapping files for my environment?</summary>
+                <div class="faq-answer">
+                    <p>Archer uses three mapping files to control detection generation for different environments:</p>
+                    <ul>
+                        <li><strong>indicatorMapping.json:</strong> Maps indicator types (cmd, file, ip, domain, etc.) to data sources and fields</li>
+                        <li><strong>platformMapping.json:</strong> Defines which platforms (Windows, Linux, AWS, Azure) are supported by each data source</li>
+                        <li><strong>fieldMapping.json:</strong> Maps generic field names to vendor-specific field names (e.g., process_name → ProcessName for Defender XDR)</li>
+                    </ul>
+                    <p><strong>Common customization scenarios:</strong></p>
+                    <ul>
+                        <li>Using custom Splunk indexes: Update <code>indicatorMapping.json</code> to replace default indexes with your own (e.g., <code>index=custom_windows_logs</code>)</li>
+                        <li>Multi-cloud environments: Add AWS/Azure/GCP data sources to appropriate indicator types</li>
+                        <li>Custom EDR solutions: Add new vendor mappings for CrowdStrike, Carbon Black, SentinelOne, etc.</li>
+                        <li>Disabling unused sources: Remove or comment out data sources you don't have</li>
+                    </ul>
+                    <p><strong>Best practices:</strong> Always backup mapping files before modifying, validate JSON syntax, test with small groups first, and document your changes. See the <a href="https://github.com/cmdaltr/archer/blob/main/docs/guides/MAPPING_FILES_GUIDE.md" target="_blank" style="color: #8B0000; text-decoration: underline;">Mapping Files Configuration Guide</a> for detailed instructions and examples.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What data sources does Archer pull from?</summary>
+                <div class="faq-answer">
+                    <p>Archer pulls from multiple authoritative sources:</p>
+                    <ul>
+                        <li><strong>MITRE ATT&CK:</strong> Official enterprise-attack.json for technique mappings</li>
+                        <li><strong>Community repositories:</strong> Elastic detection rules, Splunk security content</li>
+                        <li><strong>OSINT sources:</strong> 5+ open-source security repositories with 7,500+ detection rules</li>
+                        <li><strong>Threat reports:</strong> Uploaded files or analyzed blog posts/reports</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">Is Archer suitable for production use?</summary>
+                <div class="faq-answer">
+                    <p>Archer generates production-quality detection queries, but as with any automated tool, you should review and test all detections in your environment before deploying to production. Different organizations have different baselines, and tuning is essential to reduce false positives and ensure the detections work correctly with your specific data sources and infrastructure.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How do I get started with Archer?</summary>
+                <div class="faq-answer">
+                    <p>Getting started is easy:</p>
+                    <ol>
+                        <li>Go to the <strong>Generate</strong> tab and enter a threat group name (e.g., "APT29") or MITRE technique ID</li>
+                        <li>Optionally enable AI, with a local Ollama model or a cloud provider, in Profile → API Keys</li>
+                        <li>Click "Generate Detections" and wait for processing to complete</li>
+                        <li>Download the generated detections as a ZIP file</li>
+                        <li>Review the YAML files and deploy queries to your SIEM</li>
+                    </ol>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">Does Archer work offline?</summary>
+                <div class="faq-answer">
+                    <p>Archer requires internet access for the initial setup to download MITRE ATT&CK data and OSINT repositories. Once cached, it can generate detections offline without requiring external API calls (unless you enable AI enhancement). All OSINT sources are cloned locally, so Archer doesn't rely on external APIs for core functionality.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How does Archer handle software (malware/tools) in threat groups?</summary>
+                <div class="faq-answer">
+                    <p>Archer uses <strong>software-to-technique traversal</strong> to extract actionable indicators from malware and tools. Instead of just detecting software names like "BlackCat" or "Mimikatz", Archer automatically:</p>
+                    <ol>
+                        <li>Identifies which techniques the software employs (e.g., BlackCat uses T1083 File Discovery, T1486 Data Encryption)</li>
+                        <li>Extracts technical indicators from those techniques (e.g., <code>net use</code>, <code>fsutil behavior set</code>)</li>
+                        <li>Merges these with the group's direct technique indicators</li>
+                        <li>Removes duplicates to create comprehensive detections</li>
+                    </ol>
+                    <p><strong>Example:</strong> For Scattered Spider using BlackCat ransomware, detections include specific commands BlackCat runs (like <code>fsutil</code>, <code>vssadmin</code>) rather than just looking for the "BlackCat" string.</p>
+                    <p>This implements two indicator extraction paths:</p>
+                    <ul>
+                        <li><strong>Direct:</strong> Group → Techniques → Indicators</li>
+                        <li><strong>Software:</strong> Group → Software → Techniques → Indicators</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How are correlations scored and prioritized?</summary>
+                <div class="faq-answer">
+                    <p>Archer scores correlations on a 140-point scale based on six key factors:</p>
+                    <ul>
+                        <li><strong>Technique Criticality (30 points):</strong> High-impact techniques like credential dumping, lateral movement, and data exfiltration score higher</li>
+                        <li><strong>Tactic Priority (20 points):</strong> Correlations involving critical tactics (Credential Access, Lateral Movement, Exfiltration, Impact) score significantly higher than lower-priority tactics (Execution, Discovery)</li>
+                        <li><strong>Query Specificity (20 points):</strong> More specific queries with detailed indicators score better than generic ones</li>
+                        <li><strong>False Positive Rate (25 points):</strong> Lower estimated false positive rates increase the score</li>
+                        <li><strong>Attack Progression (25 points):</strong> Correlations that follow logical attack chains (e.g., Credential Access → Lateral Movement) score highest</li>
+                        <li><strong>Data Source Diversity (-10 to +20 points):</strong> Correlations spanning multiple data sources (e.g., process + network) get bonus points</li>
+                    </ul>
+                    <p><strong>Tactic Priority Weights:</strong></p>
+                    <ul style="margin-left: 20px; font-size: 0.95em;">
+                        <li><strong>Critical (10 pts):</strong> Credential Access, Lateral Movement, Exfiltration, Impact</li>
+                        <li><strong>High (8 pts):</strong> Privilege Escalation, Persistence, Command & Control</li>
+                        <li><strong>Medium (6 pts):</strong> Defense Evasion, Collection, Initial Access</li>
+                        <li><strong>Lower (3-4 pts):</strong> Execution, Discovery, Reconnaissance</li>
+                    </ul>
+                    <p><strong>Note:</strong> Semantic overlap (query field similarity) is calculated and displayed as <em>informational metadata</em> but does NOT affect scoring. What matters is whether the techniques form a meaningful attack chain, not whether they use similar log fields.</p>
+                    <p><strong>Minimum Threshold:</strong> Only correlations with 75% or higher relevance (score ≥ 105/140) are included by default. This threshold can be adjusted by setting <code>CORRELATION_MIN_RELEVANCE</code> in your <code>.env</code> file (range: 0.0 to 1.0).</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How does Archer handle multi-cloud environments (AWS/Azure/GCP)?</summary>
+                <div class="faq-answer">
+                    <p>Archer includes sophisticated <strong>cloud platform separation</strong> to prevent mixing AWS, Azure, and GCP indicators incorrectly:</p>
+                    <ul>
+                        <li><strong>Cloud-native logs:</strong> AWS CloudTrail, Azure Activity Log, and GCP Audit logs are only used for their respective cloud platforms</li>
+                        <li><strong>Endpoint detection:</strong> Endpoint logs (Windows, Linux, Defender XDR tables) can detect cloud CLI tools running on endpoints (e.g., <code>aws</code>, <code>az</code>, <code>gcloud</code> commands)</li>
+                        <li><strong>Automatic filtering:</strong> Detection queries automatically select appropriate log sources based on cloud platform context</li>
+                        <li><strong>No cross-contamination:</strong> AWS API calls won't generate Azure AD detections, and vice versa</li>
+                    </ul>
+                    <p>This ensures clean, platform-specific detections while maintaining the ability to detect cloud CLI usage on endpoints.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How do correlation filters work?</summary>
+                <div class="faq-answer">
+                    <p>Archer uses multiple intelligent filters to ensure only high-quality correlations are generated:</p>
+                    <ul>
+                        <li><strong>Attack Progression Filter:</strong> Only correlates techniques that follow logical kill chain sequences (e.g., Initial Access → Execution → Privilege Escalation)</li>
+                        <li><strong>Semantic Overlap Filters:</strong> Removes near-duplicates (>75% overlap) and completely unrelated pairs (<20% overlap)</li>
+                        <li><strong>Same-Table Deduplication:</strong> Prevents low-value correlations between detections querying identical data sources</li>
+                        <li><strong>High-Impact Requirement:</strong> Prioritizes correlations involving at least one high-value MITRE ATT&CK technique</li>
+                        <li><strong>Data Source Diversity:</strong> Awards bonus points to correlations spanning multiple data sources for better coverage</li>
+                        <li><strong>Correlation Grouping:</strong> Automatically deduplicates similar technique pairs, keeping only the highest-quality correlation</li>
+                    </ul>
+                    <p><strong>Result:</strong> 75-85% reduction in correlation noise while maintaining attack chain detection fidelity.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What is "Merge by Tactic" and when should I use it?</summary>
+                <div class="faq-answer">
+                    <p><strong>Merge by Tactic</strong> combines all detections under the same MITRE ATT&CK tactic (e.g., all Credential Access techniques), then correlates across tactics.</p>
+
+                    <p><strong>When to use:</strong></p>
+                    <ul>
+                        <li>Executive dashboards requiring simple, high-level view</li>
+                        <li>Low-noise alerting for SOC environments</li>
+                        <li>Phase-based threat hunting campaigns</li>
+                        <li>Incident response workflows focused on attack progression</li>
+                    </ul>
+
+                    <p><strong>Benefits:</strong></p>
+                    <ul>
+                        <li>Generates 8-15 high-level correlations instead of hundreds</li>
+                        <li>Represents entire attack phases (e.g., "All Credential Access → All Lateral Movement")</li>
+                        <li>Broader detection coverage - catches ANY technique in the tactic</li>
+                        <li>Reduces alert fatigue significantly</li>
+                    </ul>
+
+                    <p><strong>Trade-off:</strong> Less granular - you won't see which specific techniques triggered, but you'll know which attack phases occurred.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What is "Merge by Parent Technique"?</summary>
+                <div class="faq-answer">
+                    <p><strong>Merge by Parent Technique</strong> groups subtechniques under their parent (e.g., T1003.001, T1003.002, T1003.003 → T1003), then correlates parent techniques.</p>
+
+                    <p><strong>When to use:</strong></p>
+                    <ul>
+                        <li>Mid-level granularity between tactic-level and subtechnique-level</li>
+                        <li>Tracking specific attack patterns without excessive detail</li>
+                        <li>Correlating technique families (all OS Credential Dumping methods)</li>
+                    </ul>
+
+                    <p><strong>Benefits:</strong></p>
+                    <ul>
+                        <li>Moderate correlation reduction (~50-70% fewer than default)</li>
+                        <li>Maintains technique-level context</li>
+                        <li>Groups related attack methods logically</li>
+                        <li>Good balance between detail and simplicity</li>
+                    </ul>
+
+                    <p><strong>Example:</strong> Instead of 9 correlations for every LSASS dumping variant, you get 1 correlation for "OS Credential Dumping (T1003)".</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">How can I test which correlation settings work best for me?</summary>
+                <div class="faq-answer">
+                    <p>Archer includes a test script to evaluate different filter combinations:</p>
+
+                    <pre><code>python test_correlation_filters.py "Scattered Spider"</code></pre>
+
+                    <p>The script will:</p>
+                    <ul>
+                        <li>Run correlations with baseline, merge-by-tactic, and merge-by-parent modes</li>
+                        <li>Compare total correlation counts</li>
+                        <li>Calculate average relevance scores</li>
+                        <li>Identify high-quality correlation counts</li>
+                        <li>Measure execution time for each configuration</li>
+                        <li>Provide recommendations based on your specific threat group</li>
+                    </ul>
+
+                    <p>Results are saved to a JSON file for further analysis. Use this to determine which mode produces the most actionable results for your environment.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What are the various approaches to building correlations available in Archer and how do I invoke each one?</summary>
+                <div class="faq-answer">
+                    <p>Archer uses <strong>one correlation engine</strong> that automatically runs after detection generation. However, you can influence the quality of correlations by choosing different <strong>detection generation modes</strong>:</p>
+
+                    <h4>The Correlation Engine (Always Enabled)</h4>
+                    <p>Archer's correlation engine uses a <strong>rule-based heuristic scoring system</strong> with 6 factors (0-140 points) to intelligently pair detections within each vendor. This engine:</p>
+                    <ul>
+                        <li>Automatically runs after detection generation completes</li>
+                        <li>Cannot be disabled (always generates correlations)</li>
+                        <li>Works entirely offline without AI</li>
+                        <li>Provides deterministic, consistent results</li>
+                        <li><strong>Includes semantic analysis by default</strong>: Calculates semantic overlap between queries (0-100%) to filter duplicates and ensure diversity</li>
+                    </ul>
+
+                    <p><strong>Scoring factors:</strong> Technique Criticality (0-30 pts), Tactic Priority (0-20 pts), Query Specificity (0-20 pts), False Positive Rate (0-25 pts), Attack Progression (0-25 pts), Data Source Diversity (-10 to +20 pts)</p>
+
+                    <p><strong>Built-in semantic analysis:</strong> Always calculates token-based semantic overlap (Jaccard similarity) to filter correlations with >80% overlap (too similar)</p>
+
+                    <p><strong>Tunable parameters</strong> (Profile → Config):</p>
+                    <ul>
+                        <li><strong>Threshold:</strong> 40% (minimum relevance score to include correlation)</li>
+                        <li><strong>Per-Vendor Limit:</strong> 60 (max correlations per vendor)</li>
+                        <li><strong>Tech Frequency:</strong> 20 (max appearances of a technique in simple correlations)</li>
+                    </ul>
+
+                    <h4>Detection Generation Modes (Affect Correlation Quality)</h4>
+                    <p>The quality and types of correlations depend on what detections you generate. Choose a generation mode:</p>
+
+                    <h5>1. Standard Generation (Default)</h5>
+                    <ul>
+                        <li><strong>How to invoke:</strong> Don't check any boxes (default)</li>
+                        <li><strong>What it does:</strong> Generates detections using template-based approach</li>
+                        <li><strong>Correlation result:</strong> Standard correlations based on templates</li>
+                    </ul>
+
+                    <h5>2. Advanced Parsing (Semantic Analysis)</h5>
+                    <ul>
+                        <li><strong>How to invoke:</strong> Check "Advanced Parsing" in Web UI</li>
+                        <li><strong>What it does:</strong> Groups detections by behavioral categories during generation (authentication, network, file, process)</li>
+                        <li><strong>Correlation result:</strong> More semantically-related correlations that understand behavioral context</li>
+                        <li><strong>When to use:</strong> Complex attack chains where behavioral relationships matter</li>
+                    </ul>
+
+                    <h5>3. AI Generators (Optional)</h5>
+                    <ul>
+                        <li><strong>How to invoke:</strong> Check "AI Generators" checkbox in Web UI</li>
+                        <li><strong>What it does:</strong> Uses LLMs to enhance detection generation quality</li>
+                        <li><strong>Effect on correlations:</strong> AI-enhanced detections → better quality input for correlation engine</li>
+                        <li><strong>AI providers:</strong> a local model via Ollama or LM Studio, or a cloud provider (Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok)</li>
+                        <li><strong>Requirements:</strong> a provider configured in Profile → API Keys, or a local LLM endpoint for offline AI</li>
+                        <li><strong>When to use:</strong> Experimental AI-enhanced detection quality</li>
+                    </ul>
+
+                    <h5>4. AI Correlations (Optional)</h5>
+                    <ul>
+                        <li><strong>How to invoke:</strong> Check "AI Correlations" checkbox in Web UI (requires "AI Generators" also enabled)</li>
+                        <li><strong>What it does:</strong> Uses LLMs to improve correlation JOIN query combination strategies</li>
+                        <li><strong>What it does NOT do:</strong> Detection pairing and scoring remain rule-based (6-factor, 0-140 points). AI cannot change which detections get paired or their relevance scores</li>
+                        <li><strong>Effect on correlations:</strong> Smarter JOIN query logic for combining detection queries</li>
+                        <li><strong>Requirements:</strong> AI enabled, with a provider configured in Profile → API Keys</li>
+                        <li><strong>When to use:</strong> Experimental AI-enhanced correlation query combination</li>
+                    </ul>
+
+                    <h4>The Complete Flow</h4>
+                    <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 1em 0; font-family: monospace; font-size: 0.9em;">
+                        <strong>Step 1: Detection Generation</strong> (choose one mode)<br>
+                        &nbsp;&nbsp;├─ Standard (default)<br>
+                        &nbsp;&nbsp;├─ Advanced Parsing (semantic grouping)<br>
+                        &nbsp;&nbsp;└─ AI Generators (AI-enhanced)<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+                        <strong>Step 2: Generated Detections</strong> (YAML files)<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+                        <strong>Step 3: Correlation Engine</strong> (ALWAYS runs automatically)<br>
+                        &nbsp;&nbsp;├─ Score all detection pairs (0-140)<br>
+                        &nbsp;&nbsp;├─ Filter by threshold (40%)<br>
+                        &nbsp;&nbsp;├─ Apply per-vendor limit (60)<br>
+                        &nbsp;&nbsp;├─ Merge related correlations<br>
+                        &nbsp;&nbsp;└─ Generate JOIN queries<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+                        <strong>Step 4: Correlation Results</strong> (JSON file)
+                    </div>
+
+                    <h4>Quick Reference</h4>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;">
+                        <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                            <th style="padding: 8px; text-align: left;">Option</th>
+                            <th style="padding: 8px; text-align: left;">Invocation</th>
+                            <th style="padding: 8px; text-align: left;">Offline?</th>
+                            <th style="padding: 8px; text-align: left;">Effect on Correlations</th>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>Standard</strong></td>
+                            <td style="padding: 8px;">Default (no boxes)</td>
+                            <td style="padding: 8px;">✅ Yes</td>
+                            <td style="padding: 8px;">Standard template-based correlations</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>Advanced Parsing</strong></td>
+                            <td style="padding: 8px;">Check "Advanced Parsing"</td>
+                            <td style="padding: 8px;">✅ Yes</td>
+                            <td style="padding: 8px;">Semantically-grouped correlations</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>AI Generators</strong></td>
+                            <td style="padding: 8px;">Check "AI Generators"</td>
+                            <td style="padding: 8px;">❌ No (requires API)</td>
+                            <td style="padding: 8px;">AI-enhanced detections → better input quality</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 8px;"><strong>AI Correlations</strong></td>
+                            <td style="padding: 8px;">Check "AI Correlations"</td>
+                            <td style="padding: 8px;">❌ No (requires API)</td>
+                            <td style="padding: 8px;">Smarter JOIN query combination logic</td>
+                        </tr>
+                    </table>
+
+                    <h4>Advanced Correlation Options</h4>
+                    <p>These options modify how the correlation engine processes results:</p>
+                    <ul>
+                        <li><strong>Merge by Parent Technique:</strong> Groups correlations by parent technique (e.g., T1003.001, T1003.002 → T1003) - Check "Merge by Parent Technique" in UI</li>
+                        <li><strong>OSINT Enhancement:</strong> Incorporate battle-tested detection patterns from OSINT sources (Elastic, Splunk) - Check "OSINT Enhancement" in UI</li>
+                        <li><strong>OSINT Comparison:</strong> Compare generated correlations with open-source repos to show alignment with community detection rules - Check "OSINT Comparison" in UI</li>
+                    </ul>
+
+                    <h4>Key Takeaways</h4>
+                    <ul>
+                        <li><strong>ONE correlation engine</strong>: Rule-based heuristic with built-in semantic analysis (always active)</li>
+                        <li><strong>Detection generation modes</strong>: Affect the INPUT to correlation (quality of detections)</li>
+                        <li><strong>AI Generators</strong>: Enhances detection quality, providing better input for correlation engine</li>
+                        <li><strong>AI Correlations</strong>: Improves JOIN query combination logic, but scoring/pairing remain rule-based</li>
+                        <li><strong>Semantic analysis</strong>: Token-based overlap calculation (0-100%) is default, "Advanced Parsing" adds deep behavioral categorization</li>
+                        <li><strong>All correlations</strong>: Scored identically (6 factors, 0-140 points) regardless of generation mode or AI options</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">What's coming in future versions?</summary>
+                <div class="faq-answer">
+                    <p>Planned enhancements include:</p>
+                    <ul>
+                        <li>VECTR integration for purple team exercises</li>
+                        <li>Atomic Red Team emulation capabilities</li>
+                        <li>Real-time threat intelligence feeds</li>
+                        <li>Custom query template support</li>
+                        <li>Cross-vendor correlation workflows</li>
+                    </ul>
+                </div>
+            </details>
+        </div>
             </div>
             <!-- End Overview Tab -->
 
@@ -819,33 +1336,38 @@
             </p>
 
             <div class="diagram" style="padding:0;background:transparent;border:0">
-                <div class="diagram-click">
-                    <a class="diagram-overlay" href="{{ url_for('static', path='diagrams/architecture.html') }}" target="_blank" rel="noopener" aria-label="Open the architecture diagram full size"></a>
-                    <span class="diagram-badge">&#8599; full size</span>
-                    <iframe id="arch-frame" src="{{ url_for('static', path='diagrams/architecture.html') }}?v={{ request.app.state.asset_version }}"
-                            title="Archer architecture — web UI and archer-cli" loading="lazy" scrolling="no"
-                            style="width:100%;border:1px solid var(--border-color);border-radius:10px;background:transparent;display:block;pointer-events:none"></iframe>
-                </div>
-                <div class="diagram-caption">
-                    The web UI (top) and <code>archer-cli</code> (bottom) — the same pipeline. Click the diagram to open it
-                    <a href="{{ url_for('static', path='diagrams/architecture.html') }}" target="_blank" rel="noopener">full size</a>.
-                </div>
-
-                <div class="diagram-previews">
-                    <div class="diagram-click">
-                        <a class="diagram-overlay" href="{{ url_for('static', path='diagrams/pipeline.html') }}" target="_blank" rel="noopener" aria-label="Open the generation-flow diagram full size"></a>
-                        <span class="diagram-badge">&#8599; full size</span>
-                        <iframe class="diagram-thumb" src="{{ url_for('static', path='diagrams/pipeline.html') }}?v={{ request.app.state.asset_version }}"
-                                title="Archer generation flow" loading="lazy" scrolling="no" style="pointer-events:none"></iframe>
+                <div class="diagram-grid">
+                    <div class="diagram-cell arch-cell">
+                        <div class="diagram-click">
+                            <a class="diagram-overlay" href="{{ url_for('static', path='diagrams/architecture.html') }}" target="_blank" rel="noopener" aria-label="Open the architecture diagram full size"></a>
+                            <span class="diagram-badge">&#8599; full size</span>
+                            <iframe id="arch-frame" src="{{ url_for('static', path='diagrams/architecture.html') }}?v={{ request.app.state.asset_version }}"
+                                    title="Archer architecture — web UI and archer-cli" loading="lazy" scrolling="no"
+                                    style="width:100%;border:1px solid var(--border-color);border-radius:10px;background:transparent;display:block;pointer-events:none"></iframe>
+                        </div>
+                    </div>
+                    <div class="diagram-cell">
+                        <div class="diagram-click">
+                            <a class="diagram-overlay" href="{{ url_for('static', path='diagrams/pipeline.html') }}" target="_blank" rel="noopener" aria-label="Open the generation-flow diagram full size"></a>
+                            <span class="diagram-badge">&#8599; full size</span>
+                            <iframe class="diagram-thumb" src="{{ url_for('static', path='diagrams/pipeline.html') }}?v={{ request.app.state.asset_version }}"
+                                    title="Archer generation flow" loading="lazy" scrolling="no" style="pointer-events:none"></iframe>
+                        </div>
                         <div class="diagram-caption">The <strong>generation flow</strong> — input &rarr; MITRESaw &rarr; queries &rarr; correlation &rarr; artefacts.</div>
                     </div>
-                    <div class="diagram-click">
-                        <a class="diagram-overlay" href="{{ url_for('static', path='diagrams/machine.html') }}" target="_blank" rel="noopener" aria-label="Open the Archer machine diagram full size"></a>
-                        <span class="diagram-badge">&#8599; open &amp; interact</span>
-                        <iframe class="diagram-thumb" src="{{ url_for('static', path='diagrams/machine.html') }}?v={{ request.app.state.asset_version }}"
-                                title="The Archer machine" loading="lazy" scrolling="no" style="pointer-events:none"></iframe>
+                    <div class="diagram-cell">
+                        <div class="diagram-click">
+                            <a class="diagram-overlay" href="{{ url_for('static', path='diagrams/machine.html') }}" target="_blank" rel="noopener" aria-label="Open the Archer machine diagram full size"></a>
+                            <span class="diagram-badge">&#8599; open &amp; interact</span>
+                            <iframe class="diagram-thumb" src="{{ url_for('static', path='diagrams/machine.html') }}?v={{ request.app.state.asset_version }}"
+                                    title="The Archer machine" loading="lazy" scrolling="no" style="pointer-events:none"></iframe>
+                        </div>
                         <div class="diagram-caption">The <strong>Archer machine</strong> — interactive 3D runtime (drag to orbit, click a part).</div>
                     </div>
+                </div>
+                <div class="diagram-caption" style="text-align:center; margin-top:14px">
+                    The web UI (top) and <code>archer-cli</code> (bottom) — the same pipeline. Click the diagram to open it
+                    <a href="{{ url_for('static', path='diagrams/architecture.html') }}" target="_blank" rel="noopener">full size</a>.
                 </div>
             </div>
 
@@ -1658,40 +2180,7 @@ AI recognizes this as:
             </div>
             
             </div>
-            <!-- FAQ Tab -->
-            <div class="tab-pane" id="tab-faq">
-            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Short answers to the questions that come up most. For the detail behind each, see the Architecture, AI &amp; Agents and Intel &amp; Profile tabs.</p>
-            <nav class="tab-toc" aria-label="On this page"><span class="toc-label">On this page</span><a href="#faq-getting-started">Getting started</a><a href="#faq-generation-ai">Generation and AI</a><a href="#faq-siems-output">SIEMs and output</a><a href="#faq-intel-privacy">Intel, attribution and privacy</a></nav>
-            <h3 id="faq-getting-started">Getting started</h3>
-            <div class="faq-list">
-                <div class="faq-item"><p class="faq-q">Do I need an AI model or API key?</p><p class="faq-a">No. Archer generates detections, correlations and attack flows with no model at all &mdash; the template tier fills query templates from MITRESaw evidence. A model is opt-in (Profile &rarr; API Keys) and only adds the LLM generation tier and Ask Archer.</p></div>
-                <div class="faq-item"><p class="faq-q">How do I see where data appears without running a real hunt?</p><p class="faq-a">Run <code>archer-cli test populate</code>: it seeds one clearly-labelled scenario across every surface (Results, Coverage, Catalogue, Library, Assessments, correlations). <code>archer-cli test depopulate</code> removes it cleanly afterwards.</p></div>
-                <div class="faq-item"><p class="faq-q">Hunt or Profile &mdash; what's the difference?</p><p class="faq-a">A hunt takes a threat group, a CVE or an uploaded report. Profile starts from a company domain, works out who is likely to target it, then generates detections for the groups you choose.</p></div>
-            </div>
-            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
-            <h3 id="faq-generation-ai">Generation and AI</h3>
-            <div class="faq-list">
-                <div class="faq-item"><p class="faq-q">What are the generation modes?</p><p class="faq-a">From fast heuristics through to a local or cloud model. Set with the <code>GENAI_MODE</code> environment variable or in Profile. Only the LLM tier calls a model; everything else is deterministic.</p></div>
-                <div class="faq-item"><p class="faq-q">Will a small local model work?</p><p class="faq-a">Yes for single-technique generation with the compact prompt. Multi-step agents are less reliable on small local models &mdash; they tend to stop early. A looping or truncated answer is rejected and nothing is written.</p></div>
-                <div class="faq-item"><p class="faq-q">What does AI actually add?</p><p class="faq-a">IOC extraction, semantic query grouping and correlation reasoning. It sits alongside the pipeline, never in its critical path.</p></div>
-            </div>
-            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
-            <h3 id="faq-siems-output">SIEMs and output</h3>
-            <div class="faq-list">
-                <div class="faq-item"><p class="faq-q">Which SIEMs, and which is primary?</p><p class="faq-a">Google SecOps (YARA-L / UDM) is the primary target and the top correlation priority, then Defender XDR (KQL), Splunk (SPL) and Elastic (ES|QL).</p></div>
-                <div class="faq-item"><p class="faq-q">Where do detections live, and in what format?</p><p class="faq-a">YAML in <code>data/groups/</code> &mdash; name, technique, query, severity, required data connectors and indicators. They can be pushed as detections-as-code to a configured git repo.</p></div>
-                <div class="faq-item"><p class="faq-q">What is a cross-vendor playbook?</p><p class="faq-a">A correlation chain whose stages are joined across SIEMs on host and user entities &mdash; one attack chain expressed vendor-agnostically, rendered on the Results page.</p></div>
-                <div class="faq-item"><p class="faq-q">Why is a detection marked &ldquo;source not ingested&rdquo;?</p><p class="faq-a">Availability gating: the technique's data source isn't in your ingest. It is flagged at generation and excluded at deploy &mdash; never silently dropped, so coverage stays honest.</p></div>
-            </div>
-            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
-            <h3 id="faq-intel-privacy">Intel, attribution and privacy</h3>
-            <div class="faq-list">
-                <div class="faq-item"><p class="faq-q">How does attribution work?</p><p class="faq-a">Three paths via MITRESaw: <strong>direct</strong> (the group uses the technique), <strong>via software</strong> (inherited from its tooling or its campaigns' tooling) and <strong>via campaign</strong> (attributed through a named campaign).</p></div>
-                <div class="faq-item"><p class="faq-q">Does my organisation's data get committed to git?</p><p class="faq-a">No. Index names and mappings live in gitignored <code>bespoke/</code>; <code>data/</code> and all telemetry are gitignored; only generic names appear in code and docs.</p></div>
-                <div class="faq-item"><p class="faq-q">Is VECTR required?</p><p class="faq-a">No. Archer works alongside VECTR &mdash; push threat-library cases in, read campaign outcomes back &mdash; but it isn't needed. The in-app threat library stands on its own.</p></div>
-            </div>
-            </div>
-            <!-- End FAQ Tab -->
+            
 
             <!-- End Intel and Profile Tab -->
 
@@ -1706,532 +2195,7 @@ AI recognizes this as:
         </div>
         <!-- End Tabs Container -->
 
-        <!-- FAQ Section -->
-        <div class="section" style="margin-top: 3em;">
-            <h2 class="hiw-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Frequently Asked Questions</h2>
-
-            <details class="faq-item">
-                <summary class="faq-question">What is Archer and what does it do?</summary>
-                <div class="faq-answer">
-                    <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Archer turns MITRE ATT&CK threat intelligence into detection queries for Microsoft Defender XDR, Google SecOps, Splunk and Elastic. Point it at a threat group, a CVE, a report or a company and it generates coverage for every technique involved, chains the detections into correlations, and checks them before you keep them. It is open source and self-hosted, and works without AI by default.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">Do I need an AI provider to use Archer?</summary>
-                <div class="faq-answer">
-                    <p>No. Archer works without AI by default, and the whole pipeline — generation, correlation and the checks — is deterministic code. AI is opt-in and never in the critical path: it adds Ask Archer, the agents and threat briefings. When you do want it, you can point Archer at a local model through Ollama or a cloud provider (Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok), so nothing has to leave your machine.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">Why is Archer so fast? Is it using AI or machine learning?</summary>
-                <div class="faq-answer">
-                    <p>Generation is deterministic code, not model inference. The ATT&CK bundle and the OSINT rule index are built once and read from disk; indicators are matched with compiled patterns and dictionary lookups; queries come from per-platform builders, not token-by-token from an LLM; and correlation scoring is arithmetic over the techniques. A full group of 30–50 techniques takes minutes, and a single detection well under a second — and it all runs locally against a SQLite database, offline if you want.</p>
-
-                    <p>When you turn AI on, it sits beside this, never inside it: Ask Archer, the agents and briefings call a model you choose (local or cloud), and if one isn't configured the deterministic path is simply what runs. So the speed, the privacy and the repeatability are the default, and AI is something you add when it earns its place.</p>
-
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 1em;">
-                        <tr style="background: var(--bg-secondary); border-bottom: 2px solid var(--border);">
-                            <th style="padding: 8px; text-align: left;">Aspect</th>
-                            <th style="padding: 8px; text-align: left;">Archer's pipeline</th>
-                            <th style="padding: 8px; text-align: left;">An LLM-in-the-loop generator</th>
-                        </tr>
-                        <tr style="border-bottom: 1px solid var(--border);">
-                            <td style="padding: 8px;"><strong>Speed</strong></td>
-                            <td style="padding: 8px;">Sub-second per detection</td>
-                            <td style="padding: 8px;">Seconds per query, per model call</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid var(--border);">
-                            <td style="padding: 8px;"><strong>Cost</strong></td>
-                            <td style="padding: 8px;">None — runs locally</td>
-                            <td style="padding: 8px;">Per-token, per query</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid var(--border);">
-                            <td style="padding: 8px;"><strong>Privacy</strong></td>
-                            <td style="padding: 8px;">Stays on your machine</td>
-                            <td style="padding: 8px;">Sent to the provider (unless local)</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid var(--border);">
-                            <td style="padding: 8px;"><strong>Repeatability</strong></td>
-                            <td style="padding: 8px;">Same input, same output</td>
-                            <td style="padding: 8px;">Non-deterministic</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px;"><strong>Offline</strong></td>
-                            <td style="padding: 8px;">Works without a network</td>
-                            <td style="padding: 8px;">Needs the API (unless local)</td>
-                        </tr>
-                    </table>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">What's the difference between OSINT Enhancement and OSINT Comparison?</summary>
-                <div class="faq-answer">
-                    <p><strong>OSINT Enhancement:</strong> Automatically incorporates battle-tested detection patterns from OSINT sources (Elastic, Splunk community rules) directly into your queries. This is enabled by default on the Hunt and Analyse tabs. What LOLBAS, LOLRMM and LOLDrivers document about binaries, RMM tools and drivers the group is seen using is a separate option, <strong>LOL datasets</strong>, also ticked by default.</p>
-                    <p><strong>OSINT Comparison:</strong> Compares techniques against OSINT databases and adds metadata to YAML files (visible in the "Show Details" button). This is reference-only and doesn't modify the queries themselves. Either option adds the known false positives that Elastic and Splunk rules document for the technique (LoFP-style).</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">How do correlations work?</summary>
-                <div class="faq-answer">
-                    <p><strong>Correlations:</strong> Combines queries for the same SIEM (Google SecOps, Defender XDR, Splunk or Elastic) into multi-stage detections. This is enabled by default and helps create detection chains that track attack progressions within a single SIEM platform.</p>
-                    <p>The results page shows each technique in a correlation as an <strong>individual query block</strong>, stacked with "chained with" connectors. The combined JOIN query is available via "Show Combined Query" below the stack.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">How does Semantic Analysis work?</summary>
-                <div class="faq-answer">
-                    <p>Semantic Analysis groups queries by behavioral categories (authentication, network, file activity, process execution, etc.) rather than just by technique ID. This is enabled by default and helps organize detections logically, making them easier to review, deploy, and maintain. It includes advanced query parsing for intelligent syntax-aware merging.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">What file formats can Analyse read?</summary>
-                <div class="faq-answer">
-                    <p>The Analyse tab reads multiple threat intelligence file formats including: PDF, TXT, Markdown (MD), JSON, CSV, Excel (XLSX/XLS), Word (DOCX/DOC), and YARA rules (.yar/.yara). Archer automatically extracts TTPs (Tactics, Techniques, and Procedures) and IOCs (Indicators of Compromise) from these files.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">What is the Profile tab used for?</summary>
-                <div class="faq-answer">
-                    <p>The Profile tab lets you analyze an organization's threat landscape based on their domain. It automatically identifies industry-specific threats, geographic threat actors, technology stack vulnerabilities, and optionally supply chain dependencies. It then recommends relevant threat groups and can auto-generate detection queries for them.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">What is Threat Briefing and how is it different from the AI Ask feature?</summary>
-                <div class="faq-answer">
-                    <p><strong>Threat Briefing</strong> generates a grounded, prioritised detection plan for a threat group. It is different from the Ask feature in a critical way:</p>
-                    <ul>
-                        <li><strong>Ask:</strong> Sends only the group name to the LLM — the LLM draws on its training data, which may be incomplete or outdated</li>
-                        <li><strong>Threat Briefing:</strong> Sends the actual MITRE ATT&CK technique list (all three attribution paths: direct, via software, via campaign) <em>plus</em> your current detection coverage — the LLM prioritises based on real data</li>
-                    </ul>
-                    <h4>What it produces</h4>
-                    <ul>
-                        <li><strong>Coverage stats:</strong> How many techniques are already covered by your detection library vs. gaps</li>
-                        <li><strong>Top-N priority list:</strong> Ranked techniques with priority reasoning and specific detection approach per technique</li>
-                        <li><strong>Attack chain:</strong> Kill chain tactic progression for the group</li>
-                        <li><strong>Executive summary:</strong> 2–3 sentence briefing for SOC leadership</li>
-                    </ul>
-                    <h4>How to use it</h4>
-                    <ol>
-                        <li>Enter a threat group name in the Generate tab (e.g., "Scattered Spider")</li>
-                        <li>Click <strong>Threat Briefing</strong> (the button below Generate Detections)</li>
-                        <li>Select the number of top techniques to prioritise (5 or 10)</li>
-                        <li>The briefing panel loads with coverage statistics, the ranked technique cards, and the attack chain</li>
-                    </ol>
-                    <p><strong>Requires:</strong> An LLM configured (Anthropic, OpenAI, or local Ollama). The briefing uses <code>POST /api/threat-briefing</code> and passes the complete technique/coverage context to the model.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">What are the individual query blocks on the results page?</summary>
-                <div class="faq-answer">
-                    <p>After generating detections and correlations, the results page now shows <strong>individual detection queries per technique</strong> within each correlation, stacked visually with "chained with" connectors between them. This replaces the previous single combined-query view.</p>
-                    <h4>What you see</h4>
-                    <ul>
-                        <li><strong>Technique name</strong> — the MITRE ATT&CK technique name</li>
-                        <li><strong>ATT&CK ID badge</strong> — e.g., <code>T1078</code> in a blue pill</li>
-                        <li><strong>Tactic badge</strong> — e.g., <code>Initial Access</code> in a green pill</li>
-                        <li><strong>Query block</strong> — the individual Splunk SPL or KQL query for that technique</li>
-                        <li><strong>Copy button</strong> — copies the individual query to clipboard</li>
-                        <li><strong>"chained with" connector</strong> — visual divider between techniques in a correlation</li>
-                    </ul>
-                    <h4>Combined query</h4>
-                    <p>The JOIN query that combines all techniques is still available — click <strong>Show Combined Query</strong> below the stacked blocks to expand it. This is the query you deploy to your SIEM as a single multi-stage alert.</p>
-                    <h4>Why this matters</h4>
-                    <p>Previously you could only see the combined JOIN query. The individual blocks let you understand exactly which technique each sub-query detects, copy individual queries for testing, and understand the attack chain before deploying the combined rule.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">How fast is Archer at generating detections?</summary>
-                <div class="faq-answer">
-                    <p>Archer is optimized for speed with template caching, parallel processing, and async operations. Generating 200 detection queries for a threat group like APT29 takes approximately 30 seconds with caching enabled (compared to 4-5 minutes without optimization). First-time runs take about 45 seconds while subsequent cached runs complete in about 5 seconds.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">What output formats does Archer generate?</summary>
-                <div class="faq-answer">
-                    <p>Archer generates multiple output formats:</p>
-                    <ul>
-                        <li><strong>YAML files:</strong> Individual detection rules in standardized YAML format</li>
-                        <li><strong>Vendor queries:</strong> Splunk SPL and Microsoft KQL queries</li>
-                        <li><strong>Correlation JSON:</strong> Multi-stage detection relationships</li>
-                        <li><strong>Attack Flow diagrams:</strong> JSON and HTML visualizations following the MITRE ATT&CK Flow specification</li>
-                        <li><strong>Library view:</strong> Interactive web interface to browse and export detections</li>
-                    </ul>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">Can I customize the generated detection queries?</summary>
-                <div class="faq-answer">
-                    <p>Yes! All generated detections are saved as YAML files that you can review, modify, and customize before deploying to your SIEM. The queries are designed to be production-ready but should always be tested in your environment and tuned to reduce false positives based on your specific infrastructure.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">How do I customize mapping files for my environment?</summary>
-                <div class="faq-answer">
-                    <p>Archer uses three mapping files to control detection generation for different environments:</p>
-                    <ul>
-                        <li><strong>indicatorMapping.json:</strong> Maps indicator types (cmd, file, ip, domain, etc.) to data sources and fields</li>
-                        <li><strong>platformMapping.json:</strong> Defines which platforms (Windows, Linux, AWS, Azure) are supported by each data source</li>
-                        <li><strong>fieldMapping.json:</strong> Maps generic field names to vendor-specific field names (e.g., process_name → ProcessName for Defender XDR)</li>
-                    </ul>
-                    <p><strong>Common customization scenarios:</strong></p>
-                    <ul>
-                        <li>Using custom Splunk indexes: Update <code>indicatorMapping.json</code> to replace default indexes with your own (e.g., <code>index=custom_windows_logs</code>)</li>
-                        <li>Multi-cloud environments: Add AWS/Azure/GCP data sources to appropriate indicator types</li>
-                        <li>Custom EDR solutions: Add new vendor mappings for CrowdStrike, Carbon Black, SentinelOne, etc.</li>
-                        <li>Disabling unused sources: Remove or comment out data sources you don't have</li>
-                    </ul>
-                    <p><strong>Best practices:</strong> Always backup mapping files before modifying, validate JSON syntax, test with small groups first, and document your changes. See the <a href="https://github.com/cmdaltr/archer/blob/main/docs/guides/MAPPING_FILES_GUIDE.md" target="_blank" style="color: #8B0000; text-decoration: underline;">Mapping Files Configuration Guide</a> for detailed instructions and examples.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">What data sources does Archer pull from?</summary>
-                <div class="faq-answer">
-                    <p>Archer pulls from multiple authoritative sources:</p>
-                    <ul>
-                        <li><strong>MITRE ATT&CK:</strong> Official enterprise-attack.json for technique mappings</li>
-                        <li><strong>Community repositories:</strong> Elastic detection rules, Splunk security content</li>
-                        <li><strong>OSINT sources:</strong> 5+ open-source security repositories with 7,500+ detection rules</li>
-                        <li><strong>Threat reports:</strong> Uploaded files or analyzed blog posts/reports</li>
-                    </ul>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">Is Archer suitable for production use?</summary>
-                <div class="faq-answer">
-                    <p>Archer generates production-quality detection queries, but as with any automated tool, you should review and test all detections in your environment before deploying to production. Different organizations have different baselines, and tuning is essential to reduce false positives and ensure the detections work correctly with your specific data sources and infrastructure.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">How do I get started with Archer?</summary>
-                <div class="faq-answer">
-                    <p>Getting started is easy:</p>
-                    <ol>
-                        <li>Go to the <strong>Generate</strong> tab and enter a threat group name (e.g., "APT29") or MITRE technique ID</li>
-                        <li>Optionally enable AI, with a local Ollama model or a cloud provider, in Profile → API Keys</li>
-                        <li>Click "Generate Detections" and wait for processing to complete</li>
-                        <li>Download the generated detections as a ZIP file</li>
-                        <li>Review the YAML files and deploy queries to your SIEM</li>
-                    </ol>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">Does Archer work offline?</summary>
-                <div class="faq-answer">
-                    <p>Archer requires internet access for the initial setup to download MITRE ATT&CK data and OSINT repositories. Once cached, it can generate detections offline without requiring external API calls (unless you enable AI enhancement). All OSINT sources are cloned locally, so Archer doesn't rely on external APIs for core functionality.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">How does Archer handle software (malware/tools) in threat groups?</summary>
-                <div class="faq-answer">
-                    <p>Archer uses <strong>software-to-technique traversal</strong> to extract actionable indicators from malware and tools. Instead of just detecting software names like "BlackCat" or "Mimikatz", Archer automatically:</p>
-                    <ol>
-                        <li>Identifies which techniques the software employs (e.g., BlackCat uses T1083 File Discovery, T1486 Data Encryption)</li>
-                        <li>Extracts technical indicators from those techniques (e.g., <code>net use</code>, <code>fsutil behavior set</code>)</li>
-                        <li>Merges these with the group's direct technique indicators</li>
-                        <li>Removes duplicates to create comprehensive detections</li>
-                    </ol>
-                    <p><strong>Example:</strong> For Scattered Spider using BlackCat ransomware, detections include specific commands BlackCat runs (like <code>fsutil</code>, <code>vssadmin</code>) rather than just looking for the "BlackCat" string.</p>
-                    <p>This implements two indicator extraction paths:</p>
-                    <ul>
-                        <li><strong>Direct:</strong> Group → Techniques → Indicators</li>
-                        <li><strong>Software:</strong> Group → Software → Techniques → Indicators</li>
-                    </ul>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">How are correlations scored and prioritized?</summary>
-                <div class="faq-answer">
-                    <p>Archer scores correlations on a 140-point scale based on six key factors:</p>
-                    <ul>
-                        <li><strong>Technique Criticality (30 points):</strong> High-impact techniques like credential dumping, lateral movement, and data exfiltration score higher</li>
-                        <li><strong>Tactic Priority (20 points):</strong> Correlations involving critical tactics (Credential Access, Lateral Movement, Exfiltration, Impact) score significantly higher than lower-priority tactics (Execution, Discovery)</li>
-                        <li><strong>Query Specificity (20 points):</strong> More specific queries with detailed indicators score better than generic ones</li>
-                        <li><strong>False Positive Rate (25 points):</strong> Lower estimated false positive rates increase the score</li>
-                        <li><strong>Attack Progression (25 points):</strong> Correlations that follow logical attack chains (e.g., Credential Access → Lateral Movement) score highest</li>
-                        <li><strong>Data Source Diversity (-10 to +20 points):</strong> Correlations spanning multiple data sources (e.g., process + network) get bonus points</li>
-                    </ul>
-                    <p><strong>Tactic Priority Weights:</strong></p>
-                    <ul style="margin-left: 20px; font-size: 0.95em;">
-                        <li><strong>Critical (10 pts):</strong> Credential Access, Lateral Movement, Exfiltration, Impact</li>
-                        <li><strong>High (8 pts):</strong> Privilege Escalation, Persistence, Command & Control</li>
-                        <li><strong>Medium (6 pts):</strong> Defense Evasion, Collection, Initial Access</li>
-                        <li><strong>Lower (3-4 pts):</strong> Execution, Discovery, Reconnaissance</li>
-                    </ul>
-                    <p><strong>Note:</strong> Semantic overlap (query field similarity) is calculated and displayed as <em>informational metadata</em> but does NOT affect scoring. What matters is whether the techniques form a meaningful attack chain, not whether they use similar log fields.</p>
-                    <p><strong>Minimum Threshold:</strong> Only correlations with 75% or higher relevance (score ≥ 105/140) are included by default. This threshold can be adjusted by setting <code>CORRELATION_MIN_RELEVANCE</code> in your <code>.env</code> file (range: 0.0 to 1.0).</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">How does Archer handle multi-cloud environments (AWS/Azure/GCP)?</summary>
-                <div class="faq-answer">
-                    <p>Archer includes sophisticated <strong>cloud platform separation</strong> to prevent mixing AWS, Azure, and GCP indicators incorrectly:</p>
-                    <ul>
-                        <li><strong>Cloud-native logs:</strong> AWS CloudTrail, Azure Activity Log, and GCP Audit logs are only used for their respective cloud platforms</li>
-                        <li><strong>Endpoint detection:</strong> Endpoint logs (Windows, Linux, Defender XDR tables) can detect cloud CLI tools running on endpoints (e.g., <code>aws</code>, <code>az</code>, <code>gcloud</code> commands)</li>
-                        <li><strong>Automatic filtering:</strong> Detection queries automatically select appropriate log sources based on cloud platform context</li>
-                        <li><strong>No cross-contamination:</strong> AWS API calls won't generate Azure AD detections, and vice versa</li>
-                    </ul>
-                    <p>This ensures clean, platform-specific detections while maintaining the ability to detect cloud CLI usage on endpoints.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">How do correlation filters work?</summary>
-                <div class="faq-answer">
-                    <p>Archer uses multiple intelligent filters to ensure only high-quality correlations are generated:</p>
-                    <ul>
-                        <li><strong>Attack Progression Filter:</strong> Only correlates techniques that follow logical kill chain sequences (e.g., Initial Access → Execution → Privilege Escalation)</li>
-                        <li><strong>Semantic Overlap Filters:</strong> Removes near-duplicates (>75% overlap) and completely unrelated pairs (<20% overlap)</li>
-                        <li><strong>Same-Table Deduplication:</strong> Prevents low-value correlations between detections querying identical data sources</li>
-                        <li><strong>High-Impact Requirement:</strong> Prioritizes correlations involving at least one high-value MITRE ATT&CK technique</li>
-                        <li><strong>Data Source Diversity:</strong> Awards bonus points to correlations spanning multiple data sources for better coverage</li>
-                        <li><strong>Correlation Grouping:</strong> Automatically deduplicates similar technique pairs, keeping only the highest-quality correlation</li>
-                    </ul>
-                    <p><strong>Result:</strong> 75-85% reduction in correlation noise while maintaining attack chain detection fidelity.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">What is "Merge by Tactic" and when should I use it?</summary>
-                <div class="faq-answer">
-                    <p><strong>Merge by Tactic</strong> combines all detections under the same MITRE ATT&CK tactic (e.g., all Credential Access techniques), then correlates across tactics.</p>
-
-                    <p><strong>When to use:</strong></p>
-                    <ul>
-                        <li>Executive dashboards requiring simple, high-level view</li>
-                        <li>Low-noise alerting for SOC environments</li>
-                        <li>Phase-based threat hunting campaigns</li>
-                        <li>Incident response workflows focused on attack progression</li>
-                    </ul>
-
-                    <p><strong>Benefits:</strong></p>
-                    <ul>
-                        <li>Generates 8-15 high-level correlations instead of hundreds</li>
-                        <li>Represents entire attack phases (e.g., "All Credential Access → All Lateral Movement")</li>
-                        <li>Broader detection coverage - catches ANY technique in the tactic</li>
-                        <li>Reduces alert fatigue significantly</li>
-                    </ul>
-
-                    <p><strong>Trade-off:</strong> Less granular - you won't see which specific techniques triggered, but you'll know which attack phases occurred.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">What is "Merge by Parent Technique"?</summary>
-                <div class="faq-answer">
-                    <p><strong>Merge by Parent Technique</strong> groups subtechniques under their parent (e.g., T1003.001, T1003.002, T1003.003 → T1003), then correlates parent techniques.</p>
-
-                    <p><strong>When to use:</strong></p>
-                    <ul>
-                        <li>Mid-level granularity between tactic-level and subtechnique-level</li>
-                        <li>Tracking specific attack patterns without excessive detail</li>
-                        <li>Correlating technique families (all OS Credential Dumping methods)</li>
-                    </ul>
-
-                    <p><strong>Benefits:</strong></p>
-                    <ul>
-                        <li>Moderate correlation reduction (~50-70% fewer than default)</li>
-                        <li>Maintains technique-level context</li>
-                        <li>Groups related attack methods logically</li>
-                        <li>Good balance between detail and simplicity</li>
-                    </ul>
-
-                    <p><strong>Example:</strong> Instead of 9 correlations for every LSASS dumping variant, you get 1 correlation for "OS Credential Dumping (T1003)".</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">How can I test which correlation settings work best for me?</summary>
-                <div class="faq-answer">
-                    <p>Archer includes a test script to evaluate different filter combinations:</p>
-
-                    <pre><code>python test_correlation_filters.py "Scattered Spider"</code></pre>
-
-                    <p>The script will:</p>
-                    <ul>
-                        <li>Run correlations with baseline, merge-by-tactic, and merge-by-parent modes</li>
-                        <li>Compare total correlation counts</li>
-                        <li>Calculate average relevance scores</li>
-                        <li>Identify high-quality correlation counts</li>
-                        <li>Measure execution time for each configuration</li>
-                        <li>Provide recommendations based on your specific threat group</li>
-                    </ul>
-
-                    <p>Results are saved to a JSON file for further analysis. Use this to determine which mode produces the most actionable results for your environment.</p>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">What are the various approaches to building correlations available in Archer and how do I invoke each one?</summary>
-                <div class="faq-answer">
-                    <p>Archer uses <strong>one correlation engine</strong> that automatically runs after detection generation. However, you can influence the quality of correlations by choosing different <strong>detection generation modes</strong>:</p>
-
-                    <h4>The Correlation Engine (Always Enabled)</h4>
-                    <p>Archer's correlation engine uses a <strong>rule-based heuristic scoring system</strong> with 6 factors (0-140 points) to intelligently pair detections within each vendor. This engine:</p>
-                    <ul>
-                        <li>Automatically runs after detection generation completes</li>
-                        <li>Cannot be disabled (always generates correlations)</li>
-                        <li>Works entirely offline without AI</li>
-                        <li>Provides deterministic, consistent results</li>
-                        <li><strong>Includes semantic analysis by default</strong>: Calculates semantic overlap between queries (0-100%) to filter duplicates and ensure diversity</li>
-                    </ul>
-
-                    <p><strong>Scoring factors:</strong> Technique Criticality (0-30 pts), Tactic Priority (0-20 pts), Query Specificity (0-20 pts), False Positive Rate (0-25 pts), Attack Progression (0-25 pts), Data Source Diversity (-10 to +20 pts)</p>
-
-                    <p><strong>Built-in semantic analysis:</strong> Always calculates token-based semantic overlap (Jaccard similarity) to filter correlations with >80% overlap (too similar)</p>
-
-                    <p><strong>Tunable parameters</strong> (Profile → Config):</p>
-                    <ul>
-                        <li><strong>Threshold:</strong> 40% (minimum relevance score to include correlation)</li>
-                        <li><strong>Per-Vendor Limit:</strong> 60 (max correlations per vendor)</li>
-                        <li><strong>Tech Frequency:</strong> 20 (max appearances of a technique in simple correlations)</li>
-                    </ul>
-
-                    <h4>Detection Generation Modes (Affect Correlation Quality)</h4>
-                    <p>The quality and types of correlations depend on what detections you generate. Choose a generation mode:</p>
-
-                    <h5>1. Standard Generation (Default)</h5>
-                    <ul>
-                        <li><strong>How to invoke:</strong> Don't check any boxes (default)</li>
-                        <li><strong>What it does:</strong> Generates detections using template-based approach</li>
-                        <li><strong>Correlation result:</strong> Standard correlations based on templates</li>
-                    </ul>
-
-                    <h5>2. Advanced Parsing (Semantic Analysis)</h5>
-                    <ul>
-                        <li><strong>How to invoke:</strong> Check "Advanced Parsing" in Web UI</li>
-                        <li><strong>What it does:</strong> Groups detections by behavioral categories during generation (authentication, network, file, process)</li>
-                        <li><strong>Correlation result:</strong> More semantically-related correlations that understand behavioral context</li>
-                        <li><strong>When to use:</strong> Complex attack chains where behavioral relationships matter</li>
-                    </ul>
-
-                    <h5>3. AI Generators (Optional)</h5>
-                    <ul>
-                        <li><strong>How to invoke:</strong> Check "AI Generators" checkbox in Web UI</li>
-                        <li><strong>What it does:</strong> Uses LLMs to enhance detection generation quality</li>
-                        <li><strong>Effect on correlations:</strong> AI-enhanced detections → better quality input for correlation engine</li>
-                        <li><strong>AI providers:</strong> a local model via Ollama or LM Studio, or a cloud provider (Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok)</li>
-                        <li><strong>Requirements:</strong> a provider configured in Profile → API Keys, or a local LLM endpoint for offline AI</li>
-                        <li><strong>When to use:</strong> Experimental AI-enhanced detection quality</li>
-                    </ul>
-
-                    <h5>4. AI Correlations (Optional)</h5>
-                    <ul>
-                        <li><strong>How to invoke:</strong> Check "AI Correlations" checkbox in Web UI (requires "AI Generators" also enabled)</li>
-                        <li><strong>What it does:</strong> Uses LLMs to improve correlation JOIN query combination strategies</li>
-                        <li><strong>What it does NOT do:</strong> Detection pairing and scoring remain rule-based (6-factor, 0-140 points). AI cannot change which detections get paired or their relevance scores</li>
-                        <li><strong>Effect on correlations:</strong> Smarter JOIN query logic for combining detection queries</li>
-                        <li><strong>Requirements:</strong> AI enabled, with a provider configured in Profile → API Keys</li>
-                        <li><strong>When to use:</strong> Experimental AI-enhanced correlation query combination</li>
-                    </ul>
-
-                    <h4>The Complete Flow</h4>
-                    <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 1em 0; font-family: monospace; font-size: 0.9em;">
-                        <strong>Step 1: Detection Generation</strong> (choose one mode)<br>
-                        &nbsp;&nbsp;├─ Standard (default)<br>
-                        &nbsp;&nbsp;├─ Advanced Parsing (semantic grouping)<br>
-                        &nbsp;&nbsp;└─ AI Generators (AI-enhanced)<br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
-                        <strong>Step 2: Generated Detections</strong> (YAML files)<br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
-                        <strong>Step 3: Correlation Engine</strong> (ALWAYS runs automatically)<br>
-                        &nbsp;&nbsp;├─ Score all detection pairs (0-140)<br>
-                        &nbsp;&nbsp;├─ Filter by threshold (40%)<br>
-                        &nbsp;&nbsp;├─ Apply per-vendor limit (60)<br>
-                        &nbsp;&nbsp;├─ Merge related correlations<br>
-                        &nbsp;&nbsp;└─ Generate JOIN queries<br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
-                        <strong>Step 4: Correlation Results</strong> (JSON file)
-                    </div>
-
-                    <h4>Quick Reference</h4>
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 1em; margin-bottom: 1em;">
-                        <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
-                            <th style="padding: 8px; text-align: left;">Option</th>
-                            <th style="padding: 8px; text-align: left;">Invocation</th>
-                            <th style="padding: 8px; text-align: left;">Offline?</th>
-                            <th style="padding: 8px; text-align: left;">Effect on Correlations</th>
-                        </tr>
-                        <tr style="border-bottom: 1px solid #ddd;">
-                            <td style="padding: 8px;"><strong>Standard</strong></td>
-                            <td style="padding: 8px;">Default (no boxes)</td>
-                            <td style="padding: 8px;">✅ Yes</td>
-                            <td style="padding: 8px;">Standard template-based correlations</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid #ddd;">
-                            <td style="padding: 8px;"><strong>Advanced Parsing</strong></td>
-                            <td style="padding: 8px;">Check "Advanced Parsing"</td>
-                            <td style="padding: 8px;">✅ Yes</td>
-                            <td style="padding: 8px;">Semantically-grouped correlations</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid #ddd;">
-                            <td style="padding: 8px;"><strong>AI Generators</strong></td>
-                            <td style="padding: 8px;">Check "AI Generators"</td>
-                            <td style="padding: 8px;">❌ No (requires API)</td>
-                            <td style="padding: 8px;">AI-enhanced detections → better input quality</td>
-                        </tr>
-                        <tr style="border-bottom: 1px solid #ddd;">
-                            <td style="padding: 8px;"><strong>AI Correlations</strong></td>
-                            <td style="padding: 8px;">Check "AI Correlations"</td>
-                            <td style="padding: 8px;">❌ No (requires API)</td>
-                            <td style="padding: 8px;">Smarter JOIN query combination logic</td>
-                        </tr>
-                    </table>
-
-                    <h4>Advanced Correlation Options</h4>
-                    <p>These options modify how the correlation engine processes results:</p>
-                    <ul>
-                        <li><strong>Merge by Parent Technique:</strong> Groups correlations by parent technique (e.g., T1003.001, T1003.002 → T1003) - Check "Merge by Parent Technique" in UI</li>
-                        <li><strong>OSINT Enhancement:</strong> Incorporate battle-tested detection patterns from OSINT sources (Elastic, Splunk) - Check "OSINT Enhancement" in UI</li>
-                        <li><strong>OSINT Comparison:</strong> Compare generated correlations with open-source repos to show alignment with community detection rules - Check "OSINT Comparison" in UI</li>
-                    </ul>
-
-                    <h4>Key Takeaways</h4>
-                    <ul>
-                        <li><strong>ONE correlation engine</strong>: Rule-based heuristic with built-in semantic analysis (always active)</li>
-                        <li><strong>Detection generation modes</strong>: Affect the INPUT to correlation (quality of detections)</li>
-                        <li><strong>AI Generators</strong>: Enhances detection quality, providing better input for correlation engine</li>
-                        <li><strong>AI Correlations</strong>: Improves JOIN query combination logic, but scoring/pairing remain rule-based</li>
-                        <li><strong>Semantic analysis</strong>: Token-based overlap calculation (0-100%) is default, "Advanced Parsing" adds deep behavioral categorization</li>
-                        <li><strong>All correlations</strong>: Scored identically (6 factors, 0-140 points) regardless of generation mode or AI options</li>
-                    </ul>
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-question">What's coming in future versions?</summary>
-                <div class="faq-answer">
-                    <p>Planned enhancements include:</p>
-                    <ul>
-                        <li>VECTR integration for purple team exercises</li>
-                        <li>Atomic Red Team emulation capabilities</li>
-                        <li>Real-time threat intelligence feeds</li>
-                        <li>Custom query template support</li>
-                        <li>Cross-vendor correlation workflows</li>
-                    </ul>
-                </div>
-            </details>
-        </div>
+        
         <!-- End FAQ Section -->
 
     </div>
