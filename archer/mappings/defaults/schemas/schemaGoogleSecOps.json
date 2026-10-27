@@ -1,0 +1,256 @@
+{
+    "Account": [
+        {
+            "Name": "principal.user.userid"
+        },
+        {
+            "UserName": [
+                "principal.user.userid",
+                "target.user.userid",
+                "src.user.userid"
+            ]
+        },
+        {
+            "Domain": [
+                "principal.user.windows_sid",
+                "target.user.windows_sid"
+            ]
+        },
+        {
+            "Email": [
+                "principal.user.email_addresses",
+                "target.user.email_addresses"
+            ]
+        }
+    ],
+    "Host": [
+        {
+            "HostName": [
+                "principal.hostname",
+                "target.hostname",
+                "src.hostname"
+            ]
+        },
+        {
+            "AssetId": [
+                "principal.asset.asset_id",
+                "target.asset.asset_id"
+            ]
+        },
+        {
+            "MAC": [
+                "principal.mac",
+                "target.mac",
+                "src.mac"
+            ]
+        },
+        {
+            "Platform": [
+                "principal.asset.platform_software.platform",
+                "target.asset.platform_software.platform"
+            ]
+        }
+    ],
+    "IP": [
+        {
+            "Address": [
+                "principal.ip",
+                "target.ip",
+                "src.ip",
+                "about.ip"
+            ]
+        },
+        {
+            "Port": [
+                "principal.port",
+                "target.port",
+                "src.port"
+            ]
+        },
+        {
+            "Location": [
+                "principal.location.country_or_region",
+                "target.location.country_or_region"
+            ]
+        }
+    ],
+    "URL": [
+        {
+            "Url": [
+                "target.url",
+                "src.url",
+                "about.url"
+            ]
+        },
+        {
+            "Domain": [
+                "network.dns.questions.name",
+                "network.http.referral_url"
+            ]
+        }
+    ],
+    "DNS": [
+        {
+            "DomainName": [
+                "network.dns.questions.name",
+                "network.dns.answers.data"
+            ]
+        },
+        {
+            "QueryType": "network.dns.questions.type"
+        }
+    ],
+    "File": [
+        {
+            "Name": [
+                "target.file.names",
+                "src.file.names",
+                "principal.process.file.names"
+            ]
+        },
+        {
+            "FullPath": [
+                "target.file.full_path",
+                "src.file.full_path",
+                "principal.process.file.full_path"
+            ]
+        },
+        {
+            "Size": [
+                "target.file.size",
+                "src.file.size"
+            ]
+        },
+        {
+            "MimeType": [
+                "target.file.mime_type",
+                "src.file.mime_type"
+            ]
+        }
+    ],
+    "FileHash": [
+        {
+            "MD5": [
+                "target.file.md5",
+                "src.file.md5",
+                "principal.process.file.md5"
+            ]
+        },
+        {
+            "SHA1": [
+                "target.file.sha1",
+                "src.file.sha1",
+                "principal.process.file.sha1"
+            ]
+        },
+        {
+            "SHA256": [
+                "target.file.sha256",
+                "src.file.sha256",
+                "principal.process.file.sha256"
+            ]
+        }
+    ],
+    "Process": [
+        {
+            "ProcessId": [
+                "principal.process.pid",
+                "target.process.pid"
+            ]
+        },
+        {
+            "CommandLine": [
+                "principal.process.command_line",
+                "target.process.command_line"
+            ]
+        },
+        {
+            "ParentProcessId": "principal.process.parent_process.pid"
+        },
+        {
+            "ProcessName": [
+                "principal.process.file.names",
+                "target.process.file.names"
+            ]
+        }
+    ],
+    "Registry": [
+        {
+            "Key": [
+                "target.registry.registry_key",
+                "src.registry.registry_key"
+            ]
+        },
+        {
+            "ValueName": [
+                "target.registry.registry_value_name",
+                "src.registry.registry_value_name"
+            ]
+        },
+        {
+            "ValueData": [
+                "target.registry.registry_value_data",
+                "src.registry.registry_value_data"
+            ]
+        }
+    ],
+    "Network": [
+        {
+            "Protocol": "network.ip_protocol"
+        },
+        {
+            "Direction": "network.direction"
+        },
+        {
+            "BytesSent": "network.sent_bytes"
+        },
+        {
+            "BytesReceived": "network.received_bytes"
+        },
+        {
+            "SessionId": "network.session_id"
+        }
+    ],
+    "Email": [
+        {
+            "Sender": "network.email.from"
+        },
+        {
+            "Recipient": "network.email.to"
+        },
+        {
+            "Subject": "network.email.subject"
+        },
+        {
+            "MessageId": "network.email.mail_id"
+        }
+    ],
+    "CloudResource": [
+        {
+            "ResourceName": [
+                "target.resource.name",
+                "src.resource.name"
+            ]
+        },
+        {
+            "ResourceType": [
+                "target.resource.resource_type",
+                "src.resource.resource_type"
+            ]
+        },
+        {
+            "ProjectId": "target.resource.attribute.labels.project_id"
+        }
+    ],
+    "Malware": [
+        {
+            "Name": "security_result.detection_fields.value"
+        },
+        {
+            "Category": "security_result.category"
+        },
+        {
+            "Severity": "security_result.severity"
+        }
+    ]
+}

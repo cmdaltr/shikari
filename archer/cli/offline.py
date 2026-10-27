@@ -12,6 +12,10 @@ from pathlib import Path
 # Add the project root to the path so we can import our modules
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from archer import paths  # noqa: E402
+
+paths.seed_bespoke()
+
 
 def process_group(group_name, hypothesis=None, manual_data=None, run_correlation=False, use_llm=False):
     """Run the process_group function to generate YAML files"""

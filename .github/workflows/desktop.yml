@@ -1,0 +1,150 @@
+# The installable desktop app (desktop/README.md): a .dmg per Mac architecture, a Windows .msi and a
+# Linux AppImage, built from a clean checkout so nothing gitignored (bespoke/, data/archer.db) can
+# reach them. A v* tag attaches them to a GitHub Release; a manual run leaves them as artifacts.
+name: Desktop app
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      procedures:
+        description: "Bundle MITRESaw's procedures CSV (up to ~90 min when ATT&CK changed and it isn't cached)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON: "3.11"
+  BRIEFCASE: "0.4.7"
+
+jobs:
+  seed:
+    # The reference data every build bundles: the ATT&CK bundle and the procedures CSV built from it
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      ARCHER_HOME: ${{ runner.temp }}/home
+      MITRESAW_DIR: ${{ github.workspace }}/MITRESaw
+      MITRESAW_PYTHON: ${{ runner.temp }}/mitresaw/bin/python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: cmdaltr/MITRESaw
+          path: MITRESaw
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON }}
+          cache: pip
+
+      - name: Download ATT&CK
+        id: attack
+        run: |
+          cache="$ARCHER_HOME/archer/data/cache"
+          mkdir -p "$cache" "$ARCHER_HOME/data"
+          curl -fsSL -o "$cache/enterprise-attack.json" \
+            https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json
+          version=$(python -c "import re,sys; t=open(sys.argv[1]).read(); m=re.search(r'\"type\":\s*\"x-mitre-collection\".*?\"x_mitre_version\":\s*\"([^\"]+)\"', t, re.S); print(m.group(1) if m else 'unknown')" "$cache/enterprise-attack.json")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "mitresaw=$(git -C MITRESaw rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "ATT&CK v$version"
+
+      - name: Restore the procedures CSV
+        id: cache
+        if: github.event_name == 'push' || inputs.procedures
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/home/data/mitre_procedures.*
+          key: procedures-attack${{ steps.attack.outputs.version }}-mitresaw${{ steps.attack.outputs.mitresaw }}-${{ hashFiles('archer/mitre/procedures.py') }}
+
+      - name: Build the procedures CSV (MITRESaw)
+        if: (github.event_name == 'push' || inputs.procedures) && steps.cache.outputs.cache-hit != 'true'
+        run: |
+          pip install -r requirements.txt
+          # MITRESaw pins its own pandas/stix2, so it gets its own environment (archer.mitre.procedures)
+          python -m venv "${{ runner.temp }}/mitresaw"
+          "$MITRESAW_PYTHON" -m pip install -r MITRESaw/requirements.txt
+          python -m archer.mitre.procedures --full
+
+      - name: Collect
+        run: |
+          mkdir seed
+          cp "$ARCHER_HOME/archer/data/cache/enterprise-attack.json" seed/
+          cp "$ARCHER_HOME"/data/mitre_procedures.* seed/ 2>/dev/null || echo "No procedures CSV: the app works without it, minus threat briefings"
+          ls -la seed
+      - uses: actions/upload-artifact@v4
+        with:
+          name: seed
+          path: seed/
+          retention-days: 7
+
+  build:
+    needs: seed
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-15, target: macOS, sign: --adhoc-sign, suffix: macos-arm64 }
+          - { os: macos-15-intel, target: macOS, sign: --adhoc-sign, suffix: macos-x86_64 }
+          - { os: windows-latest, target: windows, sign: --adhoc-sign, suffix: windows-x64 }
+          - { os: ubuntu-24.04, target: linux appimage, sign: "", suffix: linux-x86_64 }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: seed
+          path: seed
+
+      - name: Stage
+        run: |
+          procedures=$(ls seed/mitre_procedures.csv seed/mitre_procedures.meta.json 2>/dev/null || true)
+          python desktop/stage.py --out "$RUNNER_TEMP/desktop" --attack seed/enterprise-attack.json \
+            ${procedures:+--procedures $procedures}
+
+      - name: Package
+        working-directory: ${{ runner.temp }}/desktop
+        run: |
+          python -m pip install "briefcase==$BRIEFCASE"
+          briefcase package ${{ matrix.target }} ${{ matrix.sign }} --no-input
+
+      - name: Name by platform
+        working-directory: ${{ runner.temp }}/desktop
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          for f in dist/*; do
+            base=$(basename "$f"); mv "$f" "$GITHUB_WORKSPACE/out/${base%.*}-${{ matrix.suffix }}.${base##*.}"
+          done
+          ls -la "$GITHUB_WORKSPACE/out"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: archer-${{ matrix.suffix }}
+          path: out/*
+          retention-days: 14
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: archer-*
+          path: out
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
+          generate_release_notes: true

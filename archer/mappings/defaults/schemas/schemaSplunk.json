@@ -1,0 +1,31 @@
+{
+  "cmd": {
+    "edr": "sourcetype IN (\"cef:edr\", \"cef:av\")\n| fields _time dvchost deviceProduct deviceEventClassId name suser sproc dproc spid dpid cs1 cs2 cs3 cs4 fname filePath fileHash act outcome\n| eval Time=strftime(_time, \"%F %T\")",
+    "os": "sourcetype IN (\"cef:windows\", \"cef:sysmon\", \"cef:linux\", \"cef:macos\")\n| fields _time dvchost deviceProduct deviceEventClassId name suser sproc dproc spid dpid cs1 cs2 cs3 cs4 fname filePath fileHash act outcome\n| eval Time=strftime(_time, \"%F %T\")"
+  },
+  "reg": {
+    "edr": "sourcetype IN (\"cef:edr\", \"cef:av\")\n| fields _time dvchost deviceProduct deviceEventClassId name suser sproc dproc spid dpid cs1 cs2 cs3 cs4 fname filePath fileHash act outcome\n| eval Time=strftime(_time, \"%F %T\")",
+    "os": "sourcetype IN (\"cef:windows\", \"cef:sysmon\", \"cef:linux\", \"cef:macos\")\n| fields _time dvchost deviceProduct deviceEventClassId name suser sproc dproc spid dpid cs1 cs2 cs3 cs4 fname filePath fileHash act outcome\n| eval Time=strftime(_time, \"%F %T\")"
+  },
+  "evt": {
+    "os": "sourcetype IN (\"cef:windows\", \"cef:sysmon\", \"cef:linux\", \"cef:macos\")\n| fields _time dvchost deviceProduct deviceEventClassId name suser sproc dproc spid dpid cs1 cs2 cs3 cs4 fname filePath fileHash act outcome\n| eval Time=strftime(_time, \"%F %T\")",
+    "edr": "sourcetype IN (\"cef:edr\", \"cef:av\")\n| fields _time dvchost deviceProduct deviceEventClassId name suser sproc dproc spid dpid cs1 cs2 cs3 cs4 fname filePath fileHash act outcome\n| eval Time=strftime(_time, \"%F %T\")"
+  },
+  "sw": {
+    "edr": "sourcetype IN (\"cef:edr\", \"cef:av\")\n| fields _time dvchost deviceProduct deviceEventClassId name suser sproc dproc spid dpid cs1 cs2 cs3 cs4 fname filePath fileHash act outcome\n| eval Time=strftime(_time, \"%F %T\")",
+    "os": "sourcetype IN (\"cef:windows\", \"cef:sysmon\", \"cef:linux\", \"cef:macos\")\n| fields _time dvchost deviceProduct deviceEventClassId name suser sproc dproc spid dpid cs1 cs2 cs3 cs4 fname filePath fileHash act outcome\n| eval Time=strftime(_time, \"%F %T\")"
+  },
+  "cve": {
+    "network": "sourcetype IN (\"cef:firewall\", \"cef:ips\")\n| fields _time dvchost deviceProduct deviceEventClassId name src spt dst dpt proto app act outcome cs6 msg\n| eval Time=strftime(_time, \"%F %T\")",
+    "proxy": "sourcetype IN (\"cef:proxy\", \"cef:waf\")\n| fields _time dvchost deviceProduct deviceEventClassId name src suser dst dhost request requestMethod requestClientApplication app act outcome cs6 msg\n| eval Time=strftime(_time, \"%F %T\")"
+  },
+  "api": {
+    "aws": "sourcetype IN (\"cef:aws\")\n| fields _time deviceProduct deviceEventClassId name act outcome reason suser src cs5 msg\n| eval Time=strftime(_time, \"%F %T\")",
+    "azure": "sourcetype IN (\"cef:azure\")\n| fields _time deviceProduct deviceEventClassId name act outcome reason suser src cs5 msg\n| eval Time=strftime(_time, \"%F %T\")",
+    "gcp": "sourcetype IN (\"cef:gcp\")\n| fields _time deviceProduct deviceEventClassId name act outcome reason suser src cs5 msg\n| eval Time=strftime(_time, \"%F %T\")",
+    "identity": "sourcetype IN (\"cef:idp\", \"cef:ad\")\n| fields _time deviceProduct deviceEventClassId name act outcome reason suser duser src cs5 msg\n| eval Time=strftime(_time, \"%F %T\")",
+    "saas": "sourcetype IN (\"cef:o365\", \"cef:casb\")\n| fields _time deviceProduct deviceEventClassId name act outcome reason suser src cs5 msg\n| eval Time=strftime(_time, \"%F %T\")",
+    "edr": "sourcetype IN (\"cef:edr\", \"cef:av\")\n| fields _time dvchost deviceProduct deviceEventClassId name suser sproc dproc spid dpid cs1 cs2 cs3 cs4 fname filePath fileHash act outcome\n| eval Time=strftime(_time, \"%F %T\")",
+    "os": "sourcetype IN (\"cef:windows\", \"cef:sysmon\", \"cef:linux\", \"cef:macos\")\n| fields _time dvchost deviceProduct deviceEventClassId name suser sproc dproc spid dpid cs1 cs2 cs3 cs4 fname filePath fileHash act outcome\n| eval Time=strftime(_time, \"%F %T\")"
+  }
+}

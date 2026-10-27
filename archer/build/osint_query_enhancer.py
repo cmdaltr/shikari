@@ -14,6 +14,7 @@ The enhancement process:
 import re
 import logging
 from typing import Dict, List, Any, Optional
+from archer import paths
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ class OSINTQueryEnhancer:
         try:
             import json
             import os
-            schema_path = os.path.join(os.path.dirname(__file__), '..', '..', 'bespoke', 'mappings', 'schemas', 'schemaMDE.json')
+            schema_path = str(paths.BESPOKE / "mappings" / "schemas" / "schemaMDE.json")
             with open(schema_path, 'r') as f:
                 mde_schema = json.load(f)
 

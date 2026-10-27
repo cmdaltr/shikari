@@ -12,9 +12,10 @@ import re
 import time
 from pathlib import Path
 from typing import Dict, List, Optional
+from archer import paths
 
 
-_BESPOKE_DIR = Path(__file__).resolve().parent.parent.parent / "bespoke"
+_BESPOKE_DIR = paths.BESPOKE
 _PROMPTS_DIR = _BESPOKE_DIR / "prompts"
 _TEMPLATES_DIR = _BESPOKE_DIR / "query_templates"
 

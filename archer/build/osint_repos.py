@@ -130,6 +130,23 @@ def needs_update(repo_name: str) -> bool:
     return datetime.now() - last_update > UPDATE_INTERVAL
 
 
+_GIT = None
+
+
+def git_available() -> bool:
+    """git that can run. On a Mac without the developer tools /usr/bin/git is a stub that
+    opens an "install the command line developer tools" dialog, so that counts as no git."""
+    global _GIT
+    if _GIT is None:
+        found = shutil.which("git")
+        if found and found == "/usr/bin/git" and os.uname().sysname == "Darwin":
+            found = found if subprocess.run(["xcode-select", "-p"], capture_output=True).returncode == 0 else None
+        _GIT = bool(found)
+        if not _GIT:
+            print("git isn't installed: the OSINT detection repositories won't be downloaded")
+    return _GIT
+
+
 def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
     """
     Clone or update a repository.
@@ -143,6 +160,8 @@ def clone_or_update_repo(repo_name: str, force: bool = False) -> bool:
     """
     if repo_name not in REPOS:
         print(f"❌ Unknown repository: {repo_name}")
+        return False
+    if not git_available():
         return False
 
     repo_config = REPOS[repo_name]

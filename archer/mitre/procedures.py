@@ -39,6 +39,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 import requests
+from archer import paths
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +62,8 @@ XLSX_URL = (
 # ---------------------------------------------------------------------------
 
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
-_DEFAULT_CSV = _PROJECT_ROOT / "data" / "mitre_procedures.csv"
-_DEFAULT_XLSX = _PROJECT_ROOT / "data" / "mitre_procedures.xlsx"
+_DEFAULT_CSV = paths.DATA / "mitre_procedures.csv"
+_DEFAULT_XLSX = paths.DATA / "mitre_procedures.xlsx"
 
 
 def _find_mitresaw() -> Path:
@@ -83,7 +84,10 @@ def _mitresaw_python() -> str:
     $MITRESAW_PYTHON, ~/.venvs/mitresaw (outside OneDrive, which breaks a venv's
     symlinks), MITRESaw/.venv, then Archer's own interpreter."""
     candidates = [os.environ.get("MITRESAW_PYTHON") or "", str(_MITRESAW_VENV / "bin" / "python"),
-                  str(_MITRESAW_DIR / ".venv" / "bin" / "python"), sys.executable]
+                  str(_MITRESAW_DIR / ".venv" / "bin" / "python")]
+    # In the desktop app sys.executable is the app itself: running it would open another Archer
+    if Path(sys.executable).name.lower().startswith("python"):
+        candidates.append(sys.executable)
     for python in filter(None, candidates):
         try:
             if subprocess.run([python, "-c", "import mitreattack"], capture_output=True, timeout=60).returncode == 0:
@@ -391,8 +395,8 @@ def is_cache_stale(csv_path: Optional[Path] = None, bundle_path: Optional[Path] 
 # mitre_procedures.csv/.xlsx), quietly, without MITRESaw's "start?" prompt (-A), with
 # techniques reached through a group's software as well as its own and its campaigns' (-S)
 _MITRESAW_FLAGS = ["-f", "Enterprise", "-D", "-E", "-q", "-A", "-S"]
-_ARCHER_BUNDLE = _PROJECT_ROOT / "archer" / "data" / "cache" / "enterprise-attack.json"
-_LOCK = _PROJECT_ROOT / "data" / ".mitresaw.lock"
+_ARCHER_BUNDLE = paths.CACHE / "enterprise-attack.json"
+_LOCK = paths.DATA / ".mitresaw.lock"
 
 # The last check of MITRESaw's CSV against ATT&CK (check_procedures), for the server to report
 LAST_CHECK: Optional[Dict] = None

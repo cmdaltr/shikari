@@ -12,6 +12,7 @@ import os
 import yaml
 from typing import Dict, List, Optional, Any
 from pathlib import Path
+from archer import paths
 
 # MITRE ATT&CK Tactics in kill chain order
 MITRE_TACTICS = [
@@ -48,9 +49,7 @@ class ReferenceQueryLoader:
         """
         if base_dir is None:
             # Find the data directory relative to this file
-            current_file = Path(__file__)
-            archer_root = current_file.parent.parent.parent
-            base_dir = archer_root / "bespoke" / "llm_references"
+            base_dir = paths.BESPOKE / "llm_references"
 
         self.base_dir = Path(base_dir)
         self._cache: Dict[str, Any] = {}

@@ -1,0 +1,258 @@
+{
+  "_comment": "Categorizes log sources by type to enable proper cloud platform filtering",
+  "_description": "endpoint sources can detect cloud API tools running on endpoints; cloud_native sources only capture cloud control plane activity",
+  "categories": {
+    "endpoint": {
+      "description": "Endpoint telemetry sources that can detect processes, commands, and network activity on endpoints (including cloud CLI tools)",
+      "Splunk": [
+        "edr",
+        "os"
+      ],
+      "MDE": [
+        "DeviceEvents",
+        "DeviceProcessEvents",
+        "DeviceFileEvents",
+        "DeviceNetworkEvents",
+        "DeviceRegistryEvents",
+        "DeviceLogonEvents",
+        "DeviceImageLoadEvents",
+        "DeviceFileCertificateInfo",
+        "DeviceNetworkInfo"
+      ],
+      "GoogleSecOps": [
+        "WINDOWS_SYSMON",
+        "WINDOWS_EVENT_LOG",
+        "WINDOWS_DEFENDER",
+        "MICROSOFT_DEFENDER_ATP",
+        "MACOS_ENDPOINT",
+        "MACOS_SYSTEM_LOG",
+        "LINUX_SYSLOG",
+        "LINUX_AUDITD"
+      ],
+      "Elastic": [
+        "logs-endpoint.events.*",
+        "logs-endpoint.events.process-*",
+        "logs-endpoint.events.file-*",
+        "logs-endpoint.events.network-*",
+        "logs-endpoint.events.registry-*",
+        "winlogbeat-*",
+        "auditbeat-*",
+        "filebeat-*",
+        "logs-windows.*",
+        "logs-system.auth-*",
+        "logs-system.syslog-*"
+      ]
+    },
+    "cloud_native_aws": {
+      "description": "AWS cloud control plane logs - only valid for AWS cloud operations",
+      "Splunk": [
+        "aws"
+      ],
+      "MDE": [],
+      "GoogleSecOps": [
+        "AWS_CLOUDTRAIL",
+        "AWS_GUARDDUTY",
+        "AWS_SECURITYHUB"
+      ],
+      "Elastic": [
+        "logs-aws.*",
+        "logs-aws.cloudtrail-*",
+        "logs-aws.guardduty-*",
+        "logs-aws.securityhub-*",
+        "logs-aws.waf-*"
+      ]
+    },
+    "cloud_native_azure": {
+      "description": "Azure cloud control plane logs - only valid for Azure cloud operations",
+      "Splunk": [
+        "azure",
+        "identity",
+        "saas"
+      ],
+      "MDE": [
+        "AADSignInEventsBeta",
+        "CloudAppEvents",
+        "IdentityLogonEvents",
+        "IdentityDirectoryEvents"
+      ],
+      "GoogleSecOps": [
+        "AZURE_AD",
+        "MICROSOFT_GRAPH",
+        "AZURE_ACTIVITY"
+      ],
+      "Elastic": [
+        "logs-azure.*",
+        "logs-azure.activitylogs-*",
+        "logs-azure.auditlogs-*",
+        "logs-azure.signinlogs-*"
+      ]
+    },
+    "cloud_native_gcp": {
+      "description": "GCP cloud control plane logs - only valid for GCP cloud operations",
+      "Splunk": [
+        "gcp"
+      ],
+      "MDE": [],
+      "GoogleSecOps": [
+        "GCP_AUDIT",
+        "GCP_CLOUDAUDIT",
+        "GCP_IAM"
+      ],
+      "Elastic": [
+        "logs-gcp.*",
+        "logs-gcp.audit-*",
+        "logs-gcp.firewall-*"
+      ]
+    },
+    "network": {
+      "description": "Network security device logs",
+      "Splunk": [
+        "network",
+        "proxy",
+        "dns"
+      ],
+      "MDE": [],
+      "GoogleSecOps": [
+        "NETWORK",
+        "NETWORK_CONNECTION",
+        "NETWORK_DNS",
+        "NETWORK_HTTP"
+      ],
+      "Elastic": [
+        "packetbeat-*",
+        "logs-network.*",
+        "logs-network.dns-*",
+        "logs-network.http-*"
+      ]
+    }
+  },
+  "cloud_indicator_mappings": {
+    "_comment": "Maps cloud-specific indicators to their native cloud platform",
+    "_description": "Used to determine which cloud platform an indicator belongs to",
+    "aws": {
+      "api_calls": [
+        "DescribeInstances",
+        "ListBuckets",
+        "HeadBucket",
+        "GetPublicAccessBlock",
+        "DescribeDBInstances",
+        "GetObject",
+        "PutObject",
+        "CreateVpc",
+        "DescribeVolumes",
+        "CreateSecurityGroup",
+        "AuthorizeSecurityGroupIngress",
+        "RunInstances",
+        "TerminateInstances",
+        "CreateSnapshot",
+        "DescribeSnapshots",
+        "ListAccessKeys",
+        "CreateAccessKey",
+        "DeleteAccessKey",
+        "GetUser",
+        "ListUsers",
+        "CreateUser",
+        "DeleteUser",
+        "AttachUserPolicy",
+        "DetachUserPolicy",
+        "CreateRole",
+        "DeleteRole",
+        "AssumeRole",
+        "GetCallerIdentity",
+        "DescribeRegions",
+        "DescribeAvailabilityZones"
+      ],
+      "commands": [
+        "aws s3",
+        "aws ec2",
+        "aws iam",
+        "aws sts",
+        "aws lambda",
+        "aws cloudformation",
+        "aws rds",
+        "aws dynamodb",
+        "aws sns",
+        "aws sqs",
+        "aws cloudtrail"
+      ],
+      "tools": [
+        "awscli",
+        "aws-cli",
+        "boto3"
+      ]
+    },
+    "azure": {
+      "api_calls": [
+        "Get-AzVM",
+        "Get-AzStorageAccount",
+        "Get-AzResource",
+        "New-AzVM",
+        "Remove-AzVM",
+        "Get-AzSubscription",
+        "Get-AzResourceGroup",
+        "New-AzResourceGroup",
+        "Get-AzNetworkSecurityGroup",
+        "New-AzNetworkSecurityGroup",
+        "Get-AzStorageBlob",
+        "Set-AzStorageBlob",
+        "Get-AzKeyVault",
+        "Get-AzKeyVaultSecret",
+        "Get-AzRoleAssignment",
+        "New-AzRoleAssignment",
+        "Remove-AzRoleAssignment",
+        "Get-AzADUser",
+        "New-AzADUser",
+        "Remove-AzADUser",
+        "Get-AzADGroup",
+        "New-AzADGroup",
+        "Get-AzADServicePrincipal"
+      ],
+      "commands": [
+        "az vm",
+        "az storage",
+        "az network",
+        "az ad",
+        "az role",
+        "az group",
+        "az account",
+        "az keyvault",
+        "az aks",
+        "az sql",
+        "az webapp"
+      ],
+      "tools": [
+        "az",
+        "az.exe",
+        "azurecli",
+        "powershell"
+      ]
+    },
+    "gcp": {
+      "api_calls": [
+        "gcloud compute instances list",
+        "gcloud storage buckets list",
+        "gcloud projects list",
+        "gcloud iam service-accounts list",
+        "gcloud compute disks list",
+        "gcloud sql instances list",
+        "gcloud container clusters list",
+        "gcloud compute networks list"
+      ],
+      "commands": [
+        "gcloud compute",
+        "gcloud storage",
+        "gcloud iam",
+        "gcloud projects",
+        "gcloud sql",
+        "gcloud container",
+        "gcloud services",
+        "gcloud auth"
+      ],
+      "tools": [
+        "gcloud",
+        "gsutil",
+        "bq"
+      ]
+    }
+  }
+}

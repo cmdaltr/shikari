@@ -12,9 +12,10 @@ import yaml
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from functools import lru_cache
+from archer import paths
 
 # Bespoke directory path
-BESPOKE_DIR = Path(__file__).parent.parent.parent / "bespoke"
+BESPOKE_DIR = paths.BESPOKE
 
 
 @lru_cache(maxsize=1)

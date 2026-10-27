@@ -1,0 +1,13 @@
+{
+  "edr": "Endpoint (EDR/AV)",
+  "os": "OS audit logs",
+  "network": "Firewall / IPS",
+  "proxy": "Web proxy / WAF",
+  "dns": "DNS",
+  "identity": "Identity provider",
+  "aws": "AWS",
+  "azure": "Azure",
+  "gcp": "GCP",
+  "saas": "SaaS / CASB",
+  "email": "Email gateway"
+}

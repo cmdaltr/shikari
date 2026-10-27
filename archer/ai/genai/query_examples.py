@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set
 from collections import defaultdict
 import hashlib
+from archer import paths
 
 
 class QueryExampleRepository:
@@ -32,8 +33,7 @@ class QueryExampleRepository:
         """
         if base_dir is None:
             # Store in archer/data/query_examples
-            archer_dir = Path(__file__).parent.parent
-            base_dir = archer_dir / "data" / "query_examples"
+            base_dir = paths.HOME / "archer" / "data" / "query_examples"
 
         self.base_dir = Path(base_dir)
         self.base_dir.mkdir(parents=True, exist_ok=True)

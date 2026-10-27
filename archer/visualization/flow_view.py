@@ -21,6 +21,7 @@ from typing import Dict, Iterable, List, Optional
 
 from archer import yaml_cache
 from archer.tactic_scope import intel_only
+from archer import paths as archer_paths
 
 # ATT&CK enterprise kill-chain order. v18 split Defense Evasion into Stealth and
 # Defense Impairment; older detections still carry Defense Evasion.
@@ -37,7 +38,7 @@ _CONNECTOR_VENDOR = {"GoogleSecOps": "googlesecops", "MicrosoftThreatProtection"
                      "Splunk": "splunk", "Elastic": "elastic", "ElasticSecurity": "elastic"}
 
 _TID = re.compile(r"^T\d{4}(?:\.\d{3})?$")
-_PROCEDURES_CSV = os.path.join(os.path.dirname(__file__), "..", "..", "data", "mitre_procedures.csv")
+_PROCEDURES_CSV = str(archer_paths.DATA / "mitre_procedures.csv")
 
 
 def canonical_tactic(name: str) -> Optional[str]:

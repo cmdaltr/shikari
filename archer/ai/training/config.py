@@ -6,10 +6,11 @@ Centralized configuration for LLM training and inference.
 
 import os
 from pathlib import Path
+from archer import paths
 
 # Base directories
 BASE_DIR = Path(__file__).parent
-DATA_DIR = BASE_DIR.parent.parent / "data"
+DATA_DIR = paths.DATA
 AI_DATA_DIR = DATA_DIR / "ai_training"
 
 # Dataset directories

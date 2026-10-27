@@ -22,10 +22,11 @@ import os
 from typing import Dict, Iterable, Optional, Tuple
 
 from archer.telemetry.datasets import PARSER_VERSION, parse, summarise
+from archer import paths
 
 NAME = "lab"
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-LAB_DIR = os.path.join(ROOT, "data", "telemetry", "lab")
+LAB_DIR = str(paths.DATA / "telemetry" / "lab")
 INFO = {"name": "Your lab", "url": "", "licence": "Yours", "local": True,
         "note": "Atomic Red Team tests recorded on your own machines (scripts/telemetry). Never committed"}
 

@@ -12,9 +12,10 @@ import os
 import re
 from pathlib import Path
 from typing import List, Tuple
+from archer import paths
 
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_PROJECT_ROOT = paths.HOME
 _BESPOKE_DIR = _PROJECT_ROOT / "bespoke"
 _DATA_DIR = _PROJECT_ROOT / "data"
 

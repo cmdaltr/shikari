@@ -7,6 +7,7 @@ import requests
 import stix2
 from pathlib import Path
 from datetime import datetime, timedelta
+from archer import paths
 
 
 # What the last load found: the ATT&CK version in use, the one before it, and where it
@@ -15,7 +16,7 @@ LAST_LOAD: dict = {}
 
 
 def _cache_path(url) -> Path:
-    cache_dir = Path(__file__).parent.parent / "data" / "cache"
+    cache_dir = paths.CACHE
     cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir / url.split("/")[-1]
 

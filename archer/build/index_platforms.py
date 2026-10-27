@@ -11,8 +11,9 @@ With no file every lookup is empty and callers fall back to the index name itsel
 import json
 import os
 from typing import Dict, Set
+from archer import paths
 
-_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "bespoke", "mappings", "sources", "platforms.json")
+_PATH = str(paths.BESPOKE / "mappings" / "sources" / "platforms.json")
 _cache: Dict = {"mtime": None, "by_index": {}}
 
 # Platforms whose logs are cloud API activity: they apply whatever the OS of a technique

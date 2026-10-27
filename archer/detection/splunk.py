@@ -37,10 +37,11 @@ import re
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from archer import paths
 
 logger = logging.getLogger(__name__)
 
-_PROJECT_ROOT = Path(__file__).parent.parent.parent
+_PROJECT_ROOT = paths.HOME
 _BESPOKE_DIR = _PROJECT_ROOT / "bespoke"
 _DEFAULT_CSV = _PROJECT_ROOT / "data" / "mitre_procedures.csv"
 _DETECTIONS_DIR = _PROJECT_ROOT / "data" / "detections" / "splunk"

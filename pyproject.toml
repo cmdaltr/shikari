@@ -188,6 +188,13 @@ local-ai = [
     "sentencepiece>=0.1.99",
 ]
 
+# Desktop app window (archer-cli app). Linux also needs GTK (python3-gi, gir1.2-webkit2-4.1) or Qt
+desktop = [
+    "pywebview>=5.0",
+    # Checks an organisation's server against the OS certificate store, as the window does
+    "truststore>=0.9",
+]
+
 # Data analysis and visualization tools
 analysis = [
     "jupyter>=1.0.0",

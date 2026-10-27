@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Set
 import logging
+from archer import paths
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 def load_validation_matrix() -> Dict:
     """Load the technique-platform-indicator validation matrix"""
     matrix_file = (
-        Path(os.path.dirname(__file__)) / ".." / ".." / "bespoke" / "mappings" / "techniquePlatformIndicators.json"
+        paths.BESPOKE / "mappings" / "techniquePlatformIndicators.json"
     )
 
     if not matrix_file.exists():

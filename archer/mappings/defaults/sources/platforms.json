@@ -1,0 +1,202 @@
+{
+  "Windows": {
+    "MDE": [
+      "DeviceEvents",
+      "DeviceFileCertificateInfo",
+      "DeviceFileEvents",
+      "DeviceImageLoadEvents",
+      "DeviceLogonEvents",
+      "DeviceNetworkEvents",
+      "DeviceNetworkInfo",
+      "DeviceProcessEvents",
+      "DeviceRegistryEvents"
+    ],
+    "Splunk": [
+      "edr",
+      "os"
+    ],
+    "GoogleSecOps": [
+      "WINDOWS_SYSMON",
+      "WINDOWS_EVENT_LOG",
+      "WINDOWS_DEFENDER",
+      "MICROSOFT_DEFENDER_ATP"
+    ],
+    "Elastic": [
+      "winlogbeat-*",
+      "logs-windows.*",
+      "logs-endpoint.events.process-*",
+      "logs-endpoint.events.file-*",
+      "logs-endpoint.events.registry-*"
+    ]
+  },
+  "macOS": {
+    "MDE": [
+      "DeviceEvents",
+      "DeviceFileCertificateInfo",
+      "DeviceFileEvents",
+      "DeviceImageLoadEvents",
+      "DeviceLogonEvents",
+      "DeviceNetworkEvents",
+      "DeviceNetworkInfo",
+      "DeviceProcessEvents",
+      "DeviceRegistryEvents"
+    ],
+    "Splunk": [
+      "edr",
+      "os"
+    ],
+    "GoogleSecOps": [
+      "MACOS_ENDPOINT",
+      "MACOS_SYSTEM_LOG"
+    ],
+    "Elastic": [
+      "logs-endpoint.events.*",
+      "logs-system.auth-*",
+      "filebeat-*"
+    ]
+  },
+  "Linux": {
+    "MDE": [
+      "DeviceEvents",
+      "DeviceFileCertificateInfo",
+      "DeviceFileEvents",
+      "DeviceImageLoadEvents",
+      "DeviceLogonEvents",
+      "DeviceNetworkEvents",
+      "DeviceNetworkInfo",
+      "DeviceProcessEvents",
+      "DeviceRegistryEvents"
+    ],
+    "Splunk": [
+      "edr",
+      "os"
+    ],
+    "GoogleSecOps": [
+      "LINUX_SYSLOG",
+      "LINUX_AUDITD"
+    ],
+    "Elastic": [
+      "logs-system.auth-*",
+      "logs-system.syslog-*",
+      "auditbeat-*",
+      "filebeat-*"
+    ]
+  },
+  "AWS": {
+    "MDE": [
+      "DeviceEvents",
+      "DeviceFileCertificateInfo",
+      "DeviceFileEvents",
+      "DeviceImageLoadEvents",
+      "DeviceLogonEvents",
+      "DeviceNetworkEvents",
+      "DeviceNetworkInfo",
+      "DeviceProcessEvents",
+      "DeviceRegistryEvents"
+    ],
+    "Splunk": [
+      "aws",
+      "proxy",
+      "edr",
+      "os"
+    ]
+  },
+  "Azure": {
+    "MDE": [
+      "DeviceEvents",
+      "DeviceFileCertificateInfo",
+      "DeviceFileEvents",
+      "DeviceImageLoadEvents",
+      "DeviceLogonEvents",
+      "DeviceNetworkEvents",
+      "DeviceNetworkInfo",
+      "DeviceProcessEvents",
+      "DeviceRegistryEvents",
+      "AADSignInEventsBeta",
+      "CloudAppEvents",
+      "IdentityLogonEvents",
+      "IdentityDirectoryEvents"
+    ],
+    "Splunk": [
+      "identity",
+      "azure",
+      "saas",
+      "edr",
+      "os"
+    ]
+  },
+  "GCP": {
+    "MDE": [
+      "DeviceEvents",
+      "DeviceFileCertificateInfo",
+      "DeviceFileEvents",
+      "DeviceImageLoadEvents",
+      "DeviceLogonEvents",
+      "DeviceNetworkEvents",
+      "DeviceNetworkInfo",
+      "DeviceProcessEvents",
+      "DeviceRegistryEvents"
+    ],
+    "Splunk": [
+      "gcp",
+      "edr",
+      "os"
+    ]
+  },
+  "IaaS": {
+    "_comment": "Legacy platform for backward compatibility - will be deprecated",
+    "MDE": [
+      "DeviceEvents",
+      "DeviceFileCertificateInfo",
+      "DeviceFileEvents",
+      "DeviceImageLoadEvents",
+      "DeviceLogonEvents",
+      "DeviceNetworkEvents",
+      "DeviceNetworkInfo",
+      "DeviceProcessEvents",
+      "DeviceRegistryEvents"
+    ],
+    "Splunk": [
+      "edr",
+      "os"
+    ]
+  },
+  "Azure AD": {
+    "MDE": [
+      "AADSignInEventsBeta",
+      "CloudAppEvents",
+      "IdentityLogonEvents",
+      "IdentityDirectoryEvents"
+    ],
+    "Splunk": [
+      "identity"
+    ]
+  },
+  "Identity Provider": {
+    "MDE": [
+      "AADSignInEventsBeta",
+      "IdentityLogonEvents"
+    ],
+    "Splunk": [
+      "identity"
+    ]
+  },
+  "Network Devices": {
+    "Splunk": [
+      "network",
+      "dns",
+      "proxy"
+    ]
+  },
+  "SaaS": {
+    "Splunk": [
+      "saas"
+    ]
+  },
+  "Office Suite": {
+    "Splunk": [
+      "saas",
+      "email"
+    ]
+  }
+}

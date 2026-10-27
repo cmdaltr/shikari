@@ -31,6 +31,7 @@ import re
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
 from collections import defaultdict
+from archer import paths
 
 
 class SplunkSchemaNormalizer:
@@ -283,7 +284,7 @@ class SplunkSchemaNormalizer:
         """
         if schema_path is None:
             # Look in bespoke/mappings directory
-            schema_path = Path(__file__).parent.parent.parent / "bespoke" / "mappings" / "schemas" / "schemaSplunk.json"
+            schema_path = paths.BESPOKE / "mappings" / "schemas" / "schemaSplunk.json"
 
         self.schema_path = schema_path
         self.schema = None

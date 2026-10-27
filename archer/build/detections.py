@@ -12,6 +12,7 @@ import json
 import os
 import re
 from pathlib import Path
+from archer import paths
 
 
 ALL_SIEMS = frozenset({"mde", "secops", "elastic"})  # splunk disabled -- Stage 1 soft-disable, see docs/SIEM_ONBOARDING.md
@@ -136,7 +137,7 @@ def load_indicator_mappings():
 
     # Use bespoke mappings directory (org-specific)
     mappings_dir = (
-        Path(os.path.dirname(__file__)) / ".." / ".." / "bespoke" / "mappings"
+        paths.BESPOKE / "mappings"
     )  # bespoke/mappings
 
     # Check for user-specific mappings first (not committed to GitHub)

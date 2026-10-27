@@ -21,6 +21,7 @@ or as archer.service (the pip-installed archer-cli).
     archer-cli mcp                    Archer's tools for an MCP client, over stdio
     archer-cli offline <command>      generate | correlate | hunt | emulate without the server
     archer-cli install                put `archer-cli` on your PATH (~/bin, or ~/.local/bin)
+    archer-cli app install [--dock]   Archer as a desktop app (Dock, Start menu, app menu); see archer/desktop.py
     archer-cli docker <args>          docker compose with the project's docker-compose.yml
 
 Options given to start or restart are remembered in settings.json in the state directory:
@@ -575,6 +576,7 @@ HANDOVER = {
     "mcp": ("archer.mcp_server", False),
     "offline": ("archer.cli.offline", False),
     "test": ("archer.cli.test_data", False),
+    "app": ("archer.desktop", False),
 }
 
 
@@ -618,7 +620,8 @@ def main(argv=None):
     docker.add_argument("args", nargs=argparse.REMAINDER)
     parser.epilog = ("Also: serve [--port N] (foreground, no supervisor) · clear-cache · console (interactive) · "
                      "preview <group> · mcp (MCP server on stdio) · offline generate|correlate|hunt|emulate · "
-                     "test populate|depopulate|status (sample data for a guided tour)")
+                     "test populate|depopulate|status (sample data for a guided tour) · "
+                     "app install|uninstall|open (a desktop app with a Dock / Start menu entry)")
 
     args = parser.parse_args(argv)
     commands = {"start": cmd_start, "stop": cmd_stop, "restart": cmd_restart, "status": cmd_status,

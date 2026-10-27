@@ -33,14 +33,15 @@ import os
 import re
 from collections import Counter, defaultdict
 from typing import Dict, Iterable, List, Optional, Tuple
+from archer import paths
 
 HERE = os.path.dirname(os.path.dirname(__file__))
 SUMMARY_PATH = os.path.join(HERE, "data", "telemetry_datasets.json")
 VALUES_PATH = os.path.join(HERE, "data", "telemetry_values.json.gz")
 # Sources whose licence keeps them out of git (INFO["local"]): built on this machine only
-LOCAL_SUMMARY_PATH = os.path.join(HERE, "data", "cache", "telemetry_local.json")
-LOCAL_VALUES_PATH = os.path.join(HERE, "data", "cache", "telemetry_local_values.json.gz")
-STATE_PATH = os.path.join(HERE, "data", "cache", "telemetry_state.json")
+LOCAL_SUMMARY_PATH = str(paths.CACHE / "telemetry_local.json")
+LOCAL_VALUES_PATH = str(paths.CACHE / "telemetry_local_values.json.gz")
+STATE_PATH = str(paths.CACHE / "telemetry_state.json")
 MAP_FILES = (os.path.join(HERE, "mappings", "telemetry_map.json"),
              os.path.join("bespoke", "mappings", "telemetry_map.json"))
 PARSER_VERSION = 3  # part of each recording's build key: a parser change fetches everything again

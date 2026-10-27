@@ -11,13 +11,14 @@ import os
 import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+from archer import paths
 
 
 # ---------------------------------------------------------------------------
 # Mapping loaders
 # ---------------------------------------------------------------------------
 
-_BESPOKE_DIR = Path(__file__).resolve().parent.parent.parent / "bespoke"
+_BESPOKE_DIR = paths.BESPOKE
 _MAPPINGS_DIR = _BESPOKE_DIR / "mappings"
 _SCHEMAS_DIR = _MAPPINGS_DIR / "schemas"
 _SOURCES_DIR = _MAPPINGS_DIR / "sources"

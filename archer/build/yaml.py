@@ -9,6 +9,7 @@ import getpass
 import hashlib
 import json
 import os
+from archer import paths
 import textwrap
 import re
 import uuid
@@ -251,7 +252,7 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
             # Adversary-side Reconnaissance/Resource Development: the estate's logs don't see it
             print(f"  ⏭️  Not written: {os.path.basename(query_file)} is intel only (pre-compromise)")
             return
-    with open(os.path.join("archer", "mappings", "template.yaml")) as queryTemplate:
+    with open(paths.ROOT / "archer" / "mappings" / "template.yaml") as queryTemplate:
         template = queryTemplate.read()
 
     uid = check_id([])

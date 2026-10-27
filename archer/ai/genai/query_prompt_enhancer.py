@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional
 from .query_examples import get_repository
+from archer import paths
 
 
 class QueryPromptEnhancer:
@@ -27,8 +28,7 @@ class QueryPromptEnhancer:
             schema_dir: Directory containing SIEM schema files (default: archer/mappings)
         """
         if schema_dir is None:
-            archer_dir = Path(__file__).parent.parent.parent
-            schema_dir = archer_dir / "bespoke" / "mappings" / "schemas"
+            schema_dir = paths.BESPOKE / "mappings" / "schemas"
 
         self.schema_dir = Path(schema_dir)
         self.repository = get_repository()

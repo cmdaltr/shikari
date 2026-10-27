@@ -5,6 +5,7 @@ from pathlib import Path
 from collections import defaultdict
 from archer.build.index_platforms import is_cloud_native, platforms_of
 from archer.build.malware_iocs import enrich_indicators_with_iocs, log_ioc_enrichment
+from archer import paths
 
 
 def validate_and_clean_indicators(indicators: list, indicator_type: str = "cmd") -> list:
@@ -121,7 +122,7 @@ def load_splunk_schema():
     Checks for custom mapping file first (schemaSplunk_custom.json),
     then falls back to default mapping file (schemaSplunk.json).
     """
-    schemas_dir = Path(os.path.dirname(__file__)) / ".." / ".." / "bespoke" / "mappings" / "schemas"
+    schemas_dir = paths.BESPOKE / "mappings" / "schemas"
 
     # Try custom mapping file first
     custom_schema_file = schemas_dir / "schemaSplunk_custom.json"
@@ -151,7 +152,7 @@ SPLUNK_SCHEMA = load_splunk_schema()
 def load_log_source_categories():
     """Load log source categorization from logSourceCategories.json"""
     categories_file = (
-        Path(os.path.dirname(__file__)) / ".." / ".." / "bespoke" / "mappings" / "sources" / "logSourceCategories.json"
+        paths.BESPOKE / "mappings" / "sources" / "logSourceCategories.json"
     )
     if not categories_file.exists():
         return {}, {}
@@ -1109,7 +1110,7 @@ def find_matching_field(osint_field, pipeline_fields):
 
 def load_platform_mappings():
     platforms_file = (
-        Path(os.path.dirname(__file__)) / ".." / ".." / "bespoke" / "mappings" / "sources" / "platforms.json"
+        paths.BESPOKE / "mappings" / "sources" / "platforms.json"
     )
     if not platforms_file.exists():
         return {}

@@ -1,0 +1,206 @@
+{
+    "Account": [
+        {
+            "Name": "AccountName"
+        },
+        "FullName",
+        "NTDomain",
+        "DnsDomain",
+        "UPNSuffix",
+        "Sid",
+        "AadTenantId",
+        {
+            "AadUserId": [
+                "AccountName",
+                "InitiatingProcessAccountName"
+            ]
+        },
+        "PUID",
+        "IsDomainJoined",
+        {
+            "DisplayName": [
+                "AccountUpn",
+                "InitiatingProcessAccountUpn"
+            ]
+        },
+        "ObjectGuid"
+    ],
+    "Host": [
+        "DnsDomain",
+        "NTDomain",
+        {
+            "HostName": "DeviceName"
+        },
+        "FullName",
+        "NetBiosName",
+        "AzureID",
+        "OMSAgentID",
+        "OSFamily",
+        "OSVersion",
+        "IsDomainJoined"
+    ],
+    "IP": [
+        {
+            "Address": [
+                "LocalIP",
+                "RemoteIP"
+            ],
+            "AddressScope": [
+                "IsPrivate",
+                "IsPublic"
+            ]
+        }
+    ],
+    "URL": [
+        {
+            "Url": [
+                "RemoteUrl",
+                "FileOriginUrl",
+                "FileOriginReferrerUrl"
+            ]
+        }
+    ],
+    "AzureResource": [
+        "ResourceId"
+    ],
+    "CloudApplication": [
+        "AppId",
+        "Name",
+        "InstanceName"
+    ],
+    "DNS": [
+        "DomainName"
+    ],
+    "File": [
+        {
+            "Name": [
+                "FileName",
+                "InitiatingProcessFileName",
+                "InitiatingProcessParentFileName",
+                "PreviousFileName"
+            ]
+        },
+        {
+            "Directory": [
+                "FolderPath",
+                "InitiatingProcessFolderPath",
+                "PreviousFolderPath"
+            ]
+        }
+    ],
+    "FileHash": [
+        "Algorithm",
+        {
+            "Value": [
+                "SHA1",
+                "SHA256",
+                "InitiatingProcessSHA1",
+                "InitiatingProcessSHA256"
+            ]
+        }
+    ],
+    "Malware": [
+        "Name",
+        "Category"
+    ],
+    "Process": [
+        "ProcessId",
+        {
+            "CommandLine": [
+                "ProcessCommandLine",
+                "InitiatingProcessCommandLine"
+            ]
+        },
+        "ElevationToken",
+        {
+            "CreationTimeUtc": "Timestamp"
+        }
+    ],
+    "RegistryKey": [
+        "Hive",
+        {
+            "Key": [
+                "RegistryKey",
+                "PreviousRegistryKey"
+            ]
+        }
+    ],
+    "RegistryValue": [
+        "Name",
+        {
+            "Value": [
+                "RegistryValueName",
+                "PreviousRegistryValueName"
+            ]
+        },
+        "ValueType"
+    ],
+    "SecurityGroup": [
+        "DistinguishedName",
+        "SID",
+        "ObjectGuid"
+    ],
+    "Mailbox": [
+        "MailboxPrimaryAddress",
+        "DisplayName",
+        "UPN",
+        "ExternalDirectoryObjectId",
+        "RiskLevel"
+    ],
+    "MailCluster": [
+        "NetworkMessageIds",
+        "CountByDeliveryStatus",
+        "CountByThreatType",
+        "CountByProtectionStatus",
+        "Threats",
+        "Query",
+        "QueryTime",
+        "MailCount",
+        "IsVolumeAnomaly",
+        "Source",
+        "ClusterSourceIdentifier",
+        "ClusterSourceType",
+        "ClusterQueryStartTime",
+        "ClusterQueryEndTime",
+        "ClusterGroup"
+    ],
+    "MailMessage": [
+        "Recipient",
+        "Urls",
+        "Threats",
+        "Sender",
+        "P1Sender",
+        "P1SenderDisplayName",
+        "P1SenderDomain",
+        "SenderIP",
+        "P2Sender",
+        "P2SenderDisplayName",
+        "P2SenderDomain",
+        "ReceivedDate",
+        "NetworkMessageId",
+        "InternetMessageId",
+        "Subject",
+        "BodyFingerprintBin1",
+        "BodyFingerprintBin2",
+        "BodyFingerprintBin3",
+        "BodyFingerprintBin4",
+        "BodyFingerprintBin5",
+        "AntispamDirection",
+        "DeliveryAction",
+        "DeliveryLocation",
+        "Language",
+        "ThreatDetectionMethods"
+    ],
+    "SubmissionMail": [
+        "NetworkMessageId",
+        "Timestamp",
+        "Recipient",
+        "Sender",
+        "SenderIp",
+        "Subject",
+        "ReportType",
+        "SubmissionId",
+        "SubmissionDate",
+        "Submitter"
+    ]
+}

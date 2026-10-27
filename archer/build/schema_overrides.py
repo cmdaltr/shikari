@@ -13,8 +13,9 @@ import json
 import os
 from pathlib import Path
 from typing import Dict, Optional
+from archer import paths
 
-_SCHEMAS_DIR = Path(__file__).resolve().parent.parent.parent / "bespoke" / "mappings" / "schemas"
+_SCHEMAS_DIR = paths.BESPOKE / "mappings" / "schemas"
 
 # Canonical SIEM key -> base schema filename.
 _BASE = {

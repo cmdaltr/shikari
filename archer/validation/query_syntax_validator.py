@@ -11,6 +11,7 @@ import os
 import re
 from pathlib import Path
 from typing import Tuple, List, Optional
+from archer import paths
 
 
 # Cache for loaded schemas
@@ -24,7 +25,7 @@ def load_splunk_schema() -> dict:
     if _splunk_schema is not None:
         return _splunk_schema
 
-    mappings_dir = Path(__file__).parent.parent.parent / "bespoke" / "mappings" / "schemas"
+    mappings_dir = paths.BESPOKE / "mappings" / "schemas"
 
     # Try custom mapping file first
     custom_schema_file = mappings_dir / "schemaSplunk_custom.json"
@@ -57,7 +58,7 @@ def load_mde_schema() -> dict:
     if _mde_schema is not None:
         return _mde_schema
 
-    mappings_dir = Path(__file__).parent.parent.parent / "bespoke" / "mappings" / "schemas"
+    mappings_dir = paths.BESPOKE / "mappings" / "schemas"
 
     # Try custom mapping file first
     custom_schema_file = mappings_dir / "schemaMDE_custom.json"

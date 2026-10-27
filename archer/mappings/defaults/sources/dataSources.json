@@ -1,0 +1,297 @@
+{
+  "mitreDataSources": {
+    "Active Directory": {
+      "Splunk": [
+        "identity",
+        "edr",
+        "saas",
+        "os"
+      ],
+      "MDE": ""
+    },
+    "Application Log": {
+      "Splunk": [
+        "azure",
+        "saas",
+        "email"
+      ],
+      "MDE": ""
+    },
+    "Certificate": {
+      "Splunk": "",
+      "MDE": [
+        "DeviceFileEvents"
+      ]
+    },
+    "Cloud Service": {
+      "Splunk": [
+        "aws",
+        "gcp",
+        "saas"
+      ],
+      "MDE": ""
+    },
+    "Cloud Storage": {
+      "Splunk": [
+        "aws",
+        "azure",
+        "gcp",
+        "saas"
+      ],
+      "MDE": ""
+    },
+    "Command": {
+      "Splunk": [
+        "edr",
+        "os"
+      ],
+      "MDE": [
+        "DeviceFileEvents",
+        "DeviceNetworkEvents",
+        "DeviceProcessEvents"
+      ]
+    },
+    "Container": {
+      "Splunk": "",
+      "MDE": ""
+    },
+    "Domain Name": {
+      "Splunk": [
+        "dns"
+      ],
+      "MDE": [
+        "DeviceNetworkEvents"
+      ]
+    },
+    "Drive": {
+      "Splunk": [
+        "edr"
+      ],
+      "MDE": [
+        "DeviceEvents",
+        "DeviceRegistryEvents"
+      ]
+    },
+    "Driver": {
+      "Splunk": [
+        "edr"
+      ],
+      "MDE": [
+        "DeviceEvents"
+      ]
+    },
+    "File": {
+      "Splunk": [
+        "edr",
+        "os"
+      ],
+      "MDE": [
+        "DeviceFileEvents"
+      ]
+    },
+    "Firewall": {
+      "Splunk": [
+        "proxy",
+        "network"
+      ],
+      "MDE": ""
+    },
+    "Firmware": {
+      "Splunk": "",
+      "MDE": ""
+    },
+    "Group": {
+      "Splunk": [
+        "identity",
+        "azure",
+        "os"
+      ],
+      "MDE": [
+        "DeviceLogonEvents"
+      ]
+    },
+    "Image": {
+      "Splunk": [
+        "aws"
+      ],
+      "MDE": ""
+    },
+    "Instance": {
+      "Splunk": [
+        "aws",
+        "gcp"
+      ],
+      "MDE": ""
+    },
+    "Internet Scan": {
+      "Splunk": "",
+      "MDE": [
+        "DeviceNetworkEvents"
+      ]
+    },
+    "Kernel": {
+      "Splunk": "",
+      "MDE": [
+        "DeviceEvents"
+      ]
+    },
+    "Logon Session": {
+      "Splunk": [
+        "identity",
+        "os"
+      ],
+      "MDE": ""
+    },
+    "Malware Repository": {
+      "Splunk": "",
+      "MDE": ""
+    },
+    "Module": {
+      "Splunk": [
+        "edr"
+      ],
+      "MDE": [
+        "DeviceEvents",
+        "DeviceFileEvents",
+        "DeviceProcessEvents"
+      ]
+    },
+    "Named Pipe": {
+      "Splunk": [
+        "edr",
+        "os"
+      ],
+      "MDE": [
+        "DeviceEvents",
+        "DeviceProcessEvents"
+      ]
+    },
+    "Network Share": {
+      "Splunk": [
+        "os"
+      ],
+      "MDE": [
+        "DeviceEvents",
+        "DeviceNetworkEvents",
+        "DeviceProcessEvents"
+      ]
+    },
+    "Network Traffic": {
+      "Splunk": [
+        "aws",
+        "proxy",
+        "dns",
+        "gcp",
+        "network"
+      ],
+      "MDE": [
+        "DeviceNetworkEvents",
+        "DeviceNetworkInfo"
+      ]
+    },
+    "Operational Databases": {
+      "Splunk": "",
+      "MDE": ""
+    },
+    "Persona": {
+      "Splunk": "",
+      "MDE": ""
+    },
+    "Pod": {
+      "Splunk": [
+        "os"
+      ],
+      "MDE": ""
+    },
+    "Process": {
+      "Splunk": [
+        "edr",
+        "os"
+      ],
+      "MDE": [
+        "DeviceProcessEvents"
+      ]
+    },
+    "Scheduled Job": {
+      "Splunk": [
+        "os",
+        "edr"
+      ],
+      "MDE": [
+        "DeviceProcessEvents"
+      ]
+    },
+    "Script": {
+      "Splunk": [
+        "os",
+        "edr"
+      ],
+      "MDE": [
+        "DeviceFileEvents",
+        "DeviceProcessEvents"
+      ]
+    },
+    "Sensor Health": {
+      "Splunk": [
+        "edr"
+      ],
+      "MDE": ""
+    },
+    "Service": {
+      "Splunk": [
+        "edr",
+        "os"
+      ],
+      "MDE": [
+        "DeviceEvents",
+        "DeviceProcessEvents"
+      ]
+    },
+    "User Account": {
+      "Splunk": [
+        "edr",
+        "os",
+        "identity"
+      ],
+      "MDE": [
+        "DeviceLogonEvents"
+      ]
+    },
+    "User Interface": {
+      "Splunk": "",
+      "MDE": ""
+    },
+    "Volume": {
+      "Splunk": [
+        "edr",
+        "os"
+      ],
+      "MDE": [
+        "DeviceEvents"
+      ]
+    },
+    "Web Credential": {
+      "Splunk": [
+        "identity",
+        "proxy"
+      ],
+      "MDE": ""
+    },
+    "Windows Registry": {
+      "Splunk": [
+        "os"
+      ],
+      "MDE": [
+        "DeviceRegistryEvents"
+      ]
+    },
+    "WMI": {
+      "Splunk": [
+        "os"
+      ],
+      "MDE": [
+        "DeviceProcessEvents"
+      ]
+    }
+  }
+}

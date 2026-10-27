@@ -19,8 +19,9 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from archer.build.schema_overrides import load_active_schema
+from archer import paths
 
-_MAPPINGS_DIR = Path(__file__).resolve().parent.parent.parent / "bespoke" / "mappings"
+_MAPPINGS_DIR = paths.BESPOKE / "mappings"
 _PATH = _MAPPINGS_DIR / "availability.json"
 # Drop the authoritative UDM metadata.event_type list here (a JSON array of strings) to offer the
 # full set in the config checklist. Absent, the curated default below is used, unioned with whatever

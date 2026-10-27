@@ -14,11 +14,9 @@ from archer.build.detections import MappingsError, load_indicator_mappings
 
 
 def _point_mappings_at(tmp_path):
-    """load_indicator_mappings resolves bespoke/mappings two levels above archer/build/."""
-    build_dir = tmp_path / "archer" / "build"
-    build_dir.mkdir(parents=True)
+    """load_indicator_mappings reads <paths.BESPOKE>/mappings."""
     mappings_dir = tmp_path / "bespoke" / "mappings"
-    return patch.object(detections.os.path, "dirname", return_value=str(build_dir)), mappings_dir
+    return patch.object(detections.paths, "BESPOKE", tmp_path / "bespoke"), mappings_dir
 
 
 def test_missing_directory_raises_mappings_error(tmp_path):

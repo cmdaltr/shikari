@@ -1,0 +1,288 @@
+{
+    "Account": [
+        {
+            "Name": "user.name"
+        },
+        {
+            "Domain": "user.domain"
+        },
+        {
+            "Id": "user.id"
+        },
+        {
+            "Email": "user.email"
+        },
+        {
+            "FullName": "user.full_name"
+        },
+        {
+            "Group": "user.group.name"
+        }
+    ],
+    "Host": [
+        {
+            "HostName": "host.name"
+        },
+        {
+            "FullName": "host.hostname"
+        },
+        {
+            "Id": "host.id"
+        },
+        {
+            "IP": "host.ip"
+        },
+        {
+            "MAC": "host.mac"
+        },
+        {
+            "OS": "host.os.name"
+        },
+        {
+            "OSVersion": "host.os.version"
+        },
+        {
+            "Platform": "host.os.platform"
+        },
+        {
+            "Architecture": "host.architecture"
+        }
+    ],
+    "IP": [
+        {
+            "Address": [
+                "source.ip",
+                "destination.ip",
+                "client.ip",
+                "server.ip"
+            ]
+        },
+        {
+            "Port": [
+                "source.port",
+                "destination.port",
+                "client.port",
+                "server.port"
+            ]
+        },
+        {
+            "GeoLocation": [
+                "source.geo.country_name",
+                "destination.geo.country_name"
+            ]
+        }
+    ],
+    "URL": [
+        {
+            "Url": "url.full"
+        },
+        {
+            "Domain": "url.domain"
+        },
+        {
+            "Path": "url.path"
+        },
+        {
+            "Query": "url.query"
+        },
+        {
+            "Scheme": "url.scheme"
+        }
+    ],
+    "DNS": [
+        {
+            "QuestionName": "dns.question.name"
+        },
+        {
+            "QuestionType": "dns.question.type"
+        },
+        {
+            "AnswerData": "dns.answers.data"
+        },
+        {
+            "AnswerType": "dns.answers.type"
+        }
+    ],
+    "File": [
+        {
+            "Name": "file.name"
+        },
+        {
+            "Path": "file.path"
+        },
+        {
+            "Extension": "file.extension"
+        },
+        {
+            "Size": "file.size"
+        },
+        {
+            "MimeType": "file.mime_type"
+        },
+        {
+            "Directory": "file.directory"
+        },
+        {
+            "Owner": "file.owner"
+        }
+    ],
+    "FileHash": [
+        {
+            "MD5": "file.hash.md5"
+        },
+        {
+            "SHA1": "file.hash.sha1"
+        },
+        {
+            "SHA256": "file.hash.sha256"
+        },
+        {
+            "SHA512": "file.hash.sha512"
+        }
+    ],
+    "Process": [
+        {
+            "ProcessId": "process.pid"
+        },
+        {
+            "Name": "process.name"
+        },
+        {
+            "CommandLine": "process.command_line"
+        },
+        {
+            "Executable": "process.executable"
+        },
+        {
+            "WorkingDirectory": "process.working_directory"
+        },
+        {
+            "ParentPid": "process.parent.pid"
+        },
+        {
+            "ParentName": "process.parent.name"
+        },
+        {
+            "ParentCommandLine": "process.parent.command_line"
+        },
+        {
+            "User": "process.user.name"
+        }
+    ],
+    "Registry": [
+        {
+            "Key": "registry.key"
+        },
+        {
+            "Path": "registry.path"
+        },
+        {
+            "Value": "registry.value"
+        },
+        {
+            "Data": "registry.data.strings"
+        },
+        {
+            "Hive": "registry.hive"
+        }
+    ],
+    "Network": [
+        {
+            "Protocol": "network.protocol"
+        },
+        {
+            "Direction": "network.direction"
+        },
+        {
+            "BytesSent": "network.bytes"
+        },
+        {
+            "BytesReceived": "source.bytes"
+        },
+        {
+            "Transport": "network.transport"
+        },
+        {
+            "Type": "network.type"
+        }
+    ],
+    "HTTP": [
+        {
+            "Method": "http.request.method"
+        },
+        {
+            "StatusCode": "http.response.status_code"
+        },
+        {
+            "UserAgent": "user_agent.original"
+        },
+        {
+            "RequestBody": "http.request.body.content"
+        },
+        {
+            "ReferrerUrl": "http.request.referrer"
+        }
+    ],
+    "CloudResource": [
+        {
+            "Provider": "cloud.provider"
+        },
+        {
+            "Account": "cloud.account.id"
+        },
+        {
+            "Instance": "cloud.instance.id"
+        },
+        {
+            "Region": "cloud.region"
+        },
+        {
+            "Project": "cloud.project.id"
+        }
+    ],
+    "Container": [
+        {
+            "Id": "container.id"
+        },
+        {
+            "Name": "container.name"
+        },
+        {
+            "Image": "container.image.name"
+        },
+        {
+            "Runtime": "container.runtime"
+        }
+    ],
+    "Threat": [
+        {
+            "Framework": "threat.framework"
+        },
+        {
+            "Tactic": "threat.tactic.name"
+        },
+        {
+            "Technique": "threat.technique.name"
+        },
+        {
+            "TechniqueId": "threat.technique.id"
+        }
+    ],
+    "Event": [
+        {
+            "Action": "event.action"
+        },
+        {
+            "Category": "event.category"
+        },
+        {
+            "Type": "event.type"
+        },
+        {
+            "Outcome": "event.outcome"
+        },
+        {
+            "Severity": "event.severity"
+        }
+    ]
+}

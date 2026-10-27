@@ -9,6 +9,10 @@ Usage:
 
 import argparse
 
+from archer import paths
+
+paths.seed_bespoke()
+
 VALID_SIEMS = {"mde", "splunk", "elastic", "secops"}
 
 

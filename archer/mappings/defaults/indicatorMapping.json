@@ -1,0 +1,448 @@
+{
+  "_comment": "Maps indicator types to log sources with cloud platform awareness",
+  "_description": "cloud_native_* sources only capture cloud API activity; endpoint sources can detect CLI tools running on endpoints",
+  "cmd": {
+    "Splunk": {
+      "edr": [
+        "cs1"
+      ],
+      "os": [
+        "cs1"
+      ]
+    },
+    "MDE": {
+      "DeviceProcessEvents": [
+        "ProcessCommandLine",
+        "InitiatingProcessCommandLine"
+      ],
+      "DeviceFileEvents": [
+        "InitiatingProcessCommandLine"
+      ],
+      "DeviceEvents": [
+        "AdditionalFields"
+      ]
+    },
+    "GoogleSecOps": {
+      "WINDOWS_SYSMON": [
+        "target.process.command_line",
+        "principal.process.command_line"
+      ],
+      "WINDOWS_EVENT_LOG": [
+        "target.process.command_line"
+      ],
+      "LINUX_SYSLOG": [
+        "target.process.command_line"
+      ],
+      "LINUX_AUDITD": [
+        "target.process.command_line"
+      ]
+    },
+    "Elastic": {
+      "logs-endpoint.events.process-*": [
+        "process.command_line",
+        "process.parent.command_line"
+      ],
+      "winlogbeat-*": [
+        "process.command_line"
+      ],
+      "auditbeat-*": [
+        "process.args"
+      ]
+    }
+  },
+  "reg": {
+    "Splunk": {
+      "edr": [
+        "cs3"
+      ],
+      "os": [
+        "cs3"
+      ]
+    },
+    "MDE": {
+      "DeviceRegistryEvents": [
+        "RegistryKey",
+        "RegistryValueData"
+      ]
+    },
+    "GoogleSecOps": {
+      "WINDOWS_SYSMON": [
+        "target.registry.registry_key",
+        "target.registry.registry_value_data"
+      ],
+      "WINDOWS_EVENT_LOG": [
+        "target.registry.registry_key"
+      ]
+    },
+    "Elastic": {
+      "logs-endpoint.events.registry-*": [
+        "registry.path",
+        "registry.data.strings",
+        "registry.value"
+      ],
+      "winlogbeat-*": [
+        "registry.path"
+      ]
+    }
+  },
+  "evt": {
+    "Splunk": {
+      "os": [
+        "deviceEventClassId"
+      ],
+      "edr": [
+        "deviceEventClassId"
+      ]
+    },
+    "MDE": {
+      "DeviceEvents": [
+        "ActionType",
+        "EventNumber"
+      ],
+      "DeviceLogonEvents": [
+        "LogonId"
+      ]
+    },
+    "GoogleSecOps": {
+      "WINDOWS_EVENT_LOG": [
+        "metadata.windows_log_record_id",
+        "metadata.event_type"
+      ],
+      "LINUX_AUDITD": [
+        "metadata.log_type"
+      ]
+    },
+    "Elastic": {
+      "winlogbeat-*": [
+        "event.code",
+        "winlog.event_id"
+      ],
+      "logs-windows.*": [
+        "event.code"
+      ],
+      "auditbeat-*": [
+        "event.action",
+        "event.type"
+      ]
+    }
+  },
+  "sw": {
+    "Splunk": {
+      "edr": [
+        "dproc"
+      ],
+      "os": [
+        "dproc"
+      ]
+    },
+    "MDE": {
+      "DeviceProcessEvents": [
+        "FileName",
+        "ProcessVersionInfoProductName",
+        "ProcessVersionInfoCompanyName"
+      ],
+      "DeviceFileEvents": [
+        "FileName"
+      ],
+      "DeviceImageLoadEvents": [
+        "FileName",
+        "ImagePath"
+      ]
+    },
+    "GoogleSecOps": {
+      "WINDOWS_SYSMON": [
+        "target.process.file.full_path",
+        "target.file.names",
+        "principal.process.file.full_path"
+      ],
+      "LINUX_SYSLOG": [
+        "target.process.file.full_path",
+        "target.file.names"
+      ]
+    },
+    "Elastic": {
+      "logs-endpoint.events.process-*": [
+        "process.name",
+        "process.executable",
+        "process.parent.name"
+      ],
+      "logs-endpoint.events.file-*": [
+        "file.name",
+        "file.path"
+      ],
+      "winlogbeat-*": [
+        "process.name",
+        "process.executable"
+      ]
+    }
+  },
+  "network": {
+    "Splunk": {
+      "edr": [
+        "request"
+      ],
+      "os": [
+        "cs1"
+      ],
+      "proxy": [
+        "request"
+      ],
+      "dns": [
+        "destinationDnsDomain"
+      ]
+    },
+    "MDE": {
+      "DeviceNetworkEvents": [
+        "RemoteUrl",
+        "RemoteIP",
+        "RemotePort"
+      ],
+      "DeviceProcessEvents": [
+        "ProcessCommandLine"
+      ],
+      "DeviceEvents": [
+        "RemoteUrl"
+      ]
+    },
+    "GoogleSecOps": {
+      "WINDOWS_SYSMON": [
+        "target.url",
+        "target.ip",
+        "target.port"
+      ],
+      "NETWORK": [
+        "target.url",
+        "target.ip",
+        "target.port",
+        "principal.ip"
+      ]
+    },
+    "Elastic": {
+      "logs-endpoint.events.network-*": [
+        "url.full",
+        "destination.ip",
+        "destination.port",
+        "source.ip"
+      ],
+      "packetbeat-*": [
+        "url.full",
+        "destination.address",
+        "source.address"
+      ]
+    }
+  },
+  "port": {
+    "Splunk": {
+      "edr": [
+        "dpt"
+      ],
+      "os": [
+        "dpt"
+      ],
+      "network": [
+        "dpt"
+      ]
+    },
+    "MDE": {
+      "DeviceNetworkEvents": [
+        "RemotePort",
+        "LocalPort"
+      ]
+    },
+    "GoogleSecOps": {
+      "WINDOWS_SYSMON": [
+        "target.port",
+        "principal.port"
+      ],
+      "NETWORK": [
+        "target.port",
+        "principal.port"
+      ]
+    },
+    "Elastic": {
+      "logs-endpoint.events.network-*": [
+        "destination.port",
+        "source.port"
+      ],
+      "packetbeat-*": [
+        "destination.port",
+        "source.port"
+      ]
+    }
+  },
+  "protocol": {
+    "Splunk": {
+      "edr": [
+        "proto"
+      ],
+      "network": [
+        "proto"
+      ]
+    },
+    "MDE": {
+      "DeviceNetworkEvents": [
+        "Protocol"
+      ]
+    },
+    "GoogleSecOps": {
+      "WINDOWS_SYSMON": [
+        "network.application_protocol",
+        "target.application"
+      ],
+      "NETWORK": [
+        "network.application_protocol",
+        "network.ip_protocol"
+      ]
+    },
+    "Elastic": {
+      "logs-endpoint.events.network-*": [
+        "network.protocol",
+        "network.transport"
+      ],
+      "packetbeat-*": [
+        "network.protocol",
+        "network.transport"
+      ]
+    }
+  },
+  "service": {
+    "Splunk": {
+      "edr": [
+        "destinationServiceName"
+      ],
+      "os": [
+        "destinationServiceName"
+      ]
+    },
+    "MDE": {
+      "DeviceNetworkEvents": [
+        "RemoteUrl"
+      ],
+      "DeviceEvents": [
+        "ActionType"
+      ]
+    },
+    "GoogleSecOps": {
+      "WINDOWS_SYSMON": [
+        "target.application",
+        "principal.application"
+      ],
+      "NETWORK": [
+        "target.application",
+        "network.application_protocol"
+      ]
+    },
+    "Elastic": {
+      "logs-endpoint.events.network-*": [
+        "network.application",
+        "destination.service.name"
+      ],
+      "packetbeat-*": [
+        "network.application",
+        "service.name"
+      ]
+    }
+  },
+  "api": {
+    "_comment": "API indicators - flattened structure for compatibility with detection generation",
+    "Splunk": {
+      "aws": [
+        "act"
+      ],
+      "azure": [
+        "act"
+      ],
+      "gcp": [
+        "act"
+      ],
+      "identity": [
+        "act"
+      ],
+      "saas": [
+        "act"
+      ],
+      "edr": [
+        "cs1"
+      ],
+      "os": [
+        "cs1"
+      ]
+    },
+    "MDE": {
+      "CloudAppEvents": [
+        "ActionType",
+        "ActivityType"
+      ],
+      "IdentityLogonEvents": [
+        "ActionType",
+        "Application"
+      ],
+      "IdentityDirectoryEvents": [
+        "ActionType",
+        "Application"
+      ],
+      "DeviceEvents": [
+        "ActionType"
+      ],
+      "DeviceProcessEvents": [
+        "ProcessCommandLine",
+        "InitiatingProcessCommandLine"
+      ],
+      "DeviceNetworkEvents": [
+        "RemoteUrl"
+      ]
+    },
+    "GoogleSecOps": {
+      "GCP_AUDIT": [
+        "metadata.vendor_name",
+        "metadata.product_name",
+        "security_result.action"
+      ],
+      "AZURE_AD": [
+        "metadata.vendor_name",
+        "target.application",
+        "security_result.action"
+      ],
+      "AWS_CLOUDTRAIL": [
+        "metadata.vendor_name",
+        "target.resource.name",
+        "security_result.action"
+      ],
+      "WINDOWS_SYSMON": [
+        "target.process.command_line",
+        "principal.process.command_line"
+      ],
+      "LINUX_AUDITD": [
+        "target.process.command_line"
+      ]
+    },
+    "Elastic": {
+      "logs-gcp.*": [
+        "event.action",
+        "gcp.audit.method_name"
+      ],
+      "logs-azure.*": [
+        "event.action",
+        "azure.activitylogs.operation_name"
+      ],
+      "logs-aws.*": [
+        "event.action",
+        "aws.cloudtrail.event_name"
+      ],
+      "logs-endpoint.events.process-*": [
+        "process.command_line"
+      ],
+      "winlogbeat-*": [
+        "process.command_line"
+      ]
+    }
+  },
+  "api_event": {
+    "_comment": "Windows API calls Defender XDR records as DeviceEvents ActionTypes (WriteProcessMemoryApiCall...). Defender only.",
+    "MDE": {
+      "DeviceEvents": [
+        "ActionType"
+      ]
+    }
+  }
+}

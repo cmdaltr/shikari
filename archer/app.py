@@ -8,8 +8,10 @@ from archer.build.attack_mapping import rule_name as attack_rule_name
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from typing import List, Optional
+from archer import paths
 
-_PROJECT_ROOT = Path(__file__).parent.parent
+# Before archer.build.queries is imported: it reads the Splunk schema at import
+paths.seed_bespoke()
 
 # -----------------------------------------------------------------------------
 # Archer service - main FastAPI application
@@ -80,7 +82,7 @@ from archer.chat import router as chat_router
 from archer.visualization.frameworks import FRAMEWORKS as FLOW_FRAMEWORKS
 
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=str(paths.TEMPLATES))
 # Attack flow tabs (partials/attack_flow.html): the Cyber Kill Chain and Targeted Attack Lifecycle mappings
 templates.env.globals["flow_frameworks"] = FLOW_FRAMEWORKS
 
@@ -115,7 +117,7 @@ DATA_SOURCE_DISPLAY_NAMES = {
 # Names for the organisation's own products (WAFs, proxies, IPS) stay out of the code:
 # bespoke/mappings/sources/display_names.json (gitignored) adds or overrides entries
 try:
-    with open(os.path.join(os.path.dirname(__file__), "..", "bespoke", "mappings", "sources", "display_names.json")) as _fh:
+    with open(paths.BESPOKE / "mappings" / "sources" / "display_names.json") as _fh:
         DATA_SOURCE_DISPLAY_NAMES.update({k.lower(): v for k, v in json.load(_fh).items()})
 except (OSError, ValueError):
     pass
@@ -1134,7 +1136,7 @@ def get_indicators_from_yaml(yaml_file, yaml_data=None):
 
 
 app = FastAPI(title="Archer Threat Hunting Service")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=str(paths.STATIC)), name="static")
 
 
 def _bearer_token(request: Request) -> Optional[str]:
@@ -1191,7 +1193,7 @@ app.include_router(elevation_router)
 # Favicon route - ensure favicon is served from root with no-cache headers
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
-    favicon_path = Path("static/favicon-32.png")
+    favicon_path = paths.STATIC / "favicon-32.png"
     if favicon_path.exists():
         return FileResponse(
             favicon_path,
@@ -3824,7 +3826,8 @@ def manual(request: Request, group_name: str = "", archer_session: Optional[str]
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    # "app" lets the desktop app tell an Archer server from anything else answering at a URL
+    return {"status": "ok", "app": "archer"}
 
 
 _DRAFT_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,128}")
@@ -4152,7 +4155,7 @@ def coverage_json(request: Request, group: str = "", techniques: str = "",
 @functools.lru_cache(maxsize=1)
 def _attack_techniques() -> dict:
     """{technique ID: attack-pattern} from the cached ATT&CK bundle."""
-    path = Path(__file__).parent / "data" / "cache" / "enterprise-attack.json"
+    path = paths.CACHE / "enterprise-attack.json"
     with open(path, encoding="utf-8") as fh:
         bundle = json.load(fh)
     index = {}
@@ -5411,7 +5414,7 @@ async def get_technique_names(request: Request):
         technique_ids = body.get("technique_ids", [])
 
         # Load MITRE ATT&CK data
-        mitre_path = Path(__file__).parent / "data" / "cache" / "enterprise-attack.json"
+        mitre_path = paths.CACHE / "enterprise-attack.json"
         if not mitre_path.exists():
             return JSONResponse(
                 {"success": False, "error": "MITRE ATT&CK data not found"}, status_code=500
@@ -7447,7 +7450,7 @@ def list_splunk_detections():
     Returns a list of objects with technique_id, technique_name, filename,
     query_count, and tactic for each saved detection.
     """
-    detections_dir = _PROJECT_ROOT / "data" / "detections" / "splunk"
+    detections_dir = paths.DATA / "detections" / "splunk"
     if not detections_dir.exists():
         return JSONResponse({"detections": [], "total": 0})
 
@@ -7480,7 +7483,7 @@ def splunk_detection_status():
 
     cache_exists = _DEFAULT_CSV.exists()
 
-    detections_dir = _PROJECT_ROOT / "data" / "detections" / "splunk"
+    detections_dir = paths.DATA / "detections" / "splunk"
     detection_count = len(list(detections_dir.glob("*.json"))) if detections_dir.exists() else 0
 
     return JSONResponse({
