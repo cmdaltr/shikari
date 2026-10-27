@@ -6,62 +6,62 @@
 <title>The Archer machine</title>
 <style>
   :root{
-    --navy:#0D1B2A; --navy2:#0a1521; --teal:#00D4AA; --amber:#F59E0B; --red:#EF4444;
-    --ink:#E6EEF2; --muted:#7f93a3;
+    --navy:#0D1B2A; --navy2:#081019; --teal:#00D4AA; --amber:#F59E0B; --red:#EF4444;
+    --ink:#E6EEF2; --muted:#8aa0b0;
     --mono:'JetBrains Mono','SFMono-Regular',ui-monospace,'Courier New',monospace;
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
-  body{background:
-      radial-gradient(1200px 700px at 60% 30%, #12263a 0%, var(--navy) 55%, var(--navy2) 100%);
+  body{background:radial-gradient(1200px 800px at 55% 25%, #163049 0%, #0d2036 50%, var(--navy2) 100%);
     color:var(--ink);font-family:var(--mono);overflow:hidden}
   #scene{position:fixed;inset:0}
   canvas{display:block}
 
   .label{font-family:var(--mono);font-size:11px;color:var(--ink);pointer-events:none;
-    text-shadow:0 1px 3px rgba(0,0,0,.8);white-space:nowrap;letter-spacing:.3px;
-    transition:opacity .25s}
-  .label .s{display:block;font-size:9px;color:var(--teal);letter-spacing:1px}
-  .label.dim{opacity:.18}
+    text-shadow:0 1px 4px rgba(0,0,0,.9);white-space:nowrap;letter-spacing:.3px;transition:opacity .3s}
+  .label .s{display:block;font-size:9px;color:var(--teal);letter-spacing:.6px}
+  .label.dim{opacity:.28}
   .nhead{display:inline-flex;align-items:center;gap:5px}
-  .nico{width:13px;height:13px;fill:none;stroke:var(--teal);stroke-width:2;
-    stroke-linecap:round;stroke-linejoin:round;flex:none}
-  .nlogo{width:14px;height:14px;stroke:none;flex:none}
-  .chip svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;
-    stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px;margin-right:6px}
+  .nico{width:13px;height:13px;flex:none}
+  .nlogo{width:14px;height:14px;flex:none}
 
   header{position:fixed;top:0;left:0;right:0;padding:16px 20px;z-index:5;
     display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;pointer-events:none}
   h1{font-size:18px;margin:0;letter-spacing:.5px}
   h1 .a{color:var(--teal)}
-  .fig{font-size:11px;color:var(--muted);border:1px solid rgba(0,212,170,.3);
-    padding:2px 8px;border-radius:3px}
+  .fig{font-size:11px;color:var(--muted);border:1px solid rgba(0,212,170,.3);padding:2px 8px;border-radius:3px}
   .hint{font-size:11px;color:var(--muted);margin-left:auto}
 
-  /* toolbar chips */
-  #chips{position:fixed;left:0;right:0;bottom:16px;z-index:5;display:flex;gap:8px;
+  /* narration banner */
+  #story{position:fixed;left:50%;bottom:72px;transform:translateX(-50%);z-index:6;
+    width:min(680px,calc(100vw - 32px));text-align:center;pointer-events:none}
+  #story .camp{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--amber)}
+  #story .step{font-size:13.5px;color:var(--ink);margin-top:5px;line-height:1.5;
+    text-shadow:0 2px 8px rgba(0,0,0,.9)}
+
+  /* controls */
+  #ctl{position:fixed;left:0;right:0;bottom:16px;z-index:7;display:flex;gap:8px;
     justify-content:center;flex-wrap:wrap;padding:0 16px}
   .chip{font-family:var(--mono);font-size:11px;color:var(--ink);cursor:pointer;
-    background:rgba(13,27,42,.72);border:1px solid rgba(0,212,170,.3);border-radius:4px;
-    padding:6px 11px;letter-spacing:.4px;backdrop-filter:blur(6px);transition:all .15s;user-select:none}
+    background:rgba(10,21,33,.78);border:1px solid rgba(0,212,170,.3);border-radius:4px;
+    padding:6px 11px;letter-spacing:.4px;backdrop-filter:blur(6px);transition:all .15s;user-select:none;
+    display:inline-flex;align-items:center;gap:6px}
   .chip:hover{border-color:var(--teal)}
   .chip.on{background:var(--teal);color:var(--navy);border-color:var(--teal);font-weight:700}
-  .chip.tour.on{background:var(--amber);border-color:var(--amber)}
+  .chip svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .chip.sep{background:none;border:none;cursor:default;color:var(--muted);padding:6px 2px}
 
   /* info panel */
-  #info{position:fixed;top:64px;right:16px;width:300px;max-width:calc(100vw - 32px);z-index:6;
-    background:rgba(10,21,33,.9);border:1px solid rgba(0,212,170,.35);border-radius:8px;
-    padding:16px 18px;backdrop-filter:blur(10px);transform:translateX(120%);
-    transition:transform .3s cubic-bezier(.2,.8,.2,1);box-shadow:0 18px 40px rgba(0,0,0,.45)}
+  #info{position:fixed;top:60px;right:16px;width:290px;max-width:calc(100vw - 32px);z-index:8;
+    background:rgba(8,17,26,.92);border:1px solid rgba(0,212,170,.35);border-radius:8px;
+    padding:15px 17px;backdrop-filter:blur(10px);transform:translateX(130%);
+    transition:transform .3s cubic-bezier(.2,.8,.2,1);box-shadow:0 18px 40px rgba(0,0,0,.5)}
   #info.show{transform:translateX(0)}
-  #info .cat{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--teal)}
-  #info h2{font-size:15px;margin:4px 0 2px}
-  #info .port{font-size:10.5px;color:var(--amber);margin:0 0 10px}
-  #info p{font-size:12px;color:var(--ink);line-height:1.5;margin:0 0 10px;opacity:.9}
-  #info .edges{font-size:10.5px;color:var(--muted);border-top:1px solid rgba(255,255,255,.08);
-    padding-top:9px;line-height:1.6}
-  #info .edges b{color:var(--teal);font-weight:400}
-  #info .x{position:absolute;top:10px;right:12px;cursor:pointer;color:var(--muted);font-size:16px}
+  #info .cat{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--amber)}
+  #info h2{font-size:15px;margin:3px 0 1px}
+  #info .port{font-size:10.5px;color:var(--teal);margin:0 0 9px}
+  #info p{font-size:12px;color:var(--ink);line-height:1.5;margin:0;opacity:.9}
+  #info .x{position:absolute;top:9px;right:12px;cursor:pointer;color:var(--muted);font-size:16px}
   #info .x:hover{color:var(--ink)}
   @media (max-width:560px){.hint{display:none}}
 </style>
@@ -71,28 +71,32 @@
 
 <header>
   <h1><span class="a">The Archer</span> machine</h1>
-  <span class="fig">Fig · Archer runtime</span>
-  <span class="hint">drag to orbit · scroll to zoom · click a part · follow the flow of data along the links</span>
+  <span class="fig">Fig &middot; Archer realm</span>
+  <span class="hint">drag to orbit &middot; scroll to zoom &middot; click a landmark &middot; watch one campaign ride through at a time</span>
 </header>
 
 <div id="info">
-  <span class="x" id="infoX">×</span>
+  <span class="x" id="infoX">&times;</span>
   <div class="cat" id="iCat"></div>
   <h2 id="iName"></h2>
   <p class="port" id="iPort"></p>
   <p id="iDesc"></p>
-  <div class="edges" id="iEdges"></div>
 </div>
 
-<div id="chips">
-  <span class="chip" data-cat="store"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v14c0 1.7 3 3 7 3s7-1.3 7-3V5"/><path d="M5 12c0 1.7 3 3 7 3s7-1.3 7-3"/></svg>Detection store</span>
-  <span class="chip" data-cat="core"><svg viewBox="0 0 24 24"><path d="M9 13a4 4 0 0 0 6 .5l2-2a4 4 0 0 0-6-6l-1 1"/><path d="M15 11a4 4 0 0 0-6-.5l-2 2a4 4 0 0 0 6 6l1-1"/></svg>Correlation</span>
-  <span class="chip" data-cat="intel"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="9" r="2"/><path d="M6 8v8M6 12h7a3 3 0 0 0 3-3"/></svg>MITRESaw / OSINT</span>
-  <span class="chip" data-cat="siem"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 7-7 9-4-2-7-4.5-7-9V6z"/></svg>SIEM</span>
-  <span class="chip" data-cat="ai"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>Ollama / LLM</span>
-  <span class="chip" data-cat="lab"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 8a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-8V3"/></svg>Lab</span>
-  <span class="chip" data-cat="assess"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>VECTR</span>
-  <span class="chip tour" data-tour="1"><svg viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></svg>Tour</span>
+<div id="story">
+  <div class="camp" id="sCamp"></div>
+  <div class="step" id="sStep"></div>
+</div>
+
+<div id="ctl">
+  <span class="chip sep">Campaign:</span>
+  <span class="chip jchip on" data-journey="group">Group hunt</span>
+  <span class="chip jchip" data-journey="cve">CVE</span>
+  <span class="chip jchip" data-journey="report">Report</span>
+  <span class="chip sep">&middot;</span>
+  <span class="chip" id="playBtn"><svg id="playIco"><rect x="6" y="5" width="3" height="14"/><rect x="15" y="5" width="3" height="14"/></svg><span id="playTxt">Pause</span></span>
+  <span class="chip" id="nextBtn"><svg><path d="M5 5l9 7-9 7z"/><line x1="18" y1="5" x2="18" y2="19"/></svg>Next</span>
+  <span class="chip" id="orbitBtn"><svg><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3l3 3-3 3"/></svg>Orbit</span>
 </div>
 
 <script type="importmap">
@@ -107,93 +111,85 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
-const COL = { navy:0x0D1B2A, teal:0x00D4AA, amber:0xF59E0B, red:0xEF4444, slate:0x1b3047 };
-const CAT_COLOR = { ops:COL.teal, core:COL.teal, intel:COL.amber, siem:COL.teal,
-                    ai:COL.amber, store:0x8aa0b4, lab:COL.amber, assess:COL.red };
+const C = { teal:0x00D4AA, amber:0xF59E0B, red:0xEF4444, ink:0xE6EEF2,
+  stone:0x6b7d8c, stoneDk:0x4a5866, wood:0x8a5a2b, woodDk:0x5e3d1d, gold:0xd9a441,
+  sail:0xe6eef2, grass:0x1d4536, grassDk:0x14362b, water:0x0b2a3a, dark:0x1a2430 };
 
-// --- node graph -----------------------------------------------------------
-// pos is [x,y,z] on an isometric field; size scales the box.
-const NODES = [
-  { id:'cli',  cat:'ops',    name:'archer-cli',       port:'supervisor', pos:[-10,0,-4], size:1.1,
-    desc:'The one CLI. Starts/stops the stack and runs one-shot hunts, correlation and exports.',
-    to:['api'] },
-  { id:'api',  cat:'core',   name:'FastAPI app',      port:':8000', pos:[-3.5,0.6,-4], size:1.4,
-    desc:'Server-rendered Jinja2 UI + HTTP API. The hub every request passes through.',
-    to:['saw','gen','corr','db','cat'] },
-  { id:'saw',  cat:'intel',  name:'MITRESaw',         port:'STIX / TAXII', pos:[-7,0,2.5], size:1.1,
-    desc:'Walks ATT&CK STIX for procedures and indicators across direct, software and campaign paths.',
-    to:['gen'] },
-  { id:'cat',  cat:'intel',  name:'Catalogue · Exposure', port:'OSINT', pos:[-10,0,7], size:1.1,
-    desc:'Org attack-surface mapping — Team Cymru, MX and HIBP enrichment feeding the exposure map.',
-    to:['api'] },
-  { id:'lab',  cat:'lab',    name:'Telemetry · Lab',  port:'ATT&CK datasets', pos:[-3,0,7.5], size:1.0,
-    desc:'Public corpora + your own local ART recordings — telemetry that grounds detection fields.',
-    to:['gen'] },
-  { id:'gen',  cat:'core',   name:'Query generator',  port:'two-tier', pos:[2,0.4,-1], size:1.3,
-    desc:'Emits one vendor-native query per technique — LLM tier or no-LLM template tier, with an availability gate.',
-    to:['llm','secops','mde','splunk','elastic','yaml'] },
-  { id:'llm',  cat:'ai',     name:'LLM',              port:'Ollama :11434 / Anthropic', pos:[3,2.4,-6.5], size:1.0,
-    desc:'Optional. Compact prompt + MITRESaw evidence → query, with a degenerate-output guard. AI is opt-in.',
-    to:[] },
-  { id:'yaml', cat:'store',  name:'Detection YAML',   port:'data/groups', pos:[4.5,-0.4,6.5], size:1.1,
-    desc:'The rule set — name, technique, query, severity, connectors, indicators. Pushable as detections-as-code.',
-    to:['corr','vectr'] },
-  { id:'corr', cat:'core',   name:'Correlation engine', port:'chains', pos:[7.5,0.6,2.5], size:1.2,
-    desc:'Stitches techniques into single-vendor sequences and cross-vendor playbooks joined on host/user entities.',
-    to:['secops','mde','splunk','elastic'] },
-  { id:'db',   cat:'store',  name:'SQLite store',     port:'archer.db', pos:[-3.5,-1.8,1.5], size:1.0,
-    desc:'Case store — threat-library test cases, assessments, saved detections. Lives in place (OneDrive), NullPool.',
-    to:[] },
-  { id:'secops',cat:'siem',  name:'Google SecOps',    port:'YARA-L · UDM', pos:[11,1.4,-4], size:1.0,
-    desc:'Primary target and top correlation priority. Availability keyed on UDM metadata.event_type.', to:[] },
-  { id:'mde',  cat:'siem',   name:'Defender XDR',     port:'KQL', pos:[12,0.2,-0.5], size:1.0,
-    desc:'MDE schema — DeviceProcessEvents, DeviceFileEvents and the rest of the advanced-hunting tables.', to:[] },
-  { id:'splunk',cat:'siem',  name:'Splunk',           port:'SPL', pos:[11.5,-0.6,3], size:1.0,
-    desc:'Field mapping handled by bespoke custom schema — no fixed CIM guarantee across tenants.', to:[] },
-  { id:'elastic',cat:'siem', name:'Elastic',          port:'ES|QL · ECS', pos:[12,0.6,6.5], size:1.0,
-    desc:'ECS-mapped fields; detections gated on the data connectors actually ingested.', to:[] },
-  { id:'vectr',cat:'assess', name:'VECTR',            port:'GraphQL', pos:[8.5,0,9.5], size:1.0,
-    desc:'Purple-team campaign side. Archer pushes threat-library cases in and reads campaign outcomes back.', to:[] },
-];
-const NODE = Object.fromEntries(NODES.map(n => [n.id, n]));
-
+// CC0 brand logomarks (Simple Icons) to mark the real integration targets
 const LOGOS = {
   secops:{ d:'M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z', c:'#4285F4' },
   splunk:{ d:'M23.348 11.911l-2.241-1.091v-.65L24 11.621v.593l-2.893 1.438v-.636zm-5.397 1.841h-.961v-5.31h.961v3.116h.102l1.28-1.481.723.31-1.23 1.316 1.453 1.809-.888.311-1.44-1.996zm-2.577-.002v-2.068a2.685 2.685 0 0 0-.026-.42.791.791 0 0 0-.09-.26c-.113-.202-.308-.304-.59-.304a.888.888 0 0 0-.461.113.673.673 0 0 0-.286.33 1.012 1.012 0 0 0-.07.263c-.012.13-.019.262-.017.395v1.95h-.961v-3.614h.961l.002.485c.185-.2.373-.348.566-.437.192-.089.418-.134.673-.134.286 0 .527.058.721.177a1.016 1.016 0 0 1 .475.665 1.972 1.972 0 0 1 .054.448c.002.1.004.22.004.358v2.053zm-4.115.002l-.002-.485a1.783 1.783 0 0 1-.565.437 1.597 1.597 0 0 1-.674.135c-.285 0-.524-.057-.72-.17a.972.972 0 0 1-.425-.504.75.75 0 0 1-.054-.167 1.918 1.918 0 0 1-.033-.199 2.033 2.033 0 0 1-.017-.258 15.516 15.516 0 0 1-.005-.355V10.13h.956v2.07c-.003.141.006.282.026.42.015.092.045.18.09.26.113.204.308.306.59.306.36 0 .606-.15.74-.449.035-.082.06-.168.074-.257.017-.134.024-.269.022-.403v-1.95h.955v3.624zM7.184 8.44h.955v5.31h-.955zM5.759 11.9c0-.396-.08-.708-.24-.937a.759.759 0 0 0-.657-.345.804.804 0 0 0-.693.366c-.171.245-.256.574-.253.99 0 .405.084.723.25.957a.796.796 0 0 0 .69.347.685.685 0 0 0 .433-.135.985.985 0 0 0 .277-.34c.071-.14.121-.292.147-.448.03-.151.043-.3.046-.455m1.01-.036c.003.266-.04.532-.129.786-.082.23-.204.441-.364.626-.31.361-.764.567-1.24.563a1.67 1.67 0 0 1-.313-.028 1.041 1.041 0 0 1-.275-.098 1.33 1.33 0 0 1-.257-.178 2.379 2.379 0 0 1-.265-.268v2.293h-.929v-5.425h.93l.004.529c.169-.212.353-.368.55-.468.197-.1.426-.15.688-.147a1.509 1.509 0 0 1 1.156.507c.148.166.259.361.33.571.08.236.12.485.115.737m-4.21.89a.946.946 0 0 1-.102.441 1.007 1.007 0 0 1-.282.345c-.13.1-.275.173-.43.22a1.8 1.8 0 0 1-.546.08 1.985 1.985 0 0 1-.637-.097 1.964 1.964 0 0 1-.563-.32l.312-.505c.15.126.284.217.405.275.115.057.24.087.368.087a.557.557 0 0 0 .373-.12.396.396 0 0 0 .14-.322.475.475 0 0 0-.12-.318 1.306 1.306 0 0 0-.187-.173 9.231 9.231 0 0 0-.308-.232 6.787 6.787 0 0 1-.281-.21 2.11 2.11 0 0 1-.252-.232 1.039 1.039 0 0 1-.18-.275.826.826 0 0 1-.069-.347.893.893 0 0 1 .094-.409.935.935 0 0 1 .255-.314 1.22 1.22 0 0 1 .39-.203c.16-.05.327-.074.494-.072.184 0 .368.026.545.076.174.05.338.123.488.219l-.282.454a1.05 1.05 0 0 0-.608-.201.504.504 0 0 0-.323.102.307.307 0 0 0-.126.253c0 .098.041.193.113.26.074.078.203.186.385.325.185.136.336.253.457.355.104.085.202.182.286.286.065.08.115.173.145.273a.808.808 0 0 1 .046.299Z', c:'#7DB23F' },
   elastic:{ d:'M20.345 16.33l-3.959-.926-1.05-2.01 5.177-4.535a3.962 3.962 0 012.559 3.702 4.006 4.006 0 01-2.727 3.77m-2.976 4.68c-.616 0-1.22-.207-1.714-.587l.782-4.077 3.596.841c.115.31.172.642.172.987a2.839 2.839 0 01-2.836 2.836m-2.637-.586a5.92 5.92 0 01-4.908 2.6A5.947 5.947 0 014 15.905l5.167-4.67 5.272 2.403 1.167 2.23zM.928 11.443a4.007 4.007 0 012.726-3.77l3.95.933.927 1.98-5.05 4.565a3.97 3.97 0 01-2.553-3.708m5.703-8.45a2.841 2.841 0 011.723.58l-.789 4.092-3.598-.85a2.842 2.842 0 01-.172-.986A2.84 2.84 0 016.63 2.992m2.66.59A5.92 5.92 0 0120.1 6.93c0 .4-.038.781-.114 1.164l-5.299 4.643-5.251-2.394-1.026-2.19zM24 12.571a4.723 4.723 0 00-3.124-4.454 6.695 6.695 0 00.126-1.29A6.789 6.789 0 0014.22.047 6.769 6.769 0 008.727 2.86a3.586 3.586 0 00-2.204-.754A3.604 3.604 0 003.15 6.959 4.786 4.786 0 000 11.431 4.727 4.727 0 003.139 15.9a6.876 6.876 0 00-.124 1.289 6.773 6.773 0 006.765 6.765c2.19 0 4.22-1.052 5.49-2.824a3.568 3.568 0 002.207.769 3.603 3.603 0 003.374-4.854A4.785 4.785 0 0024 12.572', c:'#00BFB3' },
   llm:{ d:'M16.361 10.26a.894.894 0 0 0-.558.47l-.072.148.001.207c0 .193.004.217.059.353.076.193.152.312.291.448.24.238.51.3.872.205a.86.86 0 0 0 .517-.436.752.752 0 0 0 .08-.498c-.064-.453-.33-.782-.724-.897a1.06 1.06 0 0 0-.466 0zm-9.203.005c-.305.096-.533.32-.65.639a1.187 1.187 0 0 0-.06.52c.057.309.31.59.598.667.362.095.632.033.872-.205.14-.136.215-.255.291-.448.055-.136.059-.16.059-.353l.001-.207-.072-.148a.894.894 0 0 0-.565-.472 1.02 1.02 0 0 0-.474.007Zm4.184 2c-.131.071-.223.25-.195.383.031.143.157.288.353.407.105.063.112.072.117.136.004.038-.01.146-.029.243-.02.094-.036.194-.036.222.002.074.07.195.143.253.064.052.076.054.255.059.164.005.198.001.264-.03.169-.082.212-.234.15-.525-.052-.243-.042-.28.087-.355.137-.08.281-.219.324-.314a.365.365 0 0 0-.175-.48.394.394 0 0 0-.181-.033c-.126 0-.207.03-.355.124l-.085.053-.053-.032c-.219-.13-.259-.145-.391-.143a.396.396 0 0 0-.193.032zm.39-2.195c-.373.036-.475.05-.654.086-.291.06-.68.195-.951.328-.94.46-1.589 1.226-1.787 2.114-.04.176-.045.234-.045.53 0 .294.005.357.043.524.264 1.16 1.332 2.017 2.714 2.173.3.033 1.596.033 1.896 0 1.11-.125 2.064-.727 2.493-1.571.114-.226.169-.372.22-.602.039-.167.044-.23.044-.523 0-.297-.005-.355-.045-.531-.288-1.29-1.539-2.304-3.072-2.497a6.873 6.873 0 0 0-.855-.031zm.645.937a3.283 3.283 0 0 1 1.44.514c.223.148.537.458.671.662.166.251.26.508.303.82.02.143.01.251-.043.482-.08.345-.332.705-.672.957a3.115 3.115 0 0 1-.689.348c-.382.122-.632.144-1.525.138-.582-.006-.686-.01-.853-.042-.57-.107-1.022-.334-1.35-.68-.264-.28-.385-.535-.45-.946-.03-.192.025-.509.137-.776.136-.326.488-.73.836-.963.403-.269.934-.46 1.422-.512.187-.02.586-.02.773-.002zm-5.503-11a1.653 1.653 0 0 0-.683.298C5.617.74 5.173 1.666 4.985 2.819c-.07.436-.119 1.04-.119 1.503 0 .544.064 1.24.155 1.721.02.107.031.202.023.208a8.12 8.12 0 0 1-.187.152 5.324 5.324 0 0 0-.949 1.02 5.49 5.49 0 0 0-.94 2.339 6.625 6.625 0 0 0-.023 1.357c.091.78.325 1.438.727 2.04l.13.195-.037.064c-.269.452-.498 1.105-.605 1.732-.084.496-.095.629-.095 1.294 0 .67.009.803.088 1.266.095.555.288 1.143.503 1.534.071.128.243.393.264.407.007.003-.014.067-.046.141a7.405 7.405 0 0 0-.548 1.873c-.062.417-.071.552-.071.991 0 .56.031.832.148 1.279L3.42 24h1.478l-.05-.091c-.297-.552-.325-1.575-.068-2.597.117-.472.25-.819.498-1.296l.148-.29v-.177c0-.165-.003-.184-.057-.293a.915.915 0 0 0-.194-.25 1.74 1.74 0 0 1-.385-.543c-.424-.92-.506-2.286-.208-3.451.124-.486.329-.918.544-1.154a.787.787 0 0 0 .223-.531c0-.195-.07-.355-.224-.522a3.136 3.136 0 0 1-.817-1.729c-.14-.96.114-2.005.69-2.834.563-.814 1.353-1.336 2.237-1.475.199-.033.57-.028.776.01.226.04.367.028.512-.041.179-.085.268-.19.374-.431.093-.215.165-.333.36-.576.234-.29.46-.489.822-.729.413-.27.884-.467 1.352-.561.17-.035.25-.04.569-.04.319 0 .398.005.569.04a4.07 4.07 0 0 1 1.914.997c.117.109.398.457.488.602.034.057.095.177.132.267.105.241.195.346.374.43.14.068.286.082.503.045.343-.058.607-.053.943.016 1.144.23 2.14 1.173 2.581 2.437.385 1.108.276 2.267-.296 3.153-.097.15-.193.27-.333.419-.301.322-.301.722-.001 1.053.493.539.801 1.866.708 3.036-.062.772-.26 1.463-.533 1.854a2.096 2.096 0 0 1-.224.258.916.916 0 0 0-.194.25c-.054.109-.057.128-.057.293v.178l.148.29c.248.476.38.823.498 1.295.253 1.008.231 2.01-.059 2.581a.845.845 0 0 0-.044.098c0 .006.329.009.732.009h.73l.02-.074.036-.134c.019-.076.057-.3.088-.516.029-.217.029-1.016 0-1.258-.11-.875-.295-1.57-.597-2.226-.032-.074-.053-.138-.046-.141.008-.005.057-.074.108-.152.376-.569.607-1.284.724-2.228.031-.26.031-1.378 0-1.628-.083-.645-.182-1.082-.348-1.525a6.083 6.083 0 0 0-.329-.7l-.038-.064.131-.194c.402-.604.636-1.262.727-2.04a6.625 6.625 0 0 0-.024-1.358 5.512 5.512 0 0 0-.939-2.339 5.325 5.325 0 0 0-.95-1.02 8.097 8.097 0 0 1-.186-.152.692.692 0 0 1 .023-.208c.208-1.087.201-2.443-.017-3.503-.19-.924-.535-1.658-.98-2.082-.354-.338-.716-.482-1.15-.455-.996.059-1.8 1.205-2.116 3.01a6.805 6.805 0 0 0-.097.726c0 .036-.007.066-.015.066a.96.96 0 0 1-.149-.078A4.857 4.857 0 0 0 12 3.03c-.832 0-1.687.243-2.456.698a.958.958 0 0 1-.148.078c-.008 0-.015-.03-.015-.066a6.71 6.71 0 0 0-.097-.725C8.997 1.392 8.337.319 7.46.048a2.096 2.096 0 0 0-.585-.041Zm.293 1.402c.248.197.523.759.682 1.388.03.113.06.244.069.292.007.047.026.152.041.233.067.365.098.76.102 1.24l.002.475-.12.175-.118.178h-.278c-.324 0-.646.041-.954.124l-.238.06c-.033.007-.038-.003-.057-.144a8.438 8.438 0 0 1 .016-2.323c.124-.788.413-1.501.696-1.711.067-.05.079-.049.157.013zm9.825-.012c.17.126.358.46.498.888.28.854.36 2.028.212 3.145-.019.14-.024.151-.057.144l-.238-.06a3.693 3.693 0 0 0-.954-.124h-.278l-.119-.178-.119-.175.002-.474c.004-.669.066-1.19.214-1.772.157-.623.434-1.185.68-1.382.078-.062.09-.063.159-.012z', c:'#E6EEF2' },
 };
-
-
-// monoline icons per node (inner SVG, 24x24 viewBox)
 const ICONS = {
   cli:'<path d="M4 6l5 5-5 5"/><path d="M12 16h8"/>',
-  api:'<rect x="3" y="4" width="18" height="7" rx="1.5"/><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M7 7.5h.01M7 16.5h.01"/>',
+  webui:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/>',
+  report:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+  api:'<path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-7h6v7"/>',
+  cat:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18"/>',
   saw:'<circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="9" r="2"/><path d="M6 8v8M6 12h7a3 3 0 0 0 3-3"/>',
-  cat:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
   lab:'<path d="M9 3h6M10 3v6l-5 8a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-8V3"/>',
   gen:'<rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 2v3M14 2v3M10 19v3M14 19v3M2 10h3M2 14h3M19 10h3M19 14h3"/>',
-  llm:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
+  db:'<ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v14c0 1.7 3 3 7 3s7-1.3 7-3V5"/>',
   yaml:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
   corr:'<path d="M9 13a4 4 0 0 0 6 .5l2-2a4 4 0 0 0-6-6l-1 1"/><path d="M15 11a4 4 0 0 0-6-.5l-2 2a4 4 0 0 0 6 6l1-1"/>',
-  db:'<ellipse cx="12" cy="5" rx="7" ry="3"/><path d="M5 5v14c0 1.7 3 3 7 3s7-1.3 7-3V5"/><path d="M5 12c0 1.7 3 3 7 3s7-1.3 7-3"/>',
-  secops:'<path d="M12 3l7 3v5c0 4.5-3 7-7 9-4-2-7-4.5-7-9V6z"/>',
   mde:'<path d="M12 3l7 3v5c0 4.5-3 7-7 9-4-2-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/>',
-  splunk:'<path d="M6 7l6 5-6 5"/><path d="M13 7l5 5-5 5"/>',
-  elastic:'<path d="M5 6h14"/><path d="M5 12h9"/><path d="M5 18h12"/>',
   vectr:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
+  emulate:'<path d="M12 2l3 6 6 1-4.5 4 1 6-5.5-3-5.5 3 1-6L3 9l6-1z"/>',
 };
 
-// --- renderer / scene ------------------------------------------------------
+// ---- node graph: each is a themed landmark -------------------------------
+const NODES = [
+  {id:'cli',  name:'archer-cli', port:'command tent', kind:'tent', col:C.teal, pos:[-15,-4.5],
+    desc:'The command tent. You run archer-cli hunt / run / start — the supervisor that sets a campaign in motion.'},
+  {id:'webui',name:'Web UI', port:'muster yard', kind:'tent', col:C.teal, pos:[-15,-0.5],
+    desc:'The server-rendered web UI — Hunt, Coverage, Catalogue, Library. The muster yard where a hunt is called.'},
+  {id:'report',name:'Threat report', port:'longboat', kind:'boat', col:C.wood, pos:[-21,12],
+    desc:'An uploaded report or URL arrives by longboat — techniques and IOCs pulled from the field.'},
+  {id:'api', name:'FastAPI app', port:'the keep :8000', kind:'keep', col:C.stone, pos:[-9,0],
+    desc:'The keep. Every request passes through the FastAPI app — the stronghold at the centre of the realm.'},
+  {id:'cat', name:'Catalogue · Exposure', port:'coast beacon', kind:'beacon', col:C.amber, pos:[-17,7],
+    desc:'The coastal beacon. Org attack-surface OSINT — Team Cymru, MX, HIBP — lighting up who might come for you.'},
+  {id:'saw', name:'MITRESaw', port:'scout tower', kind:'tower', col:C.amber, pos:[-10,6],
+    desc:'The scout tower. MITRESaw walks ATT&CK STIX for procedures and indicators — direct, software, campaign.'},
+  {id:'lab', name:'Telemetry · Lab', port:'alchemist tent', kind:'labtent', col:C.amber, pos:[-9.5,-8],
+    desc:'The alchemist tent. Public corpora and your own ART recordings — telemetry that grounds detection fields.'},
+  {id:'gen', name:'Query generator', port:'fletcher forge', kind:'forge', col:C.wood, pos:[-2,0],
+    desc:"The fletcher's forge. Each technique is forged into a vendor-native query — LLM tier or no-LLM template tier."},
+  {id:'llm', name:'LLM', port:'oracle', kind:'oracle', col:C.amber, pos:[-3,-7],
+    desc:'The oracle tower. Optional — Ollama (local) or Anthropic. Compact prompt + evidence, with a degenerate-output guard.'},
+  {id:'db',  name:'SQLite store', port:'vault', kind:'vault', col:C.stone, pos:[-5,4],
+    desc:'The vault — archer.db. Threat-library cases, assessments, saved detections.'},
+  {id:'yaml',name:'Detection YAML', port:'armoury', kind:'armoury', col:C.teal, pos:[3,5],
+    desc:'The armoury — data/groups. Finished detections: name, technique, query, severity, connectors, indicators.'},
+  {id:'corr',name:'Correlation engine', port:'war table', kind:'wartable', col:C.teal, pos:[4,-2],
+    desc:'The war table. Chains techniques into single-vendor sequences and cross-vendor playbooks on host/user entities.'},
+  {id:'secops',name:'Google SecOps', port:'target · YARA-L/UDM', kind:'target', col:C.teal, pos:[11,-6],
+    desc:'Primary target. Detections are loosed as YARA-L over UDM; availability keyed on metadata.event_type.'},
+  {id:'mde', name:'Defender XDR', port:'target · KQL', kind:'target', col:C.teal, pos:[12,-1],
+    desc:'Defender XDR target — KQL over the MDE advanced-hunting schema.'},
+  {id:'splunk',name:'Splunk', port:'target · SPL', kind:'target', col:C.teal, pos:[12,4],
+    desc:'Splunk target — SPL, field-mapped through bespoke custom schema.'},
+  {id:'elastic',name:'Elastic', port:'target · ES|QL', kind:'target', col:C.teal, pos:[11,9],
+    desc:'Elastic target — ES|QL over ECS-mapped fields.'},
+  {id:'vectr',name:'VECTR', port:'tournament ring', kind:'ring', col:C.teal, pos:[6,9],
+    desc:'The tournament ring. Purple-team campaigns — push threat-library cases in, read outcomes back.'},
+  {id:'emulate',name:'Emulate', port:'the adversary', kind:'enemy', col:C.red, pos:[17,1],
+    desc:'The adversary war-camp. The emulation plan you test coverage against — the enemy every arrow is aimed at.'},
+];
+const NODE = Object.fromEntries(NODES.map(n=>[n.id,n]));
+
+// ---- renderer / scene ----------------------------------------------------
 const host = document.getElementById('scene');
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x0D1B2A, 26, 52);
+scene.fog = new THREE.Fog(0x0d2036, 32, 70);
 
-const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 200);
-camera.position.set(16, 15, 20);
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 300);
+camera.position.set(1, 22, 33);
 
 const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth, innerHeight);
 host.appendChild(renderer.domElement);
 
@@ -203,238 +199,301 @@ labelRenderer.domElement.style.cssText = 'position:fixed;inset:0;pointer-events:
 host.appendChild(labelRenderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.08;
-controls.target.set(1, 0, 1.5);
-controls.minDistance = 8;
-controls.maxDistance = 46;
-controls.maxPolarAngle = Math.PI * 0.49;
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.target.set(-1,1,2); controls.minDistance = 10; controls.maxDistance = 60;
+controls.maxPolarAngle = Math.PI*0.48;
 
-scene.add(new THREE.AmbientLight(0x9fd7ca, 0.55));
-const key = new THREE.DirectionalLight(0xffffff, 1.0); key.position.set(8, 16, 10); scene.add(key);
-const fill = new THREE.PointLight(0x00D4AA, 0.6, 60); fill.position.set(-8, 6, -8); scene.add(fill);
+scene.add(new THREE.AmbientLight(0x9fd7ca, 0.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.05); sun.position.set(10,22,12); scene.add(sun);
+const rim = new THREE.PointLight(0x00D4AA, 0.5, 80); rim.position.set(-12,8,-8); scene.add(rim);
 
-// grid floor
-const grid = new THREE.GridHelper(44, 44, 0x1f3a52, 0x16293c);
-grid.position.y = -2.4; scene.add(grid);
+// ---- terrain -------------------------------------------------------------
+const mat = (c,o={}) => new THREE.MeshStandardMaterial({ color:c, metalness:o.m??0.15,
+  roughness:o.r??0.8, emissive:o.e??0x000000, emissiveIntensity:o.ei??0, flatShading:o.flat??true,
+  transparent:o.t??false, opacity:o.o??1 });
 
-// --- build nodes -----------------------------------------------------------
-const meshes = [];
+(function terrain(){
+  const g = new THREE.PlaneGeometry(90,90,54,54);
+  const p = g.attributes.position;
+  for (let i=0;i<p.count;i++){
+    const x=p.getX(i), y=p.getY(i);
+    const h = Math.sin(x*0.18)*Math.cos(y*0.16)*0.9 + Math.sin(x*0.05+y*0.07)*0.6;
+    p.setZ(i, h - Math.max(0,(x*0.0)) );
+  }
+  g.computeVertexNormals();
+  const ground = new THREE.Mesh(g, mat(C.grassDk,{r:1,flat:true}));
+  ground.rotation.x = -Math.PI/2; ground.position.y = -0.4; scene.add(ground);
+  // faint contour overlay
+  const wire = new THREE.Mesh(g, new THREE.MeshBasicMaterial({color:C.teal,wireframe:true,transparent:true,opacity:0.05}));
+  wire.rotation.x = -Math.PI/2; wire.position.y = -0.38; scene.add(wire);
+  // water to the west (where the longboat lands)
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(26,90),
+    new THREE.MeshStandardMaterial({color:C.water,metalness:0.5,roughness:0.3,transparent:true,opacity:0.92}));
+  water.rotation.x = -Math.PI/2; water.position.set(-30,-0.55,0); scene.add(water);
+})();
 
-NODES.forEach(n => {
-  const s = n.size, w = 1.9*s, h = 1.0*s, d = 1.9*s;
-  const geo = new THREE.BoxGeometry(w, h, d);
-  const base = new THREE.Color(CAT_COLOR[n.cat]);
-  const mat = new THREE.MeshStandardMaterial({
-    color: 0x12273b, emissive: base, emissiveIntensity: 0.12,
-    metalness: 0.3, roughness: 0.55 });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(n.pos[0], n.pos[1], n.pos[2]);
-  mesh.userData = n;
+// ---- landmark builders (all original) ------------------------------------
+const CYL=(rt,rb,h,s=8)=>new THREE.CylinderGeometry(rt,rb,h,s);
+const BOX=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+const CONE=(r,h,s=6)=>new THREE.ConeGeometry(r,h,s);
 
-  // teal wire edges
-  const edges = new THREE.LineSegments(
-    new THREE.EdgesGeometry(geo),
-    new THREE.LineBasicMaterial({ color: base }));
-  edges.material.transparent = true; edges.material.opacity = 0.85;
-  mesh.add(edges);
+function flag(col,h=2.6){
+  const g=new THREE.Group();
+  const pole=new THREE.Mesh(CYL(0.04,0.04,h,5),mat(0x3a4a57)); pole.position.y=h/2; g.add(pole);
+  const b=new THREE.Mesh(new THREE.PlaneGeometry(0.8,0.45),mat(col,{e:col,ei:0.25}));
+  b.position.set(0.42,h-0.3,0); b.material.side=THREE.DoubleSide; g.add(b);
+  return g;
+}
+function build(kind,col){
+  const g=new THREE.Group();
+  if(kind==='tent'){
+    const t=new THREE.Mesh(CONE(1.15,1.7,4),mat(C.sail,{r:0.9})); t.position.y=0.85; t.rotation.y=Math.PI/4; g.add(t);
+    const d=new THREE.Mesh(BOX(0.5,0.7,0.02),mat(col,{e:col,ei:0.3})); d.position.set(0,0.35,0.83); g.add(d);
+    const f=flag(col,2.2); f.position.y=1.7; g.add(f);
+  } else if(kind==='labtent'){
+    const t=new THREE.Mesh(CONE(1.1,1.6,6),mat(0x2a4a5a,{r:0.8})); t.position.y=0.8; g.add(t);
+    const ch=new THREE.Mesh(CYL(0.16,0.2,0.8,6),mat(C.stoneDk)); ch.position.set(0.5,1.5,0); g.add(ch);
+    const em=new THREE.Mesh(new THREE.SphereGeometry(0.14,10,10),mat(C.amber,{e:C.amber,ei:1.4})); em.position.set(0.5,2.0,0); g.add(em);
+    g.add(flagless(col));
+  } else if(kind==='keep'){
+    const b=new THREE.Mesh(BOX(2.2,2.6,2.2),mat(C.stone,{r:0.9})); b.position.y=1.3; g.add(b);
+    for(const sx of [-0.85,0.85]) for(const sz of [-0.85,0.85]){
+      const m=new THREE.Mesh(BOX(0.45,0.5,0.45),mat(C.stoneDk)); m.position.set(sx,2.75,sz); g.add(m);
+    }
+    const gate=new THREE.Mesh(BOX(0.7,1.0,0.05),mat(C.woodDk)); gate.position.set(0,0.5,1.11); g.add(gate);
+    const f=flag(C.teal,2.4); f.position.y=2.6; g.add(f);
+  } else if(kind==='tower'||kind==='beacon'||kind==='oracle'){
+    const h = kind==='oracle'?3.6:2.8;
+    const body=new THREE.Mesh(CYL(0.62,0.72,h,8),mat(kind==='oracle'?0x24404f:C.stone,{r:0.85})); body.position.y=h/2; g.add(body);
+    const roof=new THREE.Mesh(CONE(0.92,0.95,8),mat(kind==='oracle'?C.teal:col,{e:col,ei:0.35})); roof.position.y=h+0.45; g.add(roof);
+    if(kind==='beacon'){
+      const fire=new THREE.Mesh(new THREE.SphereGeometry(0.28,12,12),mat(C.amber,{e:C.amber,ei:1.6})); fire.position.y=h+0.45; g.add(fire);
+      const pl=new THREE.PointLight(C.amber,0.8,10); pl.position.y=h+0.45; g.add(pl);
+    }
+    if(kind==='oracle'){
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(0.9,0.05,8,32),mat(C.teal,{e:C.teal,ei:1.2})); ring.position.y=h+0.45; ring.rotation.x=Math.PI/2; g.add(ring); g._ring=ring;
+      const orb=new THREE.Mesh(new THREE.SphereGeometry(0.22,16,16),mat(C.teal,{e:C.teal,ei:1.5})); orb.position.y=h+0.45; g.add(orb);
+    } else { const f=flag(col,2.0); f.position.y=h+0.9; g.add(f); }
+  } else if(kind==='forge'){
+    const hut=new THREE.Mesh(BOX(1.9,1.2,1.5),mat(C.woodDk,{r:0.95})); hut.position.y=0.6; g.add(hut);
+    const roof=new THREE.Mesh(CONE(1.5,0.8,4),mat(C.wood)); roof.position.y=1.55; roof.rotation.y=Math.PI/4; g.add(roof);
+    const ch=new THREE.Mesh(CYL(0.16,0.2,0.7,6),mat(C.stoneDk)); ch.position.set(0.6,1.9,0); g.add(ch);
+    const em=new THREE.Mesh(new THREE.SphereGeometry(0.18,12,12),mat(C.amber,{e:C.amber,ei:1.8})); em.position.set(0.6,2.35,0); g.add(em);
+    const pl=new THREE.PointLight(C.amber,0.9,9); pl.position.set(0.6,2.2,0); g.add(pl);
+    // arrow rack
+    for(let i=0;i<3;i++){ const a=new THREE.Mesh(CYL(0.03,0.03,1.1,5),mat(C.teal,{e:C.teal,ei:0.3})); a.position.set(-0.9,0.9,-0.4+i*0.3); a.rotation.z=0.25; g.add(a); }
+  } else if(kind==='vault'||kind==='armoury'){
+    const base=new THREE.Mesh(BOX(1.5,0.8,1.1),mat(C.stoneDk,{r:0.9})); base.position.y=0.4; g.add(base);
+    const lid=new THREE.Mesh(BOX(1.6,0.3,1.2),mat(col,{e:col,ei:0.25})); lid.position.y=0.95; g.add(lid);
+    if(kind==='armoury'){ for(let i=0;i<5;i++){ const a=new THREE.Mesh(CYL(0.03,0.03,1.3,5),mat(C.teal,{e:C.teal,ei:0.4}));
+      a.position.set(-0.5+i*0.25,1.3,0); a.rotation.z=(i-2)*0.12; const hd=new THREE.Mesh(CONE(0.08,0.2,5),mat(C.teal,{e:C.teal,ei:0.5})); hd.position.y=0.75; a.add(hd); g.add(a);} }
+  } else if(kind==='wartable'){
+    const t=new THREE.Mesh(CYL(1.0,1.1,0.5,10),mat(C.woodDk)); t.position.y=0.25; g.add(t);
+    const map=new THREE.Mesh(new THREE.CircleGeometry(0.95,16),mat(0x2c6a57,{e:C.teal,ei:0.15})); map.position.y=0.51; map.rotation.x=-Math.PI/2; g.add(map);
+    for(let i=0;i<3;i++){ const f=flag([C.teal,C.amber,C.red][i],0.7); f.position.set(Math.cos(i*2.1)*0.5,0.5,Math.sin(i*2.1)*0.5); g.add(f); }
+  } else if(kind==='target'){
+    const legs=new THREE.Group();
+    for(const a of [-0.5,0.5]){ const l=new THREE.Mesh(CYL(0.05,0.05,2.0,5),mat(C.woodDk)); l.position.set(a,0.9,0.2); l.rotation.x=0.2; legs.add(l);} g.add(legs);
+    const face=new THREE.Group(); face.position.set(0,1.5,0); face.rotation.x=-0.25;
+    const rc=[[0.95,C.sail],[0.72,0x1d6fd6],[0.5,C.red],[0.28,C.gold]];
+    rc.forEach(([r,c],i)=>{ const d=new THREE.Mesh(new THREE.CircleGeometry(r,24),mat(c,{e:c,ei:0.12})); d.position.z=0.01*i; face.add(d); });
+    const arrow=new THREE.Mesh(CYL(0.03,0.03,0.9,5),mat(C.teal,{e:C.teal,ei:0.6})); arrow.rotation.x=Math.PI/2+0.3; arrow.position.set(0.12,0.1,0.5); face.add(arrow);
+    g.add(face); g._face=face;
+  } else if(kind==='ring'){
+    const r=new THREE.Mesh(new THREE.TorusGeometry(1.0,0.08,10,28),mat(C.teal,{e:C.teal,ei:0.4})); r.position.y=0.1; r.rotation.x=Math.PI/2; g.add(r);
+    for(const a of [0,Math.PI]){ const p=new THREE.Mesh(CYL(0.06,0.06,1.0,6),mat(C.woodDk)); p.position.set(Math.cos(a)*1.0,0.5,Math.sin(a)*1.0); g.add(p);}
+  } else if(kind==='boat'){
+    const hull=new THREE.Mesh(BOX(2.6,0.5,0.9),mat(C.woodDk)); hull.position.y=0.25; g.add(hull);
+    for(const [x,ry] of [[-1.5,0],[1.5,Math.PI]]){ const p=new THREE.Mesh(CONE(0.45,1.0,4),mat(C.wood)); p.rotation.z=Math.PI/2; p.rotation.y=ry; p.position.set(x,0.25,0); g.add(p);}
+    const mast=new THREE.Mesh(CYL(0.05,0.05,2.0,6),mat(C.stoneDk)); mast.position.y=1.1; g.add(mast);
+    const sail=new THREE.Mesh(new THREE.PlaneGeometry(1.3,1.1),mat(C.sail,{r:0.9})); sail.material.side=THREE.DoubleSide; sail.position.set(0,1.3,0); g.add(sail);
+    const stripe=new THREE.Mesh(new THREE.PlaneGeometry(1.3,0.3),mat(C.red,{e:C.red,ei:0.2})); stripe.material.side=THREE.DoubleSide; stripe.position.set(0,1.3,0.01); g.add(stripe);
+    for(let i=0;i<3;i++){ const sh=new THREE.Mesh(new THREE.CircleGeometry(0.2,12),mat([C.teal,C.amber,C.gold][i],{e:0x111,ei:0})); sh.position.set(-0.7+i*0.7,0.35,0.46); g.add(sh);}
+  } else if(kind==='enemy'){
+    const base=new THREE.Mesh(CYL(1.6,1.9,0.6,6),mat(0x2a1414,{r:0.95})); base.position.y=0.3; g.add(base);
+    const keep=new THREE.Mesh(CONE(1.0,2.4,5),mat(0x3a1a1a,{e:C.red,ei:0.15})); keep.position.y=1.7; g.add(keep);
+    for(let i=0;i<6;i++){ const a=i/6*Math.PI*2; const sp=new THREE.Mesh(CONE(0.22,1.1,4),mat(0x241018)); sp.position.set(Math.cos(a)*1.4,0.8,Math.sin(a)*1.4); g.add(sp);
+      const bn=new THREE.Mesh(new THREE.PlaneGeometry(0.3,0.5),mat(C.red,{e:C.red,ei:0.35})); bn.material.side=THREE.DoubleSide; bn.position.set(Math.cos(a)*1.4+0.18,1.2,Math.sin(a)*1.4); g.add(bn); }
+    const fire=new THREE.Mesh(new THREE.SphereGeometry(0.3,12,12),mat(C.red,{e:C.red,ei:1.8})); fire.position.y=0.7; g.add(fire);
+    const pl=new THREE.PointLight(C.red,1.0,12); pl.position.y=1.0; g.add(pl); g._fire=fire;
+  }
+  return g;
+}
+function flagless(col){ const g=new THREE.Group(); return g; }
 
-  // leg to the floor (a glowing drop line)
-  const legY = n.pos[1] - h/2;
-  const leg = new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints([ new THREE.Vector3(0,-h/2,0), new THREE.Vector3(0, -2.4 - n.pos[1], 0) ]),
-    new THREE.LineBasicMaterial({ color: base, transparent:true, opacity:0.25 }));
-  mesh.add(leg);
-
+// ---- place nodes ---------------------------------------------------------
+const pickMeshes=[];
+const labelY={tent:2.6,labtent:2.2,boat:2.4,keep:3.4,tower:4.0,beacon:4.0,oracle:4.6,
+  forge:2.6,vault:1.6,armoury:2.2,wartable:1.3,target:2.6,ring:1.2,enemy:3.4};
+NODES.forEach(n=>{
+  const g=build(n.kind,n.col);
+  g.position.set(n.pos[0],0,n.pos[1]);
+  g.traverse(o=>{ if(o.isMesh) o.userData.node=n; });
+  scene.add(g); n._g=g;
+  // activation ring on the ground
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(1.35,0.07,8,36),
+    new THREE.MeshBasicMaterial({color:C.teal,transparent:true,opacity:0.0}));
+  ring.rotation.x=-Math.PI/2; ring.position.set(n.pos[0],0.02,n.pos[1]); scene.add(ring); n._ring=ring;
   // label
-  const el = document.createElement('div');
-  el.className = 'label';
+  const el=document.createElement('div'); el.className='label';
   const mark = LOGOS[n.id]
     ? `<svg class="nlogo" viewBox="0 0 24 24" style="fill:${LOGOS[n.id].c}"><path d="${LOGOS[n.id].d}"/></svg>`
-    : `<svg class="nico" viewBox="0 0 24 24">${ICONS[n.id]||''}</svg>`;
-  el.innerHTML = `<span class="nhead">${mark}${n.name}</span><span class="s">${n.port}</span>`;
-  n._lit = true; n._pulse = 0;
-  const lbl = new CSS2DObject(el);
-  lbl.position.set(0, h/2 + 0.5, 0);
-  mesh.add(lbl);
-  n._el = el;
-
-  scene.add(mesh);
-  meshes.push(mesh);
-  n._mesh = mesh; n._mat = mat; n._edges = edges.material; n._base = base;
+    : `<svg class="nico" viewBox="0 0 24 24" fill="none" stroke="${n.id==='emulate'?'#EF4444':'#00D4AA'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[n.id]||''}</svg>`;
+  el.innerHTML=`<span class="nhead">${mark}${n.name}</span><span class="s">${n.port}</span>`;
+  const lbl=new CSS2DObject(el); lbl.position.set(n.pos[0],labelY[n.kind]||2.4,n.pos[1]); scene.add(lbl); n._el=el;
+  // collect pick target (first mesh)
+  g.traverse(o=>{ if(o.isMesh) pickMeshes.push(o); });
 });
 
-// --- edges + animated data-flow particles ----------------------------------
-// Each link carries glowing packets from source to target: the direction *is*
-// the pipeline, so you can watch a request move cli → api → saw/gen → SIEM.
-const flows = [];
-const pGeo = new THREE.SphereGeometry(0.13, 10, 10);
-NODES.forEach(n => {
-  (n.to||[]).forEach(tid => {
-    const t = NODE[tid]; if (!t) return;
-    const a = new THREE.Vector3(...n.pos), b = new THREE.Vector3(...t.pos);
-    const mid = a.clone().add(b).multiplyScalar(0.5); mid.y += 1.6;
-    const curve = new THREE.QuadraticBezierCurve3(a, mid, b);
-    const line = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints(curve.getPoints(30)),
-      new THREE.LineBasicMaterial({ color:0x00D4AA, transparent:true, opacity:0.20 }));
-    line.userData.pair = [n.id, tid];
-    scene.add(line);
-
-    let col = CAT_COLOR[n.cat]; if (col === 0x8aa0b4) col = COL.teal;
-    const parts = [];
-    const count = 2;
-    for (let k=0;k<count;k++){
-      const pm = new THREE.Mesh(pGeo, new THREE.MeshBasicMaterial({
-        color: col, transparent:true, opacity:0.95,
-        blending: THREE.AdditiveBlending, depthWrite:false }));
-      scene.add(pm);
-      parts.push({ mesh: pm, t: k/count });
-    }
-    const len = Math.max(a.distanceTo(b), 1);
-    flows.push({ curve, parts, speed: 0.10 + 0.9/len/len, from:n, to:t, line });
-  });
-});
-
-// --- 01–07 pipeline spine with a travelling pulse --------------------------
-const spinePts = [[-7,2.2,-7],[-4,2.6,-6],[-1,2.9,-4.5],[1.5,3,-2.5],[4,3,0],[6.5,2.8,2.5],[8.5,2.4,5]];
-const spineCurve = new THREE.CatmullRomCurve3(spinePts.map(p=>new THREE.Vector3(...p)));
-scene.add(new THREE.Line(
-  new THREE.BufferGeometry().setFromPoints(spineCurve.getPoints(80)),
-  new THREE.LineBasicMaterial({ color: COL.amber, transparent:true, opacity:0.28 })));
-spinePts.forEach((p,i)=>{
-  const m = new THREE.Mesh(new THREE.SphereGeometry(0.15,14,14),
-    new THREE.MeshBasicMaterial({ color: COL.amber }));
-  m.position.set(...p); scene.add(m);
-  const el = document.createElement('div'); el.className='label'; el.style.opacity='.55';
-  el.innerHTML = `<span class="s">${String(i+1).padStart(2,'0')}</span>`;
-  const l = new CSS2DObject(el); l.position.set(...p); m.add(l);
-});
-const spineDot = new THREE.Mesh(new THREE.SphereGeometry(0.22,16,16),
-  new THREE.MeshBasicMaterial({ color: COL.amber, transparent:true,
-    blending: THREE.AdditiveBlending, depthWrite:false }));
-scene.add(spineDot);
-let spineT = 0;
-
-// --- interaction ------------------------------------------------------------
-const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
-let selected = null;
-const info = document.getElementById('info');
-
-function pick(ev){
-  const r = renderer.domElement.getBoundingClientRect();
-  ptr.x = ((ev.clientX - r.left)/r.width)*2 - 1;
-  ptr.y = -((ev.clientY - r.top)/r.height)*2 + 1;
-  ray.setFromCamera(ptr, camera);
-  const hit = ray.intersectObjects(meshes, false)[0];
-  if (hit) select(hit.object.userData);
-}
-renderer.domElement.addEventListener('click', pick);
-
-function select(n){
-  selected = n;
-  document.getElementById('iCat').textContent = n.cat;
-  document.getElementById('iName').textContent = n.name;
-  document.getElementById('iPort').textContent = n.port;
-  document.getElementById('iDesc').textContent = n.desc;
-  const outs = (n.to||[]).map(t=>NODE[t]?.name).filter(Boolean);
-  const ins = NODES.filter(x=>(x.to||[]).includes(n.id)).map(x=>x.name);
-  document.getElementById('iEdges').innerHTML =
-    (ins.length? `<b>in ◂</b> ${ins.join(', ')}<br>`:'') +
-    (outs.length? `<b>out ▸</b> ${outs.join(', ')}`:'');
-  info.classList.add('show');
-  focusOn(n);
-}
-document.getElementById('infoX').onclick = ()=>{
-  info.classList.remove('show');
-  selected = null;
+// ---- campaigns (one journey at a time) -----------------------------------
+const JOURNEYS = {
+  group:{label:'Group hunt', steps:[
+    ['cli','You call a hunt against a named group from the command tent.'],
+    ['api','The request rides to the keep — the FastAPI app.'],
+    ['saw','The scout tower (MITRESaw) walks ATT&CK STIX for the group’s procedures.'],
+    ['gen','The fletcher’s forge turns each technique into a vendor-native query.'],
+    ['yaml','Finished detections are stocked in the armoury (data/groups).'],
+    ['corr','The war table chains them into single- and cross-vendor playbooks.'],
+    ['secops','A volley is loosed at the SecOps target — YARA-L over UDM.'],
+    ['emulate','Coverage is proven against the adversary you emulate.'],
+  ]},
+  cve:{label:'CVE', steps:[
+    ['webui','You submit a CVE from the muster yard (web UI).'],
+    ['api','The keep resolves it to the affected techniques.'],
+    ['saw','The scout tower maps the exploitation behaviour.'],
+    ['gen','The forge builds the detection queries.'],
+    ['yaml','Detections join the armoury.'],
+    ['mde','Fired at the Defender XDR target — KQL.'],
+    ['emulate','Validated against the adversary.'],
+  ]},
+  report:{label:'Report', steps:[
+    ['report','A longboat lands bearing a threat report.'],
+    ['cat','The coast beacon (Catalogue · Exposure) enriches it with OSINT.'],
+    ['api','The keep extracts techniques and IOCs.'],
+    ['gen','The forge builds queries from the evidence.'],
+    ['yaml','Detections join the armoury.'],
+    ['elastic','Fired at the Elastic target — ES|QL.'],
+    ['emulate','Validated against the adversary.'],
+  ]},
 };
+const jkeys=['group','cve','report'];
 
-// smooth camera focus
-let focusTarget = null;
-function focusOn(n){
-  focusTarget = new THREE.Vector3(...n.pos);
+// messenger arrow
+const messenger=new THREE.Group();
+(()=>{ const sh=new THREE.Mesh(CYL(0.05,0.05,0.9,6),mat(C.amber,{e:C.amber,ei:1.2})); sh.rotation.x=Math.PI/2; messenger.add(sh);
+  const hd=new THREE.Mesh(CONE(0.14,0.34,8),mat(C.amber,{e:C.amber,ei:1.5})); hd.rotation.x=Math.PI/2; hd.position.z=0.6; messenger.add(hd);
+  const gl=new THREE.PointLight(C.amber,0.8,6); messenger.add(gl);
+})();
+scene.add(messenger);
+
+let ji=0, hop=0, segT=0, phase='travel', pauseT=0, playing=true;
+let curve=null;
+const up=new THREE.Vector3(0,1,0);
+
+function nodeTop(n){ return new THREE.Vector3(n.pos[0], 1.1, n.pos[1]); }
+function makeHop(){
+  const s=JOURNEYS[jkeys[ji]].steps;
+  const a=nodeTop(NODE[s[hop][0]]), b=nodeTop(NODE[s[hop+1][0]]);
+  const mid=a.clone().add(b).multiplyScalar(0.5); mid.y += 2.2 + a.distanceTo(b)*0.12;
+  curve=new THREE.QuadraticBezierCurve3(a,mid,b);
+}
+function highlightJourney(){
+  const s=JOURNEYS[jkeys[ji]].steps; const set=new Set(s.map(x=>x[0]));
+  NODES.forEach(n=>{ n._el.classList.toggle('dim', !set.has(n.id)); n._onPath=set.has(n.id); });
+}
+function story(camp,txt){ document.getElementById('sCamp').textContent=camp; document.getElementById('sStep').textContent=txt; }
+function startJourney(k){
+  ji=jkeys.indexOf(k); hop=0; segT=0; phase='travel'; pauseT=0;
+  document.querySelectorAll('.jchip').forEach(c=>c.classList.toggle('on',c.dataset.journey===k));
+  highlightJourney(); makeHop();
+  const s=JOURNEYS[k];
+  story(s.label, s.steps[0][1]);
+  NODE[s.steps[0][0]]._pulse=1;
+}
+const pings=[];
+function ping(n){ const m=new THREE.Mesh(new THREE.TorusGeometry(0.4,0.06,8,28),
+  new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:0.9}));
+  m.rotation.x=-Math.PI/2; m.position.set(n.pos[0],0.1,n.pos[1]); scene.add(m); pings.push({m,t:0}); }
+
+NODES.forEach(n=>{n._pulse=0;n._onPath=false;});
+startJourney('group');
+
+// ---- interaction ---------------------------------------------------------
+const ray=new THREE.Raycaster(), ptr=new THREE.Vector2(); const info=document.getElementById('info');
+renderer.domElement.addEventListener('click', ev=>{
+  const r=renderer.domElement.getBoundingClientRect();
+  ptr.x=((ev.clientX-r.left)/r.width)*2-1; ptr.y=-((ev.clientY-r.top)/r.height)*2+1;
+  ray.setFromCamera(ptr,camera);
+  const hit=ray.intersectObjects(pickMeshes,false)[0];
+  if(hit&&hit.object.userData.node){ const n=hit.object.userData.node;
+    document.getElementById('iCat').textContent=n.port;
+    document.getElementById('iName').textContent=n.name;
+    document.getElementById('iPort').textContent=n.port;
+    document.getElementById('iDesc').textContent=n.desc; info.classList.add('show');
+  }
+});
+document.getElementById('infoX').onclick=()=>info.classList.remove('show');
+document.querySelectorAll('.jchip').forEach(c=>c.onclick=()=>{ playing=true; setPlay(); startJourney(c.dataset.journey); });
+const playBtn=document.getElementById('playBtn');
+function setPlay(){ document.getElementById('playTxt').textContent=playing?'Pause':'Play';
+  document.getElementById('playIco').innerHTML=playing?'<rect x="6" y="5" width="3" height="14"></rect><rect x="15" y="5" width="3" height="14"></rect>':'<path d="M6 4l14 8-14 8z"></path>'; }
+playBtn.onclick=()=>{ playing=!playing; setPlay(); };
+document.getElementById('nextBtn').onclick=()=>{ advance(true); };
+let orbit=false; const orbitBtn=document.getElementById('orbitBtn');
+orbitBtn.onclick=()=>{ orbit=!orbit; controls.autoRotate=orbit; controls.autoRotateSpeed=0.6; orbitBtn.classList.toggle('on',orbit); };
+
+function advance(manual){
+  const s=JOURNEYS[jkeys[ji]].steps;
+  if(hop < s.length-2){ hop++; segT=0; phase='travel'; makeHop(); }
+  else { ji=(ji+1)%jkeys.length; startJourney(jkeys[ji]); }
 }
 
-// --- chips (category highlight + tour) -------------------------------------
-let activeCat = null;
-document.querySelectorAll('.chip[data-cat]').forEach(ch=>{
-  ch.onclick = ()=>{
-    const cat = ch.dataset.cat;
-    const on = activeCat === cat;
-    document.querySelectorAll('.chip[data-cat]').forEach(c=>c.classList.remove('on'));
-    activeCat = on ? null : cat;
-    if (!on) ch.classList.add('on');
-    applyFilter();
-  };
-});
-function applyFilter(){
-  NODES.forEach(n=>{
-    const lit = !activeCat || n.cat === activeCat;
-    n._lit = lit;
-    n._mat.opacity = lit ? 1 : 0.35; n._mat.transparent = !lit;
-    n._edges.opacity = lit ? 0.85 : 0.12;
-    n._el.classList.toggle('dim', !lit);
-  });
-}
+// ---- resize / loop -------------------------------------------------------
+addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight); labelRenderer.setSize(innerWidth,innerHeight); });
 
-// tour: orbit slowly through the nodes
-let tour = false, tourI = 0, tourClock = 0;
-const tourChip = document.querySelector('.chip.tour');
-tourChip.onclick = ()=>{
-  tour = !tour; tourChip.classList.toggle('on', tour);
-  controls.autoRotate = tour; controls.autoRotateSpeed = 0.8;
-  if (tour){ tourClock = 0; tourI = 0; select(NODES[0]); }
-};
-
-// --- resize / loop ----------------------------------------------------------
-addEventListener('resize', ()=>{
-  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight); labelRenderer.setSize(innerWidth, innerHeight);
-});
-
-const clock = new THREE.Clock();
+const clock=new THREE.Clock(); const tmp=new THREE.Vector3(), tmp2=new THREE.Vector3();
 function animate(){
   requestAnimationFrame(animate);
-  const dt = clock.getDelta();
-  if (tour){
-    tourClock += dt;
-    if (tourClock > 2.6){ tourClock = 0; tourI = (tourI+1)%NODES.length; select(NODES[tourI]); }
-  }
-  if (focusTarget){
-    controls.target.lerp(focusTarget, 0.06);
-    if (controls.target.distanceTo(focusTarget) < 0.05) focusTarget = null;
+  const dt=Math.min(clock.getDelta(),0.05), tsec=clock.elapsedTime;
+  const s=JOURNEYS[jkeys[ji]].steps;
+
+  if(playing && curve){
+    if(phase==='travel'){
+      segT += dt*0.55;
+      if(segT>=1){ segT=1; phase='pause'; pauseT=0;
+        const arr=NODE[s[hop+1][0]]; arr._pulse=1; ping(arr); story(JOURNEYS[jkeys[ji]].label, s[hop+1][1]); }
+      curve.getPointAt(Math.min(segT,1),tmp); messenger.position.copy(tmp);
+      curve.getPointAt(Math.min(segT+0.02,1),tmp2); messenger.lookAt(tmp2);
+      messenger.visible=true;
+    } else {
+      pauseT+=dt; messenger.visible=false;
+      if(pauseT>1.1) advance(false);
+    }
   }
 
-  const tsec = clock.elapsedTime;
-  // node glow = base state + a decaying pulse when data arrives
+  // node rings: on-path glow + arrival pulse
   NODES.forEach(n=>{
-    const base = (n===selected) ? 0.65 : (n._lit===false ? 0.03 : 0.12);
-    n._mat.emissiveIntensity = base + n._pulse*0.6;
-    n._pulse *= 0.90;
+    const base = n._onPath ? 0.4 : 0.0;
+    const op = Math.min(1, base + n._pulse*0.9);
+    n._ring.material.opacity = op*(0.6+0.25*Math.sin(tsec*3));
+    n._ring.scale.setScalar(1 + n._pulse*0.5);
+    n._ring.material.color.setHex(n.id==='emulate'?0xEF4444:0x00D4AA);
+    n._pulse*=0.94;
+    if(n._g._fire) n._g._fire.scale.setScalar(0.9+0.25*Math.sin(tsec*6));
+    if(n._g._ring) n._g._ring.rotation.z+=dt*0.8;
   });
-  // flow packets travel source → target along each link
-  flows.forEach(f=>{
-    const dim = (f.from._lit===false || f.to._lit===false);
-    f.line.material.opacity = dim ? 0.05 : 0.20;
-    f.parts.forEach(p=>{
-      p.t += f.speed*dt;
-      if (p.t >= 1){ p.t -= 1; if (!dim) f.to._pulse = Math.min(1, f.to._pulse + 0.8); }
-      f.curve.getPointAt(Math.min(p.t, 0.999), p.mesh.position);
-      p.mesh.scale.setScalar(dim ? 0.3 : (0.8 + 0.4*Math.sin(tsec*6 + p.t*10)));
-      p.mesh.material.opacity = dim ? 0.12 : 0.95;
-    });
-  });
-  // amber pulse running the 01–07 pipeline spine
-  spineT = (spineT + 0.08*dt) % 1;
-  spineCurve.getPointAt(spineT, spineDot.position);
-  spineDot.scale.setScalar(0.9 + 0.3*Math.sin(tsec*5));
+  // pings expand & fade
+  for(let i=pings.length-1;i>=0;i--){ const p=pings[i]; p.t+=dt*1.6;
+    p.m.scale.setScalar(1+p.t*3); p.m.material.opacity=Math.max(0,0.9-p.t*0.9);
+    if(p.t>=1){ scene.remove(p.m); pings.splice(i,1);} }
+  if(messenger.visible){ messenger.children.forEach(c=>{}); }
 
   controls.update();
-  renderer.render(scene, camera);
-  labelRenderer.render(scene, camera);
+  renderer.render(scene,camera);
+  labelRenderer.render(scene,camera);
 }
-animate();
+setPlay(); animate();
 </script>
 </body>
 </html>
