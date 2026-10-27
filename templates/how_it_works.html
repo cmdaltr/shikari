@@ -146,6 +146,67 @@
         .tab-pane h3 { color: var(--text-primary); font-size: 1.2rem; font-weight: 600; margin: 1.5em 0 .6em; }
         .tab-pane h3:first-child { margin-top: 0; }
         .tab-pane h4 { color: var(--text-primary); font-size: 1rem; font-weight: 600; }
+        .tab-pane h3.faq-group {
+            font-size: 1.45rem; letter-spacing: .3px;
+            padding-left: 12px; border-left: 4px solid #00D4AA;
+        }
+
+        /* Attack Flow example diagrams */
+        .flow-examples { display: grid; gap: 18px; margin: 1em 0 0; }
+        .flow-fig {
+            background: #0D1B2A; border: 1px solid rgba(0,212,170,.3);
+            border-radius: 10px; padding: 16px 18px 12px;
+        }
+        .flow-fig svg { width: 100%; height: auto; display: block;
+            font-family: 'JetBrains Mono','Courier New',monospace; }
+        .flow-fig .cap { color: #7f93a3; font-size: .82rem; line-height: 1.5;
+            margin: 10px 2px 0; font-family: 'JetBrains Mono','Courier New',monospace; }
+        .flow-fig .cap b { color: #00D4AA; font-weight: 400; }
+
+        /* Per-tab table of contents */
+        .tab-toc {
+            display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center;
+            margin: 0 0 1.6em; padding: 12px 14px;
+            background: var(--bg-secondary, rgba(0,212,170,.05));
+            border: 1px solid var(--border-color); border-left: 4px solid #00D4AA;
+            border-radius: 8px;
+        }
+        .tab-toc .toc-label {
+            font-size: .72rem; letter-spacing: 1.5px; text-transform: uppercase;
+            color: var(--text-secondary); margin-right: 4px;
+        }
+        .tab-toc a {
+            font-size: .85rem; color: var(--text-primary); text-decoration: none;
+            padding: 3px 10px; border: 1px solid var(--border-color); border-radius: 20px;
+            transition: all .15s;
+        }
+        .tab-toc a:hover { border-color: #00D4AA; color: #00D4AA; }
+
+        /* Clickable diagrams */
+        .diagram-click { position: relative; cursor: zoom-in; border-radius: 10px; }
+        .diagram-overlay { position: absolute; inset: 0; z-index: 3; display: block; border-radius: 10px; }
+        .diagram-badge {
+            position: absolute; top: 10px; right: 10px; z-index: 4; pointer-events: none;
+            font-family: 'JetBrains Mono','Courier New',monospace; font-size: .72rem;
+            color: #0D1B2A; background: #00D4AA; padding: 3px 9px; border-radius: 5px;
+            opacity: .9; box-shadow: 0 2px 6px rgba(0,0,0,.25);
+        }
+        .diagram-previews { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+        .diagram-thumb {
+            width: 100%; height: 300px; border: 1px solid var(--border-color);
+            border-radius: 10px; background: #0D1B2A; display: block;
+        }
+        @media (max-width: 720px) { .diagram-previews { grid-template-columns: 1fr; } }
+
+        /* FAQ list */
+        .faq-list { display: grid; gap: 14px; margin: .4em 0 0; }
+        .faq-item {
+            padding: 14px 16px; border: 1px solid var(--border-color);
+            border-left: 3px solid #00D4AA; border-radius: 8px;
+            background: var(--bg-secondary, rgba(0,0,0,.015));
+        }
+        .faq-item .faq-q { font-weight: 600; color: var(--text-primary); margin: 0 0 .5em; }
+        .faq-item .faq-a { color: var(--text-secondary); font-size: .93em; line-height: 1.6; margin: 0; }
 
         .section h3 {
             color: var(--text-primary);
@@ -639,49 +700,11 @@
                     </svg>
                     <span>Architecture</span>
                 </button>
-                <button class="tab-button" data-tab="libraries">
-                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                    </svg>
-                    <span>Libraries</span>
-                </button>
-                <button class="tab-button" data-tab="ai">
-                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"/>
-                        <path d="M12 1v6m0 6v6"/>
-                        <path d="m4.93 4.93 4.24 4.24m5.66 5.66 4.24 4.24"/>
-                        <path d="M1 12h6m6 0h6"/>
-                        <path d="m4.93 19.07 4.24-4.24m5.66-5.66 4.24-4.24"/>
-                    </svg>
-                    <span>AI</span>
-                </button>
-                <button class="tab-button" data-tab="workflow">
-                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"/>
-                        <path d="M12 1v6"/>
-                        <path d="m15.4 17.4 3.2 3.2"/>
-                        <path d="M6.4 20.6 3.2 17.4"/>
-                        <path d="M1 12h6"/>
-                        <path d="M17 12h6"/>
-                        <path d="m5.6 6.4-3.2-3.2"/>
-                        <path d="M20.6 3.2l-3.2 3.2"/>
-                    </svg>
-                    <span>Workflow</span>
-                </button>
                 <button class="tab-button" data-tab="attack-flow">
                     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
                     </svg>
                     <span>Attack Flow</span>
-                </button>
-                <button class="tab-button" data-tab="agents">
-                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="4" y="8" width="16" height="12" rx="2"/>
-                        <path d="M12 8V4"/><circle cx="12" cy="3" r="1"/>
-                        <circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/>
-                    </svg>
-                    <span>Agents</span>
                 </button>
                 <button class="tab-button" data-tab="emulate">
                     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -690,19 +713,19 @@
                     </svg>
                     <span>Emulate</span>
                 </button>
-                <button class="tab-button" data-tab="profile">
-                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/>
-                        <path d="M9 21v-6h6v6"/><path d="M9 11h.01"/><path d="M15 11h.01"/>
-                    </svg>
-                    <span>Profile</span>
+                <button class="tab-button" data-tab="ai-agents">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6"/><path d="m4.93 4.93 4.24 4.24m5.66 5.66 4.24 4.24"/><path d="M1 12h6m6 0h6"/><path d="m4.93 19.07 4.24-4.24m5.66-5.66 4.24-4.24"/></svg>
+                    <span>AI &amp; Agents</span>
                 </button>
-                <button class="tab-button" data-tab="intel">
+                <button class="tab-button" data-tab="intel-profile">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+                    <span>Intel &amp; Profile</span>
+                </button>
+                <button class="tab-button" data-tab="faq">
                     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/>
-                        <circle cx="5" cy="19" r="1"/>
+                        <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                     </svg>
-                    <span>Intel</span>
+                    <span>FAQ</span>
                 </button>
             </div>
 
@@ -784,8 +807,10 @@
 
             <!-- Architecture Tab -->
             <div class="tab-pane" id="tab-architecture">
+            <nav class="tab-toc" aria-label="On this page"><span class="toc-label">On this page</span><a href="#arch-how-it-fits-together">How it fits together</a><a href="#arch-the-same-pipeline-from-a-terminal">The same pipeline from a terminal</a><a href="#arch-workflow">Workflow</a><a href="#arch-libraries">Libraries</a></nav>
 
-            <h3>How it fits together</h3>
+
+            <h3 id="arch-how-it-fits-together">How it fits together</h3>
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
                 Archer turns MITRE ATT&amp;CK threat intelligence into detections for Microsoft Defender XDR, Google SecOps,
                 Splunk and Elastic. The same pipeline runs behind every interface — the web UI, the <code>archer-cli</code>
@@ -794,19 +819,33 @@
             </p>
 
             <div class="diagram" style="padding:0;background:transparent;border:0">
-                <iframe id="arch-frame" src="{{ url_for('static', path='diagrams/architecture.html') }}?v={{ request.app.state.asset_version }}"
-                        title="Archer architecture — web UI and archer-cli" loading="lazy" scrolling="no"
-                        style="width:100%;border:1px solid var(--border-color);border-radius:10px;background:transparent;display:block"></iframe>
-                <div class="diagram-caption">
-                    The web UI (top) and <code>archer-cli</code> (bottom) — the same pipeline. An inline, editable HTML diagram;
-                    open it <a href="{{ url_for('static', path='diagrams/architecture.html') }}" target="_blank" rel="noopener">full size</a> for detail.
+                <div class="diagram-click">
+                    <a class="diagram-overlay" href="{{ url_for('static', path='diagrams/architecture.html') }}" target="_blank" rel="noopener" aria-label="Open the architecture diagram full size"></a>
+                    <span class="diagram-badge">&#8599; full size</span>
+                    <iframe id="arch-frame" src="{{ url_for('static', path='diagrams/architecture.html') }}?v={{ request.app.state.asset_version }}"
+                            title="Archer architecture — web UI and archer-cli" loading="lazy" scrolling="no"
+                            style="width:100%;border:1px solid var(--border-color);border-radius:10px;background:transparent;display:block;pointer-events:none"></iframe>
                 </div>
-                <div class="diagram-caption" style="margin-top:10px">
-                    Two more views:
-                    <a href="{{ url_for('static', path='diagrams/pipeline.html') }}" target="_blank" rel="noopener">the generation flow</a>
-                    (input&nbsp;&rarr;&nbsp;MITRESaw&nbsp;&rarr;&nbsp;queries&nbsp;&rarr;&nbsp;correlation&nbsp;&rarr;&nbsp;artefacts, step by step), and
-                    <a href="{{ url_for('static', path='diagrams/machine.html') }}" target="_blank" rel="noopener">the Archer machine</a>
-                    &mdash; an interactive 3D view of the runtime (drag to orbit, click a part).
+                <div class="diagram-caption">
+                    The web UI (top) and <code>archer-cli</code> (bottom) — the same pipeline. Click the diagram to open it
+                    <a href="{{ url_for('static', path='diagrams/architecture.html') }}" target="_blank" rel="noopener">full size</a>.
+                </div>
+
+                <div class="diagram-previews">
+                    <div class="diagram-click">
+                        <a class="diagram-overlay" href="{{ url_for('static', path='diagrams/pipeline.html') }}" target="_blank" rel="noopener" aria-label="Open the generation-flow diagram full size"></a>
+                        <span class="diagram-badge">&#8599; full size</span>
+                        <iframe class="diagram-thumb" src="{{ url_for('static', path='diagrams/pipeline.html') }}?v={{ request.app.state.asset_version }}"
+                                title="Archer generation flow" loading="lazy" scrolling="no" style="pointer-events:none"></iframe>
+                        <div class="diagram-caption">The <strong>generation flow</strong> — input &rarr; MITRESaw &rarr; queries &rarr; correlation &rarr; artefacts.</div>
+                    </div>
+                    <div class="diagram-click">
+                        <a class="diagram-overlay" href="{{ url_for('static', path='diagrams/machine.html') }}" target="_blank" rel="noopener" aria-label="Open the Archer machine diagram full size"></a>
+                        <span class="diagram-badge">&#8599; open &amp; interact</span>
+                        <iframe class="diagram-thumb" src="{{ url_for('static', path='diagrams/machine.html') }}?v={{ request.app.state.asset_version }}"
+                                title="The Archer machine" loading="lazy" scrolling="no" style="pointer-events:none"></iframe>
+                        <div class="diagram-caption">The <strong>Archer machine</strong> — interactive 3D runtime (drag to orbit, click a part).</div>
+                    </div>
                 </div>
             </div>
 
@@ -827,7 +866,7 @@
             </div>
 
             <hr style="border: none; border-top: 1px solid var(--border); margin: 2.5em 0;">
-            <h3>The same pipeline from a terminal</h3>
+            <h3 id="arch-the-same-pipeline-from-a-terminal">The same pipeline from a terminal</h3>
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
                 <code>archer-cli</code> is the supervisor — <code>start</code>, <code>status</code>, <code>restart</code>,
                 <code>mcp</code>, <code>console</code> — and the console and offline modes run the identical stages without a
@@ -864,11 +903,134 @@ archer-cli mcp                           # Archer's tools for any MCP client</co
                 rules with their documented false positives), LOLBAS/LOLDrivers/LOLRMM, known-good lists, recorded attack
                 telemetry and Microsoft's Defender XDR GUIDE grades.</p>
             </div>
-            </div>
-            <!-- End Architecture Tab -->
+            
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3 class="faq-group" id="arch-workflow">Workflow</h3>
 
-            <!-- Libraries Tab -->
-            <div class="tab-pane" id="tab-libraries">
+
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
+                This section details Archer's complete detection generation workflow, from initial input through final output.
+                It covers the six-stage process including threat intelligence lookup, machine learning-based query generation,
+                correlation analysis, OSINT enhancement, validation, and attack flow visualization.
+            </p>
+
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3>Step-by-Step Process</h3>
+
+            <div class="workflow-step">
+                <h4>Stage 1: Input & Lookup</h4>
+                <pre><code>User → Threat Group Name (e.g., "APT29")
+     ↓
+MITRE ATT&CK Lookup → enterprise-attack.json
+     ↓
+Extract Techniques → [T1059.001, T1078, T1003.001, ...]</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Stage 2: Query Learning</h4>
+                <pre><code>Community Repositories
+     ↓
+Parse Queries (Splunk SPL, KQL)
+     ↓
+Extract Patterns & Variables
+     ↓
+Create Jinja2 Templates
+     ↓
+Cache in data/cache/ for future use</code></pre>
+                <p style="margin-top: 1em;">
+                    <strong>Example Template:</strong>
+                </p>
+                <pre><code>Template: powershell_execution
+Variables: {process_name}, {command_line}
+SPL: index=wineventlog EventCode=4688
+     Image=*{{ process_name }}*
+     CommandLine=*{{ command_line }}*</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Stage 3: Detection Generation</h4>
+                <pre><code>For each technique:
+    1. Load relevant templates
+    2. Apply technique-specific values
+    3. Generate Splunk query (SPL)
+    4. Generate Defender XDR query (KQL)
+    5. Validate syntax
+    6. Write to YAML file
+
+Output: data/APT29/splunk/T1059_001_PowerShell.yml</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Stage 4: Semantic Grouping (Optional)</h4>
+                <pre><code>All queries → Semantic analyzer
+    ↓
+Group by behavior:
+    - Authentication behaviors
+    - Network connections
+    - File system operations
+    - Process execution
+    - Registry modifications
+
+Output: Organized YAML files in subdirectories</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Stage 5: Correlation Analysis</h4>
+                <pre><code>Find related techniques:
+    T1078 (Valid Accounts)
+         ↓ often followed by
+    T1021 (Remote Services)
+         ↓ enables
+    T1003 (Credential Dumping)
+
+Create multi-stage detection:
+    - Stage 1: Detect valid account abuse
+    - Stage 2: Monitor remote service usage
+    - Stage 3: Alert on credential access
+
+Results page shows:
+    - Individual query block per technique (stacked)
+    - "chained with" connectors between techniques
+    - Combined JOIN query collapsed below
+
+Output: data/APT29/correlations/vendor_correlations.json</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Stage 6: Attack Flow Visualization</h4>
+                <pre><code>Generate Attack Flow diagrams:
+    1. Correlation flows (per correlation)
+    2. Complete actor flow (all techniques)
+
+Format: ATT&CK Flow JSON schema
+Output: data/attack_flows/APT29_complete_flow.json
+        data/attack_flows/APT29_complete_flow.html</code></pre>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Stage 7: Output & Delivery</h4>
+                <pre><code>Final structure:
+data/APT29/
+├── splunk/
+│   ├── T1059_001_PowerShell.yml
+│   ├── T1078_Valid_Accounts.yml
+│   └── ...
+├── mde/
+│   ├── T1059_001_PowerShell.yml
+│   ├── T1078_Valid_Accounts.yml
+│   └── ...
+├── correlations/
+│   └── vendor_correlations.json
+└── attack_flows/
+    ├── APT29_complete_flow.json
+    ├── APT29_complete_flow.html
+    └── correlation_flows/</code></pre>
+            </div>
+            
+
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3 class="faq-group" id="arch-libraries">Libraries</h3>
+
 
             <table class="library-table">
                 <thead>
@@ -1028,11 +1190,175 @@ archer-cli mcp                           # Archer's tools for any MCP client</co
                 <strong>Performance Benchmark:</strong> Generating 200 detection queries for APT29 takes approximately
                 <strong>30 seconds</strong> with caching enabled, compared to 4-5 minutes without optimization.
             </div>
-            </div>
-            <!-- End Libraries Tab -->
+            
+</div>
+            <!-- End Architecture Tab -->
 
-            <!-- AI Tab -->
-            <div class="tab-pane" id="tab-ai">
+            
+
+            
+
+            
+
+            <!-- Attack Flow Tab -->
+            <div class="tab-pane" id="tab-attack-flow">
+            <nav class="tab-toc" aria-label="On this page"><span class="toc-label">On this page</span><a href="#atta-example-flows">Example flows</a><a href="#atta-types-of-attack-flows">Types of Attack Flows</a><a href="#atta-attack-flow-schema">Attack Flow Schema</a></nav>
+
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
+                Archer generates <strong>attack flow diagrams</strong> following the
+                <a href="https://github.com/center-for-threat-informed-defense/attack-flow" target="_blank" style="color: #C53030;">
+                MITRE ATT&CK Flow specification</a>. These visualizations show technique sequences and attack paths.
+            </p>
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
+                <strong>ATT&amp;CK isn't linear.</strong> Its tactics are an adversary's goals, not steps in a fixed order:
+                a group can reach Discovery before Execution, return to Credential Access after Lateral Movement, or skip tactics altogether.
+                Archer lays tactics out left to right in ATT&amp;CK's usual order for reading, but never treats that order as the sequence a group followed.
+                The order that matters is the one the correlation links show: one technique seen before another on the same host.
+            </p>
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
+                The results page's attack flow has three tabs over the same techniques: <strong>MITRE ATT&amp;CK</strong> (by tactic, where you
+                rearrange and link them), the <a href="https://www.lockheedmartin.com/en-us/capabilities/cyber/cyber-kill-chain.html" target="_blank" style="color: #C53030;">Cyber Kill Chain</a>
+                (Lockheed Martin) and the <a href="https://cloud.google.com/security/resources/insights/targeted-attack-lifecycle" target="_blank" style="color: #C53030;">Targeted Attack Lifecycle</a>
+                (Mandiant). A technique goes by its tactic, or by the technique itself where that says more, such as phishing as Delivery.
+                The mapping is Archer's own (<code>archer/visualization/frameworks.py</code>), since neither model has an official ATT&amp;CK crosswalk.
+            </p>
+            
+
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3 id="atta-example-flows">Example flows</h3>
+            <div class="flow-examples">
+                <div class="flow-fig">
+                    <svg viewBox="0 0 940 125" role="img" aria-label="Example correlation flow"><defs><marker id="af-arrow" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#00D4AA"/></marker><marker id="af-back" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#F59E0B"/></marker></defs><text x="26" y="34" fill="#F59E0B" font-size="11" letter-spacing="1">INITIAL ACCESS</text><text x="261" y="34" fill="#F59E0B" font-size="11" letter-spacing="1">EXECUTION</text><text x="496" y="34" fill="#F59E0B" font-size="11" letter-spacing="1">CREDENTIAL ACCESS</text><text x="731" y="34" fill="#F59E0B" font-size="11" letter-spacing="1">EXFILTRATION</text><line x1="217" y1="77" x2="251" y2="77" stroke="#00D4AA" stroke-width="2" marker-end="url(#af-arrow)"/><line x1="452" y1="77" x2="486" y2="77" stroke="#00D4AA" stroke-width="2" marker-end="url(#af-arrow)"/><line x1="687" y1="77" x2="721" y2="77" stroke="#00D4AA" stroke-width="2" marker-end="url(#af-arrow)"/><rect x="20" y="46" width="195" height="62" rx="6" fill="#12273b" stroke="#00D4AA" stroke-opacity=".55"/><text x="34" y="76" fill="#00D4AA" font-size="14">T1566.001</text><text x="34" y="96" fill="#E6EEF2" font-size="11.5">Spearphishing Attach.</text><rect x="255" y="46" width="195" height="62" rx="6" fill="#12273b" stroke="#00D4AA" stroke-opacity=".55"/><text x="269" y="76" fill="#00D4AA" font-size="14">T1059.001</text><text x="269" y="96" fill="#E6EEF2" font-size="11.5">PowerShell</text><rect x="490" y="46" width="195" height="62" rx="6" fill="#12273b" stroke="#00D4AA" stroke-opacity=".55"/><text x="504" y="76" fill="#00D4AA" font-size="14">T1003.001</text><text x="504" y="96" fill="#E6EEF2" font-size="11.5">LSASS Memory</text><rect x="725" y="46" width="195" height="62" rx="6" fill="#12273b" stroke="#00D4AA" stroke-opacity=".55"/><text x="739" y="76" fill="#00D4AA" font-size="14">T1041</text><text x="739" y="96" fill="#E6EEF2" font-size="11.5">Exfil over C2</text></svg>
+                    <p class="cap"><b>Correlation flow.</b> One multi-stage correlation on a single host &mdash;
+                    phishing lands, PowerShell runs, LSASS is read, data leaves over the C2 channel. The arrows are the
+                    <b>correlation links</b>, not ATT&amp;CK's tactic order: this is the sequence actually seen.</p>
+                </div>
+                <div class="flow-fig">
+                    <svg viewBox="0 0 790 185" role="img" aria-label="Example complete actor flow"><defs><marker id="af-arrow2" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#00D4AA"/></marker></defs><path d="M188,94.0 C201.5,94.0 201.5,94.0 215,94.0" fill="none" stroke="#00D4AA" stroke-width="2" marker-end="url(#af-arrow)"/><path d="M383,94.0 C396.5,94.0 396.5,42.0 410,42.0" fill="none" stroke="#00D4AA" stroke-width="2" marker-end="url(#af-arrow)"/><path d="M383,94.0 C396.5,94.0 396.5,146.0 410,146.0" fill="none" stroke="#00D4AA" stroke-width="2" marker-end="url(#af-arrow)"/><path d="M578,42.0 C594.0,42.0 594.0,42.0 610,42.0" fill="none" stroke="#00D4AA" stroke-width="2" marker-end="url(#af-arrow)"/><path d="M578,146.0 C594.0,146.0 594.0,146.0 610,146.0" fill="none" stroke="#00D4AA" stroke-width="2" marker-end="url(#af-arrow)"/><path d="M610,42.0 C550,42.0 638,146.0 578,146.0" fill="none" stroke="#F59E0B" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#af-back)"/><text x="24" y="65" fill="#F59E0B" font-size="10.5" letter-spacing=".5">INITIAL ACCESS</text><rect x="20" y="72" width="168" height="44" rx="6" fill="#12273b" stroke="#00D4AA" stroke-opacity=".55"/><text x="32" y="91" fill="#00D4AA" font-size="12.5">T1566.001</text><text x="32" y="107" fill="#E6EEF2" font-size="10.5">Spearphishing</text><text x="219" y="65" fill="#F59E0B" font-size="10.5" letter-spacing=".5">EXECUTION</text><rect x="215" y="72" width="168" height="44" rx="6" fill="#12273b" stroke="#00D4AA" stroke-opacity=".55"/><text x="227" y="91" fill="#00D4AA" font-size="12.5">T1059.001</text><text x="227" y="107" fill="#E6EEF2" font-size="10.5">PowerShell</text><text x="414" y="13" fill="#F59E0B" font-size="10.5" letter-spacing=".5">DISCOVERY</text><rect x="410" y="20" width="168" height="44" rx="6" fill="#12273b" stroke="#00D4AA" stroke-opacity=".55"/><text x="422" y="39" fill="#00D4AA" font-size="12.5">T1082</text><text x="422" y="55" fill="#E6EEF2" font-size="10.5">System Info</text><text x="414" y="117" fill="#F59E0B" font-size="10.5" letter-spacing=".5">CREDENTIAL ACCESS</text><rect x="410" y="124" width="168" height="44" rx="6" fill="#12273b" stroke="#00D4AA" stroke-opacity=".55"/><text x="422" y="143" fill="#00D4AA" font-size="12.5">T1003.001</text><text x="422" y="159" fill="#E6EEF2" font-size="10.5">LSASS Memory</text><text x="614" y="13" fill="#F59E0B" font-size="10.5" letter-spacing=".5">LATERAL MOVEMENT</text><rect x="610" y="20" width="168" height="44" rx="6" fill="#12273b" stroke="#00D4AA" stroke-opacity=".55"/><text x="622" y="39" fill="#00D4AA" font-size="12.5">T1021.002</text><text x="622" y="55" fill="#E6EEF2" font-size="10.5">SMB Admin Share</text><text x="614" y="117" fill="#F59E0B" font-size="10.5" letter-spacing=".5">EXFILTRATION</text><rect x="610" y="124" width="168" height="44" rx="6" fill="#12273b" stroke="#00D4AA" stroke-opacity=".55"/><text x="622" y="143" fill="#00D4AA" font-size="12.5">T1041</text><text x="622" y="159" fill="#E6EEF2" font-size="10.5">Exfil over C2</text></svg>
+                    <p class="cap"><b>Complete actor flow.</b> All of a group's techniques and the routes between them.
+                    Execution branches to Discovery and Credential Access, and the dashed amber edge is a
+                    <span style="color:#F59E0B">non-linear return</span> &mdash; back to Credential Access after Lateral
+                    Movement. Tactics read left to right; the paths do not have to.</p>
+                </div>
+            </div>
+
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3 id="atta-types-of-attack-flows">Types of Attack Flows</h3>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Correlation Flows</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Generated for each multi-stage correlation</p>
+                    <ul>
+                        <li>Shows technique sequence</li>
+                        <li>Highlights relationships</li>
+                        <li>Per-correlation diagram</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Complete Actor Flow</h4>
+                    <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Shows all techniques for a threat group</p>
+                    <ul>
+                        <li>All possible attack routes</li>
+                        <li>Tactical progressions</li>
+                        <li>Comprehensive coverage</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3 id="atta-attack-flow-schema">Attack Flow Schema</h3>
+            
+            <div class="workflow-step">
+                <h4>JSON Structure</h4>
+                <pre><code>{
+              "type": "bundle",
+              "spec_version": "2.1",
+              "objects": [
+                {
+                  "type": "attack-flow",
+                  "name": "APT29 - Complete Attack Flow",
+                  "description": "All techniques and possible routes",
+                  "scope": "campaign"
+                },
+                {
+                  "type": "attack-action",
+                  "technique_id": "T1059.001",
+                  "name": "PowerShell",
+                  "description": "Execution of PowerShell"
+                },
+                ...
+              ]
+            }</code></pre>
+            </div>
+            
+            <div class="callout callout-info">
+                <strong>Editing the flow on the results page:</strong> select, hide, drag and unlink techniques,
+                switch between horizontal and vertical lanes or forward and reverse order, with Undo and Reset.
+                Edits are saved per user and group once you are logged in and the group's results are in your library.
+                Removing the group's last library item deletes its saved layout,
+                dragged positions can shift after the group is regenerated, and the STIX download exports the flow as shown
+                (filters, hidden techniques and removed links; Attack Flow has no layout, so positions and orientation aren't exported).
+            </div>
+
+            <div class="callout callout-info">
+                <strong>Interactive Visualization:</strong> Flow JSON files are automatically converted to interactive
+                HTML visualizations that can be viewed in any browser.
+            </div>
+            </div>
+            <!-- End Attack Flow Tab -->
+
+            
+
+            <!-- Emulate Tab -->
+            <div class="tab-pane" id="tab-emulate">
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
+                Emulate checks a detection against logs recorded while attacks were actually run in a lab. For each technique it
+                shows whether a detection's indicators appear in real recorded events, and by which log — a cheap first look
+                before testing against your own SIEM. No AI, no infrastructure; it reads values the pipeline already matches on.
+            </p>
+
+            <table class="library-table">
+                <thead>
+                    <tr><th>Status</th><th>What it means</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Seen</strong></td><td>The detection's indicators appear in recordings of its own technique — it would have matched real events, and this says which log it needs.</td></tr>
+                    <tr><td><strong>Not seen</strong></td><td>The technique has recordings, but none contain the indicators. Not proof it's wrong — the recording may have used another tool or procedure.</td></tr>
+                    <tr><td><strong>No recordings</strong></td><td>No source recorded the technique.</td></tr>
+                    <tr><td><strong>Noisy</strong></td><td>An indicator recorded in five or more <em>other</em> techniques too — it matches the lab's ordinary activity as well as the attack.</td></tr>
+                </tbody>
+            </table>
+
+            <div class="workflow-step">
+                <h4>The noisy signal, as a tool</h4>
+                <p>The same noise check is a tool, <code>noisy_indicators</code>, for the agents and any MCP client. The
+                <strong>Library audit</strong> agent uses it to flag weak detections and <strong>Detection tuning</strong> to
+                tighten them; Ask Archer has it too.</p>
+            </div>
+
+            <div class="workflow-step">
+                <h4>Sources</h4>
+                <p>Splunk attack_data, OTRF Security-Datasets, EVTX-ATTACK-SAMPLES and macOS-ATTACK-DATASET, plus Microsoft's
+                Defender XDR GUIDE triage grades. Recording Atomic Red Team in your own lab, with Defender for Endpoint's own
+                rows, is coming soon.</p>
+            </div>
+
+            <div class="workflow-step">
+                <h4>From checking logs to recording tests</h4>
+                <p>Emulate tells you which logs <em>could</em> record a technique; <strong>Assessments</strong> (Build &rarr;
+                Assessments) record what actually happened when you tested. Build a threat library of test cases from a profile's
+                ranked groups — one per MITRESaw procedure, sorted by how many of those groups use the technique — then run them in
+                a campaign, logging a red outcome (executed, failed, blocked) and a blue outcome (not logged, logged, alerted,
+                prevented) per technique. A logged-but-no-alert result links straight to a detection hunt; outcomes export as CSV
+                or an ATT&amp;CK Navigator layer. VECTR-style, per user, no AI.</p>
+            </div>
+            </div>
+                        <!-- AI and Agents Tab -->
+            <div class="tab-pane" id="tab-ai-agents">
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">How Archer uses AI &mdash; the optional generation modes, what a model adds over the heuristics, and the agents that drive the tools. AI is opt-in and off by default.</p>
+            <nav class="tab-toc" aria-label="On this page"><span class="toc-label">On this page</span><a href="#aiag-generation-modes">Generation Modes</a><a href="#aiag-what-ai-enhances">What AI Enhances</a><a href="#aiag-models-used">Models Used</a><a href="#aiag-ai-vs-non-ai-performance">AI vs Non-AI Performance</a><a href="#aiag-agents">Agents</a></nav>
+
 
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
                 Archer supports <strong>5 generation modes</strong> ranging from fast heuristics to advanced AI models.
@@ -1041,7 +1367,7 @@ archer-cli mcp                           # Archer's tools for any MCP client</co
             </p>
 
             <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
-            <h3>Generation Modes</h3>
+            <h3 id="aiag-generation-modes">Generation Modes</h3>
 
             <table class="library-table">
                 <thead>
@@ -1092,7 +1418,7 @@ archer-cli mcp                           # Archer's tools for any MCP client</co
             </div>
 
             <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
-            <h3>What AI Enhances</h3>
+            <h3 id="aiag-what-ai-enhances">What AI Enhances</h3>
 
             <div class="workflow-step">
                 <h4>1. Enhanced IOC Extraction</h4>
@@ -1136,7 +1462,7 @@ AI recognizes this as:
             </div>
 
             <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
-            <h3>Models Used</h3>
+            <h3 id="aiag-models-used">Models Used</h3>
 
             <table class="library-table">
                 <thead>
@@ -1171,7 +1497,7 @@ AI recognizes this as:
             </div>
 
             <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
-            <h3>AI vs Non-AI Performance</h3>
+            <h3 id="aiag-ai-vs-non-ai-performance">AI vs Non-AI Performance</h3>
 
             <table class="library-table">
                 <thead>
@@ -1206,7 +1532,7 @@ AI recognizes this as:
             </table>
 
             <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
-            <h3>Agents</h3>
+            <h3 id="aiag-agents">Agents</h3>
             <p style="line-height: 1.6;">
                 An agent is a model in a loop with tools: it picks a tool, reads the result, and picks again until it can
                 answer. The model never runs anything itself; Archer runs the tool it asks for and sends the result back.
@@ -1229,222 +1555,9 @@ AI recognizes this as:
                 agents' prompts to Claude Code, Claude Desktop or your own agent. <code>examples/agents/minimal_agent.py</code>
                 is a complete agent in about 100 lines. Full guide: <code>docs/agents/README.md</code>.
             </p>
-            </div>
-            <!-- End AI Tab -->
-
-            <!-- Workflow Tab -->
-            <div class="tab-pane" id="tab-workflow">
-
-            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                This section details Archer's complete detection generation workflow, from initial input through final output.
-                It covers the six-stage process including threat intelligence lookup, machine learning-based query generation,
-                correlation analysis, OSINT enhancement, validation, and attack flow visualization.
-            </p>
-
-            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
-            <h3>Step-by-Step Process</h3>
-
-            <div class="workflow-step">
-                <h4>Stage 1: Input & Lookup</h4>
-                <pre><code>User → Threat Group Name (e.g., "APT29")
-     ↓
-MITRE ATT&CK Lookup → enterprise-attack.json
-     ↓
-Extract Techniques → [T1059.001, T1078, T1003.001, ...]</code></pre>
-            </div>
-
-            <div class="workflow-step">
-                <h4>Stage 2: Query Learning</h4>
-                <pre><code>Community Repositories
-     ↓
-Parse Queries (Splunk SPL, KQL)
-     ↓
-Extract Patterns & Variables
-     ↓
-Create Jinja2 Templates
-     ↓
-Cache in data/cache/ for future use</code></pre>
-                <p style="margin-top: 1em;">
-                    <strong>Example Template:</strong>
-                </p>
-                <pre><code>Template: powershell_execution
-Variables: {process_name}, {command_line}
-SPL: index=wineventlog EventCode=4688
-     Image=*{{ process_name }}*
-     CommandLine=*{{ command_line }}*</code></pre>
-            </div>
-
-            <div class="workflow-step">
-                <h4>Stage 3: Detection Generation</h4>
-                <pre><code>For each technique:
-    1. Load relevant templates
-    2. Apply technique-specific values
-    3. Generate Splunk query (SPL)
-    4. Generate Defender XDR query (KQL)
-    5. Validate syntax
-    6. Write to YAML file
-
-Output: data/APT29/splunk/T1059_001_PowerShell.yml</code></pre>
-            </div>
-
-            <div class="workflow-step">
-                <h4>Stage 4: Semantic Grouping (Optional)</h4>
-                <pre><code>All queries → Semantic analyzer
-    ↓
-Group by behavior:
-    - Authentication behaviors
-    - Network connections
-    - File system operations
-    - Process execution
-    - Registry modifications
-
-Output: Organized YAML files in subdirectories</code></pre>
-            </div>
-
-            <div class="workflow-step">
-                <h4>Stage 5: Correlation Analysis</h4>
-                <pre><code>Find related techniques:
-    T1078 (Valid Accounts)
-         ↓ often followed by
-    T1021 (Remote Services)
-         ↓ enables
-    T1003 (Credential Dumping)
-
-Create multi-stage detection:
-    - Stage 1: Detect valid account abuse
-    - Stage 2: Monitor remote service usage
-    - Stage 3: Alert on credential access
-
-Results page shows:
-    - Individual query block per technique (stacked)
-    - "chained with" connectors between techniques
-    - Combined JOIN query collapsed below
-
-Output: data/APT29/correlations/vendor_correlations.json</code></pre>
-            </div>
-
-            <div class="workflow-step">
-                <h4>Stage 6: Attack Flow Visualization</h4>
-                <pre><code>Generate Attack Flow diagrams:
-    1. Correlation flows (per correlation)
-    2. Complete actor flow (all techniques)
-
-Format: ATT&CK Flow JSON schema
-Output: data/attack_flows/APT29_complete_flow.json
-        data/attack_flows/APT29_complete_flow.html</code></pre>
-            </div>
-
-            <div class="workflow-step">
-                <h4>Stage 7: Output & Delivery</h4>
-                <pre><code>Final structure:
-data/APT29/
-├── splunk/
-│   ├── T1059_001_PowerShell.yml
-│   ├── T1078_Valid_Accounts.yml
-│   └── ...
-├── mde/
-│   ├── T1059_001_PowerShell.yml
-│   ├── T1078_Valid_Accounts.yml
-│   └── ...
-├── correlations/
-│   └── vendor_correlations.json
-└── attack_flows/
-    ├── APT29_complete_flow.json
-    ├── APT29_complete_flow.html
-    └── correlation_flows/</code></pre>
-            </div>
-            </div>
-            <!-- End Workflow Tab -->
-
-            <!-- Attack Flow Tab -->
-            <div class="tab-pane" id="tab-attack-flow">
-            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                Archer generates <strong>attack flow diagrams</strong> following the
-                <a href="https://github.com/center-for-threat-informed-defense/attack-flow" target="_blank" style="color: #C53030;">
-                MITRE ATT&CK Flow specification</a>. These visualizations show technique sequences and attack paths.
-            </p>
-            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                <strong>ATT&amp;CK isn't linear.</strong> Its tactics are an adversary's goals, not steps in a fixed order:
-                a group can reach Discovery before Execution, return to Credential Access after Lateral Movement, or skip tactics altogether.
-                Archer lays tactics out left to right in ATT&amp;CK's usual order for reading, but never treats that order as the sequence a group followed.
-                The order that matters is the one the correlation links show: one technique seen before another on the same host.
-            </p>
-            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                The results page's attack flow has three tabs over the same techniques: <strong>MITRE ATT&amp;CK</strong> (by tactic, where you
-                rearrange and link them), the <a href="https://www.lockheedmartin.com/en-us/capabilities/cyber/cyber-kill-chain.html" target="_blank" style="color: #C53030;">Cyber Kill Chain</a>
-                (Lockheed Martin) and the <a href="https://cloud.google.com/security/resources/insights/targeted-attack-lifecycle" target="_blank" style="color: #C53030;">Targeted Attack Lifecycle</a>
-                (Mandiant). A technique goes by its tactic, or by the technique itself where that says more, such as phishing as Delivery.
-                The mapping is Archer's own (<code>archer/visualization/frameworks.py</code>), since neither model has an official ATT&amp;CK crosswalk.
-            </p>
             
-            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
-            <h3>Types of Attack Flows</h3>
-            
-            <div class="feature-grid">
-                <div class="feature-card">
-                    <h4>Correlation Flows</h4>
-                    <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Generated for each multi-stage correlation</p>
-                    <ul>
-                        <li>Shows technique sequence</li>
-                        <li>Highlights relationships</li>
-                        <li>Per-correlation diagram</li>
-                    </ul>
-                </div>
-                <div class="feature-card">
-                    <h4>Complete Actor Flow</h4>
-                    <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Shows all techniques for a threat group</p>
-                    <ul>
-                        <li>All possible attack routes</li>
-                        <li>Tactical progressions</li>
-                        <li>Comprehensive coverage</li>
-                    </ul>
-                </div>
-            </div>
-            
-            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
-            <h3>Attack Flow Schema</h3>
-            
-            <div class="workflow-step">
-                <h4>JSON Structure</h4>
-                <pre><code>{
-              "type": "bundle",
-              "spec_version": "2.1",
-              "objects": [
-                {
-                  "type": "attack-flow",
-                  "name": "APT29 - Complete Attack Flow",
-                  "description": "All techniques and possible routes",
-                  "scope": "campaign"
-                },
-                {
-                  "type": "attack-action",
-                  "technique_id": "T1059.001",
-                  "name": "PowerShell",
-                  "description": "Execution of PowerShell"
-                },
-                ...
-              ]
-            }</code></pre>
-            </div>
-            
-            <div class="callout callout-info">
-                <strong>Editing the flow on the results page:</strong> select, hide, drag and unlink techniques,
-                switch between horizontal and vertical lanes or forward and reverse order, with Undo and Reset.
-                Edits are saved per user and group once you are logged in and the group's results are in your library.
-                Removing the group's last library item deletes its saved layout,
-                dragged positions can shift after the group is regenerated, and the STIX download exports the flow as shown
-                (filters, hidden techniques and removed links; Attack Flow has no layout, so positions and orientation aren't exported).
-            </div>
+<hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
 
-            <div class="callout callout-info">
-                <strong>Interactive Visualization:</strong> Flow JSON files are automatically converted to interactive
-                HTML visualizations that can be viewed in any browser.
-            </div>
-            </div>
-            <!-- End Attack Flow Tab -->
-
-            <!-- Agents Tab -->
-            <div class="tab-pane" id="tab-agents">
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
                 An agent is a model in a loop with Archer's tools: it picks a tool, reads the result and picks again until it
                 can answer. Every step is shown as it happens and kept, so you can read back what it did. Agents run on any
@@ -1473,84 +1586,16 @@ data/APT29/
                 tools and the six agents' prompts, with the changing tools marked so the client asks first. It signs in to a
                 running Archer as you, so hunts use your AI settings and your keys stay on the server.</p>
             </div>
+            
             </div>
-            <!-- End Agents Tab -->
+            <!-- End AI and Agents Tab -->
 
-            <!-- Emulate Tab -->
-            <div class="tab-pane" id="tab-emulate">
-            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                Emulate checks a detection against logs recorded while attacks were actually run in a lab. For each technique it
-                shows whether a detection's indicators appear in real recorded events, and by which log — a cheap first look
-                before testing against your own SIEM. No AI, no infrastructure; it reads values the pipeline already matches on.
-            </p>
+            <!-- Intel and Profile Tab -->
+            <div class="tab-pane" id="tab-intel-profile">
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Where intelligence comes into Archer before it becomes detections, and how a company profile seeds a hunt.</p>
+            <nav class="tab-toc" aria-label="On this page"><span class="toc-label">On this page</span><a href="#intp-intel">Intel</a><a href="#intp-company-profiling">Company profiling</a></nav>
+            <h3 id="intp-intel">Intel</h3>
 
-            <table class="library-table">
-                <thead>
-                    <tr><th>Status</th><th>What it means</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td><strong>Seen</strong></td><td>The detection's indicators appear in recordings of its own technique — it would have matched real events, and this says which log it needs.</td></tr>
-                    <tr><td><strong>Not seen</strong></td><td>The technique has recordings, but none contain the indicators. Not proof it's wrong — the recording may have used another tool or procedure.</td></tr>
-                    <tr><td><strong>No recordings</strong></td><td>No source recorded the technique.</td></tr>
-                    <tr><td><strong>Noisy</strong></td><td>An indicator recorded in five or more <em>other</em> techniques too — it matches the lab's ordinary activity as well as the attack.</td></tr>
-                </tbody>
-            </table>
-
-            <div class="workflow-step">
-                <h4>The noisy signal, as a tool</h4>
-                <p>The same noise check is a tool, <code>noisy_indicators</code>, for the agents and any MCP client. The
-                <strong>Library audit</strong> agent uses it to flag weak detections and <strong>Detection tuning</strong> to
-                tighten them; Ask Archer has it too.</p>
-            </div>
-
-            <div class="workflow-step">
-                <h4>Sources</h4>
-                <p>Splunk attack_data, OTRF Security-Datasets, EVTX-ATTACK-SAMPLES and macOS-ATTACK-DATASET, plus Microsoft's
-                Defender XDR GUIDE triage grades. Recording Atomic Red Team in your own lab, with Defender for Endpoint's own
-                rows, is coming soon.</p>
-            </div>
-
-            <div class="workflow-step">
-                <h4>From checking logs to recording tests</h4>
-                <p>Emulate tells you which logs <em>could</em> record a technique; <strong>Assessments</strong> (Build &rarr;
-                Assessments) record what actually happened when you tested. Build a threat library of test cases from a profile's
-                ranked groups — one per MITRESaw procedure, sorted by how many of those groups use the technique — then run them in
-                a campaign, logging a red outcome (executed, failed, blocked) and a blue outcome (not logged, logged, alerted,
-                prevented) per technique. A logged-but-no-alert result links straight to a detection hunt; outcomes export as CSV
-                or an ATT&amp;CK Navigator layer. VECTR-style, per user, no AI.</p>
-            </div>
-            </div>
-            <!-- End Emulate Tab -->
-
-            <!-- Profile Tab -->
-            <div class="tab-pane" id="tab-profile">
-            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                Profiling starts from a company instead of a threat: enter a domain and Archer works out who is likely to target
-                it, then generates detections for the groups you choose. It reads Wikidata, the company's homepage and OSINT to
-                establish its sector, where it operates and where its site is hosted, and fingerprints the technology stack for
-                relevant CVEs — all in the background, with a progress page of its seven stages.
-            </p>
-
-            <div class="workflow-step">
-                <h4>The Review page</h4>
-                <p>When profiling finishes it opens a Review page: the company's branding, a profile summary (industry, location,
-                hosting, source, risk score), the exposure map, and the recommended groups laid out in columns — each with a
-                <strong>likelihood</strong> of targeting this organisation (how strongly its sector and region match the group's
-                known targeting), the top three pre-ticked. Tick the groups you want and generate; each gets its own Results page.</p>
-            </div>
-
-            <div class="workflow-step">
-                <h4>Organisation Exposure Map</h4>
-                <p>A node-and-link graph of everything profiling surfaced from public sources and how each piece links back to
-                the domain — the attack surface a threat actor sees before acting. Two hops out: resolved IPs, nameservers, mail,
-                subdomains, technology and historical snapshots off the domain; then the networks, certificates, exposed services,
-                known CVEs and breach surface off those. Nothing is harvested to build it.</p>
-            </div>
-            </div>
-            <!-- End Profile Tab -->
-
-            <!-- Intel Tab -->
-            <div class="tab-pane" id="tab-intel">
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
                 The Intel menu is where threat intelligence comes into Archer before it becomes detections — the weekly feed,
                 the companies you've profiled, and the report and actor research that seeds a hunt.
@@ -1585,8 +1630,77 @@ data/APT29/
                 <p>Extract TTPs and IOCs from a report URL or file and hunt them, or find groups by keyword (country, industry)
                 and consolidate their techniques before generating coverage.</p>
             </div>
+            
+<hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3 id="intp-company-profiling">Company profiling</h3>
+
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
+                Profiling starts from a company instead of a threat: enter a domain and Archer works out who is likely to target
+                it, then generates detections for the groups you choose. It reads Wikidata, the company's homepage and OSINT to
+                establish its sector, where it operates and where its site is hosted, and fingerprints the technology stack for
+                relevant CVEs — all in the background, with a progress page of its seven stages.
+            </p>
+
+            <div class="workflow-step">
+                <h4>The Review page</h4>
+                <p>When profiling finishes it opens a Review page: the company's branding, a profile summary (industry, location,
+                hosting, source, risk score), the exposure map, and the recommended groups laid out in columns — each with a
+                <strong>likelihood</strong> of targeting this organisation (how strongly its sector and region match the group's
+                known targeting), the top three pre-ticked. Tick the groups you want and generate; each gets its own Results page.</p>
             </div>
-            <!-- End Intel Tab -->
+
+            <div class="workflow-step">
+                <h4>Organisation Exposure Map</h4>
+                <p>A node-and-link graph of everything profiling surfaced from public sources and how each piece links back to
+                the domain — the attack surface a threat actor sees before acting. Two hops out: resolved IPs, nameservers, mail,
+                subdomains, technology and historical snapshots off the domain; then the networks, certificates, exposed services,
+                known CVEs and breach surface off those. Nothing is harvested to build it.</p>
+            </div>
+            
+            </div>
+            <!-- FAQ Tab -->
+            <div class="tab-pane" id="tab-faq">
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Short answers to the questions that come up most. For the detail behind each, see the Architecture, AI &amp; Agents and Intel &amp; Profile tabs.</p>
+            <nav class="tab-toc" aria-label="On this page"><span class="toc-label">On this page</span><a href="#faq-getting-started">Getting started</a><a href="#faq-generation-ai">Generation and AI</a><a href="#faq-siems-output">SIEMs and output</a><a href="#faq-intel-privacy">Intel, attribution and privacy</a></nav>
+            <h3 id="faq-getting-started">Getting started</h3>
+            <div class="faq-list">
+                <div class="faq-item"><p class="faq-q">Do I need an AI model or API key?</p><p class="faq-a">No. Archer generates detections, correlations and attack flows with no model at all &mdash; the template tier fills query templates from MITRESaw evidence. A model is opt-in (Profile &rarr; API Keys) and only adds the LLM generation tier and Ask Archer.</p></div>
+                <div class="faq-item"><p class="faq-q">How do I see where data appears without running a real hunt?</p><p class="faq-a">Run <code>archer-cli test populate</code>: it seeds one clearly-labelled scenario across every surface (Results, Coverage, Catalogue, Library, Assessments, correlations). <code>archer-cli test depopulate</code> removes it cleanly afterwards.</p></div>
+                <div class="faq-item"><p class="faq-q">Hunt or Profile &mdash; what's the difference?</p><p class="faq-a">A hunt takes a threat group, a CVE or an uploaded report. Profile starts from a company domain, works out who is likely to target it, then generates detections for the groups you choose.</p></div>
+            </div>
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3 id="faq-generation-ai">Generation and AI</h3>
+            <div class="faq-list">
+                <div class="faq-item"><p class="faq-q">What are the generation modes?</p><p class="faq-a">From fast heuristics through to a local or cloud model. Set with the <code>GENAI_MODE</code> environment variable or in Profile. Only the LLM tier calls a model; everything else is deterministic.</p></div>
+                <div class="faq-item"><p class="faq-q">Will a small local model work?</p><p class="faq-a">Yes for single-technique generation with the compact prompt. Multi-step agents are less reliable on small local models &mdash; they tend to stop early. A looping or truncated answer is rejected and nothing is written.</p></div>
+                <div class="faq-item"><p class="faq-q">What does AI actually add?</p><p class="faq-a">IOC extraction, semantic query grouping and correlation reasoning. It sits alongside the pipeline, never in its critical path.</p></div>
+            </div>
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3 id="faq-siems-output">SIEMs and output</h3>
+            <div class="faq-list">
+                <div class="faq-item"><p class="faq-q">Which SIEMs, and which is primary?</p><p class="faq-a">Google SecOps (YARA-L / UDM) is the primary target and the top correlation priority, then Defender XDR (KQL), Splunk (SPL) and Elastic (ES|QL).</p></div>
+                <div class="faq-item"><p class="faq-q">Where do detections live, and in what format?</p><p class="faq-a">YAML in <code>data/groups/</code> &mdash; name, technique, query, severity, required data connectors and indicators. They can be pushed as detections-as-code to a configured git repo.</p></div>
+                <div class="faq-item"><p class="faq-q">What is a cross-vendor playbook?</p><p class="faq-a">A correlation chain whose stages are joined across SIEMs on host and user entities &mdash; one attack chain expressed vendor-agnostically, rendered on the Results page.</p></div>
+                <div class="faq-item"><p class="faq-q">Why is a detection marked &ldquo;source not ingested&rdquo;?</p><p class="faq-a">Availability gating: the technique's data source isn't in your ingest. It is flagged at generation and excluded at deploy &mdash; never silently dropped, so coverage stays honest.</p></div>
+            </div>
+            <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
+            <h3 id="faq-intel-privacy">Intel, attribution and privacy</h3>
+            <div class="faq-list">
+                <div class="faq-item"><p class="faq-q">How does attribution work?</p><p class="faq-a">Three paths via MITRESaw: <strong>direct</strong> (the group uses the technique), <strong>via software</strong> (inherited from its tooling or its campaigns' tooling) and <strong>via campaign</strong> (attributed through a named campaign).</p></div>
+                <div class="faq-item"><p class="faq-q">Does my organisation's data get committed to git?</p><p class="faq-a">No. Index names and mappings live in gitignored <code>bespoke/</code>; <code>data/</code> and all telemetry are gitignored; only generic names appear in code and docs.</p></div>
+                <div class="faq-item"><p class="faq-q">Is VECTR required?</p><p class="faq-a">No. Archer works alongside VECTR &mdash; push threat-library cases in, read campaign outcomes back &mdash; but it isn't needed. The in-app threat library stands on its own.</p></div>
+            </div>
+            </div>
+            <!-- End FAQ Tab -->
+
+            <!-- End Intel and Profile Tab -->
+
+
+            <!-- End Emulate Tab -->
+
+            
+
+            
             </div>
             <!-- End Tab Content -->
         </div>
@@ -2211,6 +2325,17 @@ data/APT29/
         window.addEventListener('hashchange', () => {
             const t = (location.hash || '').replace('#', '');
             if (t) activateTab(t, false);
+        });
+
+        // In-tab TOC links: smooth-scroll to the section without touching tab routing
+        document.querySelectorAll('.tab-toc a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                const el = document.getElementById(a.getAttribute('href').slice(1));
+                if (!el) return;
+                e.preventDefault();
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                history.replaceState(null, '', a.getAttribute('href'));
+            });
         });
 
         // Architecture diagram iframe: size it to its content, and refit when the tab opens
