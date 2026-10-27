@@ -48,7 +48,6 @@
     {"id": "kaseya", "label": "Kaseya VSA", "category": "Remote mgmt & endpoints", "platforms": ["Windows"], "aliases": ["Kaseya", "Kaseya VSA"], "cpe": ["kaseya:*"]},
     {"id": "screenconnect", "attacker_used": true, "label": "ConnectWise ScreenConnect", "category": "Remote mgmt & endpoints", "platforms": ["Windows"], "aliases": ["ScreenConnect", "ConnectWise"], "cpe": ["connectwise:*"]},
     {"id": "manageengine", "label": "ManageEngine", "category": "Remote mgmt & endpoints", "platforms": ["Windows"], "aliases": ["ManageEngine", "ServiceDesk Plus", "ADSelfService Plus", "Desktop Central", "Endpoint Central"], "cpe": ["zohocorp:*"]},
-    {"id": "nable", "label": "N-able (N-central)", "category": "Remote mgmt & endpoints", "platforms": ["Windows"], "aliases": ["N-able", "N-central"], "cpe": ["n-able:*"]},
     {"id": "teamviewer", "attacker_used": true, "label": "TeamViewer", "category": "Remote mgmt & endpoints", "platforms": ["Windows", "macOS", "Linux"], "aliases": ["TeamViewer"], "cpe": ["teamviewer:*"]},
     {"id": "anydesk", "attacker_used": true, "label": "AnyDesk", "category": "Remote mgmt & endpoints", "platforms": ["Windows", "macOS", "Linux"], "aliases": ["AnyDesk"], "cpe": ["anydesk:*"]},
     {"id": "sccm", "label": "MS Configuration Manager (SCCM)", "category": "Remote mgmt & endpoints", "platforms": ["Windows"], "aliases": ["SCCM", "MECM", "Configuration Manager"], "cpe": ["microsoft:configuration_manager*", "microsoft:endpoint_configuration_manager"]},
@@ -57,7 +56,6 @@
 
     {"id": "moveit", "label": "Progress MOVEit", "category": "Apps & file transfer", "platforms": ["Windows"], "aliases": ["MOVEit"], "cpe": ["progress:moveit*", "ipswitch:moveit*"]},
     {"id": "goanywhere", "label": "Fortra GoAnywhere", "category": "Apps & file transfer", "platforms": ["Windows", "Linux"], "aliases": ["GoAnywhere"], "cpe": ["fortra:goanywhere*"]},
-    {"id": "cleo", "label": "Cleo (Harmony, VLTrader, LexiCom)", "category": "Apps & file transfer", "platforms": ["Windows", "Linux"], "aliases": ["Cleo Harmony", "VLTrader", "LexiCom"], "cpe": ["cleo:*"]},
     {"id": "crushftp", "label": "CrushFTP", "category": "Apps & file transfer", "platforms": ["Windows", "Linux", "macOS"], "aliases": ["CrushFTP"], "cpe": ["crushftp:*"]},
     {"id": "accellion", "label": "Accellion / Kiteworks", "category": "Apps & file transfer", "platforms": ["Linux"], "aliases": ["Accellion", "Kiteworks"], "cpe": ["accellion:*", "kiteworks:*"]},
 
