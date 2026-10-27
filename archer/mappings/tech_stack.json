@@ -13,7 +13,7 @@
     {"id": "duo", "label": "Cisco Duo", "category": "Identity & access", "platforms": ["Identity Provider"], "aliases": ["Duo Security", "Cisco Duo"], "cpe": ["duo:*"]},
 
     {"id": "m365", "label": "Microsoft 365", "category": "Productivity & email", "platforms": ["Office Suite", "SaaS", "Identity Provider"], "aliases": ["Microsoft 365", "Office 365", "M365", "O365", "Exchange Online", "SharePoint Online", "OneDrive", "Microsoft Teams", "Outlook Web", "Microsoft Exchange", "Exchange mailboxes"], "cpe": ["microsoft:365*", "microsoft:office_365*", "microsoft:sharepoint_online", "microsoft:teams"]},
-    {"id": "office", "label": "Microsoft Office (desktop)", "category": "Productivity & email", "platforms": ["Office Suite", "Windows"], "aliases": ["Microsoft Office", "Microsoft Word", "Microsoft Excel", "Outlook"], "cpe": ["microsoft:office", "microsoft:word", "microsoft:excel", "microsoft:outlook"]},
+    {"id": "office", "label": "Microsoft Office", "category": "Productivity & email", "platforms": ["Office Suite", "Windows"], "aliases": ["Microsoft Office", "Microsoft Word", "Microsoft Excel", "Outlook"], "cpe": ["microsoft:office", "microsoft:word", "microsoft:excel", "microsoft:outlook"]},
     {"id": "exchange_server", "label": "Microsoft Exchange Server", "category": "Productivity & email", "platforms": ["Windows", "Office Suite"], "aliases": ["Exchange Server", "Microsoft Exchange", "Outlook Web Access", "ProxyShell", "ProxyLogon", "ProxyNotShell"], "cpe": ["microsoft:exchange_server"]},
     {"id": "sharepoint_server", "label": "SharePoint Server", "category": "Productivity & email", "platforms": ["Windows"], "aliases": ["SharePoint Server", "ToolShell"], "cpe": ["microsoft:sharepoint_server*", "microsoft:sharepoint_enterprise_server"]},
     {"id": "google_workspace", "attacker_used": true, "label": "Google Workspace", "category": "Productivity & email", "platforms": ["Office Suite", "SaaS", "Identity Provider"], "aliases": ["Google Workspace", "G Suite", "Gmail", "Google Drive"], "cpe": ["google:workspace*"]},
@@ -39,8 +39,10 @@
     {"id": "juniper", "label": "Juniper (Junos)", "category": "Firewalls & network", "platforms": ["Network Devices"], "aliases": ["Juniper", "Junos"], "cpe": ["juniper:*"]},
     {"id": "checkpoint", "label": "Check Point", "category": "Firewalls & network", "platforms": ["Network Devices"], "aliases": ["Check Point", "Quantum Security Gateway"], "cpe": ["checkpoint:*"]},
     {"id": "f5", "label": "F5 BIG-IP", "category": "Firewalls & network", "platforms": ["Network Devices"], "aliases": ["BIG-IP", "F5 Networks"], "cpe": ["f5:*"]},
+    {"id": "watchguard", "label": "WatchGuard", "category": "Firewalls & network", "platforms": ["Network Devices"], "aliases": ["WatchGuard", "Firebox", "Fireware"], "cpe": ["watchguard:*"]},
     {"id": "zyxel", "label": "Zyxel", "category": "VPN & edge access", "platforms": ["Network Devices"], "aliases": ["Zyxel"], "cpe": ["zyxel:*"]},
     {"id": "sophos_fw", "label": "Sophos Firewall", "category": "VPN & edge access", "platforms": ["Network Devices"], "aliases": ["Sophos Firewall", "Sophos XG"], "cpe": ["sophos:*firewall*"]},
+    {"id": "array_networks", "label": "Array Networks", "category": "VPN & edge access", "platforms": ["Network Devices"], "aliases": ["Array Networks", "Array AG", "Array Networks AG"], "cpe": ["arraynetworks:*", "array_networks:*"]},
 
     {"id": "solarwinds", "label": "Solarwinds", "category": "Remote mgmt & endpoints", "platforms": ["Windows"], "aliases": ["SolarWinds", "Orion", "Serv-U", "Web Help Desk", "SUNBURST"], "cpe": ["solarwinds:*"]},
     {"id": "kaseya", "label": "Kaseya VSA", "category": "Remote mgmt & endpoints", "platforms": ["Windows"], "aliases": ["Kaseya", "Kaseya VSA"], "cpe": ["kaseya:*"]},
@@ -67,6 +69,7 @@
     {"id": "salesforce", "label": "Salesforce", "category": "Collaboration & SaaS", "platforms": ["SaaS"], "aliases": ["Salesforce"], "cpe": ["salesforce:*"]},
     {"id": "snowflake", "label": "Snowflake", "category": "Collaboration & SaaS", "platforms": ["SaaS"], "aliases": ["Snowflake"], "cpe": ["snowflake:*"]},
     {"id": "servicenow", "label": "ServiceNow", "category": "Collaboration & SaaS", "platforms": ["SaaS"], "aliases": ["ServiceNow"], "cpe": ["servicenow:*"]},
+    {"id": "box", "label": "Box", "category": "Collaboration & SaaS", "platforms": ["SaaS"], "aliases": ["Box"], "cpe": ["box:*"]},
 
     {"id": "iis", "label": "Microsoft IIS", "category": "Servers & databases", "platforms": ["Windows"], "aliases": ["IIS", "Internet Information Services", "w3wp"], "cpe": ["microsoft:internet_information_services*", "microsoft:iis"]},
     {"id": "apache_httpd", "label": "Apache HTTP Server", "category": "Servers & databases", "platforms": ["Linux", "Windows"], "aliases": ["Apache HTTP Server", "httpd"], "cpe": ["apache:http_server"]},
@@ -87,6 +90,7 @@
     {"id": "defender", "attacker_used": true, "label": "Microsoft Defender", "category": "Backup & security", "platforms": ["Windows", "macOS", "Linux"], "aliases": ["Microsoft Defender", "Windows Defender", "Defender for Endpoint"], "cpe": ["microsoft:defender*"]},
     {"id": "crowdstrike", "label": "CrowdStrike Falcon", "category": "Backup & security", "platforms": ["Windows", "macOS", "Linux"], "aliases": ["CrowdStrike Falcon"], "cpe": ["crowdstrike:*"]},
     {"id": "sentinelone", "label": "SentinelOne", "category": "Backup & security", "platforms": ["Windows", "macOS", "Linux"], "aliases": ["SentinelOne"], "cpe": ["sentinelone:*"]},
-    {"id": "elastic_agent", "label": "Elastic Agent", "category": "Backup & security", "platforms": ["Windows", "macOS", "Linux"], "aliases": ["Elastic Agent", "Elastic Defend", "Elastic Beats"], "cpe": ["elastic:elastic_agent*", "elastic:beats*"]}
+    {"id": "elastic_agent", "label": "Elastic Agent", "category": "Backup & security", "platforms": ["Windows", "macOS", "Linux"], "aliases": ["Elastic Agent", "Elastic Defend", "Elastic Beats"], "cpe": ["elastic:elastic_agent*", "elastic:beats*"]},
+    {"id": "commvault", "label": "Commvault", "category": "Backup & security", "platforms": ["Windows", "Linux"], "aliases": ["Commvault", "Metallic"], "cpe": ["commvault:*"]}
   ]
 }
