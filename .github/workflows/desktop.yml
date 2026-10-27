@@ -26,10 +26,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 150
     env:
-      ARCHER_HOME: ${{ runner.temp }}/home
       MITRESAW_DIR: ${{ github.workspace }}/MITRESaw
-      MITRESAW_PYTHON: ${{ runner.temp }}/mitresaw/bin/python
     steps:
+      # The runner context isn't available to job-level env
+      - run: |
+          echo "ARCHER_HOME=$RUNNER_TEMP/home" >> "$GITHUB_ENV"
+          echo "MITRESAW_PYTHON=$RUNNER_TEMP/mitresaw/bin/python" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
