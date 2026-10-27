@@ -198,6 +198,14 @@
             </svg>
             <span>Config</span>
           </button>
+          <button class="tab-button" data-tab="environment">
+            <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M2 12h20"/>
+              <path d="M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20z"/>
+            </svg>
+            <span>Environment</span>
+          </button>
           {% if user and user.role.value == 'admin' %}
           <button class="tab-button" data-tab="users">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -214,8 +222,7 @@
         <div class="tabs-content">
           <!-- PROFILE TAB -->
           <div class="tab-pane active" id="tab-profile">
-            <nav class="tab-toc" aria-label="On this page"><span class="toc-label">On this page</span><a href="#pf-details">Details</a><a href="#siems">SIEM platforms</a><a href="#industries">Threat Feed industries</a><a href="#tech-stack">Technology stack</a></nav>
-            <div class="tab-description" style="margin-bottom: 16px;" id="pf-details">
+            <div class="tab-description" style="margin-bottom: 16px;">
               Profile information and preferences
             </div>
 
@@ -318,8 +325,15 @@
               </form>
 
             </div>
+          </div>
 
-            <!-- Settings that apply to every hunt and the threat feed, under the profile form -->
+          <!-- ENVIRONMENT TAB -->
+          <div class="tab-pane" id="tab-environment">
+            <div class="tab-description" style="margin-bottom: 16px;">
+              What your organisation runs — applied to every hunt and the Threat Feed
+            </div>
+
+            <!-- Settings that apply to every hunt and the threat feed -->
             <div class="profile-prefs">
               <!-- SIEMs every hunt generates for (app._siem_args) -->
               <section class="industries" id="siems">

@@ -43,7 +43,7 @@ Enter technique IDs separated by commas: `T1003, T1021.001, T1078`. Archer hunts
 | OSINT Enhancement | On | Merges indicators from public detection rules (Google SecOps, Sentinel, Splunk and Elastic repositories) into the queries, and adds their known false positives to each detection |
 | OSINT Comparison | Off | Scores each detection against the public rules for the same technique, and records how well they agree. Also builds detections from the public rules when ATT&CK gives a technique no indicators |
 
-Correlations are always built. Which SIEMs get queries is set in Profile → SIEM platforms.
+Correlations are always built. Which SIEMs get queries is set in Environment → SIEM platforms.
 
 ## The AI question
 

@@ -101,7 +101,7 @@ The filter card applies to whichever view is open below it, and shows only the f
 
 | Filter | What it picks |
 |---|---|
-| SIEM | Google SecOps or Defender XDR: whose UDM event types or tables are shown, and in the group view, whose detections. Defaults to your first SIEM under Profile → SIEM platforms |
+| SIEM | Google SecOps or Defender XDR: whose UDM event types or tables are shown, and in the group view, whose detections. Defaults to your first SIEM under Environment → SIEM platforms |
 | Indicators | Free text. By technique: techniques whose recorded events hold a field value containing it (`…` gaps match their parts in order). By group: detections with an indicator containing it |
 | Techniques | Search by ID or name |
 | Groups | Groups you've hunted. By technique or data source: the techniques their detections are for |

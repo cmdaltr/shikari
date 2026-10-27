@@ -15,7 +15,7 @@
 | Refresh now | Collect again (only new posts are fetched, so it's usually quick) |
 | Analyse in Archer | Open the post on Home → [Analyse](03-analyse.md) |
 
-Set your industries in Profile → Threat Feed industries.
+Set your industries in Environment → Threat Feed industries.
 
 A card shows the source, date, title, a two-to-three sentence description, and its tags:
 
