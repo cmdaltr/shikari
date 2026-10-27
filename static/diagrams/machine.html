@@ -14,17 +14,28 @@
   .label{font-family:var(--mono);font-size:11px;color:var(--ink);pointer-events:none;
     text-shadow:0 1px 5px rgba(0,0,0,.95);white-space:nowrap;letter-spacing:.3px;transition:opacity .3s}
   .label .s{display:block;font-size:9px;color:var(--teal);letter-spacing:.6px}
-  .label.dim{opacity:.3}
+  .label.dim{opacity:.32}
   header{position:fixed;top:0;left:0;right:0;padding:16px 20px;z-index:5;display:flex;
     align-items:baseline;gap:14px;flex-wrap:wrap;pointer-events:none}
   h1{font-size:18px;margin:0;letter-spacing:.5px} h1 .a{color:var(--teal)}
   .fig{font-size:11px;color:var(--muted);border:1px solid rgba(0,212,170,.3);padding:2px 8px;border-radius:3px}
   .hint{font-size:11px;color:var(--muted);margin-left:auto}
   .tm{position:fixed;left:12px;bottom:12px;z-index:5;font-size:9.5px;color:var(--muted);pointer-events:none}
+  #track{position:fixed;left:50%;bottom:118px;transform:translateX(-50%);z-index:6;
+    width:min(940px,calc(100vw - 24px));display:flex;flex-wrap:wrap;gap:4px 5px;justify-content:center;pointer-events:none}
+  .tk{font-size:10px;color:var(--muted);border:1px solid rgba(255,255,255,.14);border-radius:11px;
+    padding:2px 8px;background:rgba(10,21,33,.55);transition:all .3s}
+  .tk.done{color:var(--teal);border-color:rgba(0,212,170,.5)}
+  .tk.cur{background:var(--teal);color:var(--navy);border-color:var(--teal);font-weight:700}
+  .tk.opt{border-style:dashed}
+  .tk.opt.done{color:var(--amber);border-color:rgba(245,158,11,.6)}
+  .tk.opt.cur{background:var(--amber);border-color:var(--amber);color:var(--navy)}
+  .tkar{color:var(--muted);font-size:10px;opacity:.45;align-self:center}
   #story{position:fixed;left:50%;bottom:72px;transform:translateX(-50%);z-index:6;
     width:min(680px,calc(100vw - 32px));text-align:center;pointer-events:none}
   #story .camp{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--amber)}
   #story .step{font-size:13.5px;color:var(--ink);margin-top:5px;line-height:1.5;text-shadow:0 2px 8px rgba(0,0,0,.95)}
+  #story .step.opt{color:var(--amber)}
   #ctl{position:fixed;left:0;right:0;bottom:16px;z-index:7;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:0 16px}
   .chip{font-family:var(--mono);font-size:11px;color:var(--ink);cursor:pointer;background:rgba(10,21,33,.78);
     border:1px solid rgba(0,212,170,.3);border-radius:4px;padding:6px 11px;letter-spacing:.4px;
@@ -41,7 +52,7 @@
   #info h2{font-size:15px;margin:3px 0 1px} #info .port{font-size:10.5px;color:var(--teal);margin:0 0 9px}
   #info p{font-size:12px;color:var(--ink);line-height:1.5;margin:0;opacity:.9}
   #info .x{position:absolute;top:9px;right:12px;cursor:pointer;color:var(--muted);font-size:16px}
-  #info .x:hover{color:var(--ink)} @media (max-width:560px){.hint{display:none}}
+  #info .x:hover{color:var(--ink)} @media (max-width:560px){.hint{display:none}.tk{font-size:9px;padding:2px 6px}}
 </style>
 </head>
 <body>
@@ -53,6 +64,7 @@
   <span class="hint">drag to orbit &middot; scroll to zoom &middot; click a landmark &middot; watch one campaign ride through at a time</span>
 </header>
 <div id="info"><span class="x" id="infoX">&times;</span><div class="cat" id="iCat"></div><h2 id="iName"></h2><p class="port" id="iPort"></p><p id="iDesc"></p></div>
+<div id="track"></div>
 <div id="story"><div class="camp" id="sCamp"></div><div class="step" id="sStep"></div></div>
 <div id="ctl">
   <span class="chip sep">Campaign:</span>
@@ -63,6 +75,9 @@
   <span class="chip" id="playBtn"><svg id="playIco"><rect x="6" y="5" width="3" height="14"/><rect x="15" y="5" width="3" height="14"/></svg><span id="playTxt">Pause</span></span>
   <span class="chip" id="nextBtn"><svg><path d="M5 5l9 7-9 7z"/><line x1="18" y1="5" x2="18" y2="19"/></svg>Next</span>
   <span class="chip" id="orbitBtn"><svg><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3l3 3-3 3"/></svg>Orbit</span>
+  <span class="chip sep">&middot;</span>
+  <span class="chip sep" style="color:var(--teal)">&#9632; required</span>
+  <span class="chip sep" style="color:var(--amber)">&#9633; optional</span>
 </div>
 <script type="importmap">
 { "imports": { "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -75,7 +90,6 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 
 const C={teal:0x00D4AA,amber:0xF59E0B,red:0xEF4444,ink:0xE6EEF2,stone:0x7c8b99,stoneDk:0x53626f,
   wood:0x9a6433,woodDk:0x6b4522,gold:0xd9a441,sail:0xeef2f6,grass:0x24604a,grassDk:0x1a4d3b,water:0x0e3047};
-
 const LOGO_IMG={secops:'/static/images/siem/secops.png',mde:'/static/images/siem/mde.png',
   splunk:'/static/images/siem/splunk.png',elastic:'/static/images/siem/elastic.png',
   saw:'/static/images/brands/attack.png',llm:'/static/images/brands/anthropic.png'};
@@ -92,20 +106,23 @@ const ICONS={
   vectr:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
   emulate:'<path d="M12 2l3 6 6 1-4.5 4 1 6-5.5-3-5.5 3 1-6L3 9l6-1z"/>',
 };
+const SHORT={cli:'archer-cli',webui:'Web UI',report:'Report',api:'Keep',cat:'Catalogue',saw:'MITRESaw',
+  lab:'Lab',gen:'Blacksmith',llm:'LLM',db:'Store',yaml:'Cache',corr:'Weaver',secops:'SecOps',mde:'Defender',
+  splunk:'Splunk',elastic:'Elastic',vectr:'VECTR',emulate:'Adversary'};
 
 const NODES=[
  {id:'cli',name:'archer-cli',port:'command tent',kind:'tent',col:C.teal,pos:[-15,-4.5],desc:'The command tent. You run archer-cli hunt / run / start — the supervisor that sets a campaign in motion.'},
- {id:'webui',name:'Web UI',port:'muster yard',kind:'tent',col:C.teal,pos:[-15,-0.5],desc:'The server-rendered web UI — Hunt, Coverage, Catalogue, Library. The muster yard where a hunt is called.'},
+ {id:'webui',name:'Web UI',port:'muster yard',kind:'stables',col:C.teal,pos:[-15,-0.5],desc:'The muster-yard stables. The server-rendered web UI — Hunt, Coverage, Catalogue, Library — where a hunt is called.'},
  {id:'report',name:'Threat report',port:'longboat',kind:'boat',col:C.wood,pos:[-21,12],desc:'An uploaded report or URL arrives by longboat — techniques and IOCs pulled from the field.'},
  {id:'api',name:'FastAPI app',port:'the keep :8000',kind:'keep',col:C.stone,pos:[-9,0],desc:'The keep. Every request passes through the FastAPI app — the stronghold at the centre of the realm.'},
  {id:'cat',name:'Catalogue · Exposure',port:'coast beacon',kind:'beacon',col:C.amber,pos:[-17,7],desc:'The coastal beacon. Org attack-surface OSINT — Team Cymru, MX, HIBP — lighting up who might come for you.'},
  {id:'saw',name:'MITRESaw',port:'scout tower',kind:'tower',col:C.amber,pos:[-10,6],desc:'The scout tower. MITRESaw walks ATT&CK STIX for procedures and indicators — direct, software, campaign.'},
- {id:'lab',name:'Telemetry · Lab',port:'alchemist tent',kind:'labtent',col:C.amber,pos:[-9.5,-8],desc:'The alchemist tent. Public corpora and your own ART recordings — telemetry that grounds detection fields.'},
- {id:'gen',name:'Query generator',port:'fletcher forge',kind:'forge',col:C.wood,pos:[-2,0],desc:"The fletcher's forge. Each technique is forged into a vendor-native query — LLM tier or no-LLM template tier."},
- {id:'llm',name:'LLM',port:'oracle',kind:'oracle',col:C.amber,pos:[-3,-7],desc:'The oracle tower. Optional — Ollama (local) or Anthropic. Compact prompt + evidence, with a degenerate-output guard.'},
- {id:'db',name:'SQLite store',port:'vault',kind:'vault',col:C.stone,pos:[-5,4],desc:'The vault — archer.db. Threat-library cases, assessments, saved detections.'},
- {id:'yaml',name:'Detection YAML',port:'armoury',kind:'armoury',col:C.teal,pos:[3,5],desc:'The armoury — data/groups. Finished detections: name, technique, query, severity, connectors, indicators.'},
- {id:'corr',name:'Correlation engine',port:'war table',kind:'wartable',col:C.teal,pos:[4,-2],desc:'The war table. Chains techniques into single-vendor sequences and cross-vendor playbooks on host/user entities.'},
+ {id:'lab',name:'Telemetry · Lab',port:'grain silo',kind:'silo',col:C.amber,pos:[-9.5,-8],big:true,desc:'The great grain silo. Public corpora and your own ART recordings — telemetry that grounds detection fields.'},
+ {id:'gen',name:'Query generator',port:'blacksmith',kind:'blacksmith',col:C.wood,pos:[-2,0],desc:"The blacksmith. Each technique is forged into a vendor-native query — LLM tier or no-LLM template tier."},
+ {id:'llm',name:'LLM',port:'oracle (optional)',kind:'oracle',col:C.amber,pos:[-3,-7],opt:true,desc:'The oracle tower. Optional — Ollama (local) or Anthropic. Compact prompt + evidence, with a degenerate-output guard. AI is opt-in.'},
+ {id:'db',name:'SQLite store',port:'store silo',kind:'silo',col:C.stone,pos:[-5,4],desc:'The store silo — archer.db. Threat-library cases, assessments, saved detections.'},
+ {id:'yaml',name:'Detection YAML',port:'weapons cache',kind:'cache',col:C.teal,pos:[3,5],desc:'The weapons cache — data/groups. Finished detections: name, technique, query, severity, connectors, indicators.'},
+ {id:'corr',name:'Correlation engine',port:"weaver's loom",kind:'weaver',col:C.teal,pos:[4,-2],desc:'The weaver. Ties techniques into single-vendor sequences and cross-vendor playbooks on host/user entities.'},
  {id:'secops',name:'Google SecOps',port:'target · YARA-L/UDM',kind:'target',col:C.teal,pos:[11,-6],desc:'Primary target. Detections are loosed as YARA-L over UDM; availability keyed on metadata.event_type.'},
  {id:'mde',name:'Defender XDR',port:'target · KQL',kind:'target',col:C.teal,pos:[12,-1],desc:'Defender XDR target — KQL over the MDE advanced-hunting schema.'},
  {id:'splunk',name:'Splunk',port:'target · SPL',kind:'target',col:C.teal,pos:[12,4],desc:'Splunk target — SPL, field-mapped through bespoke custom schema.'},
@@ -141,13 +158,10 @@ const mat=(c,o={})=>new THREE.MeshStandardMaterial({color:c,metalness:o.m??0.08,
 (function terrain(){
   const g=new THREE.PlaneGeometry(100,100,96,96); const p=g.attributes.position;
   for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i);
-    const h=Math.sin(x*0.13)*Math.cos(y*0.11)*0.8+Math.sin(x*0.045+y*0.06)*0.7+Math.cos(x*0.3)*0.12;
-    p.setZ(i,h);}
+    const h=Math.sin(x*0.13)*Math.cos(y*0.11)*0.8+Math.sin(x*0.045+y*0.06)*0.7+Math.cos(x*0.3)*0.12; p.setZ(i,h);}
   g.computeVertexNormals();
-  const ground=new THREE.Mesh(g,mat(C.grassDk,{r:0.95})); ground.rotation.x=-Math.PI/2; ground.position.y=-0.45;
-  ground.receiveShadow=true; scene.add(ground);
-  const water=new THREE.Mesh(new THREE.PlaneGeometry(34,100),
-    new THREE.MeshStandardMaterial({color:C.water,metalness:0.6,roughness:0.18,transparent:true,opacity:0.92}));
+  const ground=new THREE.Mesh(g,mat(C.grassDk,{r:0.95})); ground.rotation.x=-Math.PI/2; ground.position.y=-0.45; ground.receiveShadow=true; scene.add(ground);
+  const water=new THREE.Mesh(new THREE.PlaneGeometry(34,100),new THREE.MeshStandardMaterial({color:C.water,metalness:0.6,roughness:0.18,transparent:true,opacity:0.92}));
   water.rotation.x=-Math.PI/2; water.position.set(-34,-0.6,0); scene.add(water);
 })();
 
@@ -156,73 +170,79 @@ const BOX=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
 const CONE=(r,h,s=20)=>new THREE.ConeGeometry(r,h,s);
 const SPH=(r,s=16)=>new THREE.SphereGeometry(r,s,s);
 const shadowed=g=>{g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});return g;};
+const plight=(c,i,d,x,y,z)=>{const l=new THREE.PointLight(c,i,d);l.position.set(x,y,z);return l;};
 
-function build(kind,col){
-  const g=new THREE.Group();
-  if(kind==='tent'||kind==='labtent'){
-    const canvasCol = kind==='labtent'?0x2f5468:C.sail;
-    const t=new THREE.Mesh(CONE(1.2,1.8,22),mat(canvasCol,{r:0.85})); t.position.y=0.9; g.add(t);
+function build(n){
+  const k=n.kind,col=n.col,g=new THREE.Group();
+  if(k==='tent'){
+    const t=new THREE.Mesh(CONE(1.2,1.8,22),mat(C.sail,{r:0.85})); t.position.y=0.9; g.add(t);
     const rim=new THREE.Mesh(new THREE.TorusGeometry(1.18,0.06,8,22),mat(C.woodDk)); rim.position.y=0.03; rim.rotation.x=Math.PI/2; g.add(rim);
-    if(kind==='labtent'){const ch=new THREE.Mesh(CYL(0.14,0.18,0.8,10),mat(C.stoneDk)); ch.position.set(0.5,1.7,0); g.add(ch);
-      const em=new THREE.Mesh(SPH(0.14),mat(C.amber,{e:C.amber,ei:1.6})); em.position.set(0.5,2.15,0); g.add(em);}
-  } else if(kind==='keep'){
+  } else if(k==='stables'){
+    const body=new THREE.Mesh(BOX(2.6,0.95,1.2),mat(C.wood,{r:0.9})); body.position.y=0.5; g.add(body);
+    for(const s of [-1,1]){const r=new THREE.Mesh(BOX(2.75,0.08,0.78),mat(C.woodDk)); r.position.set(0,1.18,s*0.33); r.rotation.x=s*0.62; g.add(r);}
+    for(let i=-1;i<=1;i++){const p=new THREE.Mesh(CYL(0.06,0.06,0.95,10),mat(C.woodDk)); p.position.set(i*0.82,0.5,0.62); g.add(p);}
+    const hay=new THREE.Mesh(CYL(0.22,0.22,0.5,16),mat(C.gold,{r:0.9})); hay.rotation.z=Math.PI/2; hay.position.set(1.45,0.22,0.5); g.add(hay);
+  } else if(k==='keep'){
     const body=new THREE.Mesh(CYL(1.25,1.45,3.0,22),mat(C.stone,{r:0.85})); body.position.y=1.5; g.add(body);
-    for(let i=0;i<10;i++){const a=i/10*Math.PI*2; const m=new THREE.Mesh(CYL(0.16,0.16,0.4,8),mat(C.stoneDk));
-      m.position.set(Math.cos(a)*1.25,3.1,Math.sin(a)*1.25); g.add(m);}
+    for(let i=0;i<10;i++){const a=i/10*Math.PI*2; const m=new THREE.Mesh(CYL(0.16,0.16,0.4,8),mat(C.stoneDk)); m.position.set(Math.cos(a)*1.25,3.1,Math.sin(a)*1.25); g.add(m);}
     const gate=new THREE.Mesh(new THREE.CircleGeometry(0.42,16),mat(C.woodDk)); gate.position.set(0,0.75,1.47); g.add(gate);
-  } else if(kind==='tower'||kind==='beacon'||kind==='oracle'){
-    const h=kind==='oracle'?3.6:2.9;
-    const body=new THREE.Mesh(CYL(0.62,0.78,h,18),mat(kind==='oracle'?0x274656:C.stone,{r:0.82})); body.position.y=h/2; g.add(body);
-    const roof=new THREE.Mesh(CONE(0.95,1.0,18),mat(kind==='oracle'?C.teal:col,{e:col,ei:kind==='oracle'?0.5:0.3})); roof.position.y=h+0.5; g.add(roof);
-    if(kind==='beacon'){const fire=new THREE.Mesh(SPH(0.26),mat(C.amber,{e:C.amber,ei:1.8})); fire.position.y=h+0.5; g.add(fire);
-      const pl=new THREE.PointLight(C.amber,0.9,11); pl.position.y=h+0.5; g.add(pl);}
-    if(kind==='oracle'){const ring=new THREE.Mesh(new THREE.TorusGeometry(0.95,0.05,10,36),mat(C.teal,{e:C.teal,ei:1.4})); ring.position.y=h+0.5; ring.rotation.x=Math.PI/2; g.add(ring); g._ring=ring;
+  } else if(k==='tower'||k==='beacon'||k==='oracle'){
+    const h=k==='oracle'?3.6:2.9;
+    const body=new THREE.Mesh(CYL(0.62,0.78,h,18),mat(k==='oracle'?0x274656:C.stone,{r:0.82})); body.position.y=h/2; g.add(body);
+    const roof=new THREE.Mesh(CONE(0.95,1.0,18),mat(k==='oracle'?C.teal:col,{e:col,ei:k==='oracle'?0.5:0.3})); roof.position.y=h+0.5; g.add(roof);
+    if(k==='beacon'){const fire=new THREE.Mesh(SPH(0.26),mat(C.amber,{e:C.amber,ei:1.8})); fire.position.y=h+0.5; g.add(fire); g.add(plight(C.amber,0.9,11,0,h+0.5,0)); g._fire=fire;}
+    if(k==='oracle'){const ring=new THREE.Mesh(new THREE.TorusGeometry(0.95,0.05,10,36),mat(C.teal,{e:C.teal,ei:1.4})); ring.position.y=h+0.5; ring.rotation.x=Math.PI/2; g.add(ring); g._ring=ring;
       const orb=new THREE.Mesh(SPH(0.22),mat(C.teal,{e:C.teal,ei:1.6})); orb.position.y=h+0.5; g.add(orb);}
-  } else if(kind==='forge'){
-    const hut=new THREE.Mesh(CYL(1.0,1.15,1.3,16),mat(C.woodDk,{r:0.9})); hut.position.y=0.65; g.add(hut);
+  } else if(k==='silo'){
+    const r=n.big?1.0:0.62,h=n.big?3.0:1.7;
+    const body=new THREE.Mesh(CYL(r,r,h,18),mat(C.stone,{m:0.18,r:0.6})); body.position.y=h/2; g.add(body);
+    const dome=new THREE.Mesh(new THREE.SphereGeometry(r,18,10,0,Math.PI*2,0,Math.PI/2),mat(C.stoneDk,{m:0.3,r:0.5})); dome.position.y=h; g.add(dome);
+    const nh=n.big?4:3; for(let i=1;i<nh;i++){const hoop=new THREE.Mesh(new THREE.TorusGeometry(r+0.012,0.03,8,26),mat(C.stoneDk)); hoop.position.y=h*i/nh; hoop.rotation.x=Math.PI/2; g.add(hoop);}
+  } else if(k==='blacksmith'){
+    const hut=new THREE.Mesh(CYL(1.0,1.15,1.2,16),mat(C.woodDk,{r:0.9})); hut.position.y=0.6; g.add(hut);
     const roof=new THREE.Mesh(CONE(1.3,0.85,16),mat(C.wood)); roof.position.y=1.7; g.add(roof);
-    const ch=new THREE.Mesh(CYL(0.15,0.19,0.7,10),mat(C.stoneDk)); ch.position.set(0.6,1.95,0); g.add(ch);
-    const em=new THREE.Mesh(SPH(0.18),mat(C.amber,{e:C.amber,ei:2.0})); em.position.set(0.6,2.4,0); g.add(em);
-    const pl=new THREE.PointLight(C.amber,1.0,10); pl.position.set(0.6,2.3,0); g.add(pl); g._fire=em;
-    for(let i=0;i<3;i++){const a=new THREE.Mesh(CYL(0.03,0.03,1.1,6),mat(C.teal,{e:C.teal,ei:0.3})); a.position.set(-0.95,0.95,-0.4+i*0.3); a.rotation.z=0.22; g.add(a);}
-  } else if(kind==='vault'||kind==='armoury'){
-    const barrel=new THREE.Mesh(CYL(0.72,0.72,1.1,18),mat(C.woodDk,{r:0.8})); barrel.position.y=0.55; g.add(barrel);
-    for(const yy of [0.25,0.85]){const hoop=new THREE.Mesh(new THREE.TorusGeometry(0.73,0.045,8,22),mat(C.stoneDk,{m:0.5,r:0.5})); hoop.position.y=yy; hoop.rotation.x=Math.PI/2; g.add(hoop);}
-    const lid=new THREE.Mesh(CYL(0.74,0.74,0.12,18),mat(col,{e:col,ei:0.22})); lid.position.y=1.12; g.add(lid);
-    if(kind==='armoury'){for(let i=0;i<6;i++){const a=new THREE.Mesh(CYL(0.028,0.028,1.3,6),mat(C.teal,{e:C.teal,ei:0.4}));
-      const an=(i/6)*Math.PI*2; a.position.set(Math.cos(an)*0.2,1.5,Math.sin(an)*0.2); a.rotation.z=Math.cos(an)*0.2; a.rotation.x=Math.sin(an)*0.2;
-      const hd=new THREE.Mesh(CONE(0.07,0.2,6),mat(C.teal,{e:C.teal,ei:0.5})); hd.position.y=0.75; a.add(hd); g.add(a);}}
-  } else if(kind==='wartable'){
-    const t=new THREE.Mesh(CYL(1.0,1.1,0.5,22),mat(C.woodDk)); t.position.y=0.25; g.add(t);
-    const map=new THREE.Mesh(new THREE.CircleGeometry(0.95,28),mat(0x2c6a57,{e:C.teal,ei:0.12})); map.position.y=0.51; map.rotation.x=-Math.PI/2; g.add(map);
-    for(let i=0;i<3;i++){const p=new THREE.Mesh(CYL(0.03,0.03,0.6,6),mat(C.stoneDk)); const fl=new THREE.Mesh(new THREE.PlaneGeometry(0.3,0.18),mat([C.teal,C.amber,C.red][i],{e:[C.teal,C.amber,C.red][i],ei:0.3}));
-      fl.position.set(0.15,0.22,0); fl.material.side=THREE.DoubleSide; p.add(fl); p.position.set(Math.cos(i*2.1)*0.5,0.8,Math.sin(i*2.1)*0.5); g.add(p);}
-  } else if(kind==='target'){
+    const ch=new THREE.Mesh(CYL(0.15,0.19,0.7,10),mat(C.stoneDk)); ch.position.set(0.55,1.95,0); g.add(ch);
+    const em=new THREE.Mesh(SPH(0.17),mat(C.amber,{e:C.amber,ei:2.0})); em.position.set(0.55,2.4,0); g.add(em); g.add(plight(C.amber,1.0,10,0.55,2.3,0)); g._fire=em;
+    const stump=new THREE.Mesh(CYL(0.2,0.24,0.45,12),mat(C.woodDk)); stump.position.set(0,0.22,1.15); g.add(stump);
+    const anv=new THREE.Mesh(BOX(0.5,0.16,0.22),mat(0x3a4653,{m:0.6,r:0.4})); anv.position.set(0,0.52,1.15); g.add(anv);
+    const horn=new THREE.Mesh(CONE(0.1,0.26,10),mat(0x3a4653,{m:0.6,r:0.4})); horn.rotation.z=-Math.PI/2; horn.position.set(0.32,0.52,1.15); g.add(horn);
+  } else if(k==='cache'){
+    const c1=new THREE.Mesh(BOX(0.72,0.6,0.72),mat(C.woodDk)); c1.position.set(-0.32,0.3,0); g.add(c1);
+    const c2=new THREE.Mesh(BOX(0.6,0.5,0.6),mat(C.wood)); c2.position.set(0.46,0.25,0.12); g.add(c2);
+    const c3=new THREE.Mesh(BOX(0.52,0.46,0.52),mat(C.woodDk)); c3.position.set(0.02,0.72,0.08); g.add(c3);
+    for(const x of [-0.65,0.65]){const p=new THREE.Mesh(CYL(0.05,0.05,1.35,8),mat(C.woodDk)); p.position.set(x,0.67,-0.55); g.add(p);}
+    const bar=new THREE.Mesh(CYL(0.04,0.04,1.35,8),mat(C.woodDk)); bar.rotation.z=Math.PI/2; bar.position.set(0,1.25,-0.55); g.add(bar);
+    for(let i=0;i<5;i++){const w=new THREE.Mesh(CYL(0.03,0.03,1.5,6),mat(C.teal,{e:C.teal,ei:0.4})); w.position.set(-0.52+i*0.26,0.8,-0.52); w.rotation.x=-0.22;
+      const hd=new THREE.Mesh(CONE(0.07,0.2,6),mat(C.teal,{e:C.teal,ei:0.5})); hd.position.y=0.82; w.add(hd); g.add(w);}
+  } else if(k==='weaver'){
+    for(const x of [-0.72,0.72]){const p=new THREE.Mesh(CYL(0.06,0.06,2.0,8),mat(C.woodDk)); p.position.set(x,1.0,0); g.add(p);}
+    for(const y of [0.12,1.9]){const beam=new THREE.Mesh(CYL(0.06,0.06,1.55,8),mat(C.wood)); beam.rotation.z=Math.PI/2; beam.position.set(0,y,0); g.add(beam);}
+    for(let i=0;i<7;i++){const t=new THREE.Mesh(CYL(0.012,0.012,1.78,4),mat(C.teal,{e:C.teal,ei:0.5,t:true,o:0.8})); t.position.set(-0.6+i*0.2,1.01,0); g.add(t);}
+    const cloth=new THREE.Mesh(new THREE.PlaneGeometry(1.3,0.7),mat(C.teal,{e:C.teal,ei:0.3,t:true,o:0.85})); cloth.material.side=THREE.DoubleSide; cloth.position.set(0,0.55,0.01); g.add(cloth);
+  } else if(k==='target'){
     for(const ax of [-0.5,0.5]){const l=new THREE.Mesh(CYL(0.05,0.06,2.1,8),mat(C.woodDk)); l.position.set(ax,0.95,0.25); l.rotation.x=0.2; g.add(l);}
     const face=new THREE.Group(); face.position.set(0,1.55,0); face.rotation.x=-0.22;
     [[0.98,C.sail],[0.74,0x1d6fd6],[0.5,C.red],[0.26,C.gold]].forEach(([r,c],i)=>{const d=new THREE.Mesh(new THREE.CircleGeometry(r,36),mat(c,{e:c,ei:0.1})); d.position.z=0.012*i; face.add(d);});
     const ar=new THREE.Mesh(CYL(0.028,0.028,0.95,6),mat(C.teal,{e:C.teal,ei:0.6})); ar.rotation.x=Math.PI/2+0.3; ar.position.set(0.1,0.1,0.55); face.add(ar);
     g.add(face); g._face=face;
-  } else if(kind==='ring'){
+  } else if(k==='ring'){
     const r=new THREE.Mesh(new THREE.TorusGeometry(1.0,0.08,14,36),mat(C.teal,{e:C.teal,ei:0.4})); r.position.y=0.1; r.rotation.x=Math.PI/2; g.add(r);
     for(const a of [0,Math.PI]){const p=new THREE.Mesh(CYL(0.06,0.06,1.0,8),mat(C.woodDk)); p.position.set(Math.cos(a)*1.0,0.5,Math.sin(a)*1.0); g.add(p);}
-  } else if(kind==='boat'){
+  } else if(k==='boat'){
     const hull=new THREE.Mesh(new THREE.CapsuleGeometry(0.42,2.0,6,16),mat(C.woodDk)); hull.rotation.z=Math.PI/2; hull.scale.set(1,1,0.7); hull.position.y=0.35; g.add(hull);
     const mast=new THREE.Mesh(CYL(0.05,0.05,2.0,8),mat(C.stoneDk)); mast.position.y=1.2; g.add(mast);
     const sail=new THREE.Mesh(new THREE.PlaneGeometry(1.3,1.1),mat(C.sail,{r:0.85})); sail.material.side=THREE.DoubleSide; sail.position.set(0,1.4,0); g.add(sail);
     const stripe=new THREE.Mesh(new THREE.PlaneGeometry(1.3,0.28),mat(C.red,{e:C.red,ei:0.2})); stripe.material.side=THREE.DoubleSide; stripe.position.set(0,1.4,0.01); g.add(stripe);
     for(let i=0;i<3;i++){const sh=new THREE.Mesh(new THREE.CircleGeometry(0.19,18),mat([C.teal,C.amber,C.gold][i])); sh.position.set(-0.6+i*0.6,0.4,0.42); g.add(sh);}
-  } else if(kind==='enemy'){
+  } else if(k==='enemy'){
     const base=new THREE.Mesh(CYL(1.6,1.95,0.7,16),mat(0x2a1414,{r:0.95})); base.position.y=0.35; g.add(base);
     const keep=new THREE.Mesh(CONE(1.0,2.6,10),mat(0x3a1a1a,{e:C.red,ei:0.18})); keep.position.y=1.9; g.add(keep);
     for(let i=0;i<7;i++){const a=i/7*Math.PI*2; const sp=new THREE.Mesh(CONE(0.2,1.2,8),mat(0x241018)); sp.position.set(Math.cos(a)*1.45,0.85,Math.sin(a)*1.45); g.add(sp);}
-    const fire=new THREE.Mesh(SPH(0.3),mat(C.red,{e:C.red,ei:2.0})); fire.position.y=0.8; g.add(fire);
-    const pl=new THREE.PointLight(C.red,1.1,13); pl.position.y=1.1; g.add(pl); g._fire=fire;
+    const fire=new THREE.Mesh(SPH(0.3),mat(C.red,{e:C.red,ei:2.0})); fire.position.y=0.8; g.add(fire); g.add(plight(C.red,1.1,13,0,1.1,0)); g._fire=fire;
   }
   return shadowed(g);
 }
 
-// ---- flag with logo / icon banner ----------------------------------------
 function roundRect(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath();}
 function hex(c){return '#'+('000000'+c.toString(16)).slice(-6);}
 function iconTexture(inner,col){
@@ -233,25 +253,21 @@ function iconTexture(inner,col){
   const rects=[...inner.matchAll(/<rect[^>]*x="([\d.]+)"[^>]*y="([\d.]+)"[^>]*width="([\d.]+)"[^>]*height="([\d.]+)"[^>]*rx="([\d.]+)"/g)];
   const circles=[...inner.matchAll(/<circle[^>]*cx="([\d.]+)"[^>]*cy="([\d.]+)"[^>]*r="([\d.]+)"/g)];
   const ell=[...inner.matchAll(/<ellipse[^>]*cx="([\d.]+)"[^>]*cy="([\d.]+)"[^>]*rx="([\d.]+)"[^>]*ry="([\d.]+)"/g)];
-  const sc=(S-56)/24,off=28;
-  x.save();x.translate(off,off);x.scale(sc,sc);
+  const scl=(S-56)/24;x.save();x.translate(28,28);x.scale(scl,scl);
   x.strokeStyle=hex(col);x.lineWidth=2;x.lineCap='round';x.lineJoin='round';
   ds.forEach(d=>{try{x.stroke(new Path2D(d));}catch(e){}});
-  rects.forEach(m=>{const[,X,Y,W,H]=m.map(Number);x.beginPath();x.roundRect?x.roundRect(X,Y,W,H,+m[5]||0):x.rect(X,Y,W,H);x.stroke();});
-  circles.forEach(m=>{const[,cx,cy,r]=m.map(Number);x.beginPath();x.arc(cx,cy,r,0,7);x.stroke();});
-  ell.forEach(m=>{const[,cx,cy,rx,ry]=m.map(Number);x.beginPath();x.ellipse(cx,cy,rx,ry,0,0,7);x.stroke();});
-  x.restore();
-  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t;
+  rects.forEach(m=>{const X=+m[1],Y=+m[2],W=+m[3],H=+m[4];x.beginPath();x.rect(X,Y,W,H);x.stroke();});
+  circles.forEach(m=>{x.beginPath();x.arc(+m[1],+m[2],+m[3],0,7);x.stroke();});
+  ell.forEach(m=>{x.beginPath();x.ellipse(+m[1],+m[2],+m[3],+m[4],0,0,7);x.stroke();});
+  x.restore();const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t;
 }
-const texLoader=new THREE.TextureLoader();
 function logoTexture(url){
   const S=160,c=document.createElement('canvas');c.width=c.height=S;const x=c.getContext('2d');
   x.fillStyle='rgba(238,242,246,0.96)';roundRect(x,6,6,S-12,S-12,22);x.fill();
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
   const img=new Image();img.crossOrigin='anonymous';
-  img.onload=()=>{const s=Math.min((S-40)/img.width,(S-40)/img.height);const w=img.width*s,h=img.height*s;
-    x.drawImage(img,(S-w)/2,(S-h)/2,w,h);t.needsUpdate=true;};
-  img.src=url;return t;
+  img.onload=()=>{const s=Math.min((S-40)/img.width,(S-40)/img.height),w=img.width*s,h=img.height*s;
+    x.drawImage(img,(S-w)/2,(S-h)/2,w,h);t.needsUpdate=true;};img.src=url;return t;
 }
 const banners=[];
 function addFlag(n,H){
@@ -259,55 +275,73 @@ function addFlag(n,H){
   const pole=new THREE.Mesh(CYL(0.035,0.045,H,8),mat(0x3a4a57,{m:0.4,r:0.5})); pole.position.y=H/2; pole.castShadow=true; g.add(pole);
   const knob=new THREE.Mesh(SPH(0.09),mat(C.gold,{m:0.5,r:0.4,e:C.gold,ei:0.2})); knob.position.y=H; g.add(knob);
   const pivot=new THREE.Group(); pivot.position.y=H-0.42; g.add(pivot);
-  const tex=LOGO_IMG[n.id]?logoTexture(LOGO_IMG[n.id]):iconTexture(ICONS[n.id]||'',n.id==='emulate'?C.red:C.teal);
-  const banner=new THREE.Mesh(new THREE.PlaneGeometry(0.82,0.82),
-    new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide}));
-  banner.position.set(0.5,0,0); pivot.add(banner);
-  scene.add(g); banners.push(pivot); n._flag=g;
-  return g;
+  const tex=LOGO_IMG[n.id]?logoTexture(LOGO_IMG[n.id]):iconTexture(ICONS[n.id]||'',n.id==='emulate'?C.red:(n.opt?C.amber:C.teal));
+  const banner=new THREE.Mesh(new THREE.PlaneGeometry(0.82,0.82),new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide}));
+  banner.position.set(0.5,0,0); pivot.add(banner); scene.add(g); banners.push(pivot); n._flag=g; return g;
 }
 
-// ---- place nodes ---------------------------------------------------------
 const pickMeshes=[];
-const topY={tent:2.6,labtent:2.6,boat:2.4,keep:3.7,tower:4.3,beacon:4.3,oracle:4.9,forge:2.9,vault:1.9,armoury:2.3,wartable:1.6,target:2.9,ring:1.5,enemy:3.6};
+const topY={tent:2.6,stables:2.6,boat:2.4,keep:3.7,tower:4.3,beacon:4.3,oracle:4.9,blacksmith:2.9,cache:2.3,weaver:2.6,target:2.9,ring:1.5,enemy:3.6};
 NODES.forEach(n=>{
-  const g=build(n.kind,n.col); g.position.set(n.pos[0],0,n.pos[1]);
-  g.traverse(o=>{if(o.isMesh)o.userData.node=n;}); scene.add(g); n._g=g;
-  const H=topY[n.kind]||2.6;
-  addFlag(n,H);
+  const g=build(n); g.position.set(n.pos[0],0,n.pos[1]); g.traverse(o=>{if(o.isMesh)o.userData.node=n;}); scene.add(g); n._g=g;
+  const H=n.kind==='silo'?(n.big?3.9:2.5):(topY[n.kind]||2.6); n._H=H; addFlag(n,H);
   const ring=new THREE.Mesh(new THREE.TorusGeometry(1.4,0.07,10,40),new THREE.MeshBasicMaterial({color:C.teal,transparent:true,opacity:0}));
   ring.rotation.x=-Math.PI/2; ring.position.set(n.pos[0],0.03,n.pos[1]); scene.add(ring); n._ring=ring;
-  const el=document.createElement('div'); el.className='label';
-  el.innerHTML=`${n.name}<span class="s">${n.port}</span>`;
+  const el=document.createElement('div'); el.className='label'; el.innerHTML=`${n.name}<span class="s">${n.port}</span>`;
   const lbl=new CSS2DObject(el); lbl.position.set(n.pos[0],H+0.7,n.pos[1]); scene.add(lbl); n._el=el;
   g.traverse(o=>{if(o.isMesh)pickMeshes.push(o);});
 });
 
 const JOURNEYS={
- group:{label:'Group hunt',steps:[['cli','You call a hunt against a named group from the command tent.'],['api','The request rides to the keep — the FastAPI app.'],['saw','The scout tower (MITRESaw) walks ATT&CK STIX for the group’s procedures.'],['gen','The fletcher’s forge turns each technique into a vendor-native query.'],['yaml','Finished detections are stocked in the armoury (data/groups).'],['corr','The war table chains them into single- and cross-vendor playbooks.'],['secops','A volley is loosed at the SecOps target — YARA-L over UDM.'],['emulate','Coverage is proven against the adversary you emulate.']]},
- cve:{label:'CVE',steps:[['webui','You submit a CVE from the muster yard (web UI).'],['api','The keep resolves it to the affected techniques.'],['saw','The scout tower maps the exploitation behaviour.'],['gen','The forge builds the detection queries.'],['yaml','Detections join the armoury.'],['mde','Fired at the Defender XDR target — KQL.'],['emulate','Validated against the adversary.']]},
- report:{label:'Report',steps:[['report','A longboat lands bearing a threat report.'],['cat','The coast beacon (Catalogue · Exposure) enriches it with OSINT.'],['api','The keep extracts techniques and IOCs.'],['gen','The forge builds queries from the evidence.'],['yaml','Detections join the armoury.'],['elastic','Fired at the Elastic target — ES|QL.'],['emulate','Validated against the adversary.']]},
+ group:{label:'Group hunt',steps:[['cli','You call a hunt against a named group from the command tent.'],['api','The request rides to the keep — the FastAPI app.'],['saw','The scout tower (MITRESaw) walks ATT&CK STIX for the group’s procedures.'],['gen','The blacksmith forges each technique into a vendor-native query.'],['yaml','Finished detections are stocked in the weapons cache (data/groups).'],['corr','The weaver ties them into single- and cross-vendor playbooks.'],['secops','A volley is loosed at the SecOps target — YARA-L over UDM.'],['emulate','Optional: coverage is validated against the adversary you emulate.',true]]},
+ cve:{label:'CVE',steps:[['webui','You submit a CVE from the muster yard (web UI).'],['api','The keep resolves it to the affected techniques.'],['saw','The scout tower maps the exploitation behaviour.'],['gen','The blacksmith forges the detection queries.'],['yaml','Detections join the weapons cache.'],['mde','Fired at the Defender XDR target — KQL.'],['emulate','Optional: validated against the adversary.',true]]},
+ report:{label:'Report',steps:[['report','A longboat lands bearing a threat report.'],['cat','The coast beacon (Catalogue · Exposure) enriches it with OSINT.'],['api','The keep extracts techniques and IOCs.'],['gen','The blacksmith forges queries from the evidence.'],['yaml','Detections join the weapons cache.'],['elastic','Fired at the Elastic target — ES|QL.'],['emulate','Optional: validated against the adversary.',true]]},
 };
 const jkeys=['group','cve','report'];
 const messenger=new THREE.Group();
 (()=>{const sh=new THREE.Mesh(CYL(0.05,0.05,0.9,8),mat(C.amber,{e:C.amber,ei:1.2}));sh.rotation.x=Math.PI/2;messenger.add(sh);
  const hd=new THREE.Mesh(CONE(0.14,0.34,10),mat(C.amber,{e:C.amber,ei:1.6}));hd.rotation.x=Math.PI/2;hd.position.z=0.6;messenger.add(hd);
- messenger.add(new THREE.PointLight(C.amber,0.9,7));})(); scene.add(messenger);
+ messenger.add(new THREE.PointLight(C.amber,0.9,7));})();
+messenger.scale.setScalar(1.25); scene.add(messenger);
 
-let ji=0,hop=0,segT=0,phase='travel',pauseT=0,playing=true,curve=null;
+let ji=0,atNode=0,segT=0,phase='travel',pauseT=0,playing=true,endWait=0;
+let pathCurves=[],pathLines=[];
 const nodeTop=n=>new THREE.Vector3(n.pos[0],1.3,n.pos[1]);
-function makeHop(){const s=JOURNEYS[jkeys[ji]].steps;const a=nodeTop(NODE[s[hop][0]]),b=nodeTop(NODE[s[hop+1][0]]);
-  const mid=a.clone().add(b).multiplyScalar(0.5);mid.y+=2.4+a.distanceTo(b)*0.12;curve=new THREE.QuadraticBezierCurve3(a,mid,b);}
+function optOf(i){return !!JOURNEYS[jkeys[ji]].steps[i][2];}
+function buildPath(){
+  pathLines.forEach(o=>scene.remove(o.line)); pathLines=[]; pathCurves=[];
+  const s=JOURNEYS[jkeys[ji]].steps;
+  for(let i=0;i<s.length-1;i++){
+    const a=nodeTop(NODE[s[i][0]]),b=nodeTop(NODE[s[i+1][0]]);
+    const mid=a.clone().add(b).multiplyScalar(0.5); mid.y+=2.4+a.distanceTo(b)*0.12;
+    const cv=new THREE.QuadraticBezierCurve3(a,mid,b); pathCurves.push(cv);
+    const opt=!!s[i+1][2];
+    const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(cv.getPoints(30)),
+      new THREE.LineBasicMaterial({color:opt?0xF59E0B:0x00D4AA,transparent:true,opacity:0.1}));
+    scene.add(line); pathLines.push({line,opt});
+  }
+}
+function buildTracker(){
+  const s=JOURNEYS[jkeys[ji]].steps;
+  document.getElementById('track').innerHTML=s.map((st,i)=>
+    `<span class="tk${st[2]?' opt':''}" data-i="${i}">${SHORT[st[0]]}</span>`+(i<s.length-1?'<span class="tkar">→</span>':'')).join('');
+}
+function updateTracker(idx){document.querySelectorAll('#track .tk').forEach(c=>{const i=+c.dataset.i;
+  c.classList.toggle('done',i<=idx);c.classList.toggle('cur',i===idx);});}
 function highlightJourney(){const set=new Set(JOURNEYS[jkeys[ji]].steps.map(x=>x[0]));
-  NODES.forEach(n=>{n._el.classList.toggle('dim',!set.has(n.id));n._onPath=set.has(n.id);});}
-function story(c,t){document.getElementById('sCamp').textContent=c;document.getElementById('sStep').textContent=t;}
-function startJourney(k){ji=jkeys.indexOf(k);hop=0;segT=0;phase='travel';pauseT=0;
+  NODES.forEach(n=>{n._el.classList.toggle('dim',!set.has(n.id));n._onPath=set.has(n.id);n._visited=false;});}
+function story(c,t,opt){document.getElementById('sCamp').textContent=c;const el=document.getElementById('sStep');el.textContent=t;el.classList.toggle('opt',!!opt);}
+function arriveAt(idx){const s=JOURNEYS[jkeys[ji]].steps,n=NODE[s[idx][0]];
+  n._pulse=1;n._visited=true;if(idx>0)pathLines[idx-1].line.material.opacity=0.9;
+  ping(n,s[idx][2]);story(JOURNEYS[jkeys[ji]].label,s[idx][1],s[idx][2]);updateTracker(idx);atNode=idx;}
+function startJourney(k){ji=jkeys.indexOf(k);atNode=0;segT=0;phase='travel';pauseT=0;endWait=0;
   document.querySelectorAll('.jchip').forEach(c=>c.classList.toggle('on',c.dataset.journey===k));
-  highlightJourney();makeHop();const s=JOURNEYS[k];story(s.label,s.steps[0][1]);NODE[s.steps[0][0]]._pulse=1;}
+  highlightJourney();buildPath();buildTracker();updateTracker(0);
+  const s=JOURNEYS[k];story(s.label,s.steps[0][1],s.steps[0][2]);const a=NODE[s.steps[0][0]];a._pulse=1;a._visited=true;}
 const pings=[];
-function ping(n){const m=new THREE.Mesh(new THREE.TorusGeometry(0.4,0.06,10,32),new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:0.9}));
+function ping(n,opt){const m=new THREE.Mesh(new THREE.TorusGeometry(0.4,0.06,10,32),new THREE.MeshBasicMaterial({color:opt?0xF59E0B:0xF59E0B,transparent:true,opacity:0.9}));
   m.rotation.x=-Math.PI/2;m.position.set(n.pos[0],0.12,n.pos[1]);scene.add(m);pings.push({m,t:0});}
-NODES.forEach(n=>{n._pulse=0;n._onPath=false;});
+NODES.forEach(n=>{n._pulse=0;n._onPath=false;n._visited=false;});
 startJourney('group');
 
 const ray=new THREE.Raycaster(),ptr=new THREE.Vector2();const info=document.getElementById('info');
@@ -322,26 +356,32 @@ document.querySelectorAll('.jchip').forEach(c=>c.onclick=()=>{playing=true;setPl
 function setPlay(){document.getElementById('playTxt').textContent=playing?'Pause':'Play';
   document.getElementById('playIco').innerHTML=playing?'<rect x="6" y="5" width="3" height="14"></rect><rect x="15" y="5" width="3" height="14"></rect>':'<path d="M6 4l14 8-14 8z"></path>';}
 document.getElementById('playBtn').onclick=()=>{playing=!playing;setPlay();};
-document.getElementById('nextBtn').onclick=()=>advance();
+document.getElementById('nextBtn').onclick=()=>nextStep();
 let orbit=false;const orbitBtn=document.getElementById('orbitBtn');
 orbitBtn.onclick=()=>{orbit=!orbit;controls.autoRotate=orbit;controls.autoRotateSpeed=0.6;orbitBtn.classList.toggle('on',orbit);};
-function advance(){const s=JOURNEYS[jkeys[ji]].steps;if(hop<s.length-2){hop++;segT=0;phase='travel';makeHop();}else{ji=(ji+1)%jkeys.length;startJourney(jkeys[ji]);}}
+function nextStep(){const s=JOURNEYS[jkeys[ji]].steps;if(atNode<s.length-1){arriveAt(atNode+1);segT=0;phase='travel';pauseT=0;}else{ji=(ji+1)%jkeys.length;startJourney(jkeys[ji]);}}
 
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);labelRenderer.setSize(innerWidth,innerHeight);});
 const clock=new THREE.Clock(),tmp=new THREE.Vector3(),tmp2=new THREE.Vector3();
 function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),0.05),ts=clock.elapsedTime;
   const s=JOURNEYS[jkeys[ji]].steps;
-  if(playing&&curve){if(phase==='travel'){segT+=dt*0.55;
-    if(segT>=1){segT=1;phase='pause';pauseT=0;const arr=NODE[s[hop+1][0]];arr._pulse=1;ping(arr);story(JOURNEYS[jkeys[ji]].label,s[hop+1][1]);}
-    curve.getPointAt(Math.min(segT,1),tmp);messenger.position.copy(tmp);curve.getPointAt(Math.min(segT+0.02,1),tmp2);messenger.lookAt(tmp2);messenger.visible=true;}
-   else{pauseT+=dt;messenger.visible=false;if(pauseT>1.1)advance();}}
-  NODES.forEach(n=>{const base=n._onPath?0.42:0;const op=Math.min(1,base+n._pulse*0.9);
-    n._ring.material.opacity=op*(0.6+0.25*Math.sin(ts*3));n._ring.scale.setScalar(1+n._pulse*0.5);
-    n._ring.material.color.setHex(n.id==='emulate'?0xEF4444:0x00D4AA);n._pulse*=0.94;
+  if(playing){
+    if(atNode<s.length-1){
+      const curve=pathCurves[atNode];
+      if(phase==='travel'){segT+=dt*0.41;
+        curve.getPointAt(Math.min(segT,1),tmp);messenger.position.copy(tmp);
+        curve.getPointAt(Math.min(segT+0.02,1),tmp2);messenger.lookAt(tmp2);messenger.visible=true;
+        if(segT>=1){arriveAt(atNode+1);phase='pause';pauseT=0;}}
+      else{pauseT+=dt;messenger.visible=false;if(pauseT>1.4){segT=0;phase='travel';}}
+    } else {messenger.visible=false;endWait+=dt;if(endWait>2.6){ji=(ji+1)%jkeys.length;startJourney(jkeys[ji]);}}
+  }
+  NODES.forEach(n=>{const base=n._visited?0.42:(n._onPath?0.12:0);const op=Math.min(1,base+n._pulse*0.8);
+    const oc=(n.id==='emulate'||n.opt)?0xF59E0B:0x00D4AA;
+    n._ring.material.opacity=op*(0.65+0.2*Math.sin(ts*3));n._ring.scale.setScalar(1+n._pulse*0.5);
+    n._ring.material.color.setHex(n.id==='emulate'?0xEF4444:oc);n._pulse*=0.945;
     if(n._g._fire)n._g._fire.scale.setScalar(0.9+0.25*Math.sin(ts*6));
     if(n._g._ring)n._g._ring.rotation.z+=dt*0.8;});
-  // billboard flag banners to face the camera (upright)
   banners.forEach(b=>{b.getWorldPosition(tmp);b.rotation.y=Math.atan2(camera.position.x-tmp.x,camera.position.z-tmp.z);});
   for(let i=pings.length-1;i>=0;i--){const p=pings[i];p.t+=dt*1.6;p.m.scale.setScalar(1+p.t*3);
     p.m.material.opacity=Math.max(0,0.9-p.t*0.9);if(p.t>=1){scene.remove(p.m);pings.splice(i,1);}}
