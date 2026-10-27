@@ -119,7 +119,7 @@ const NODES=[
  {id:'saw',name:'MITRESaw',port:'STIX forge',kind:'furnace',col:C.amber,pos:[-10,6],desc:'The STIX forge. MITRESaw walks ATT&CK STIX, smelting procedures and indicators out of it — direct, software, campaign.'},
  {id:'lab',name:'Telemetry · Lab',port:'grain silo',kind:'silo',col:C.amber,pos:[-9.5,-8],big:true,desc:'The great grain silo. Public corpora and your own ART recordings — telemetry that grounds detection fields.'},
  {id:'gen',name:'Query generator',port:'blacksmith',kind:'blacksmith',col:C.wood,pos:[-2,0],desc:"The blacksmith. Each technique is forged into a vendor-native query — LLM tier or no-LLM template tier."},
- {id:'llm',name:'LLM',port:'oracle (optional)',kind:'oracle',col:C.amber,pos:[-3,-7],opt:true,desc:'The oracle tower. Optional — Ollama (local) or Anthropic. Compact prompt + evidence, with a degenerate-output guard. AI is opt-in.'},
+ {id:'llm',name:'LLM',port:'oracle temple (optional)',kind:'temple',col:C.amber,pos:[-3,-7],opt:true,desc:'The oracle temple. Optional — Ollama (local) or Anthropic. Compact prompt + evidence, with a degenerate-output guard. AI is opt-in.'},
  {id:'db',name:'SQLite store',port:'store silo',kind:'silo',col:C.stone,pos:[-5,4],desc:'The store silo — archer.db. Threat-library cases, assessments, saved detections.'},
  {id:'yaml',name:'Detection YAML',port:'weapons cache',kind:'cache',col:C.teal,pos:[3,5],desc:'The weapons cache — data/groups. Finished detections: name, technique, query, severity, connectors, indicators.'},
  {id:'corr',name:'Correlation engine',port:"weaver's loom",kind:'weaver',col:C.teal,pos:[4,-2],desc:'The weaver. Ties techniques into single-vendor sequences and cross-vendor playbooks on host/user entities.'},
@@ -193,6 +193,16 @@ function build(n){
     if(k==='beacon'){const fire=new THREE.Mesh(SPH(0.26),mat(C.amber,{e:C.amber,ei:1.8})); fire.position.y=h+0.5; g.add(fire); g.add(plight(C.amber,0.9,11,0,h+0.5,0)); g._fire=fire;}
     if(k==='oracle'){const ring=new THREE.Mesh(new THREE.TorusGeometry(0.95,0.05,10,36),mat(C.teal,{e:C.teal,ei:1.4})); ring.position.y=h+0.5; ring.rotation.x=Math.PI/2; g.add(ring); g._ring=ring;
       const orb=new THREE.Mesh(SPH(0.22),mat(C.teal,{e:C.teal,ei:1.6})); orb.position.y=h+0.5; g.add(orb);}
+  } else if(k==='temple'){
+    // round temple (tholos): stepped base, colonnade, roof, glowing oracle core
+    for(let i=0;i<3;i++){const st=new THREE.Mesh(CYL(1.5-i*0.16,1.5-i*0.16,0.16,28),mat(C.stone,{r:0.85})); st.position.y=0.08+i*0.16; g.add(st);}
+    const colR=1.02,colH=1.5,nc=8;
+    for(let c2=0;c2<nc;c2++){const a=c2/nc*Math.PI*2; const col=new THREE.Mesh(CYL(0.1,0.11,colH,12),mat(0x9aa7b3,{r:0.7})); col.position.set(Math.cos(a)*colR,0.56+colH/2,Math.sin(a)*colR); g.add(col);}
+    const arch=new THREE.Mesh(CYL(colR+0.28,colR+0.28,0.18,28),mat(C.stoneDk)); arch.position.y=0.56+colH+0.09; g.add(arch);
+    const roof=new THREE.Mesh(CONE(colR+0.34,0.8,28),mat(C.amber,{e:C.amber,ei:0.4})); roof.position.y=0.56+colH+0.18+0.4; g.add(roof);
+    const orb=new THREE.Mesh(SPH(0.28),mat(C.amber,{e:C.amber,ei:1.8})); orb.position.y=1.15; g.add(orb); g._fire=orb;
+    g.add(plight(C.amber,1.0,9,0,1.2,0));
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(0.55,0.04,10,36),mat(C.amber,{e:C.amber,ei:1.2})); ring.position.y=1.15; ring.rotation.x=Math.PI/2; g.add(ring); g._ring=ring;
   } else if(k==='silo'){
     const r=n.big?1.0:0.62,h=n.big?3.0:1.7;
     const body=new THREE.Mesh(CYL(r,r,h,18),mat(C.stone,{m:0.18,r:0.6})); body.position.y=h/2; g.add(body);
@@ -305,7 +315,7 @@ function addFlag(n,H){
 }
 
 const pickMeshes=[];
-const topY={tent:2.6,stables:2.6,boat:2.8,furnace:3.4,keep:3.7,tower:4.3,beacon:4.3,oracle:4.9,blacksmith:2.9,cache:2.3,weaver:2.6,target:2.9,ring:1.5,enemy:3.6};
+const topY={tent:2.6,stables:2.6,boat:2.8,furnace:3.4,keep:3.7,tower:4.3,beacon:4.3,oracle:4.9,blacksmith:2.9,temple:3.6,cache:2.3,weaver:2.6,target:2.9,ring:1.5,enemy:3.6};
 NODES.forEach(n=>{
   const g=build(n); g.position.set(n.pos[0],0,n.pos[1]); g.traverse(o=>{if(o.isMesh)o.userData.node=n;}); scene.add(g); n._g=g;
   const H=n.kind==='silo'?(n.big?3.9:2.5):(topY[n.kind]||2.6); n._H=H; addFlag(n,H);
