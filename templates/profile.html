@@ -347,7 +347,13 @@
             <section class="industries tech-stack" id="tech-stack">
               <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Technology stack</h3>
               <p class="industries-hint">Tick everything your organisation runs, operating systems included. Group hunts then leave out techniques whose ATT&amp;CK platforms you don't have (ESXi, containers, network devices) and procedures aimed at products you don't run (a SolarWinds supply-chain compromise when you have no SolarWinds). Technique, CVE and report hunts are generated anyway, with a note on Results. Leave it all unticked and everything applies.</p>
-              <input type="search" class="tech-stack-filter" id="tech-stack-filter" placeholder="Filter products" aria-label="Filter products">
+              <div class="tech-stack-toolbar">
+                <input type="search" class="tech-stack-filter" id="tech-stack-filter" placeholder="Filter products" aria-label="Filter products">
+                <div class="tech-stack-bulk">
+                  <button type="button" class="tech-stack-bulk-btn" id="tech-stack-select-all">Select all</button>
+                  <button type="button" class="tech-stack-bulk-btn" id="tech-stack-clear-all">Deselect all</button>
+                </div>
+              </div>
               <div class="tech-stack-groups" id="tech-stack-grid"></div>
               <p class="industries-hint tech-stack-platforms" id="tech-stack-platforms" aria-live="polite"></p>
               <div class="industries-actions">

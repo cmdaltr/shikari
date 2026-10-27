@@ -848,6 +848,20 @@ document.head.appendChild(style);
   const status = document.getElementById('tech-stack-status');
   const platformsLine = document.getElementById('tech-stack-platforms');
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  // Fixed 4:4:3 layout: rows 1-2 hold four categories, the last row three (wider columns).
+  const TS_ROWS = [
+    ['Operating systems', 'Virtualisation', 'Cloud and containers', 'Identity'],
+    ['Productivity and email', 'Backup and security', 'Servers', 'SaaS/Apps'],
+    ['Network and VPN appliances', 'Remote management and IT tools', 'Development and collaboration'],
+  ];
+  const TS_LABEL = {
+    'Operating systems': 'Operating systems', 'Virtualisation': 'Virtualisation',
+    'Cloud and containers': 'Cloud & containers', 'Identity': 'Identity',
+    'Productivity and email': 'Productivity & email', 'Backup and security': 'Backup & security',
+    'Servers': 'Servers', 'SaaS/Apps': 'SaaS & apps',
+    'Network and VPN appliances': 'Network & VPN', 'Remote management and IT tools': 'Remote management',
+    'Development and collaboration': 'Dev & collaboration',
+  };
   let choices = [];
   const showPlatforms = () => {
     const ticked = new Set(Array.from(grid.querySelectorAll('input:checked')).map(i => i.value));
@@ -856,18 +870,34 @@ document.head.appendChild(style);
       ? `ATT&CK platforms covered: ${platforms.join(', ') || 'none'}` + (platforms.some(p => ['Windows', 'Linux', 'macOS'].includes(p)) ? '' : '. No operating system is ticked, so endpoint techniques will be left out.')
       : 'Nothing ticked: every technique and procedure applies.';
   };
+  const grpHtml = (cat, chosen) => {
+    const items = choices.filter(c => c.category === cat);
+    if (!items.length) return '';
+    return `<fieldset class="tech-stack-group"><legend>${esc(TS_LABEL[cat] || cat)}</legend>` + items.map(c =>
+      `<label class="industry-option" title="ATT&CK platforms: ${esc(c.platforms.join(', '))}"><input type="checkbox" value="${esc(c.id)}"${chosen.has(c.id) ? ' checked' : ''}> <span>${esc(c.label)}</span></label>`).join('') + '</fieldset>';
+  };
   fetch('/api/profile/stack').then(r => r.json()).then(data => {
     const chosen = new Set(data.stack || []);
     choices = data.choices || [];
-    grid.innerHTML = (data.categories || []).map(cat => {
-      const items = choices.filter(c => c.category === cat);
-      if (!items.length) return '';
-      return `<fieldset class="tech-stack-group"><legend>${esc(cat)}</legend>` + items.map(c =>
-        `<label class="industry-option" title="ATT&CK platforms: ${esc(c.platforms.join(', '))}"><input type="checkbox" value="${esc(c.id)}"${chosen.has(c.id) ? ' checked' : ''}> <span>${esc(c.label)}</span></label>`).join('') + '</fieldset>';
+    const known = new Set(TS_ROWS.flat());
+    const extra = (data.categories || []).filter(c => !known.has(c)); // anything not placed (e.g. 'Other')
+    const rows = TS_ROWS.map(r => r.slice());
+    if (extra.length) rows[rows.length - 1] = rows[rows.length - 1].concat(extra);
+    grid.innerHTML = rows.map((row, i) => {
+      const cells = row.map(cat => grpHtml(cat, chosen)).join('');
+      return `<div class="ts-row ts-row-${row.length}">${cells}</div>`;
     }).join('');
     showPlatforms();
   });
   grid.addEventListener('change', showPlatforms);
+  const setAll = on => {
+    grid.querySelectorAll('.industry-option:not([hidden]) input[type="checkbox"]').forEach(i => {
+      if (!i.closest('.tech-stack-group').hidden) i.checked = on;
+    });
+    showPlatforms();
+  };
+  document.getElementById('tech-stack-select-all')?.addEventListener('click', () => setAll(true));
+  document.getElementById('tech-stack-clear-all')?.addEventListener('click', () => setAll(false));
   document.getElementById('tech-stack-filter').addEventListener('input', e => {
     const q = e.target.value.trim().toLowerCase();
     grid.querySelectorAll('.tech-stack-group').forEach(g => {
@@ -878,6 +908,9 @@ document.head.appendChild(style);
         any = any || hit;
       });
       g.hidden = !any;
+    });
+    grid.querySelectorAll('.ts-row').forEach(r => {
+      r.hidden = !r.querySelector('.tech-stack-group:not([hidden])');
     });
   });
   document.getElementById('tech-stack-save').addEventListener('click', async () => {
