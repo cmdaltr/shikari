@@ -66,6 +66,7 @@
     {"id": "zoom", "attacker_used": true, "label": "Zoom", "category": "Collaboration & SaaS", "platforms": ["SaaS", "Windows", "macOS"], "aliases": ["Zoom"], "cpe": ["zoom:*"]},
     {"id": "salesforce", "label": "Salesforce", "category": "Collaboration & SaaS", "platforms": ["SaaS"], "aliases": ["Salesforce"], "cpe": ["salesforce:*"]},
     {"id": "snowflake", "label": "Snowflake", "category": "Collaboration & SaaS", "platforms": ["SaaS"], "aliases": ["Snowflake"], "cpe": ["snowflake:*"]},
+    {"id": "servicenow", "label": "ServiceNow", "category": "Collaboration & SaaS", "platforms": ["SaaS"], "aliases": ["ServiceNow"], "cpe": ["servicenow:*"]},
 
     {"id": "iis", "label": "Microsoft IIS", "category": "Servers & databases", "platforms": ["Windows"], "aliases": ["IIS", "Internet Information Services", "w3wp"], "cpe": ["microsoft:internet_information_services*", "microsoft:iis"]},
     {"id": "apache_httpd", "label": "Apache HTTP Server", "category": "Servers & databases", "platforms": ["Linux", "Windows"], "aliases": ["Apache HTTP Server", "httpd"], "cpe": ["apache:http_server"]},
@@ -85,6 +86,7 @@
     {"id": "barracuda_esg", "label": "Barracuda Email Security Gateway", "category": "Backup & security", "platforms": ["Network Devices"], "aliases": ["Barracuda ESG", "Barracuda Email Security Gateway"], "cpe": ["barracuda:*"]},
     {"id": "defender", "attacker_used": true, "label": "Microsoft Defender", "category": "Backup & security", "platforms": ["Windows", "macOS", "Linux"], "aliases": ["Microsoft Defender", "Windows Defender", "Defender for Endpoint"], "cpe": ["microsoft:defender*"]},
     {"id": "crowdstrike", "label": "CrowdStrike Falcon", "category": "Backup & security", "platforms": ["Windows", "macOS", "Linux"], "aliases": ["CrowdStrike Falcon"], "cpe": ["crowdstrike:*"]},
-    {"id": "sentinelone", "label": "SentinelOne", "category": "Backup & security", "platforms": ["Windows", "macOS", "Linux"], "aliases": ["SentinelOne"], "cpe": ["sentinelone:*"]}
+    {"id": "sentinelone", "label": "SentinelOne", "category": "Backup & security", "platforms": ["Windows", "macOS", "Linux"], "aliases": ["SentinelOne"], "cpe": ["sentinelone:*"]},
+    {"id": "elastic_agent", "label": "Elastic Agent", "category": "Backup & security", "platforms": ["Windows", "macOS", "Linux"], "aliases": ["Elastic Agent", "Elastic Defend", "Elastic Beats"], "cpe": ["elastic:elastic_agent*", "elastic:beats*"]}
   ]
 }
