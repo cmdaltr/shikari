@@ -27,6 +27,12 @@ archer-cli logs [archer|ollama|supervisor] [-f]
 
 ---
 
+### Desktop clients
+
+The desktop installers (`desktop/README.md`; compared with the other ways to run Archer in `docs/architecture/deployment-comparison.svg`) connect to a central Archer as clients: a window onto this server, with its users and data. Serve it over HTTPS with a certificate the client machines trust (an internal CA works once deployed to them), then give users the address or set it centrally: an MDM profile for `com.cmdaltr.archer` with `ServerURL` on macOS, `HKLM\SOFTWARE\Policies\cmdaltr\Archer\ServerURL` by Group Policy or Intune on Windows, `/etc/archer/client.json` on Linux. The app checks `/health`, which answers `{"status": "ok", "app": "archer"}`, before opening it.
+
+---
+
 ### docker_entrypoint.py
 Docker container entry point that initializes OSINT repositories and starts the web server.
 

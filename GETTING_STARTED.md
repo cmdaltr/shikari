@@ -10,6 +10,8 @@ Installing Archer, signing in, and the configuration it needs before its queries
 
 ## Install
 
+**Just using Archer?** The desktop installers on the Releases page (macOS, Windows, Linux) need no Git, Python or Docker. Each connects to your organisation's Archer server or runs Archer on that computer: see [desktop/README.md](desktop/README.md). The rest of this page is for running Archer from a checkout, including as the central server those apps connect to.
+
 ```bash
 git clone https://github.com/cmdaltr/archer.git
 cd archer
@@ -64,9 +66,9 @@ python scripts/admin/reset_password.py                     # a forgotten passwor
 
 Archer generates for **Google SecOps** (YARA-L 2.0) and **Microsoft Defender XDR** (KQL). Splunk and Elastic generation is switched off for now. Choose yours under **Profile → SIEM platforms**; Archer generates only for those.
 
-### Mapping files (required)
+### Mapping files
 
-Query generation reads your organisation's mapping files from `bespoke/mappings/`: index and table names, field mappings, and which indicators each log source can see. They're gitignored, because they describe your estate, and the repository can't regenerate them: keep a copy somewhere safe.
+Query generation reads mapping files from `bespoke/mappings/`: index and table names, field mappings, and which indicators each log source can see. A new install starts with generic ones: at start-up Archer copies in whatever is missing from `archer/mappings/defaults/` (Splunk set up for CEF-formatted indexes and sourcetypes; see [its README](archer/mappings/defaults/README.md)) and never overwrites a file that's there. Replace them with your organisation's own. Those are gitignored, because they describe your estate, so keep a copy somewhere safe.
 
 ```
 bespoke/mappings/

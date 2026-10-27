@@ -1,6 +1,6 @@
 # Bespoke Organization-Specific Configuration
 
-This directory contains **organisation-specific** content. Everything in it except the `.example` files, this README and `.gitkeep` placeholders is gitignored, including the mapping files: keep your own copy somewhere safe, because the repository cannot regenerate them.
+This directory contains **organisation-specific** content. Everything in it except the `.example` files, this README and `.gitkeep` placeholders is gitignored, including the mapping files. A new install's `mappings/` is filled from the generic defaults in `archer/mappings/defaults/`; your own replacements can't be regenerated from the repository, so keep a copy somewhere safe.
 
 ## Directory Structure
 
@@ -25,7 +25,7 @@ bespoke/
   searches/                                  # Custom detection examples
 ```
 
-The server lists any missing required files at startup ("N required bespoke mapping file(s) absent"), and detection generation fails with a message naming the missing piece.
+A new install starts with generic mappings from `archer/mappings/defaults/` (CEF-aligned Splunk indexes and sourcetypes; see its README): Archer copies in whatever is missing at startup and never overwrites a file that's here. The server lists any missing required files at startup ("N required bespoke mapping file(s) absent"), and detection generation fails with a message naming the missing piece.
 
 ## Quick Start
 
@@ -57,4 +57,4 @@ The server lists any missing required files at startup ("N required bespoke mapp
 - `exclusions.yaml`, `config.yaml` - **Gitignored** (org-specific)
 - `searches/` contents - **Gitignored** (org-specific)
 
-New users must populate `mappings/` with schema files from a reference install or create their own.
+New installs get the generic defaults (`archer/mappings/defaults/README.md`): the six files that name Splunk indexes are copied in together, and only into an empty `mappings/`, so they never mix with your own index names. Replace them with your organisation's files when you have them.

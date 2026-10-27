@@ -42,6 +42,8 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 | [README.md](../README.md) | Project overview, features, archer-cli console usage |
 | [GETTING_STARTED.md](../GETTING_STARTED.md) | Installation, setup, first run |
 | [USAGE.md](USAGE.md) | Where each task is done, and `archer-cli offline` |
+| [desktop/README.md](../desktop/README.md) | Desktop installers: connecting to an organisation's server (MDM, Group Policy), running locally, building releases |
+| [Deployment comparison](architecture/deployment-comparison.svg) | Web, desktop client, desktop local and checkout: where users, detections and mappings live |
 
 ---
 
@@ -58,6 +60,7 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 | Document | Description |
 |----------|-------------|
 | [bespoke/README.md](../bespoke/README.md) | Bespoke directory structure, mapping files, reference queries |
+| [archer/mappings/defaults/README.md](../archer/mappings/defaults/README.md) | The default mappings a new install starts with; Splunk's CEF indexes, sourcetypes and custom-string convention |
 | [LLM_CONFIGURATION.md](features/LLM_CONFIGURATION.md) | LLM provider setup — Anthropic, OpenAI, ChatGPT Enterprise, Azure OpenAI, Copilot, local LLMs |
 | [bespoke/config.yaml.example](../bespoke/config.yaml.example) | Config file template with all LLM provider options |
 
@@ -91,6 +94,7 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 | [PERFORMANCE_ARCHITECTURE.md](architecture/PERFORMANCE_ARCHITECTURE.md) | Performance and optimisation |
 | [SCHEMA_NORMALIZATION.md](architecture/SCHEMA_NORMALIZATION.md) | Field normalisation and schema design |
 | [Architecture Diagrams](architecture/mermaid/) | 13 Mermaid diagrams — end-to-end flow, component map, decision map, data flow |
+| [deployment-comparison.svg](architecture/deployment-comparison.svg) | The four ways to run Archer, side by side |
 
 ---
 

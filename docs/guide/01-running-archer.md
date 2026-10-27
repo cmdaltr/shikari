@@ -36,6 +36,13 @@ The same command covers everything else Archer does from a terminal:
 | `archer-cli mcp` | Archer's tools for an MCP client, over stdio |
 | `archer-cli offline generate\|correlate\|hunt\|emulate` | The pipeline without the server: [USAGE.md](../USAGE.md) |
 | `archer-cli clear-cache` | Clear server-side caches and reset browser preferences |
+| `archer-cli app install\|uninstall\|open` | Archer as a desktop app (below) |
+
+## As a desktop app
+
+From a checkout, `archer-cli app install` adds Archer to Applications on macOS (`--dock` keeps it in the Dock), or to the application menu on Linux. On Windows, run `.venv\Scripts\python archer\desktop.py install` for Start menu and desktop shortcuts. Opening it starts the server if it isn't running and shows Archer in its own window; quitting stops a server the app started. `archer-cli app uninstall` removes it. For a native window rather than a browser one, `pip install -e '.[desktop]'`.
+
+The installers on the Releases page bundle everything instead, and connect to your organisation's server or run Archer locally: [desktop/README.md](../../desktop/README.md).
 
 ## Signing in
 

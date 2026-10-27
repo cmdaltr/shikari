@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1620 960" font-family="'JetBrains Mono', 'Courier New', monospace">
+<title>Archer deployment comparison</title>
+<defs>
+<marker id="t" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#00D4AA"/></marker>
+<marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#F59E0B"/></marker>
+</defs>
+<rect width="1620" height="960" fill="#0D1B2A"/>
+<text x="20" y="44" font-size="22" fill="#FFFFFF" font-weight="bold">Archer: four ways to run it</text>
+<text x="440" y="44" font-size="13" fill="#9FB3C8">where users, detections and mappings live in each</text>
+<rect x="12" y="78" width="396" height="796" rx="12" fill="none" stroke="rgba(0, 212, 170, 0.3)" stroke-width="1"/>
+<text x="24" y="106" font-size="16" fill="#00D4AA" font-weight="bold" text-anchor="start">1 · Web deployment</text>
+<text x="24" y="126" font-size="12" fill="#9FB3C8" font-weight="normal" text-anchor="start">central server, browsers</text>
+<rect x="20" y="142" width="380" height="112" rx="8" fill="#0D1B2A" stroke="#00D4AA" stroke-width="1.5"/>
+<text x="34" y="166" font-size="13" fill="#00D4AA" font-weight="bold" text-anchor="start">Browsers</text>
+<text x="34" y="188" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">Every analyst, any OS</text>
+<text x="34" y="206" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">No install on the device</text>
+<text x="34" y="224" font-size="11.5" fill="#9FB3C8" font-weight="normal" text-anchor="start">· signs in to the server</text>
+<line x1="60" y1="254" x2="60" y2="310" stroke="#00D4AA" stroke-width="2" marker-end="url(#t)"/>
+<text x="72" y="288.0" font-size="11" fill="#00D4AA" font-weight="normal" text-anchor="start">HTTPS via reverse proxy</text>
+<rect x="20" y="314" width="380" height="112" rx="8" fill="#0D1B2A" stroke="#00D4AA" stroke-width="1.5"/>
+<text x="34" y="338" font-size="13" fill="#00D4AA" font-weight="bold" text-anchor="start">Central server</text>
+<text x="34" y="360" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">archer-cli start or docker compose</text>
+<text x="34" y="378" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">uvicorn 0.0.0.0:8000, supervised</text>
+<text x="34" y="396" font-size="11.5" fill="#9FB3C8" font-weight="normal" text-anchor="start">· crash restarts, optional Ollama</text>
+<line x1="60" y1="426" x2="60" y2="466" stroke="#00D4AA" stroke-width="2" marker-end="url(#t)"/>
+<text x="72" y="452.0" font-size="11" fill="#00D4AA" font-weight="normal" text-anchor="start">reads and writes</text>
+<rect x="20" y="470" width="380" height="130" rx="8" fill="#0D1B2A" stroke="#00D4AA" stroke-width="1.5"/>
+<text x="34" y="494" font-size="13" fill="#00D4AA" font-weight="bold" text-anchor="start">Server data</text>
+<text x="34" y="516" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">data/archer.db: users, roles, Library</text>
+<text x="34" y="534" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">data/groups/: detections</text>
+<text x="34" y="552" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">bespoke/mappings/: org mappings</text>
+<text x="34" y="570" font-size="11.5" fill="#9FB3C8" font-weight="normal" text-anchor="start">· one copy, everyone shares it</text>
+<line x1="20" y1="622" x2="400" y2="622" stroke="rgba(0, 212, 170, 0.2)"/>
+<text x="24" y="640" font-size="10.5" fill="#00D4AA" font-weight="bold" text-anchor="start" letter-spacing="1">USERS</text>
+<text x="24" y="660" font-size="12.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">server database, shared</text>
+<line x1="20" y1="678" x2="400" y2="678" stroke="rgba(0, 212, 170, 0.2)"/>
+<text x="24" y="696" font-size="10.5" fill="#00D4AA" font-weight="bold" text-anchor="start" letter-spacing="1">DETECTIONS</text>
+<text x="24" y="716" font-size="12.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">on the server, shared</text>
+<line x1="20" y1="734" x2="400" y2="734" stroke="rgba(0, 212, 170, 0.2)"/>
+<text x="24" y="752" font-size="10.5" fill="#00D4AA" font-weight="bold" text-anchor="start" letter-spacing="1">MAPPINGS</text>
+<text x="24" y="772" font-size="12.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">organisation&#x27;s, on the server</text>
+<line x1="20" y1="790" x2="400" y2="790" stroke="rgba(0, 212, 170, 0.2)"/>
+<text x="24" y="808" font-size="10.5" fill="#00D4AA" font-weight="bold" text-anchor="start" letter-spacing="1">UPDATES</text>
+<text x="24" y="828" font-size="12.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">upgrade the server once</text>
+<rect x="412" y="78" width="396" height="796" rx="12" fill="none" stroke="rgba(0, 212, 170, 0.3)" stroke-width="1"/>
+<text x="424" y="106" font-size="16" fill="#00D4AA" font-weight="bold" text-anchor="start">2 · Desktop app: client</text>
+<text x="424" y="126" font-size="12" fill="#9FB3C8" font-weight="normal" text-anchor="start">installer + organisation server</text>
+<rect x="420" y="142" width="380" height="112" rx="8" fill="#0D1B2A" stroke="#00D4AA" stroke-width="1.5"/>
+<text x="434" y="166" font-size="13" fill="#00D4AA" font-weight="bold" text-anchor="start">Archer.app / .msi / AppImage</text>
+<text x="434" y="188" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">ServerURL from, first match:</text>
+<text x="434" y="206" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">MDM / Group Policy / /etc/archer</text>
+<text x="434" y="224" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">ARCHER_SERVER, saved choice, chooser</text>
+<text x="434" y="242" font-size="11.5" fill="#9FB3C8" font-weight="normal" text-anchor="start">· IT&#x27;s setting locks it</text>
+<line x1="460" y1="254" x2="460" y2="310" stroke="#00D4AA" stroke-width="2" marker-end="url(#t)"/>
+<text x="472" y="288.0" font-size="11" fill="#00D4AA" font-weight="normal" text-anchor="start">HTTPS, OS trust store, /health</text>
+<rect x="420" y="314" width="380" height="112" rx="8" fill="#0D1B2A" stroke="#00D4AA" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="434" y="338" font-size="13" fill="#00D4AA" font-weight="bold" text-anchor="start">Same central server as (1)</text>
+<text x="434" y="360" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">Window onto its pages</text>
+<text x="434" y="378" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">No bundled server started</text>
+<text x="434" y="396" font-size="11.5" fill="#9FB3C8" font-weight="normal" text-anchor="start">· untrusted cert: refused, no bypass</text>
+<line x1="460" y1="426" x2="460" y2="466" stroke="#00D4AA" stroke-width="2" marker-end="url(#t)"/>
+<text x="472" y="452.0" font-size="11" fill="#00D4AA" font-weight="normal" text-anchor="start">reads and writes</text>
+<rect x="420" y="470" width="380" height="130" rx="8" fill="#0D1B2A" stroke="#00D4AA" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="434" y="494" font-size="13" fill="#00D4AA" font-weight="bold" text-anchor="start">Same server data as (1)</text>
+<text x="434" y="516" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">Users, Library, detections, mappings</text>
+<text x="434" y="534" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">all on the server</text>
+<text x="434" y="552" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">On the device: login session, logs</text>
+<text x="434" y="570" font-size="11.5" fill="#9FB3C8" font-weight="normal" text-anchor="start">· nothing seeded locally</text>
+<line x1="420" y1="622" x2="800" y2="622" stroke="rgba(0, 212, 170, 0.2)"/>
+<text x="424" y="640" font-size="10.5" fill="#00D4AA" font-weight="bold" text-anchor="start" letter-spacing="1">USERS</text>
+<text x="424" y="660" font-size="12.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">server&#x27;s accounts and roles</text>
+<line x1="420" y1="678" x2="800" y2="678" stroke="rgba(0, 212, 170, 0.2)"/>
+<text x="424" y="696" font-size="10.5" fill="#00D4AA" font-weight="bold" text-anchor="start" letter-spacing="1">DETECTIONS</text>
+<text x="424" y="716" font-size="12.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">on the server, shared</text>
+<line x1="420" y1="734" x2="800" y2="734" stroke="rgba(0, 212, 170, 0.2)"/>
+<text x="424" y="752" font-size="10.5" fill="#00D4AA" font-weight="bold" text-anchor="start" letter-spacing="1">MAPPINGS</text>
+<text x="424" y="772" font-size="12.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">organisation&#x27;s, on the server</text>
+<line x1="420" y1="790" x2="800" y2="790" stroke="rgba(0, 212, 170, 0.2)"/>
+<text x="424" y="808" font-size="10.5" fill="#00D4AA" font-weight="bold" text-anchor="start" letter-spacing="1">UPDATES</text>
+<text x="424" y="828" font-size="12.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">server; app is only a window</text>
+<rect x="812" y="78" width="396" height="796" rx="12" fill="none" stroke="rgba(0, 212, 170, 0.3)" stroke-width="1"/>
+<text x="824" y="106" font-size="16" fill="#F59E0B" font-weight="bold" text-anchor="start">3 · Desktop app: local</text>
+<text x="824" y="126" font-size="12" fill="#9FB3C8" font-weight="normal" text-anchor="start">installer, standalone</text>
+<rect x="820" y="142" width="380" height="112" rx="8" fill="#0D1B2A" stroke="#F59E0B" stroke-width="1.5"/>
+<text x="834" y="166" font-size="13" fill="#F59E0B" font-weight="bold" text-anchor="start">Archer.app / .msi / AppImage</text>
+<text x="834" y="188" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">Bundled Python + dependencies</text>
+<text x="834" y="206" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">Chosen at first launch, or</text>
+<text x="834" y="224" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">ARCHER_SERVER=local</text>
+<text x="834" y="242" font-size="11.5" fill="#9FB3C8" font-weight="normal" text-anchor="start">· no Git, Python or Docker</text>
+<line x1="860" y1="254" x2="860" y2="310" stroke="#F59E0B" stroke-width="2" marker-end="url(#a)"/>
+<text x="872" y="288.0" font-size="11" fill="#F59E0B" font-weight="normal" text-anchor="start">127.0.0.1 only</text>
+<rect x="820" y="314" width="380" height="112" rx="8" fill="#0D1B2A" stroke="#F59E0B" stroke-width="1.5"/>
+<text x="834" y="338" font-size="13" fill="#F59E0B" font-weight="bold" text-anchor="start">In-process server</text>
+<text x="834" y="360" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">uvicorn on :8000 or next free port</text>
+<text x="834" y="378" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">Starts with the window</text>
+<text x="834" y="396" font-size="11.5" fill="#9FB3C8" font-weight="normal" text-anchor="start">· stops when the window closes</text>
+<line x1="860" y1="426" x2="860" y2="466" stroke="#F59E0B" stroke-width="2" marker-end="url(#a)"/>
+<text x="872" y="452.0" font-size="11" fill="#F59E0B" font-weight="normal" text-anchor="start">reads and writes</text>
+<rect x="820" y="470" width="380" height="130" rx="8" fill="#0D1B2A" stroke="#F59E0B" stroke-width="1.5"/>
+<text x="834" y="494" font-size="13" fill="#F59E0B" font-weight="bold" text-anchor="start">ARCHER_HOME (per user)</text>
+<text x="834" y="516" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">~/Library/Application Support/</text>
+<text x="834" y="534" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">  Archer/home (or %LOCALAPPDATA%)</text>
+<text x="834" y="552" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">Seeded: data/, ATT&amp;CK, procedures</text>
+<text x="834" y="570" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">Default CEF mappings, replaceable</text>
+<line x1="820" y1="622" x2="1200" y2="622" stroke="rgba(0, 212, 170, 0.2)"/>
+<text x="824" y="640" font-size="10.5" fill="#F59E0B" font-weight="bold" text-anchor="start" letter-spacing="1">USERS</text>
+<text x="824" y="660" font-size="12.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">local database, one person</text>
+<line x1="820" y1="678" x2="1200" y2="678" stroke="rgba(0, 212, 170, 0.2)"/>
+<text x="824" y="696" font-size="10.5" fill="#F59E0B" font-weight="bold" text-anchor="start" letter-spacing="1">DETECTIONS</text>
+<text x="824" y="716" font-size="12.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">this computer only</text>
+<line x1="820" y1="734" x2="1200" y2="734" stroke="rgba(0, 212, 170, 0.2)"/>
+<text x="824" y="752" font-size="10.5" fill="#F59E0B" font-weight="bold" text-anchor="start" letter-spacing="1">MAPPINGS</text>
+<text x="824" y="772" font-size="12.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">generic defaults (CEF Splunk)</text>
+<line x1="820" y1="790" x2="1200" y2="790" stroke="rgba(0, 212, 170, 0.2)"/>
+<text x="824" y="808" font-size="10.5" fill="#F59E0B" font-weight="bold" text-anchor="start" letter-spacing="1">UPDATES</text>
+<text x="824" y="828" font-size="12.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">install a new release</text>
+<rect x="1212" y="78" width="396" height="796" rx="12" fill="none" stroke="rgba(0, 212, 170, 0.3)" stroke-width="1"/>
+<text x="1224" y="106" font-size="16" fill="#F59E0B" font-weight="bold" text-anchor="start">4 · Checkout: archer-cli app</text>
+<text x="1224" y="126" font-size="12" fill="#9FB3C8" font-weight="normal" text-anchor="start">developer, from the repository</text>
+<rect x="1220" y="142" width="380" height="112" rx="8" fill="#0D1B2A" stroke="#F59E0B" stroke-width="1.5"/>
+<text x="1234" y="166" font-size="13" fill="#F59E0B" font-weight="bold" text-anchor="start">Archer.app launcher</text>
+<text x="1234" y="188" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">archer-cli app install --dock</text>
+<text x="1234" y="206" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">Runs the repo&#x27;s .venv</text>
+<text x="1234" y="224" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">pywebview window, or browser</text>
+<text x="1234" y="242" font-size="11.5" fill="#9FB3C8" font-weight="normal" text-anchor="start">· git pull updates it</text>
+<line x1="1260" y1="254" x2="1260" y2="310" stroke="#F59E0B" stroke-width="2" marker-end="url(#a)"/>
+<text x="1272" y="288.0" font-size="11" fill="#F59E0B" font-weight="normal" text-anchor="start">127.0.0.1:8000</text>
+<rect x="1220" y="314" width="380" height="112" rx="8" fill="#0D1B2A" stroke="#F59E0B" stroke-width="1.5"/>
+<text x="1234" y="338" font-size="13" fill="#F59E0B" font-weight="bold" text-anchor="start">archer-cli start supervisor</text>
+<text x="1234" y="360" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">Started if not already running</text>
+<text x="1234" y="378" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">Stopped on quit if it started it</text>
+<text x="1234" y="396" font-size="11.5" fill="#9FB3C8" font-weight="normal" text-anchor="start">· state: ~/Library/Application Support/Archer</text>
+<line x1="1260" y1="426" x2="1260" y2="466" stroke="#F59E0B" stroke-width="2" marker-end="url(#a)"/>
+<text x="1272" y="452.0" font-size="11" fill="#F59E0B" font-weight="normal" text-anchor="start">reads and writes</text>
+<rect x="1220" y="470" width="380" height="130" rx="8" fill="#0D1B2A" stroke="#F59E0B" stroke-width="1.5"/>
+<text x="1234" y="494" font-size="13" fill="#F59E0B" font-weight="bold" text-anchor="start">The repository</text>
+<text x="1234" y="516" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">data/: database, detections</text>
+<text x="1234" y="534" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">bespoke/: your mappings (gitignored)</text>
+<text x="1234" y="552" font-size="11.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">Logs: ~/Library/Logs/Archer</text>
+<text x="1234" y="570" font-size="11.5" fill="#9FB3C8" font-weight="normal" text-anchor="start">· nothing reaches git</text>
+<line x1="1220" y1="622" x2="1600" y2="622" stroke="rgba(0, 212, 170, 0.2)"/>
+<text x="1224" y="640" font-size="10.5" fill="#F59E0B" font-weight="bold" text-anchor="start" letter-spacing="1">USERS</text>
+<text x="1224" y="660" font-size="12.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">repository database</text>
+<line x1="1220" y1="678" x2="1600" y2="678" stroke="rgba(0, 212, 170, 0.2)"/>
+<text x="1224" y="696" font-size="10.5" fill="#F59E0B" font-weight="bold" text-anchor="start" letter-spacing="1">DETECTIONS</text>
+<text x="1224" y="716" font-size="12.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">repository data/</text>
+<line x1="1220" y1="734" x2="1600" y2="734" stroke="rgba(0, 212, 170, 0.2)"/>
+<text x="1224" y="752" font-size="10.5" fill="#F59E0B" font-weight="bold" text-anchor="start" letter-spacing="1">MAPPINGS</text>
+<text x="1224" y="772" font-size="12.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">your bespoke/ (or defaults)</text>
+<line x1="1220" y1="790" x2="1600" y2="790" stroke="rgba(0, 212, 170, 0.2)"/>
+<text x="1224" y="808" font-size="10.5" fill="#F59E0B" font-weight="bold" text-anchor="start" letter-spacing="1">UPDATES</text>
+<text x="1224" y="828" font-size="12.5" fill="#FFFFFF" font-weight="normal" text-anchor="start">git pull</text>
+<g transform="translate(20, 908)">
+<rect width="14" height="14" rx="3" fill="#0D1B2A" stroke="#00D4AA" stroke-width="1.5"/><text x="22" y="12" font-size="12" fill="#FFFFFF">shared: the organisation's server</text>
+<rect x="330" width="14" height="14" rx="3" fill="#0D1B2A" stroke="#F59E0B" stroke-width="1.5"/><text x="352" y="12" font-size="12" fill="#FFFFFF">this computer only</text>
+<rect x="560" width="14" height="14" rx="3" fill="#0D1B2A" stroke="#00D4AA" stroke-width="1.5" stroke-dasharray="4 3"/><text x="582" y="12" font-size="12" fill="#FFFFFF">the same server and data as (1)</text>
+</g>
+</svg>

@@ -2,11 +2,13 @@
 
 Archer downloads public data, keeps it up to date by itself, and stores everything you make under `data/` in the project folder. Your own data is never committed to git.
 
+The desktop app running Archer locally keeps the same layout in a per-user folder instead: `~/Library/Application Support/Archer/home` (macOS), `%LOCALAPPDATA%\Archer\home` (Windows) or `~/.local/share/archer/home` (Linux), or `$ARCHER_HOME`. The paths below are relative to it. Connected to an organisation's server, the app keeps nothing but its login session: see [desktop/README.md](../../desktop/README.md).
+
 ## What Archer downloads, and when
 
 | Data | Source | Updated | Stored in |
 |---|---|---|---|
-| MITRE ATT&CK Enterprise | `mitre-attack/attack-stix-data` on GitHub | On every start, if a new release is out | `data/cache/enterprise-attack.json` |
+| MITRE ATT&CK Enterprise | `mitre-attack/attack-stix-data` on GitHub | On every start, if a new release is out | `archer/data/cache/enterprise-attack.json` |
 | MITRESaw procedures | Built from the ATT&CK bundle | When ATT&CK changes (changed groups only), or from the [MITRESaw](12-mitresaw.md) page | `data/mitre_procedures.csv`, `.xlsx` |
 | OSINT detection rules | Public SecOps, Sentinel, Splunk and Elastic rule repositories | On every start | `data/repos/` |
 | LOLBAS, LOLDrivers, LOLRMM | lolol.farm projects | At most once a day | `data/repos/lol/`, `data/cache/lol_index.json` |
@@ -40,8 +42,8 @@ python -m archer.build.migrate_names            # --dry-run to see what it would
 
 ## Your organisation's own material
 
-The `bespoke/` folder holds what's specific to your organisation: AI prompt templates, query templates, index and table mappings, and reference queries. Its folders are committed empty and its files are gitignored, so none of it reaches git. See [BESPOKE.md](../BESPOKE.md).
+The `bespoke/` folder holds what's specific to your organisation: AI prompt templates, query templates, index and table mappings, and reference queries. Its folders are committed empty and its files are gitignored, so none of it reaches git. Missing mapping files are filled at start-up from the generic defaults in `archer/mappings/defaults/`, which never overwrite yours. See [BESPOKE.md](../BESPOKE.md).
 
 ## Backing up
 
-Copy `data/archer.db`, `data/.encryption_key` (without it, stored API keys can't be read) and `bespoke/`. Everything else is rebuilt or re-downloaded.
+Copy `data/archer.db`, `data/.encryption_key` (without it, stored API keys can't be read) and `bespoke/` (for the desktop app, the same files in its folder above). Everything else is rebuilt or re-downloaded.

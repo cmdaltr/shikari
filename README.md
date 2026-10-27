@@ -29,6 +29,21 @@ archer-cli stop
 
 `archer-cli start` runs a small supervisor (`archer/service.py`) that starts uvicorn and, if Ollama is installed but not running, `ollama serve`. If either dies, it's started again (1s, then backing off to 60s; it gives up after 6 failed starts in a row, e.g. a port clash). Options are remembered: `--port`, `--no-reload`, `--no-ollama`, `--ollama-models DIR` (an external volume that isn't mounted falls back to Ollama's default folder rather than creating an empty one). `archer-cli serve` runs the server in the foreground without the supervisor; `archer-cli docker ...` is `docker compose` with the project's compose file. The same command has the console (`archer-cli console`), a dry-run preview (`archer-cli preview <group>`), the MCP server (`archer-cli mcp`) and the pipeline without the server (`archer-cli offline generate|correlate|hunt`).
 
+### Desktop App
+
+Installers for macOS, Windows and Linux are on the Releases page: they bundle everything, with no Python or checkout needed. Each connects to your organisation's Archer server (users type its address, or IT sets it by MDM or Group Policy) or runs Archer on that computer. See [desktop/README.md](desktop/README.md). From a checkout instead:
+
+```bash
+pip install -e '.[desktop]'      # pywebview, for a native window
+archer-cli app install --dock    # macOS: ~/Applications/Archer.app, kept in the Dock
+archer-cli app install           # Linux: application menu entry (~/.local/share/applications)
+archer-cli app uninstall
+```
+
+On Windows, from the repository: `.venv\Scripts\python archer\desktop.py install` adds Start menu and desktop shortcuts (pin to the taskbar from the Start menu).
+
+The app launches this checkout's `.venv`, so it updates with `git pull`; it isn't a frozen copy. Opening it starts the server if it isn't running and shows Archer in its own window. Quitting stops a server the app started and leaves one from `archer-cli start` alone. Without pywebview it uses a Chrome/Edge/Brave app window, or the default browser. On Linux the native window also needs GTK (`python3-gi gir1.2-webkit2-4.1`) or Qt. If the repository sits in OneDrive on macOS, the first launch asks for permission to access files in OneDrive; allow it. Icons are built from `archer.png` by `desktop/make_icons.py`.
+
 ---
 <br>
 

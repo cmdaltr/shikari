@@ -23,7 +23,8 @@ The `bespoke/` directory (at the project root) contains **organization-specific*
 bespoke/
   exclusions.yaml           # Global exclusions applied to all queries
   config.yaml               # Organization-specific settings
-  members.json              # Team member assignments (LAN ID to team mapping)
+  mappings/                 # Index, table and field mappings (generic defaults copied in at start-up)
+    sources/members.json    # Team member assignments (LAN ID to team mapping; optional, never shipped)
   sample_searches/          # Custom detection examples
     *.yaml                  # Your custom searches
   exclusions.yaml.example   # Template for exclusions
