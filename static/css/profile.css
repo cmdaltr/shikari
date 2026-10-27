@@ -624,6 +624,15 @@
 }
 .tab-toc a:hover { border-color: #00D4AA; color: #00D4AA; }
 
+/* SIEM data-source availability: even columns across the card, no overflow */
+.avail-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 18px; }
+.avail-grid .avail-item { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 0.88em; }
+.avail-grid .avail-item input { flex: none; }
+.avail-grid .avail-item code { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 1080px) { .avail-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px)  { .avail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px)  { .avail-grid { grid-template-columns: 1fr; } }
+
 /* Profile: Full Name with Save Changes on the input's row, the same height */
 .pf-name-row { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); column-gap: 16px; margin-top: 16px; }
 .pf-name-label { grid-column: 1 / -1; }
@@ -651,4 +660,13 @@
 .pf-country-list li { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 6px; cursor: pointer; color: var(--text-primary); }
 .pf-country-list li.is-active { background: var(--bg-secondary, rgba(0,0,0,.06)); }
 .pf-country-list li[aria-selected="true"] { font-weight: 600; }
+/* Flip the popup above the field when there isn't room below (e.g. bottom row) */
+.pf-country-pop.drop-up { top: auto; bottom: calc(100% + 4px); }
+
+/* SIEM field-mapping editor: open full screen (specificity beats ui.css .btn-ghost) */
+.sfm-editor-wrap { display: flex; flex-direction: column; }
+.sfm-editor-wrap .sfm-exit-fs { display: none; }
+.sfm-editor-wrap.is-fullscreen { position: fixed; inset: 0; z-index: 10050; background: var(--bg-secondary, #fff); padding: 64px 24px 24px; box-sizing: border-box; }
+.sfm-editor-wrap.is-fullscreen .sfm-exit-fs { display: inline-flex; position: fixed; top: 16px; right: 24px; z-index: 10051; }
+.sfm-editor-wrap.is-fullscreen #sfm-editor { flex: 1; height: 100%; min-height: 0; }
 .pf-country-none { color: var(--text-secondary) !important; cursor: default !important; }

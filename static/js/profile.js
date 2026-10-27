@@ -988,6 +988,12 @@ document.head.appendChild(style);
     list.querySelector('.is-active')?.scrollIntoView({ block: 'nearest' });
   }
   function open() {
+    // Flip above the field when there isn't room below it within the card (which clips overflow)
+    const r = btn.getBoundingClientRect();
+    const clip = btn.closest('.tabs-container') || document.documentElement;
+    const c = clip.getBoundingClientRect();
+    const below = c.bottom - r.bottom, above = r.top - c.top;
+    pop.classList.toggle('drop-up', below < 340 && above > below);
     pop.hidden = false;
     btn.setAttribute('aria-expanded', 'true');
     search.value = '';
