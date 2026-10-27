@@ -41,6 +41,8 @@ python update.py
 ### For Architects
 - [System Flow Diagram](diagrams/flow/archer_flow.pdf) - Overall system flow
 - [Component Architecture](../../static/diagrams/architecture.html) - Web UI and `archer-cli` (inline, on the Help page)
+- [Generation Flow](../../static/diagrams/pipeline.html) - Step-by-step input → MITRESaw → queries → correlation → artefacts (light)
+- [The Archer Machine](../../static/diagrams/machine.html) - Interactive 3D isometric view of the runtime (three.js; drag/zoom/click)
 
 ## Directory Structure
 
@@ -59,5 +61,8 @@ docs/architecture/
 ```
 
 The component architecture (web UI and `archer-cli`) lives at
-`static/diagrams/architecture.html`.
+`static/diagrams/architecture.html`. Two companion views sit beside it:
+`static/diagrams/pipeline.html` (a light, top-to-bottom generation flow) and
+`static/diagrams/machine.html` (an interactive 3D isometric runtime scene). All
+three are linked from the Architecture tab on the Help page.
 

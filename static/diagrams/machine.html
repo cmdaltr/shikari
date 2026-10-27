@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Archer machine</title>
+<style>
+  :root{
+    --navy:#0D1B2A; --navy2:#0a1521; --teal:#00D4AA; --amber:#F59E0B; --red:#EF4444;
+    --ink:#E6EEF2; --muted:#7f93a3;
+    --mono:'JetBrains Mono','SFMono-Regular',ui-monospace,'Courier New',monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:
+      radial-gradient(1200px 700px at 60% 30%, #12263a 0%, var(--navy) 55%, var(--navy2) 100%);
+    color:var(--ink);font-family:var(--mono);overflow:hidden}
+  #scene{position:fixed;inset:0}
+  canvas{display:block}
+
+  .label{font-family:var(--mono);font-size:11px;color:var(--ink);pointer-events:none;
+    text-shadow:0 1px 3px rgba(0,0,0,.8);white-space:nowrap;letter-spacing:.3px;
+    transition:opacity .25s}
+  .label .s{display:block;font-size:9px;color:var(--teal);letter-spacing:1px}
+  .label.dim{opacity:.18}
+
+  header{position:fixed;top:0;left:0;right:0;padding:16px 20px;z-index:5;
+    display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;pointer-events:none}
+  h1{font-size:18px;margin:0;letter-spacing:.5px}
+  h1 .a{color:var(--teal)}
+  .fig{font-size:11px;color:var(--muted);border:1px solid rgba(0,212,170,.3);
+    padding:2px 8px;border-radius:3px}
+  .hint{font-size:11px;color:var(--muted);margin-left:auto}
+
+  /* toolbar chips */
+  #chips{position:fixed;left:0;right:0;bottom:16px;z-index:5;display:flex;gap:8px;
+    justify-content:center;flex-wrap:wrap;padding:0 16px}
+  .chip{font-family:var(--mono);font-size:11px;color:var(--ink);cursor:pointer;
+    background:rgba(13,27,42,.72);border:1px solid rgba(0,212,170,.3);border-radius:4px;
+    padding:6px 11px;letter-spacing:.4px;backdrop-filter:blur(6px);transition:all .15s;user-select:none}
+  .chip:hover{border-color:var(--teal)}
+  .chip.on{background:var(--teal);color:var(--navy);border-color:var(--teal);font-weight:700}
+  .chip.tour.on{background:var(--amber);border-color:var(--amber)}
+
+  /* info panel */
+  #info{position:fixed;top:64px;right:16px;width:300px;max-width:calc(100vw - 32px);z-index:6;
+    background:rgba(10,21,33,.9);border:1px solid rgba(0,212,170,.35);border-radius:8px;
+    padding:16px 18px;backdrop-filter:blur(10px);transform:translateX(120%);
+    transition:transform .3s cubic-bezier(.2,.8,.2,1);box-shadow:0 18px 40px rgba(0,0,0,.45)}
+  #info.show{transform:translateX(0)}
+  #info .cat{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--teal)}
+  #info h2{font-size:15px;margin:4px 0 2px}
+  #info .port{font-size:10.5px;color:var(--amber);margin:0 0 10px}
+  #info p{font-size:12px;color:var(--ink);line-height:1.5;margin:0 0 10px;opacity:.9}
+  #info .edges{font-size:10.5px;color:var(--muted);border-top:1px solid rgba(255,255,255,.08);
+    padding-top:9px;line-height:1.6}
+  #info .edges b{color:var(--teal);font-weight:400}
+  #info .x{position:absolute;top:10px;right:12px;cursor:pointer;color:var(--muted);font-size:16px}
+  #info .x:hover{color:var(--ink)}
+  @media (max-width:560px){.hint{display:none}}
+</style>
+</head>
+<body>
+<div id="scene"></div>
+
+<header>
+  <h1><span class="a">The Archer</span> machine</h1>
+  <span class="fig">Fig · Archer runtime</span>
+  <span class="hint">drag to orbit · scroll to zoom · click a part</span>
+</header>
+
+<div id="info">
+  <span class="x" id="infoX">×</span>
+  <div class="cat" id="iCat"></div>
+  <h2 id="iName"></h2>
+  <p class="port" id="iPort"></p>
+  <p id="iDesc"></p>
+  <div class="edges" id="iEdges"></div>
+</div>
+
+<div id="chips">
+  <span class="chip" data-cat="store">Detection store</span>
+  <span class="chip" data-cat="core">Correlation</span>
+  <span class="chip" data-cat="intel">MITRESaw / OSINT</span>
+  <span class="chip" data-cat="siem">SIEM</span>
+  <span class="chip" data-cat="ai">Ollama / LLM</span>
+  <span class="chip" data-cat="lab">Lab</span>
+  <span class="chip" data-cat="assess">VECTR</span>
+  <span class="chip tour" data-tour="1">Tour</span>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+const COL = { navy:0x0D1B2A, teal:0x00D4AA, amber:0xF59E0B, red:0xEF4444, slate:0x1b3047 };
+const CAT_COLOR = { ops:COL.teal, core:COL.teal, intel:COL.amber, siem:COL.teal,
+                    ai:COL.amber, store:0x8aa0b4, lab:COL.amber, assess:COL.red };
+
+// --- node graph -----------------------------------------------------------
+// pos is [x,y,z] on an isometric field; size scales the box.
+const NODES = [
+  { id:'cli',  cat:'ops',    name:'archer-cli',       port:'supervisor', pos:[-10,0,-4], size:1.1,
+    desc:'The one CLI. Starts/stops the stack and runs one-shot hunts, correlation and exports.',
+    to:['api'] },
+  { id:'api',  cat:'core',   name:'FastAPI app',      port:':8000', pos:[-3.5,0.6,-4], size:1.4,
+    desc:'Server-rendered Jinja2 UI + HTTP API. The hub every request passes through.',
+    to:['saw','gen','corr','db','cat'] },
+  { id:'saw',  cat:'intel',  name:'MITRESaw',         port:'STIX / TAXII', pos:[-7,0,2.5], size:1.1,
+    desc:'Walks ATT&CK STIX for procedures and indicators across direct, software and campaign paths.',
+    to:['gen'] },
+  { id:'cat',  cat:'intel',  name:'Catalogue · Exposure', port:'OSINT', pos:[-10,0,7], size:1.1,
+    desc:'Org attack-surface mapping — Team Cymru, MX and HIBP enrichment feeding the exposure map.',
+    to:['api'] },
+  { id:'lab',  cat:'lab',    name:'Telemetry · Lab',  port:'ATT&CK datasets', pos:[-3,0,7.5], size:1.0,
+    desc:'Public corpora + your own local ART recordings — telemetry that grounds detection fields.',
+    to:['gen'] },
+  { id:'gen',  cat:'core',   name:'Query generator',  port:'two-tier', pos:[2,0.4,-1], size:1.3,
+    desc:'Emits one vendor-native query per technique — LLM tier or no-LLM template tier, with an availability gate.',
+    to:['llm','secops','mde','splunk','elastic','yaml'] },
+  { id:'llm',  cat:'ai',     name:'LLM',              port:'Ollama :11434 / Anthropic', pos:[3,2.4,-6.5], size:1.0,
+    desc:'Optional. Compact prompt + MITRESaw evidence → query, with a degenerate-output guard. AI is opt-in.',
+    to:[] },
+  { id:'yaml', cat:'store',  name:'Detection YAML',   port:'data/groups', pos:[4.5,-0.4,6.5], size:1.1,
+    desc:'The rule set — name, technique, query, severity, connectors, indicators. Pushable as detections-as-code.',
+    to:['corr','vectr'] },
+  { id:'corr', cat:'core',   name:'Correlation engine', port:'chains', pos:[7.5,0.6,2.5], size:1.2,
+    desc:'Stitches techniques into single-vendor sequences and cross-vendor playbooks joined on host/user entities.',
+    to:['secops','mde','splunk','elastic'] },
+  { id:'db',   cat:'store',  name:'SQLite store',     port:'archer.db', pos:[-3.5,-1.8,1.5], size:1.0,
+    desc:'Case store — threat-library test cases, assessments, saved detections. Lives in place (OneDrive), NullPool.',
+    to:[] },
+  { id:'secops',cat:'siem',  name:'Google SecOps',    port:'YARA-L · UDM', pos:[11,1.4,-4], size:1.0,
+    desc:'Primary target and top correlation priority. Availability keyed on UDM metadata.event_type.', to:[] },
+  { id:'mde',  cat:'siem',   name:'Defender XDR',     port:'KQL', pos:[12,0.2,-0.5], size:1.0,
+    desc:'MDE schema — DeviceProcessEvents, DeviceFileEvents and the rest of the advanced-hunting tables.', to:[] },
+  { id:'splunk',cat:'siem',  name:'Splunk',           port:'SPL', pos:[11.5,-0.6,3], size:1.0,
+    desc:'Field mapping handled by bespoke custom schema — no fixed CIM guarantee across tenants.', to:[] },
+  { id:'elastic',cat:'siem', name:'Elastic',          port:'ES|QL · ECS', pos:[12,0.6,6.5], size:1.0,
+    desc:'ECS-mapped fields; detections gated on the data connectors actually ingested.', to:[] },
+  { id:'vectr',cat:'assess', name:'VECTR',            port:'GraphQL', pos:[8.5,0,9.5], size:1.0,
+    desc:'Purple-team campaign side. Archer pushes threat-library cases in and reads campaign outcomes back.', to:[] },
+];
+const NODE = Object.fromEntries(NODES.map(n => [n.id, n]));
+
+// --- renderer / scene ------------------------------------------------------
+const host = document.getElementById('scene');
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x0D1B2A, 26, 52);
+
+const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 200);
+camera.position.set(16, 15, 20);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+host.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(innerWidth, innerHeight);
+labelRenderer.domElement.style.cssText = 'position:fixed;inset:0;pointer-events:none';
+host.appendChild(labelRenderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.target.set(1, 0, 1.5);
+controls.minDistance = 8;
+controls.maxDistance = 46;
+controls.maxPolarAngle = Math.PI * 0.49;
+
+scene.add(new THREE.AmbientLight(0x9fd7ca, 0.55));
+const key = new THREE.DirectionalLight(0xffffff, 1.0); key.position.set(8, 16, 10); scene.add(key);
+const fill = new THREE.PointLight(0x00D4AA, 0.6, 60); fill.position.set(-8, 6, -8); scene.add(fill);
+
+// grid floor
+const grid = new THREE.GridHelper(44, 44, 0x1f3a52, 0x16293c);
+grid.position.y = -2.4; scene.add(grid);
+
+// --- build nodes -----------------------------------------------------------
+const meshes = [];
+
+NODES.forEach(n => {
+  const s = n.size, w = 1.9*s, h = 1.0*s, d = 1.9*s;
+  const geo = new THREE.BoxGeometry(w, h, d);
+  const base = new THREE.Color(CAT_COLOR[n.cat]);
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x12273b, emissive: base, emissiveIntensity: 0.12,
+    metalness: 0.3, roughness: 0.55 });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(n.pos[0], n.pos[1], n.pos[2]);
+  mesh.userData = n;
+
+  // teal wire edges
+  const edges = new THREE.LineSegments(
+    new THREE.EdgesGeometry(geo),
+    new THREE.LineBasicMaterial({ color: base }));
+  edges.material.transparent = true; edges.material.opacity = 0.85;
+  mesh.add(edges);
+
+  // leg to the floor (a glowing drop line)
+  const legY = n.pos[1] - h/2;
+  const leg = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([ new THREE.Vector3(0,-h/2,0), new THREE.Vector3(0, -2.4 - n.pos[1], 0) ]),
+    new THREE.LineBasicMaterial({ color: base, transparent:true, opacity:0.25 }));
+  mesh.add(leg);
+
+  // label
+  const el = document.createElement('div');
+  el.className = 'label';
+  el.innerHTML = `${n.name}<span class="s">${n.port}</span>`;
+  const lbl = new CSS2DObject(el);
+  lbl.position.set(0, h/2 + 0.5, 0);
+  mesh.add(lbl);
+  n._el = el;
+
+  scene.add(mesh);
+  meshes.push(mesh);
+  n._mesh = mesh; n._mat = mat; n._edges = edges.material; n._base = base;
+});
+
+// --- edges (connections) ---------------------------------------------------
+const linkMat = new THREE.LineBasicMaterial({ color: 0x00D4AA, transparent:true, opacity:0.32 });
+NODES.forEach(n => {
+  (n.to||[]).forEach(tid => {
+    const t = NODE[tid]; if (!t) return;
+    const a = new THREE.Vector3(...n.pos), b = new THREE.Vector3(...t.pos);
+    const mid = a.clone().add(b).multiplyScalar(0.5); mid.y += 1.4;
+    const curve = new THREE.QuadraticBezierCurve3(a, mid, b);
+    const line = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(curve.getPoints(24)), linkMat.clone());
+    line.userData.pair = [n.id, tid];
+    scene.add(line);
+  });
+});
+
+// --- 01–07 pipeline spine (small amber markers) ----------------------------
+const spinePts = [[-7,2.2,-7],[-4,2.6,-6],[-1,2.9,-4.5],[1.5,3,-2.5],[4,3,0],[6.5,2.8,2.5],[8.5,2.4,5]];
+spinePts.forEach((p,i)=>{
+  const m = new THREE.Mesh(
+    new THREE.SphereGeometry(0.16,16,16),
+    new THREE.MeshBasicMaterial({ color: COL.amber }));
+  m.position.set(...p); scene.add(m);
+  const el = document.createElement('div');
+  el.className='label'; el.style.opacity='.55';
+  el.innerHTML = `<span class="s">${String(i+1).padStart(2,'0')}</span>`;
+  const l = new CSS2DObject(el); l.position.set(...p); m.add(l);
+});
+for (let i=0;i<spinePts.length-1;i++){
+  const l = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...spinePts[i]),new THREE.Vector3(...spinePts[i+1])]),
+    new THREE.LineBasicMaterial({ color: COL.amber, transparent:true, opacity:0.3 }));
+  scene.add(l);
+}
+
+// --- interaction ------------------------------------------------------------
+const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
+let selected = null;
+const info = document.getElementById('info');
+
+function pick(ev){
+  const r = renderer.domElement.getBoundingClientRect();
+  ptr.x = ((ev.clientX - r.left)/r.width)*2 - 1;
+  ptr.y = -((ev.clientY - r.top)/r.height)*2 + 1;
+  ray.setFromCamera(ptr, camera);
+  const hit = ray.intersectObjects(meshes, false)[0];
+  if (hit) select(hit.object.userData);
+}
+renderer.domElement.addEventListener('click', pick);
+
+function select(n){
+  if (selected) selected._mat.emissiveIntensity = 0.12;
+  selected = n;
+  n._mat.emissiveIntensity = 0.6;
+  document.getElementById('iCat').textContent = n.cat;
+  document.getElementById('iName').textContent = n.name;
+  document.getElementById('iPort').textContent = n.port;
+  document.getElementById('iDesc').textContent = n.desc;
+  const outs = (n.to||[]).map(t=>NODE[t]?.name).filter(Boolean);
+  const ins = NODES.filter(x=>(x.to||[]).includes(n.id)).map(x=>x.name);
+  document.getElementById('iEdges').innerHTML =
+    (ins.length? `<b>in ◂</b> ${ins.join(', ')}<br>`:'') +
+    (outs.length? `<b>out ▸</b> ${outs.join(', ')}`:'');
+  info.classList.add('show');
+  focusOn(n);
+}
+document.getElementById('infoX').onclick = ()=>{
+  info.classList.remove('show');
+  if (selected){ selected._mat.emissiveIntensity = 0.12; selected = null; }
+};
+
+// smooth camera focus
+let focusTarget = null;
+function focusOn(n){
+  focusTarget = new THREE.Vector3(...n.pos);
+}
+
+// --- chips (category highlight + tour) -------------------------------------
+let activeCat = null;
+document.querySelectorAll('.chip[data-cat]').forEach(ch=>{
+  ch.onclick = ()=>{
+    const cat = ch.dataset.cat;
+    const on = activeCat === cat;
+    document.querySelectorAll('.chip[data-cat]').forEach(c=>c.classList.remove('on'));
+    activeCat = on ? null : cat;
+    if (!on) ch.classList.add('on');
+    applyFilter();
+  };
+});
+function applyFilter(){
+  NODES.forEach(n=>{
+    const lit = !activeCat || n.cat === activeCat;
+    n._mat.emissiveIntensity = lit ? (n===selected?0.6:0.12) : 0.03;
+    n._mat.opacity = lit ? 1 : 0.35; n._mat.transparent = !lit;
+    n._edges.opacity = lit ? 0.85 : 0.12;
+    n._el.classList.toggle('dim', !lit);
+  });
+}
+
+// tour: orbit slowly through the nodes
+let tour = false, tourI = 0, tourClock = 0;
+const tourChip = document.querySelector('.chip.tour');
+tourChip.onclick = ()=>{
+  tour = !tour; tourChip.classList.toggle('on', tour);
+  controls.autoRotate = tour; controls.autoRotateSpeed = 0.8;
+  if (tour){ tourClock = 0; tourI = 0; select(NODES[0]); }
+};
+
+// --- resize / loop ----------------------------------------------------------
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); labelRenderer.setSize(innerWidth, innerHeight);
+});
+
+const clock = new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  if (tour){
+    tourClock += dt;
+    if (tourClock > 2.6){ tourClock = 0; tourI = (tourI+1)%NODES.length; select(NODES[tourI]); }
+  }
+  if (focusTarget){
+    controls.target.lerp(focusTarget, 0.06);
+    if (controls.target.distanceTo(focusTarget) < 0.05) focusTarget = null;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>

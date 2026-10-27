@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Archer — detection generation flow</title>
+<style>
+  :root{
+    --navy:#0D1B2A; --teal:#00D4AA; --amber:#F59E0B; --red:#EF4444;
+    --paper:#F4F6F8; --card:#FFFFFF; --ink:#0D1B2A; --muted:#5A6B7B;
+    --line:rgba(13,27,42,.14); --tealline:rgba(0,212,170,.45);
+    --mono:'JetBrains Mono','SFMono-Regular',ui-monospace,'Courier New',monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--mono);
+    -webkit-font-smoothing:antialiased;padding:40px 16px 72px}
+  .wrap{max-width:1180px;margin:0 auto}
+  header{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:22px;margin:0;letter-spacing:.5px}
+  h1 .a{color:var(--teal)}
+  .fig{font-size:12px;color:var(--muted);border:1px solid var(--line);
+    padding:3px 9px;border-radius:3px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 30px;line-height:1.5;max-width:740px}
+
+  /* stage band */
+  .stage{position:relative;margin:0 0 10px}
+  .stage-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--muted);margin:0 0 10px;display:flex;align-items:center;gap:10px}
+  .stage-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  .stage-label .n{color:var(--teal);font-weight:700}
+
+  .row{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:6px;
+    padding:12px 14px;min-width:150px;flex:1 1 0;box-shadow:0 1px 0 rgba(13,27,42,.04)}
+  .box .t{font-size:13px;font-weight:700;margin:0 0 4px;display:flex;align-items:center;gap:7px}
+  .box .d{font-size:11px;color:var(--muted);line-height:1.45;margin:0}
+  .box code{background:var(--paper);border:1px solid var(--line);border-radius:3px;
+    padding:1px 5px;font-size:10.5px;color:var(--ink)}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .d-teal{background:var(--teal)} .d-amber{background:var(--amber)} .d-red{background:var(--red)}
+  .d-navy{background:var(--navy)}
+
+  .box.entry{border-top:3px solid var(--navy)}
+  .box.core{border-top:3px solid var(--teal)}
+  .box.gen{border-top:3px solid var(--amber)}
+  .box.out{border-top:3px solid var(--navy);background:#fbfcfd}
+
+  /* connector */
+  .down{display:flex;justify-content:center;margin:2px 0}
+  .down svg{display:block}
+
+  /* siem grid */
+  .siem{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .siem .box{min-width:0}
+  .lang{font-size:10px;color:var(--teal);letter-spacing:1px}
+
+  .note{font-size:10.5px;color:var(--muted);border-left:2px solid var(--tealline);
+    padding:6px 0 6px 12px;margin:4px auto 0;max-width:760px;line-height:1.5}
+  footer{margin-top:34px;font-size:10.5px;color:var(--muted);display:flex;
+    gap:18px;flex-wrap:wrap;align-items:center}
+  footer .k{display:inline-flex;align-items:center;gap:6px}
+  @media (max-width:720px){.siem{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="a">Archer</span> · detection generation flow</h1>
+    <span class="fig">Fig · Archer</span>
+  </header>
+  <p class="sub">From an ATT&CK group, a CVE or a threat report to deployable, vendor-native detections and
+  correlation playbooks. MITRESaw walks STIX for procedures and indicators; the generator emits one query
+  per technique per SIEM; the correlation engine stitches them into attack chains.</p>
+
+  <!-- 1. entry -->
+  <div class="stage">
+    <p class="stage-label"><span class="n">01</span> Invocation</p>
+    <div class="row">
+      <div class="box entry"><p class="t"><span class="dot d-navy"></span>archer-cli</p>
+        <p class="d">Supervisor &amp; one-shot runs — <code>archer-cli hunt</code>, <code>run</code>, <code>start</code>.</p></div>
+      <div class="box entry"><p class="t"><span class="dot d-navy"></span>Web UI</p>
+        <p class="d">Server-rendered Jinja2 — Hunt, Coverage, Catalogue, Library.</p></div>
+      <div class="box entry"><p class="t"><span class="dot d-navy"></span>HTTP API</p>
+        <p class="d">FastAPI — <code>/api/hunt</code>, <code>/api/threat-briefing</code>, <code>/api/correlate</code>.</p></div>
+    </div>
+  </div>
+  <div class="down"><svg width="22" height="30" viewBox="0 0 22 30"><line x1="11" y1="0" x2="11" y2="22" stroke="#00D4AA" stroke-width="2"/><path d="M5 20 L11 29 L17 20" fill="none" stroke="#00D4AA" stroke-width="2"/></svg></div>
+
+  <!-- 2. input -->
+  <div class="stage">
+    <p class="stage-label"><span class="n">02</span> Input selector</p>
+    <div class="row">
+      <div class="box entry"><p class="t"><span class="dot d-amber"></span>ATT&amp;CK group</p>
+        <p class="d">172+ groups — attributed TTPs with threat-actor granularity.</p></div>
+      <div class="box entry"><p class="t"><span class="dot d-amber"></span>CVE</p>
+        <p class="d">Vulnerability → mapped techniques &amp; exploitation behaviour.</p></div>
+      <div class="box entry"><p class="t"><span class="dot d-amber"></span>Threat report</p>
+        <p class="d">Uploaded URL / document → extracted techniques &amp; IOCs.</p></div>
+    </div>
+  </div>
+  <div class="down"><svg width="22" height="30" viewBox="0 0 22 30"><line x1="11" y1="0" x2="11" y2="22" stroke="#00D4AA" stroke-width="2"/><path d="M5 20 L11 29 L17 20" fill="none" stroke="#00D4AA" stroke-width="2"/></svg></div>
+
+  <!-- 3. mitresaw -->
+  <div class="stage">
+    <p class="stage-label"><span class="n">03</span> MITRESaw · STIX traversal</p>
+    <div class="row">
+      <div class="box core"><p class="t"><span class="dot d-teal"></span>Direct</p>
+        <p class="d">Techniques the group uses directly in ATT&amp;CK.</p></div>
+      <div class="box core"><p class="t"><span class="dot d-teal"></span>via Software</p>
+        <p class="d">Techniques inherited from the group's (or its campaigns') tooling.</p></div>
+      <div class="box core"><p class="t"><span class="dot d-teal"></span>via Campaign</p>
+        <p class="d">Techniques attributed through named campaigns.</p></div>
+      <div class="box core"><p class="t"><span class="dot d-teal"></span>Evidence</p>
+        <p class="d">Procedure examples + detectable indicators per technique.</p></div>
+    </div>
+  </div>
+  <div class="down"><svg width="22" height="30" viewBox="0 0 22 30"><line x1="11" y1="0" x2="11" y2="22" stroke="#00D4AA" stroke-width="2"/><path d="M5 20 L11 29 L17 20" fill="none" stroke="#00D4AA" stroke-width="2"/></svg></div>
+
+  <!-- 4. generator -->
+  <div class="stage">
+    <p class="stage-label"><span class="n">04</span> Query generator · two-tier</p>
+    <div class="row">
+      <div class="box gen"><p class="t"><span class="dot d-amber"></span>LLM tier</p>
+        <p class="d">Compact prompt + evidence → vendor query. Ollama (local) or Anthropic. Degenerate-output guard.</p></div>
+      <div class="box gen"><p class="t"><span class="dot d-amber"></span>Template tier</p>
+        <p class="d">No-LLM path — MITRESaw indicators dropped into bespoke query templates.</p></div>
+      <div class="box gen"><p class="t"><span class="dot d-amber"></span>Availability gate</p>
+        <p class="d">Flags techniques whose data source isn't ingested — kept at generation, excluded at deploy.</p></div>
+    </div>
+  </div>
+  <div class="down"><svg width="22" height="30" viewBox="0 0 22 30"><line x1="11" y1="0" x2="11" y2="22" stroke="#00D4AA" stroke-width="2"/><path d="M5 20 L11 29 L17 20" fill="none" stroke="#00D4AA" stroke-width="2"/></svg></div>
+
+  <!-- 5. siem output -->
+  <div class="stage">
+    <p class="stage-label"><span class="n">05</span> Vendor-native queries</p>
+    <div class="siem">
+      <div class="box out"><p class="t"><span class="dot d-teal"></span>Google SecOps</p>
+        <p class="lang">YARA-L · UDM</p><p class="d">Primary target. Event-type availability keyed on UDM <code>metadata.event_type</code>.</p></div>
+      <div class="box out"><p class="t"><span class="dot d-teal"></span>Defender XDR</p>
+        <p class="lang">KQL</p><p class="d">MDE schema — <code>DeviceProcessEvents</code>, <code>DeviceFileEvents</code>.</p></div>
+      <div class="box out"><p class="t"><span class="dot d-teal"></span>Splunk</p>
+        <p class="lang">SPL</p><p class="d">Field mapping via bespoke custom schema (no fixed CIM guarantee).</p></div>
+      <div class="box out"><p class="t"><span class="dot d-teal"></span>Elastic</p>
+        <p class="lang">ES|QL · ECS</p><p class="d">ECS-mapped fields; availability gated on data connectors.</p></div>
+    </div>
+  </div>
+  <div class="down"><svg width="22" height="30" viewBox="0 0 22 30"><line x1="11" y1="0" x2="11" y2="22" stroke="#00D4AA" stroke-width="2"/><path d="M5 20 L11 29 L17 20" fill="none" stroke="#00D4AA" stroke-width="2"/></svg></div>
+
+  <!-- 6. correlation -->
+  <div class="stage">
+    <p class="stage-label"><span class="n">06</span> Correlation engine</p>
+    <div class="row">
+      <div class="box core"><p class="t"><span class="dot d-teal"></span>Single-vendor</p>
+        <p class="d">Chains techniques within one SIEM into a staged query sequence.</p></div>
+      <div class="box core"><p class="t"><span class="dot d-teal"></span>Cross-vendor playbook</p>
+        <p class="d">Joins stages across SIEMs on host/user entities — a vendor-agnostic attack chain.</p></div>
+      <div class="box core"><p class="t"><span class="dot d-teal"></span>Relevance + window</p>
+        <p class="d">Scores chains and sets a time window; ATT&amp;CK is treated as goals, not a fixed order.</p></div>
+    </div>
+  </div>
+  <div class="down"><svg width="22" height="30" viewBox="0 0 22 30"><line x1="11" y1="0" x2="11" y2="22" stroke="#00D4AA" stroke-width="2"/><path d="M5 20 L11 29 L17 20" fill="none" stroke="#00D4AA" stroke-width="2"/></svg></div>
+
+  <!-- 7. output -->
+  <div class="stage">
+    <p class="stage-label"><span class="n">07</span> Artefacts &amp; export</p>
+    <div class="row">
+      <div class="box out"><p class="t"><span class="dot d-navy"></span>Detection YAML</p>
+        <p class="d"><code>data/groups/</code> — name, technique, query, severity, connectors, indicators.</p></div>
+      <div class="box out"><p class="t"><span class="dot d-navy"></span>Correlation JSON</p>
+        <p class="d"><code>data/correlate/</code> — single + cross-vendor chains, rendered on Results.</p></div>
+      <div class="box out"><p class="t"><span class="dot d-navy"></span>Detections-as-code</p>
+        <p class="d">Push to the configured git repo — version-controlled rule set.</p></div>
+      <div class="box out"><p class="t"><span class="dot d-navy"></span>Interchange</p>
+        <p class="d">MISP event · MACATable (→ VECTR) · STIX bundle.</p></div>
+    </div>
+  </div>
+
+  <p class="note">The template tier and correlation engine run with no LLM at all — AI is opt-in. Detections are
+  flagged (not dropped) when their data source isn't ingested, so coverage stays honest without silently
+  thinning the rule set.</p>
+
+  <footer>
+    <span class="k"><span class="dot d-navy"></span> invocation / artefact</span>
+    <span class="k"><span class="dot d-teal"></span> MITRESaw / correlation</span>
+    <span class="k"><span class="dot d-amber"></span> input / generation</span>
+    <span class="k"><span class="dot d-red"></span> critical path</span>
+    <span style="margin-left:auto">@cmdaltr · Archer</span>
+  </footer>
+</div>
+</body>
+</html>

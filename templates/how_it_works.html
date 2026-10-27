@@ -801,6 +801,13 @@
                     The web UI (top) and <code>archer-cli</code> (bottom) — the same pipeline. An inline, editable HTML diagram;
                     open it <a href="{{ url_for('static', path='diagrams/architecture.html') }}" target="_blank" rel="noopener">full size</a> for detail.
                 </div>
+                <div class="diagram-caption" style="margin-top:10px">
+                    Two more views:
+                    <a href="{{ url_for('static', path='diagrams/pipeline.html') }}" target="_blank" rel="noopener">the generation flow</a>
+                    (input&nbsp;&rarr;&nbsp;MITRESaw&nbsp;&rarr;&nbsp;queries&nbsp;&rarr;&nbsp;correlation&nbsp;&rarr;&nbsp;artefacts, step by step), and
+                    <a href="{{ url_for('static', path='diagrams/machine.html') }}" target="_blank" rel="noopener">the Archer machine</a>
+                    &mdash; an interactive 3D view of the runtime (drag to orbit, click a part).
+                </div>
             </div>
 
             <div class="workflow-step">
