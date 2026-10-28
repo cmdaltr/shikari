@@ -340,6 +340,13 @@ def main():
         return 0
     try:
         App(home, log).run()
+    except BaseException:
+        # Briefcase's launcher swallows what reaches it (an ARM64 Windows build failed with nothing
+        # in the log): write it here first
+        import traceback
+
+        traceback.print_exc()
+        raise
     finally:
         print("Window closed")
     # Background threads (feed collection, CVE refresh) are daemons, but some block in network

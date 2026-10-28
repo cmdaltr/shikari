@@ -100,7 +100,7 @@ jobs:
           - { os: macos-15-intel, target: macOS, sign: --adhoc-sign, suffix: macos-x86_64 }
           - { os: windows-latest, target: windows, sign: --adhoc-sign, suffix: windows-x64 }
           # Briefcase builds for the machine it runs on, so ARM64 needs an ARM64 runner and Python
-          - { os: windows-11-arm, target: windows, sign: --adhoc-sign, suffix: windows-arm64 }
+          - { os: windows-11-arm, target: windows, sign: --adhoc-sign, suffix: windows-arm64, experimental: true }
           # Built on the oldest Ubuntu it supports (the compiled GTK bindings link against its libraries)
           # and smoke-tested on the newest
           - { os: ubuntu-22.04, target: linux, sign: "", suffix: linux-amd64 }
@@ -178,10 +178,12 @@ jobs:
         include:
           - { os: macos-15, suffix: macos-arm64 }
           - { os: windows-latest, suffix: windows-x64 }
-          - { os: windows-11-arm, suffix: windows-arm64 }
+          # Experimental until the window opens: pythonnet's .NET Framework loader has no ARM64 build
+          - { os: windows-11-arm, suffix: windows-arm64, experimental: true }
           - { os: ubuntu-24.04, suffix: linux-amd64 }
           - { os: ubuntu-24.04-arm, suffix: linux-arm64 }
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental == true }}
     timeout-minutes: 30
     defaults:
       run:
@@ -273,6 +275,8 @@ jobs:
           pattern: archer-*
           path: out
           merge-multiple: true
+      # Experimental builds aren't released
+      - run: rm -f out/*windows-arm64*
       # What desktop/install.sh and install.ps1 check a download against
       - run: cd out && sha256sum -- * > SHA256SUMS && cat SHA256SUMS
       - uses: softprops/action-gh-release@v2

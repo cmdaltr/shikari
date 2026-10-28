@@ -19,8 +19,7 @@ Download the file for your machine from the repository's Releases page:
 |---|---|
 | `Archer-<version>-macos-arm64.dmg` | Apple Silicon Macs |
 | `Archer-<version>-macos-x86_64.dmg` | Intel Macs |
-| `Archer-<version>-windows-x64.msi` | Windows 10 and 11 (x64) |
-| `Archer-<version>-windows-arm64.msi` | Windows 11 on ARM, including Windows VMs on Apple Silicon (the x64 one runs there too, but emulated and much slower) |
+| `Archer-<version>-windows-x64.msi` | Windows 10 and 11, including Windows on ARM under emulation |
 | `archer_<version>-1_amd64.deb` | Ubuntu 22.04 or later, Debian 12 or later (x86_64) |
 | `archer_<version>-1_arm64.deb` | The same on arm64, including Ubuntu VMs on Apple Silicon |
 | `SHA256SUMS` | Checksums of the above, which the install scripts check |
@@ -88,7 +87,7 @@ It can't rebuild the procedures CSV itself: MITRESaw needs its own Python enviro
 
 ## Building
 
-`.github/workflows/desktop.yml` builds all six on a `v*` tag (the `.deb`s on Ubuntu 22.04, the oldest they support), installs the macOS, Windows and Linux packages on clean runners with the install scripts and checks each one serves Archer, then attaches them and `SHA256SUMS` to a GitHub Release; run it by hand (Actions > Desktop app > Run workflow) for a test build, left as workflow artifacts. A seed job downloads ATT&CK and runs MITRESaw for the procedures CSV, cached per ATT&CK version, so only a release after an ATT&CK update pays the 90 minutes.
+`.github/workflows/desktop.yml` builds all five on a `v*` tag (the `.deb`s on Ubuntu 22.04, the oldest they support), installs the macOS, Windows and Linux packages on clean runners with the install scripts and checks each one serves Archer, then attaches them and `SHA256SUMS` to a GitHub Release; run it by hand (Actions > Desktop app > Run workflow) for a test build, left as workflow artifacts. It also builds a Windows ARM64 MSI, marked experimental and left out of releases: its window can't open yet, because pythonnet's .NET Framework loader (`clr_loader`) has no ARM64 build. A seed job downloads ATT&CK and runs MITRESaw for the procedures CSV, cached per ATT&CK version, so only a release after an ATT&CK update pays the 90 minutes.
 
 To build on your own machine (macOS here; each platform builds only its own installer):
 
