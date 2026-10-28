@@ -297,7 +297,7 @@ Have an idea for a new feature? We'd love to hear it!
 
 **Submit a feature request**:
 1. Open a [GitHub Issue](https://github.com/cmdaltr/archer/issues/new)
-2. Tag it with `feature-request`
+2. Label it `enhancement`
 3. Describe the feature and use case
 4. Explain the value it would provide
 5. Include any relevant examples or references
@@ -313,27 +313,7 @@ Have an idea for a new feature? We'd love to hear it!
 
 ## Roadmap
 
-### Q1 2025
-- [ ] VECTR integration (basic)
-- [ ] Enhanced API documentation
-- [x] Detection testing suite (v1) - **Completed Feb 2026**
-
-### Q2 2025
-- [ ] CALDERA integration (basic)
-- [ ] Multi-SIEM support expansion (Elastic)
-- [ ] Local LLM support
-
-### Q3 2025
-- [ ] MACAT integration
-- [ ] Cloud integration (AWS)
-- [ ] Advanced detection validation
-
-### Q4 2025
-- [ ] GraphQL API
-- [ ] Multi-cloud support
-- [ ] AI-powered quality scoring
-
-*Roadmap subject to change based on community feedback and contributions*
+The open feature requests below are the roadmap, in the priority order further down. The dated 2025 plan this replaced had slipped past every quarter.
 
 ---
 
@@ -341,6 +321,17 @@ Have an idea for a new feature? We'd love to hear it!
 
 | Issue | Feature |
 |---|---|
+| [#9](https://github.com/cmdaltr/archer/issues/9) | Local LLM detection generation |
+| [#12](https://github.com/cmdaltr/archer/issues/12) | SIEM mapping files: index/table and field names per environment (Google SecOps, MDE, Splunk, Elastic) |
+| [#16](https://github.com/cmdaltr/archer/issues/16) | Hit counts: run a detection read-only against the SIEM to measure false positives |
+| [#26](https://github.com/cmdaltr/archer/issues/26) | VECTR integration: push test cases and read back outcomes |
+| [#27](https://github.com/cmdaltr/archer/issues/27) | Custom-execution recording: build our own datasets for novel or undocumented techniques |
+| [#28](https://github.com/cmdaltr/archer/issues/28) | In-browser VM consoles for team server set-ups |
+| [#29](https://github.com/cmdaltr/archer/issues/29) | Rocky Linux 9 / RHEL 9 desktop package (.rpm): builds as a preview, not yet in releases |
+
+Done: precision checks (#15), IOC sweeps (#17), Threat Feed watchlists (#18), STIX/TAXII and MISP (#19), detections as code (#20), technology stack (#21), Emulate log sources (#22), OSINT in correlations (#23), threat library (#24), Emulate planner (#25).
+
+---|---|
 | ~~[#15](https://github.com/cmdaltr/archer/issues/15)~~ | Precision checks: flag queries that parse but can't mean anything |
 | [#16](https://github.com/cmdaltr/archer/issues/16) | Hit counts: run a detection read-only against the SIEM to measure false positives |
 | ~~[#17](https://github.com/cmdaltr/archer/issues/17)~~ | IOC sweeps: known-good lists, `[redacted]` wildcards and IOC expiry (done) |
@@ -362,15 +353,15 @@ Have an idea for a new feature? We'd love to hear it!
 
 Based on community interest and impact, current priority features are:
 
-1. **Threat library** ([#24](https://github.com/cmdaltr/archer/issues/24)) - VECTR-style test cases and outcomes, built on Emulate
-2. **Hit counts** ([#16](https://github.com/cmdaltr/archer/issues/16)) - Detections measured read-only against the SIEM
-3. **Detections as code** ([#20](https://github.com/cmdaltr/archer/issues/20)) - Export to git, push, diff
+1. **Hit counts** ([#16](https://github.com/cmdaltr/archer/issues/16)) - Detections measured read-only against the SIEM
+2. **VECTR integration** ([#26](https://github.com/cmdaltr/archer/issues/26)) - Push test cases, read back outcomes
+3. **SIEM mapping files** ([#12](https://github.com/cmdaltr/archer/issues/12)) - Index and field names per environment
 4. **Splunk and Elastic generation** - Switched off for now; reference queries and coverage still shown
 
 Vote on features by adding 👍 to the corresponding GitHub issue!
 
 ---
 
-**Last Updated**: 2026-10-16
+**Last Updated**: 2026-10-28
 
 **Questions?** Open a [GitHub Discussion](https://github.com/cmdaltr/archer/discussions)

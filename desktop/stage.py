@@ -40,6 +40,9 @@ NOT_BUNDLED = {"playwright", "pytest", "pytest-base-url", "pytest-playwright", "
 # builds their wheels (into wheels/, which the build's pip searches). antlr4 is pinned by
 # stix2-patterns; proxy_tools comes with pywebview.
 SDIST_ONLY = {"antlr4-python3-runtime", "proxy-tools"}
+# Published as wheels only, with no source archive to compile where there's no wheel (Windows ARM64):
+# built from the tagged source instead
+NO_SDIST = {"evtx": "evtx @ git+https://github.com/omerbenamram/pyevtx-rs@{version}"}
 # Windows has no git, and the OSINT repos (sparse checkouts; Azure-Sentinel's tarball is 3.4 GB)
 # and detection export need it, so the Windows installer carries MinGit, pinned to these hashes
 # (the release's published SHA-256s). Keyed by platform.machine(), which Briefcase builds for.
@@ -112,7 +115,7 @@ requires = {toml_list(webview, "        ")}
 requires = {toml_list(webview, "        ")}
 
 [tool.briefcase.app.archer.linux]
-# Read by desktop/build_deb.py, not Briefcase: the .deb bundles its own Python and uses the distro's
+# Read by desktop/build_linux.py, not Briefcase: the .deb bundles its own Python and uses the distro's
 # GTK and WebKit (Qt would add several hundred MB)
 requires = {toml_list([w.replace("pywebview", "pywebview[gtk]") for w in webview], "        ")}
 '''
@@ -183,7 +186,8 @@ def main():
         # Several pins publish no Windows ARM64 wheel (aiohttp, pandas, PyYAML, bcrypt, evtx...), and the
         # releases that do are major upgrades, so those are compiled here (MSVC, and Rust for bcrypt and
         # evtx); the rest are downloaded as they are
-        bundled = [d for d in project["dependencies"] if requirement_name(d) not in NOT_BUNDLED]
+        bundled = [NO_SDIST.get(requirement_name(d), "").format(version=d.split("==")[-1]) or d
+                   for d in project["dependencies"] if requirement_name(d) not in NOT_BUNDLED]
         subprocess.run([sys.executable, "-m", "pip", "wheel", "-q", "--no-deps", "-w", str(wheels), *bundled], check=True)
     machine = args.mingit or (platform.machine().upper() if sys.platform == "win32" else None)
     extra = []
