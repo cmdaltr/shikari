@@ -39,7 +39,10 @@ jobs:
           path: MITRESaw
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON }}
+          # MITRESaw's pins need 3.12 (ipython 9.11); the last listed is the default
+          python-version: |
+            3.12
+            ${{ env.PYTHON }}
 
       - name: Download ATT&CK
         id: attack
@@ -66,7 +69,7 @@ jobs:
         run: |
           pip install -r requirements.txt
           # MITRESaw pins its own pandas/stix2, so it gets its own environment (archer.mitre.procedures)
-          python -m venv "${{ runner.temp }}/mitresaw"
+          python3.12 -m venv "${{ runner.temp }}/mitresaw"
           "$MITRESAW_PYTHON" -m pip install -r MITRESaw/requirements.txt
           python -m archer.mitre.procedures --full
 
