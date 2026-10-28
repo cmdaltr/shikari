@@ -1,25 +1,30 @@
 # 8. Validation Workflow — Testing Detections
 
-The detection validation loop: check Docker availability → start sandboxed SIEM → generate realistic test events → run detection query → measure true/false positives and misses → if needs work, AI suggests improvements and re-tests → accept validated detection → clean up containers.
+How a detection is validated before deployment. Static checks run first with no AI and no Docker: it parses, uses known tables and fields, and carries a quality grade (A–F), a false-positive risk and a run cost. Those thresholds gate a build in CI (detections as code). Interactively, if Docker is available, a sandboxed SIEM runs the query against generated events, times it, measures true/false positives and misses, optionally lets an opt-in AI agent suggest improvements and re-tests, accepts the detection, and cleans up.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
 flowchart TD
-    START_V(["User clicks<br/>'Validate Detection'"]) --> DOCKER_CHECK{"Is Docker<br/>available?"}
+    START_V(["Validate a<br/>detection"]) --> STATIC["Static checks <i>(no AI, no Docker)</i>:<br/>• Parses, known tables and fields<br/>• Quality grade A–F<br/>• False-positive risk<br/>• Run cost"]
 
-    DOCKER_CHECK -- "No" --> SKIP["Validation unavailable<br/><i>Docker required</i>"]
+    STATIC --> GATE{"Meets the<br/>thresholds?"}
+
+    GATE -- "In CI<br/><i>detections as code</i>" --> CI["CI gate passes or fails<br/>the build<br/><i>archer.validation.ci</i>"]
+    GATE -- "Interactive" --> DOCKER_CHECK{"Is Docker<br/>available?"}
+
+    DOCKER_CHECK -- "No" --> SKIP["Runtime test unavailable<br/><i>Docker required</i>"]
     DOCKER_CHECK -- "Yes" --> SPIN["Start a sandboxed<br/>SIEM container<br/><i>e.g. Splunk in Docker</i>"]
 
     SPIN --> GENERATE_EVENTS["Generate realistic<br/>fake log events<br/><i>Based on what the<br/>detection looks for</i>"]
 
-    GENERATE_EVENTS --> RUN_QUERY["Run the detection<br/>query against the<br/>fake events"]
+    GENERATE_EVENTS --> RUN_QUERY["Run the detection query<br/>against the fake events<br/><i>and time it</i>"]
 
-    RUN_QUERY --> MEASURE["Measure results:<br/>• True positives <i>(caught real attacks)</i><br/>• False positives <i>(false alarms)</i><br/>• False negatives <i>(missed attacks)</i>"]
+    RUN_QUERY --> MEASURE["Measure results:<br/>• True positives <i>(caught real attacks)</i><br/>• False positives <i>(false alarms)</i><br/>• False negatives <i>(missed attacks)</i><br/>• Query time"]
 
     MEASURE --> GOOD{"Detection<br/>performing<br/>well?"}
 
     GOOD -- "Yes" --> ACCEPT["Accept detection<br/>as validated"]
-    GOOD -- "Needs work" --> REFINE["AI suggests<br/>improvements:<br/>• Adjust field names<br/>• Tighten filters<br/>• Rewrite logic"]
+    GOOD -- "Needs work" --> REFINE["AI agent suggests<br/>improvements <i>(opt-in)</i>:<br/>• Adjust field names<br/>• Tighten filters<br/>• Rewrite logic"]
 
     REFINE --> APPLY["Apply refined query"]
     APPLY --> RUN_QUERY
@@ -28,8 +33,11 @@ flowchart TD
 
     style START_V fill:#4a90d9,stroke:#2c5f8a,color:#fff
     style ACCEPT fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style CI fill:#7ed321,stroke:#4a8c0f,color:#fff
     style SKIP fill:#d0021b,stroke:#8b0000,color:#fff
+    style STATIC fill:#4a90d9,stroke:#2c5f8a,color:#fff
     style DOCKER_CHECK fill:#f8e71c,stroke:#b8a700,color:#333
+    style GATE fill:#f8e71c,stroke:#b8a700,color:#333
     style GOOD fill:#f8e71c,stroke:#b8a700,color:#333
     linkStyle default stroke:#ff6600,stroke-width:3px
 ```

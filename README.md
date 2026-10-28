@@ -78,13 +78,15 @@ The app launches this checkout's `.venv`, so it updates with `git pull`; it isn'
 
 ### Additional Features
 
-- **Detection Validation** - Test queries against containerized SIEMs with sample events ([docs](docs/features/RUNTIME_VALIDATION.md))
+- **Detection Validation** - Every detection carries an AI-free quality grade (A–F), false-positive risk and run cost; optionally test queries against containerised SIEMs with sample events, timed. A CI gate (`python -m archer.validation.ci`) fails a build on detections below your thresholds ([docs](docs/features/RUNTIME_VALIDATION.md))
+- **Cloud coverage** - ATT&CK's cloud techniques by provider (AWS, Azure, GCP, Identity and SaaS) against your saved detections, with a gaps-only view (Detections → Coverage, `GET /api/coverage/cloud`) ([guide](docs/guide/08-coverage.md#cloud-coverage))
+- **API and automation** - Batch hunts, streamed run progress (SSE) and signed webhooks on run and watchlist events ([guide](docs/features/API_INTEGRATION_GUIDE.md#workflow-11-webhooks))
 - **Detection Library** - Save, search, tag, share, and export your generated detections
 - **Company Profiling** - Industry-aware threat landscape analysis for targeted detection
 - **CVE Hunting** - Generate detections from CVE IDs with NVD enrichment
 - **Query Execution** - Splunk API client (code implemented, see [UNTESTED.md](docs/other/UNTESTED.md)); Defender XDR planned with hit counts (#16)
 - **Running atomics from Archer** - Coming soon; [record a lab](docs/guide/20-recording-a-lab.md) on your own VMs for now (#22)
-- **Threat library with red and blue outcomes (VECTR-style)** - Built (Build → Assessments, #24); CALDERA and MACAT integration are feature requests ([#30](https://github.com/cmdaltr/archer/issues/30), [#31](https://github.com/cmdaltr/archer/issues/31))
+- **Threat library with red and blue outcomes (VECTR-style)** - Built (Build → Assessments, #24); CALDERA integration is a feature request ([#30](https://github.com/cmdaltr/archer/issues/30)). MACAT was declined ([#31](https://github.com/cmdaltr/archer/issues/31)): Atomic Red Team's macOS tests and the lab recorder already cover it
 
 ### Security & User Management
 - 🔐 **Enterprise Authentication** - Bcrypt password hashing, session management, MFA support (TOTP)
