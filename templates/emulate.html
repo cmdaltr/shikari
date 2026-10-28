@@ -178,6 +178,23 @@
         </div>
       </div>
 
+      <!-- CALDERA (#30): operations on agent groups, results and the static check (archer.lab.caldera) -->
+      <div class="lab-caldera" id="caldera" hidden>
+        <h3 class="ui-subtitle lab-head"><svg class="lab-head-ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 4.5V8l2.5 1.5"/></svg>CALDERA operations</h3>
+        <p class="ms-note">Chained emulation on CALDERA agents: each step's facts feed the next, and the agent behaves like an implant, which the Atomic runs above can't do.
+          Plan first, then run; Archer pulls back what each step ran and checks your detections and correlations against it. No AI.</p>
+        <div class="lab-caldera-status" id="caldera-status"></div>
+        <div class="lab-actions" id="caldera-actions" hidden>
+          <button type="button" class="ui-pill" id="caldera-plan">Plan an operation</button>
+          <button type="button" class="ui-pill" id="caldera-collect">Collect an existing operation</button>
+        </div>
+        <table class="em-table lab-caldera-ops" id="caldera-ops" hidden>
+          <thead><tr><th>Operation</th><th>Group</th><th>Hosts</th><th>Steps</th><th>Logs</th><th>Collected</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="lab-caldera-check" id="caldera-check" hidden></div>
+      </div>
+
       <div class="lab-job" id="lab-job" hidden>
         <span class="ms-state" id="lab-job-state" aria-live="polite"></span>
         <pre class="ms-log" id="lab-job-log"></pre>
@@ -338,4 +355,5 @@
 <script src="{{ url_for('static', path='js/role-watch.js') }}?v={{ request.app.state.asset_version }}"></script>
 <script src="{{ url_for('static', path='js/emulate.js') }}?v={{ request.app.state.asset_version }}"></script>
 <script src="{{ url_for('static', path='js/lab.js') }}?v={{ request.app.state.asset_version }}"></script>
+<script src="{{ url_for('static', path='js/caldera.js') }}?v={{ request.app.state.asset_version }}"></script>
 {% endblock %}
