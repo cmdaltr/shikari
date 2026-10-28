@@ -54,18 +54,35 @@
     return tip;
   }
 
-  function tipCard(list) {
+  // The guide page a tip points at, by its link and then its "Home → Analyse" label
+  function pageFor(tip, pages) {
+    if (!tip.href || !pages) return null;
+    const path = tip.href.split(/[?#]/)[0];
+    const here = pages.filter(p => p.path === path || p.href === path);
+    const where = (tip.where || '').toLowerCase();
+    return here.find(p => where.includes(p.title.toLowerCase())) || here[0] || null;
+  }
+
+  const thumb = (page) => el('button', { type: 'button', class: 'gd-start-thumb', title: `Open the guide at ${page.title}`,
+    onclick: () => showGuideViewer(page.id) },
+    el('img', { src: page.image, alt: '', loading: 'lazy' }),
+    el('span', {}, `${page.menu} → ${page.title}`));
+
+  function tipCard(list, pages) {
     const body = el('div', { class: 'gd-tip-body' });
+    let page = null;
     const show = () => {
       const t = nextTip(list);
+      page = pageFor(t, pages);
       body.replaceChildren(
         el('h3', {}, t.title),
         el('p', {}, t.text),
         t.href ? el('a', { class: 'gd-tip-where', href: t.href }, t.where || 'Open') : null,
+        page ? thumb(page) : null,
       );
     };
     show();
-    return { body, show };
+    return { body, show, page: () => page };
   }
 
   // ---- Dialog shell ----
@@ -107,17 +124,28 @@
     const showGuide = force || store.get(KEY_GUIDE, true);
     const showTips = force || store.get(KEY_TIPS, true);
     if (!showGuide && !showTips) return Promise.resolve();
-    return tips().catch(() => []).then(list => {
+    return Promise.all([tips().catch(() => []), guide().catch(() => null)]).then(([list, data]) => {
       const parts = [];
-      if (showGuide) parts.push(el('div', { class: 'gd-start-guide' },
-        el('h2', {}, 'New to Archer, or to a page?'),
-        el('p', {}, 'A picture of every page, each part highlighted in turn: what it’s for, who uses it, and when it helps most.'),
-        el('button', { type: 'button', class: 'gd-btn', onclick: () => showGuideViewer() }, 'Take the guide'),
-        tick(KEY_GUIDE, 'Show the guide at startup'),
-      ));
-      if (showTips && list.length) {
-        const card = tipCard(list);
-        parts.push(el('div', { class: 'gd-start-tip' },
+      const card = showTips && list.length ? tipCard(list, data && data.pages) : null;
+      if (showGuide) {
+        // A random page of the guide as a taste of it; clicking it opens the guide there
+        const pages = ((data && data.pages) || []).filter(p => !card || p !== card.page());
+        const pick = pages[Math.floor(Math.random() * pages.length)];
+        parts.push(el('div', { class: 'gd-start-card' },
+          el('div', { class: 'gd-tip-label' }, 'Guide'),
+          el('div', { class: 'gd-tip-body' },
+            el('h3', {}, 'New to Archer, or to a page?'),
+            el('p', {}, 'A picture of every page, each part highlighted in turn: what it’s for, who uses it, and when it helps most.'),
+          ),
+          pick ? thumb(pick) : null,
+          el('div', { class: 'gd-tip-foot' },
+            el('button', { type: 'button', class: 'gd-btn', onclick: () => showGuideViewer() }, 'Take the guide'),
+            tick(KEY_GUIDE, 'Show the guide at startup'),
+          ),
+        ));
+      }
+      if (card) {
+        parts.push(el('div', { class: 'gd-start-card' },
           el('div', { class: 'gd-tip-label' }, 'Tip'),
           card.body,
           el('div', { class: 'gd-tip-foot' },
@@ -132,8 +160,8 @@
   }
 
   function showTips() {
-    tips().then(list => {
-      const card = tipCard(list);
+    Promise.all([tips(), guide().catch(() => null)]).then(([list, data]) => {
+      const card = tipCard(list, data && data.pages);
       dialog('gd-tips', 'Tips and tricks', [
         closeBtn(),
         el('div', { class: 'gd-tip-label' }, 'Tips and tricks'),

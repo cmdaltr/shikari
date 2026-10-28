@@ -39,14 +39,21 @@
 .gd-tick input { accent-color: var(--accent, #C53030); width: 15px; height: 15px; margin: 0; }
 
 /* Start-up and tips */
-.gd-start { width: min(860px, 100%); padding: 28px; overflow: auto; }
-.gd-start-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-.gd-start-guide, .gd-start-tip { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.gd-start-guide .gd-btn { align-self: flex-start; }
-.gd-start-guide h2 { margin: 0; font-size: 1.35rem; }
-.gd-start-guide p { margin: 0; color: var(--text-secondary, #666); line-height: 1.5; }
-.gd-start-tip { background: var(--bg-primary, #f7fafc); border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px; padding: 18px; }
-.gd-tips { width: min(520px, 100%); padding: 26px; display: flex; flex-direction: column; gap: 12px; }
+.gd-start { width: min(1290px, 100%); padding: 32px; overflow: auto; }
+.gd-start-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 24px; }
+/* The guide and tip cards share one look and stretch to the same height */
+.gd-start-card { display: flex; flex-direction: column; gap: 14px; min-width: 0; background: var(--bg-primary, #f7fafc);
+  border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px; padding: 24px; }
+.gd-start .gd-tip-body h3, .gd-tips .gd-tip-body h3 { font-size: 1.3rem; margin-bottom: 8px; }
+.gd-start .gd-tip-body p, .gd-tips .gd-tip-body p { font-size: 16px; }
+.gd-tip-body .gd-start-thumb { width: 100%; margin-top: 14px; }
+.gd-start-thumb { display: block; position: relative; padding: 0; border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px;
+  overflow: hidden; cursor: pointer; background: var(--bg-secondary, #fff); aspect-ratio: 16 / 9; }
+.gd-start-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.gd-start-thumb span { position: absolute; left: 8px; bottom: 8px; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  background: rgba(0, 0, 0, 0.65); color: #fff; }
+.gd-start-thumb:hover, .gd-start-thumb:focus-visible { border-color: var(--accent, #C53030); }
+.gd-tips { width: min(780px, 100%); padding: 32px; display: flex; flex-direction: column; gap: 12px; }
 .gd-tip-label { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent, #C53030); }
 .gd-tip-body h3 { margin: 0 0 6px; font-size: 1.1rem; }
 .gd-tip-body p { margin: 0 0 8px; line-height: 1.55; white-space: normal; }
