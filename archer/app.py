@@ -6578,6 +6578,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "detection_likelihood": file_data.get("detection_likelihood", 50),
                     "quality": file_data.get("quality"),
                     "fp_risk": file_data.get("fp_risk"),
+                    "cost": file_data.get("cost"),
                     "queries": [],  # Store all queries for this group
                     "files": [],
                     "technique_id": file_data.get("technique_id", ""),
@@ -6593,6 +6594,9 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     grouped[key]["quality"] = q
                 if r and (not grouped[key]["fp_risk"] or r["score"] > grouped[key]["fp_risk"]["score"]):
                     grouped[key]["fp_risk"] = r
+                c = file_data.get("cost")
+                if c and (not grouped[key]["cost"] or c["score"] > grouped[key]["cost"]["score"]):
+                    grouped[key]["cost"] = c
                 # Merge indicators from multiple detections in the same group
                 existing_indicators = set(grouped[key]["indicators"])
                 new_indicators = file_data.get("indicators", [])
@@ -6650,6 +6654,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     ),  # Likelihood score
                     "quality": data.get("quality"),
                     "fp_risk": data.get("fp_risk"),
+                    "cost": data.get("cost"),
                     "files": data["files"],
                     "technique_id": data["technique_id"],
                     "attack_override": data["attack_override"],

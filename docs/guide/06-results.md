@@ -104,7 +104,19 @@ A is 85 and up, B 70, C 55, D 40, F below that.
 
 The risk goes down for hash matches and for exclusions of known-good activity.
 
-When several queries share a card, it shows the weakest: the lowest grade and the highest risk. The Library shows the same badges. `/api/results/<run>` returns them as `quality` and `fp_risk`. `python -m archer.validation.quality <files>` prints them for detection files. Hit counts ([#16](https://github.com/cmdaltr/archer/issues/16)) will measure false positives against the SIEM itself.
+**Cost: medium or high** appears when the query is expensive to run, read from the query itself (`archer/validation/cost.py`). The tooltip says why and how to fix it. Causes include:
+
+- no time bound;
+- KQL `contains`, or SPL and ES|QL leading wildcards, which scan every value;
+- a regex where a term would do, or one unanchored at both ends;
+- joins, subsearches and transactions;
+- every table or index;
+- lower-casing a column to compare it;
+- filtering after an aggregation.
+
+Scheduled detections run every few minutes, so a high one is worth fixing before deployment.
+
+When several queries share a card, it shows the weakest: the lowest grade, the highest risk and the highest cost. The Library shows the same badges. `/api/results/<run>` returns them as `quality`, `fp_risk` and `cost`. [Detections as code](22-detections-as-code.md#check-detections-in-ci) gates pull requests on them. `python -m archer.validation.quality <files>` prints them for detection files. Hit counts ([#16](https://github.com/cmdaltr/archer/issues/16)) will measure false positives against the SIEM itself.
 
 ## Attack flow
 

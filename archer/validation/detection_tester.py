@@ -31,6 +31,7 @@ class ValidationResult:
     false_positives: int = 0     # Benign events flagged
     true_negatives: int = 0      # Benign events correctly ignored
     execution_time_ms: float = 0
+    query_time_ms: float = 0     # the query alone, without ingesting the sample events
     error_message: Optional[str] = None
     suggestions: List[str] = field(default_factory=list)
     matched_events: List[Dict] = field(default_factory=list)
@@ -76,6 +77,7 @@ class ValidationResult:
             "recall": round(self.recall, 3),
             "f1_score": round(self.f1_score, 3),
             "execution_time_ms": self.execution_time_ms,
+            "query_time_ms": round(self.query_time_ms, 1),
             "error_message": self.error_message,
             "suggestions": self.suggestions,
             "query_error": self.query_error,
@@ -151,8 +153,11 @@ class DetectionTester:
                 from archer.build.udm import to_yaral
 
                 query = to_yaral(query)
+            query_start = datetime.utcnow()
             query_result = self.docker_manager.execute_query(session_id, vendor, query)
 
+            # The query on its own, without the ingest before it
+            query_time = (datetime.utcnow() - query_start).total_seconds() * 1000
             execution_time = (datetime.utcnow() - start_time).total_seconds() * 1000
 
             if query_result.get("status") == "error":
@@ -166,13 +171,15 @@ class DetectionTester:
             # Analyze results
             matched_events = query_result.get("results", [])
 
-            return self._analyze_results(
+            result = self._analyze_results(
                 matched_events=matched_events,
                 malicious_events=malicious_events,
                 benign_events=benign_events,
                 execution_time_ms=execution_time,
                 raw_response=query_result,
             )
+            result.query_time_ms = query_time
+            return result
 
         except Exception as e:
             logger.error(f"Detection test error: {e}")

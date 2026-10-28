@@ -20,6 +20,24 @@ Every export is a commit. Pick two and compare: added, removed and changed detec
 
 Pushing detections into a SIEM's own rule store — Defender XDR custom detection rules via the Graph security API, or Google SecOps rules via the Detection Engine — is a **dry run**. Archer builds the rule payloads and the API calls a push would make and shows the count, but sends nothing: rules would be created disabled, and live push stays off until a tenant and credentials are wired up. It exists so you can see the shape of what would be pushed, not to push from a single-machine install.
 
+## Check detections in CI
+
+`archer/validation/ci.py` gates detection files the way a pull request should: the static and precision checks, the quality grade, the false-positive risk and the run cost ([Results](06-results.md#quality-and-false-positive-risk)). A static error always fails. The thresholds fail the rest.
+
+```bash
+python -m archer.validation.ci data/groups --min-grade C --max-fp-risk medium --max-cost medium
+```
+
+It exits 0 when everything passes, 1 when anything fails and 2 when there was nothing to check. The options:
+
+- `--format github` writes workflow annotations, so failures show on the pull request's diff.
+- `--changed-only origin/main` checks only what differs from that ref.
+- `--fail-on-warnings` makes warnings fail too.
+
+A detections repository doesn't need Archer installed. With `--server https://your-archer` (and an API token in `ARCHER_TOKEN`), the checks run on your Archer server through `POST /api/validate/assess`. The script then needs only Python, `requests` and `PyYAML`.
+
+`examples/ci/archer-detections.yml` is a ready GitHub Actions workflow. Copy it to the detections repository's `.github/workflows/`, with `archer/validation/ci.py` beside it as `.github/archer_ci.py`, and set the secrets `ARCHER_URL` and `ARCHER_TOKEN`. A server on a private network needs a self-hosted runner that can reach it.
+
 ## Where its data lives
 
 The repository is `data/detections_git/`, gitignored (it's its own repo, and its contents are your detections). Deleting the directory resets the history; exporting again recreates it.

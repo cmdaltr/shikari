@@ -181,10 +181,14 @@ def _known(detection: Dict, names: Iterable[str]) -> List[Dict]:
 
 
 def assess(detection: Dict, platform: Optional[str] = None, technique_platforms: Optional[Iterable[str]] = None) -> Dict:
-    """Both, sharing one run of the checks: {quality, fp_risk}."""
+    """Quality, false-positive risk and run cost (archer.validation.cost), sharing one run of the
+    checks: {quality, fp_risk, cost}."""
+    from archer.validation.cost import cost
+
     checked = _findings(detection.get("query") or "", platform, technique_platforms)
     return {"quality": quality(detection, platform, technique_platforms, checked),
-            "fp_risk": fp_risk(detection, platform, technique_platforms, checked)}
+            "fp_risk": fp_risk(detection, platform, technique_platforms, checked),
+            "cost": cost(detection.get("query") or "", platform)}
 
 
 if __name__ == "__main__":
@@ -197,10 +201,14 @@ if __name__ == "__main__":
         with open(path, encoding="utf-8") as fh:
             result = assess(yaml.safe_load(fh) or {})
         q, r = result["quality"], result["fp_risk"]
-        print(f"{path}: quality {q['grade']} ({q['score']}), false-positive risk {r['level']} ({r['score']})")
+        c = result["cost"]
+        print(f"{path}: quality {q['grade']} ({q['score']}), false-positive risk {r['level']} ({r['score']}), "
+              f"cost {c['level']} ({c['score']})")
         for f in q["factors"]:
             print(f"    {f['name']:<12} {f['points']:>2}/{f['max']}  {'; '.join(f['notes'])}")
         for reason in r["reasons"]:
             print(f"    fp: {reason}")
+        for f in c["findings"]:
+            print(f"    cost: {f['check']} {f['message']} (fix: {f['fix']})")
         if "--json" in sys.argv:
             print(json.dumps(result, indent=2, default=str))

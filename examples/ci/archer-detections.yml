@@ -1,0 +1,29 @@
+# Check detections on every pull request to a detections-as-code repository (docs/guide/22-detections-as-code.md).
+# Copy this to .github/workflows/ in the detections repository, with archer/validation/ci.py beside it as
+# .github/archer_ci.py. Set the secrets ARCHER_URL (your Archer server, reachable from the runner: use a
+# self-hosted runner for a server on a private network) and ARCHER_TOKEN (an API token from Profile > API keys).
+name: Detections
+
+on:
+  pull_request:
+    paths: ["**/*.yaml", "**/*.yml"]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests pyyaml
+      - name: Archer checks
+        env:
+          ARCHER_TOKEN: ${{ secrets.ARCHER_TOKEN }}
+        # Only what the pull request changed; tighten or loosen the thresholds to taste
+        run: |
+          python .github/archer_ci.py . --server "${{ secrets.ARCHER_URL }}" \
+            --changed-only "origin/${{ github.base_ref }}" \
+            --min-grade C --max-fp-risk medium --max-cost medium --format github

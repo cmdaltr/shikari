@@ -213,4 +213,11 @@ Documented by community rules:{% for k in r.known_false_positives %}
 - {{ k.text }} ({{ k.source }}: {{ k.rule }}){% endfor %}{% endif %}{% endset %}
 <span class="fp-risk-badge" title="{{ rtip }}" style="display:inline-flex;align-items:center;gap:4px;border:1px solid {{ rcol }};color:{{ rcol }};padding:3px 9px;border-radius:5px;font-size:0.78em;font-weight:700;white-space:nowrap;">FP risk: {{ r.level }}</span>
 {% endif %}
+{% if detection.cost and detection.cost.level != 'low' %}
+{% set c = detection.cost %}
+{% set ccol = {'medium': '#a16207', 'high': '#b91c1c'}[c.level] %}
+{% set ctip %}Run cost {{ c.score }}/100{% for f in c.findings %}
+- {{ f.message }}. Fix: {{ f.fix }}{% endfor %}{% endset %}
+<span class="cost-badge" title="{{ ctip }}" style="display:inline-flex;align-items:center;gap:4px;border:1px solid {{ ccol }};color:{{ ccol }};padding:3px 9px;border-radius:5px;font-size:0.78em;font-weight:700;white-space:nowrap;">Cost: {{ c.level }}</span>
+{% endif %}
 {% endmacro %}

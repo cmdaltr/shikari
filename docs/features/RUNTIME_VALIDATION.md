@@ -25,6 +25,9 @@ Runtime Detection Validation tests your detection queries against sample events 
 
 ### Key Features
 
+- **Query time** - `query_time_ms` times the query on its own, apart from ingesting the sample events (`execution_time_ms` covers both). Sample events say little about cost at production volumes: the static run cost on each detection (`archer/validation/cost.py`) and hit counts ([#16](https://github.com/cmdaltr/archer/issues/16)) cover that
+- **CI gate** - `python -m archer.validation.ci` (see [Detections as code](../guide/22-detections-as-code.md#check-detections-in-ci))
+
 - **Docker-based SIEM Testing** - Spin up ephemeral SIEM containers for validation
 - **Multi-Vendor Support** - Splunk, Elastic, Google SecOps, and MDE
 - **LLM-Generated Events** - AI creates realistic malicious and benign sample events

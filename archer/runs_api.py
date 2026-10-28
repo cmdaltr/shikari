@@ -180,6 +180,20 @@ async def progress_events(run: str, read, poll: float = 1.0, heartbeat: float = 
         quiet += poll
 
 
+@router.post("/api/validate/assess")
+async def validate_assess(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """{"detection": {...parsed YAML...}}: the checks archer.validation.ci runs, for CI pipelines
+    that check detections on this server instead of installing Archer (#34)."""
+    if not _user(archer_session):
+        return JSONResponse({"error": "Please log in"}, status_code=401)
+    doc = (await request.json()).get("detection")
+    if not isinstance(doc, dict) or not doc.get("query"):
+        return JSONResponse({"error": "Send {\"detection\": {...}} with a query"}, status_code=400)
+    from archer.validation.ci import assess_document
+
+    return assess_document(doc)
+
+
 @router.get("/api/progress/{run}/stream")
 def stream_progress(run: str, archer_session: Optional[str] = Cookie(None)):
     if not _user(archer_session):

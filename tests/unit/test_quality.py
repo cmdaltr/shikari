@@ -48,4 +48,4 @@ def test_a_hash_match_lowers_the_risk():
 
 def test_assess_runs_both():
     result = quality.assess(SPECIFIC, "kql")
-    assert set(result) == {"quality", "fp_risk"}
+    assert set(result) == {"quality", "fp_risk", "cost"}
