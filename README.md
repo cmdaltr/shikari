@@ -84,7 +84,7 @@ The app launches this checkout's `.venv`, so it updates with `git pull`; it isn'
 - **CVE Hunting** - Generate detections from CVE IDs with NVD enrichment
 - **Query Execution** - Splunk API client (code implemented, see [UNTESTED.md](docs/other/UNTESTED.md)); Defender XDR planned with hit counts (#16)
 - **Running atomics from Archer** - Coming soon; [record a lab](docs/guide/20-recording-a-lab.md) on your own VMs for now (#22)
-- **Threat library with red and blue outcomes (VECTR-style)** - Built (Build → Assessments, #24); CALDERA and MACAT integration planned (see [FUTURE.md](docs/other/FUTURE.md))
+- **Threat library with red and blue outcomes (VECTR-style)** - Built (Build → Assessments, #24); CALDERA and MACAT integration are feature requests ([#30](https://github.com/cmdaltr/archer/issues/30), [#31](https://github.com/cmdaltr/archer/issues/31))
 
 ### Security & User Management
 - 🔐 **Enterprise Authentication** - Bcrypt password hashing, session management, MFA support (TOTP)

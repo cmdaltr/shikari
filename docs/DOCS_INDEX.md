@@ -151,7 +151,7 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 | Document | Description |
 |----------|-------------|
 | [UNTESTED.md](other/UNTESTED.md) | Implemented but not validated features |
-| [FUTURE.md](other/FUTURE.md) | Planned features and roadmap |
+| [Feature requests](https://github.com/cmdaltr/archer/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement) | Planned features: tracked only as GitHub issues labelled `enhancement` |
 
 ## Output contract
 

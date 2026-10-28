@@ -115,7 +115,7 @@ requires = {toml_list(webview, "        ")}
 requires = {toml_list(webview, "        ")}
 
 [tool.briefcase.app.archer.linux]
-# Read by desktop/build_linux.py, not Briefcase: the .deb bundles its own Python and uses the distro's
+# Read by desktop/build_deb.py, not Briefcase: the .deb bundles its own Python and uses the distro's
 # GTK and WebKit (Qt would add several hundred MB)
 requires = {toml_list([w.replace("pywebview", "pywebview[gtk]") for w in webview], "        ")}
 '''

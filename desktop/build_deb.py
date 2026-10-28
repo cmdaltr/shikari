@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-Build the Linux .deb (or, as a preview, a Rocky/RHEL 9 .rpm) from a tree desktop/stage.py staged,
-with its own Python.
+Build the Linux .deb from a tree desktop/stage.py staged, with its own Python.
 
     python3 desktop/stage.py --out STAGE
-    python3 desktop/build_linux.py --stage STAGE --out dist [--format rpm]
+    python3 desktop/build_deb.py --stage STAGE --out dist
 
 Briefcase's Linux system package always runs on the distro's python3, so the app's
 dependencies were compiled for whatever Python that distro shipped. This bundles a
@@ -12,11 +11,9 @@ standalone CPython (python-build-standalone, the same 3.11 the macOS and Windows
 carry) under /usr/lib/archer/python instead. GTK and WebKit still come from the distro:
 they have to match its display stack, and they're dependencies apt installs.
 
-Runs on Linux, with the headers PyGObject and pycairo build against: on Debian/Ubuntu
-dpkg-deb, libgirepository1.0-dev, libcairo2-dev and pkg-config; on Rocky 9 rpm-build, gcc,
-cairo-gobject-devel and gobject-introspection-devel (CRB). Build on the oldest distro the
-package should support: the compiled modules link against its glibc and GTK, so the .rpm
-is built on Rocky 9 itself, not converted from the .deb.
+Runs on Linux, with dpkg-deb and the headers PyGObject and pycairo build against
+(libgirepository1.0-dev, libcairo2-dev, pkg-config). Build on the oldest distro the
+package should support: the compiled modules link against its glibc and GTK.
 
     /usr/lib/archer/python     standalone CPython, with the dependencies in its site-packages
     /usr/lib/archer/app        archer/ templates/ static/ seed/ (archer.paths.ROOT)
@@ -45,12 +42,7 @@ PYTHON = {
                 "7e7e24eee3467dd666aff379c34c4ef3e6bc7142aec7d5ba783765df7da999a6", "arm64"),
 }
 SOURCES = ("archer", "templates", "static", "seed")
-RUNTIME_DEPENDS = {
-    "deb": ["libgirepository-1.0-1", "libcairo-gobject2", "gir1.2-gtk-3.0", "gir1.2-webkit2-4.1"],
-    # Rocky 9 has WebKit2 4.0 (webkit2gtk3), not 4.1: pywebview falls back to it
-    "rpm": ["gobject-introspection", "cairo-gobject", "gtk3", "webkit2gtk3"],
-}
-RPM_ARCH = {"x86_64": "x86_64", "aarch64": "aarch64"}
+RUNTIME_DEPENDS = ["libgirepository-1.0-1", "libcairo-gobject2", "gir1.2-gtk-3.0", "gir1.2-webkit2-4.1"]
 
 LAUNCHER = """#!/bin/sh
 exec /usr/lib/archer/python/bin/python3 -m archer "$@"
@@ -83,7 +75,6 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--stage", type=Path, required=True, help="the tree desktop/stage.py staged")
     parser.add_argument("--out", type=Path, default=Path("dist"))
-    parser.add_argument("--format", choices=["deb", "rpm"], default="deb")
     args = parser.parse_args()
 
     machine = platform.machine()
@@ -93,7 +84,9 @@ def main():
     staged = tomllib.loads((stage / "pyproject.toml").read_text())
     project = staged["project"]
     app = staged["tool"]["briefcase"]["app"]["archer"]
-    root = args.out.resolve() / "pkg-root"
+    arch = PYTHON[machine][2]
+
+    root = args.out.resolve() / "deb-root"
     shutil.rmtree(root, ignore_errors=True)
     prefix = root / PREFIX
     prefix.mkdir(parents=True)
@@ -126,20 +119,6 @@ def main():
     doc.mkdir(parents=True)
     shutil.copy2(stage / "LICENSE", doc / "copyright")
 
-    # Readable by everyone whatever the umask the build ran under; the launcher, the Python
-    # binaries and the compiled extensions stay executable
-    for p in root.rglob("*"):
-        if p.is_symlink():
-            continue
-        p.chmod(0o755 if p.is_dir() or p.stat().st_mode & 0o111 else 0o644)
-
-    package = (build_rpm if args.format == "rpm" else build_deb)(root, args.out.resolve(), project, staged, app, machine)
-    shutil.rmtree(root)
-    print(f"Built {package}")
-
-
-def build_deb(root, out, project, staged, app, machine):
-    arch = PYTHON[machine][2]
     installed_kb = sum(f.stat().st_size for f in root.rglob("*") if f.is_file()) // 1024
     (root / "DEBIAN").mkdir()
     (root / "DEBIAN/control").write_text(
@@ -147,56 +126,25 @@ def build_deb(root, out, project, staged, app, machine):
         f"Version: {project['version']}-1\n"
         f"Architecture: {arch}\n"
         f"Maintainer: {staged['tool']['briefcase']['author']} <{staged['tool']['briefcase']['url']}>\n"
-        f"Depends: {', '.join(RUNTIME_DEPENDS['deb'])}\n"
+        f"Depends: {', '.join(RUNTIME_DEPENDS)}\n"
         f"Installed-Size: {installed_kb}\n"
         f"Section: utils\n"
         f"Priority: optional\n"
         f"Homepage: {staged['tool']['briefcase']['url']}\n"
         f"Description: {app['description']}\n"
         f" {app['long_description'].strip()}\n")
-    (root / "DEBIAN").chmod(0o755)
-    deb = out / f"archer_{project['version']}-1_{arch}.deb"
+
+    # Readable by everyone whatever the umask the build ran under; the launcher, the Python
+    # binaries and the compiled extensions stay executable
+    for p in root.rglob("*"):
+        if p.is_symlink():
+            continue
+        p.chmod(0o755 if p.is_dir() or p.stat().st_mode & 0o111 else 0o644)
+
+    deb = args.out.resolve() / f"archer_{project['version']}-1_{arch}.deb"
     subprocess.run(["dpkg-deb", "--root-owner-group", "-Zxz", "--build", str(root), str(deb)], check=True)
-    return deb
-
-
-def build_rpm(root, out, project, staged, app, machine):
-    meta = staged["tool"]["briefcase"]
-    top = out / "rpmbuild"
-    shutil.rmtree(top, ignore_errors=True)
-    (top / "SPECS").mkdir(parents=True)
-    spec = top / "SPECS" / "archer.spec"
-    # The tree is built already: no stripping, byte-compiling or shebang rewriting by rpm's
-    # post-install scripts, and no dependencies guessed from the bundled Python's libraries
-    spec.write_text(f"""Name: archer
-Version: {project['version']}
-Release: 1%{{?dist}}
-Summary: {app['description']}
-License: MIT
-URL: {meta['url']}
-Requires: {', '.join(RUNTIME_DEPENDS['rpm'])}
-AutoReqProv: no
-%define __os_install_post %{{nil}}
-%define debug_package %{{nil}}
-%define _build_id_links none
-
-%description
-{app['long_description'].strip()}
-
-%install
-cp -a {root}/. %{{buildroot}}/
-
-%files
-%license /usr/share/doc/archer/copyright
-/usr/lib/archer
-/usr/bin/archer
-/usr/share/applications/archer.desktop
-/usr/share/icons/hicolor/*/apps/archer.png
-""")
-    subprocess.run(["rpmbuild", "-bb", "--quiet", "--define", f"_topdir {top}", "--define", f"_rpmdir {out}",
-                    "--define", "_build_name_fmt %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm", str(spec)], check=True)
-    shutil.rmtree(top)
-    return next(out.glob(f"archer-{project['version']}-1*.{RPM_ARCH[machine]}.rpm"))
+    shutil.rmtree(root)
+    print(f"Built {deb}")
 
 
 if __name__ == "__main__":

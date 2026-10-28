@@ -100,6 +100,6 @@ python3.11 -m venv .briefcase && .briefcase/bin/pip install briefcase
 .briefcase/bin/briefcase package macOS --adhoc-sign    # dist/Archer-<version>.dmg
 ```
 
-On Linux, Briefcase isn't used: `python3 desktop/build_linux.py --stage ~/.cache/archer/desktop` builds the `.deb` from the staged tree (it needs `dpkg-deb`, `libgirepository1.0-dev`, `libcairo2-dev` and `pkg-config`). `--format rpm` on Rocky 9 builds a preview `.rpm` that isn't released yet ([#29](https://github.com/cmdaltr/archer/issues/29)).
+On Linux, Briefcase isn't used: `python3 desktop/build_deb.py --stage ~/.cache/archer/desktop` builds the `.deb` from the staged tree (it needs `dpkg-deb`, `libgirepository1.0-dev`, `libcairo2-dev` and `pkg-config`).
 
 `desktop/stage.py` copies only what git would include (tracked files and new ones that aren't ignored), so nothing `.gitignore` keeps out of the repository can reach an installer; it builds outside the repository because a build is several hundred MB. The installed app's entry point is `archer/desktop_app.py`; where it puts things is `archer/paths.py`. Icons come from `archer.png` via `desktop/make_icons.py`.
