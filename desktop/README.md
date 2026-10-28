@@ -69,7 +69,7 @@ The first run fills it from the installer: the reference data in the repository'
 
 ## What the Installed App Doesn't Do
 
-It can't rebuild the procedures CSV itself: MITRESaw needs its own Python environment. A newer ATT&CK release is downloaded at startup as usual, but threat briefings use the CSV from the installer until the next release. The OSINT detection repositories are cloned with git where it's installed; without it (Windows, or a Mac without the developer tools) they're downloaded as GitHub tarballs instead, keeping only the rule folders. Azure-Sentinel's tarball is 3.4 GB, so without git it's refreshed weekly rather than hourly, and only when the repository has changed. Exporting detections to a git repository does need git. Ollama is a separate install, which Archer finds as usual.
+It can't rebuild the procedures CSV itself: MITRESaw needs its own Python environment. A newer ATT&CK release is downloaded at startup as usual, but threat briefings use the CSV from the installer until the next release. The OSINT detection repositories and detection export need git. The Windows installer carries its own (Git for Windows' MinGit, pinned by SHA-256 in `desktop/stage.py`, its licences in `mingit/`), used only when no git is installed. On a Mac without the developer tools the repositories are downloaded as GitHub tarballs instead, keeping only the rule folders; Azure-Sentinel's tarball is 3.4 GB, so that way it's refreshed weekly rather than hourly, and only when the repository has changed. Ollama is a separate install, which Archer finds as usual.
 
 ## Building
 

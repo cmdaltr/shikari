@@ -201,6 +201,13 @@ jobs:
           if (-not $exe) { Select-String -Path install.log -Pattern 'INSTALLDIR|TARGETDIR' | Select-Object -Last 5; exit 1 }
           "APP=$($exe.FullName)" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
 
+      - name: Bundled git (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          # The runner has its own git, so check the installer's copy by path
+          git_exe=$(dirname "$APP")/app/mingit/cmd/git.exe
+          "$git_exe" --version
+
       - name: Install (Linux)
         if: runner.os == 'Linux'
         run: |

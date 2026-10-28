@@ -313,6 +313,14 @@ class App:
         self.stop_local()
 
 
+def bundled_git():
+    """The Windows installer carries MinGit (desktop/stage.py), since Windows has no git. It goes
+    last on PATH, so a git the user installed (with their credentials and config) still wins."""
+    mingit = ROOT / "mingit" / "cmd"
+    if mingit.is_dir():
+        os.environ["PATH"] = os.pathsep.join(filter(None, [os.environ.get("PATH"), str(mingit)]))
+
+
 def main():
     # Before anything imports archer.paths, which reads ARCHER_HOME once
     home = Path(os.environ.get("ARCHER_HOME") or default_home()).expanduser()
@@ -322,6 +330,7 @@ def main():
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
     log = redirect_output(home)
+    bundled_git()
 
     from archer import desktop
 

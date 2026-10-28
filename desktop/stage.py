@@ -15,14 +15,20 @@ The staged tree:
                                  git's data/, plus --attack (the ATT&CK bundle, to seed/archer/data/cache)
                                  and --procedures (MITRESaw's CSV and its .meta.json, to seed/data)
     wheels/                      wheels built here for dependencies published only as source (SDIST_ONLY)
+    mingit/                      Windows only: Git for Windows' portable MinGit (MINGIT)
     icons/ LICENSE pyproject.toml
 """
 
 import argparse
+import hashlib
+import io
+import platform
 import shutil
 import subprocess
 import sys
 import tomllib
+import urllib.request
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -34,6 +40,14 @@ NOT_BUNDLED = {"playwright", "pytest", "pytest-base-url", "pytest-playwright", "
 # builds their wheels (into wheels/, which the build's pip searches). antlr4 is pinned by
 # stix2-patterns; proxy_tools comes with pywebview.
 SDIST_ONLY = {"antlr4-python3-runtime", "proxy-tools"}
+# Windows has no git, and the OSINT repos (sparse checkouts; Azure-Sentinel's tarball is 3.4 GB)
+# and detection export need it, so the Windows installer carries MinGit, pinned to these hashes
+# (the release's published SHA-256s). Keyed by platform.machine(), which Briefcase builds for.
+MINGIT_RELEASE = "https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.4"
+MINGIT = {
+    "AMD64": ("MinGit-2.56.0.4-64-bit.zip", "e3bf78351fe777fba47ddee5950082f8a98bb0f02604fdc7ba3ee2cb68ffa877"),
+    "ARM64": ("MinGit-2.56.0.4-arm64.zip", "70f7649f78088c1db1d2f3571ca46a04d5bef06e4e9d56d8ed7f9829e8c6c4db"),
+}
 
 
 def git_files():
@@ -48,7 +62,17 @@ def requirement_name(spec):
     return spec.strip().lower()
 
 
-def pyproject(project, wheels):
+def stage_mingit(out, machine):
+    name, sha256 = MINGIT[machine]
+    with urllib.request.urlopen(f"{MINGIT_RELEASE}/{name}", timeout=300) as r:
+        body = r.read()
+    if hashlib.sha256(body).hexdigest() != sha256:
+        sys.exit(f"{name} doesn't match its pinned SHA-256: refusing to bundle it")
+    zipfile.ZipFile(io.BytesIO(body)).extractall(out / "mingit")
+    return name
+
+
+def pyproject(project, wheels, extra_sources=()):
     deps = [d for d in project["dependencies"] if requirement_name(d) not in NOT_BUNDLED]
     webview = project["optional-dependencies"]["desktop"]
 
@@ -76,7 +100,7 @@ formal_name = "Archer"
 description = "Threat hunting and detection engineering"
 long_description = """Archer generates SIEM detections (Google SecOps, Microsoft Defender, Splunk, Elastic) from MITRE ATT&CK techniques, threat groups, CVEs and threat reports. Run it on this computer or connect to your organisation's Archer server."""
 icon = "icons/archer"
-sources = ["archer", "templates", "static", "seed"]
+sources = {toml_list(["archer", "templates", "static", "seed", *extra_sources])}
 requirement_installer_args = ["--find-links", "{wheels.as_posix()}"]
 
 [tool.briefcase.app.archer.macOS]
@@ -105,6 +129,8 @@ def main():
     parser.add_argument("--attack", type=Path, help="enterprise-attack.json to bundle (and its .meta.json if beside it)")
     parser.add_argument("--procedures", type=Path, nargs="*", default=[],
                         help="mitre_procedures.csv (and .meta.json / .xlsx) to bundle")
+    parser.add_argument("--mingit", choices=sorted(MINGIT), help="bundle MinGit for this Windows architecture "
+                        "(the default on Windows is the machine's own; elsewhere, none)")
     args = parser.parse_args()
 
     out = args.out.resolve()
@@ -157,7 +183,12 @@ def main():
     for name in sorted(SDIST_ONLY):
         subprocess.run([sys.executable, "-m", "pip", "wheel", "-q", "--no-deps", "-w", str(wheels), pinned.get(name, name)],
                        check=True)
-    (out / "pyproject.toml").write_text(pyproject(project, wheels))
+    machine = args.mingit or (platform.machine().upper() if sys.platform == "win32" else None)
+    extra = []
+    if machine:
+        print(f"Bundled {stage_mingit(out, machine)}")
+        extra.append("mingit")
+    (out / "pyproject.toml").write_text(pyproject(project, wheels, extra))
     # Packages install as root for every user, and a synced or private checkout can hold 0700 files
     for p in out.rglob("*"):
         p.chmod(0o755 if p.is_dir() else 0o644)

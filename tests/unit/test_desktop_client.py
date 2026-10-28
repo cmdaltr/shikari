@@ -167,3 +167,13 @@ def test_server_pages_cannot_repoint_the_app(tmp_path):
         assert client.resolve(tmp_path) is None
     finally:
         server.shutdown()
+
+
+def test_bundled_git_comes_after_an_installed_one(tmp_path, monkeypatch):
+    import os
+    from archer import desktop_app
+    (tmp_path / "mingit" / "cmd").mkdir(parents=True)
+    monkeypatch.setattr(desktop_app, "ROOT", tmp_path)
+    monkeypatch.setenv("PATH", "installed")
+    desktop_app.bundled_git()
+    assert os.environ["PATH"] == os.pathsep.join(["installed", str(tmp_path / "mingit" / "cmd")])
