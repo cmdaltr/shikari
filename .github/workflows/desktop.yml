@@ -101,8 +101,10 @@ jobs:
           - { os: windows-latest, target: windows, sign: --adhoc-sign, suffix: windows-x64 }
           # Briefcase builds for the machine it runs on, so ARM64 needs an ARM64 runner and Python
           - { os: windows-11-arm, target: windows, sign: --adhoc-sign, suffix: windows-arm64 }
-          - { os: ubuntu-24.04, target: linux system, sign: "", suffix: linux-amd64 }
-          - { os: ubuntu-24.04-arm, target: linux system, sign: "", suffix: linux-arm64 }
+          # Built on the oldest Ubuntu it supports (the compiled GTK bindings link against its libraries)
+          # and smoke-tested on the newest
+          - { os: ubuntu-22.04, target: linux, sign: "", suffix: linux-amd64 }
+          - { os: ubuntu-22.04-arm, target: linux, sign: "", suffix: linux-arm64 }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     defaults:
@@ -118,6 +120,17 @@ jobs:
           name: seed
           path: seed
 
+      # desktop/stage.py compiles the dependencies with no Windows ARM64 wheel; two are Rust
+      - name: Rust (Windows ARM64)
+        if: matrix.suffix == 'windows-arm64'
+        shell: pwsh
+        run: |
+          if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
+            Invoke-WebRequest https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe -OutFile rustup-init.exe
+            .\rustup-init.exe -y --profile minimal
+            "$env:USERPROFILE\.cargo\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          }
+
       - name: Stage
         run: |
           procedures=$(ls seed/mitre_procedures.csv seed/mitre_procedures.meta.json 2>/dev/null || true)
@@ -128,11 +141,12 @@ jobs:
         working-directory: ${{ runner.temp }}/desktop
         run: |
           if [ "$RUNNER_OS" = Linux ]; then
-            # A system package builds against the distro's own Python, GTK and WebKit
+            # Not Briefcase: its system package runs on the distro's Python. desktop/build_deb.py bundles
+            # one; PyGObject and pycairo compile against the distro's GTK headers
             sudo apt-get update -qq
-            sudo apt-get install -y -qq python3-venv python3-dev libcairo2-dev libgirepository1.0-dev pkg-config \
-              libgirepository-1.0-1 libcairo-gobject2 gir1.2-gtk-3.0 gir1.2-webkit2-4.1
-            /usr/bin/python3 -m venv "$RUNNER_TEMP/briefcase" && source "$RUNNER_TEMP/briefcase/bin/activate"
+            sudo apt-get install -y -qq libcairo2-dev libgirepository1.0-dev pkg-config
+            python "$GITHUB_WORKSPACE/desktop/build_deb.py" --stage . --out dist
+            exit 0
           fi
           python -m pip install "briefcase==$BRIEFCASE"
           briefcase package ${{ matrix.target }} ${{ matrix.sign }} --no-input
@@ -142,7 +156,7 @@ jobs:
         run: |
           mkdir -p "$GITHUB_WORKSPACE/out"
           for f in dist/*; do
-            # A .deb's name already says its distro and architecture
+            # A .deb's name already says its architecture
             base=$(basename "$f"); [[ $base == *.deb ]] && { mv "$f" "$GITHUB_WORKSPACE/out/"; continue; }
             mv "$f" "$GITHUB_WORKSPACE/out/${base%.*}-${{ matrix.suffix }}.${base##*.}"
           done
@@ -180,12 +194,16 @@ jobs:
         with:
           name: archer-${{ matrix.suffix }}
           path: pkg
+      # Only the install scripts, which install the package as a user would
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: desktop
+          path: src
 
       - name: Install (macOS)
         if: runner.os == 'macOS'
         run: |
-          hdiutil attach -nobrowse -mountpoint /Volumes/Archer pkg/*.dmg
-          cp -R /Volumes/Archer/Archer.app /Applications/
+          sh src/desktop/install.sh --file pkg/*.dmg
           echo "APP=/Applications/Archer.app/Contents/MacOS/Archer" >> "$GITHUB_ENV"
 
       - name: Install (Windows)
@@ -193,12 +211,11 @@ jobs:
         shell: pwsh
         timeout-minutes: 10
         run: |
-          # msiexec started from Git Bash never returns, so it's run and waited on from PowerShell
-          $msi = (Get-ChildItem pkg\*.msi).FullName
-          $p = Start-Process msiexec.exe -ArgumentList '/i', "`"$msi`"", '/qn', '/l*v', 'install.log' -Wait -PassThru
-          if ($p.ExitCode -ne 0) { Get-Content install.log -Tail 40; exit $p.ExitCode }
+          # msiexec started from Git Bash never returns, so the script runs from PowerShell, as a user's would
+          powershell -NoProfile -ExecutionPolicy Bypass -File src\desktop\install.ps1 -File (Get-ChildItem pkg\*.msi).FullName
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
           $exe = Get-ChildItem "$env:ProgramFiles", "$env:LOCALAPPDATA\Programs" -Recurse -Filter Archer.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $exe) { Select-String -Path install.log -Pattern 'INSTALLDIR|TARGETDIR' | Select-Object -Last 5; exit 1 }
+          if (-not $exe) { exit 1 }
           "APP=$($exe.FullName)" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
 
       - name: Bundled git (Windows)
@@ -212,7 +229,8 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq ./pkg/*.deb xvfb
+          sudo apt-get install -y -qq xvfb
+          sh src/desktop/install.sh --file pkg/*.deb
           echo "APP=archer" >> "$GITHUB_ENV"
 
       - name: Launch in local mode
@@ -255,6 +273,8 @@ jobs:
           pattern: archer-*
           path: out
           merge-multiple: true
+      # What desktop/install.sh and install.ps1 check a download against
+      - run: cd out && sha256sum -- * > SHA256SUMS && cat SHA256SUMS
       - uses: softprops/action-gh-release@v2
         with:
           files: out/*

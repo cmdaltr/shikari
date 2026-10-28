@@ -21,10 +21,25 @@ Download the file for your machine from the repository's Releases page:
 | `Archer-<version>-macos-x86_64.dmg` | Intel Macs |
 | `Archer-<version>-windows-x64.msi` | Windows 10 and 11 (x64) |
 | `Archer-<version>-windows-arm64.msi` | Windows 11 on ARM, including Windows VMs on Apple Silicon (the x64 one runs there too, but emulated and much slower) |
-| `archer_<version>-1~ubuntu-noble_amd64.deb` | Ubuntu 24.04 and Debian-based distributions (x86_64) |
-| `archer_<version>-1~ubuntu-noble_arm64.deb` | The same on arm64, including Ubuntu VMs on Apple Silicon |
+| `archer_<version>-1_amd64.deb` | Ubuntu 22.04 or later, Debian 12 or later (x86_64) |
+| `archer_<version>-1_arm64.deb` | The same on arm64, including Ubuntu VMs on Apple Silicon |
+| `SHA256SUMS` | Checksums of the above, which the install scripts check |
 
-The builds aren't signed with a paid developer certificate yet, so the first launch needs one extra step. On macOS, opening it shows "Apple could not verify Archer"; open System Settings > Privacy & Security and choose Open Anyway. On Windows, SmartScreen shows "Windows protected your PC"; choose More info > Run anyway. On Linux, install the package with `sudo apt install ./archer_<version>-1~ubuntu-noble_amd64.deb`, which pulls in GTK and WebKit, and open Archer from the applications menu.
+The builds aren't signed with a paid developer certificate yet, so the first launch needs one extra step. On macOS, opening it shows "Apple could not verify Archer"; open System Settings > Privacy & Security and choose Open Anyway. On Windows, SmartScreen shows "Windows protected your PC"; choose More info > Run anyway. On Linux, install the package with `sudo apt install ./archer_<version>-1_amd64.deb`, which pulls in GTK and WebKit, and open Archer from the applications menu. Every installer carries its own Python 3.11: the `.deb` bundles a standalone CPython under `/usr/lib/archer/python` rather than using the distro's, and only GTK and WebKit, which have to match the desktop, come from the distro.
+
+### Install scripts
+
+`desktop/install.sh` (macOS and Linux) and `desktop/install.ps1` (Windows) download the right installer for the machine from a release, check it against `SHA256SUMS`, and install it; run again to upgrade. The repository is private, so they need `GH_TOKEN` set to a token that can read it, or a logged-in `gh`.
+
+```bash
+sh install.sh                    # or --version v2.1.0, or --file Archer-<version>-macos-arm64.dmg
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File install.ps1    # or -Version v2.1.0, or -File Archer-<version>-windows-x64.msi
+```
+
+On macOS the app goes to /Applications, or ~/Applications for an account that isn't an administrator; on Linux it's installed with apt (sudo); on Windows it installs for the current user without administrator rights. `-ExecutionPolicy Bypass` applies to that one run: Windows refuses unsigned scripts by default. They're downloaded as files and run, never piped into a shell. A file the scripts download isn't marked as from the internet, so Gatekeeper and SmartScreen don't ask; the checksum is what vouches for it. A file given with `--file` / `-File` is installed as is.
 
 The first launch asks how to use it:
 
@@ -73,7 +88,7 @@ It can't rebuild the procedures CSV itself: MITRESaw needs its own Python enviro
 
 ## Building
 
-`.github/workflows/desktop.yml` builds all six on a `v*` tag, installs the macOS, Windows and Linux packages on clean runners and checks each one serves Archer, then attaches them to a GitHub Release; run it by hand (Actions > Desktop app > Run workflow) for a test build, left as workflow artifacts. A seed job downloads ATT&CK and runs MITRESaw for the procedures CSV, cached per ATT&CK version, so only a release after an ATT&CK update pays the 90 minutes.
+`.github/workflows/desktop.yml` builds all six on a `v*` tag (the `.deb`s on Ubuntu 22.04, the oldest they support), installs the macOS, Windows and Linux packages on clean runners with the install scripts and checks each one serves Archer, then attaches them and `SHA256SUMS` to a GitHub Release; run it by hand (Actions > Desktop app > Run workflow) for a test build, left as workflow artifacts. A seed job downloads ATT&CK and runs MITRESaw for the procedures CSV, cached per ATT&CK version, so only a release after an ATT&CK update pays the 90 minutes.
 
 To build on your own machine (macOS here; each platform builds only its own installer):
 
@@ -84,5 +99,7 @@ cd ~/.cache/archer/desktop
 python3.11 -m venv .briefcase && .briefcase/bin/pip install briefcase
 .briefcase/bin/briefcase package macOS --adhoc-sign    # dist/Archer-<version>.dmg
 ```
+
+On Linux, Briefcase isn't used: `python3 desktop/build_deb.py --stage ~/.cache/archer/desktop` builds the `.deb` from the staged tree (it needs `dpkg-deb`, `libgirepository1.0-dev`, `libcairo2-dev` and `pkg-config`).
 
 `desktop/stage.py` copies only what git would include (tracked files and new ones that aren't ignored), so nothing `.gitignore` keeps out of the repository can reach an installer; it builds outside the repository because a build is several hundred MB. The installed app's entry point is `archer/desktop_app.py`; where it puts things is `archer/paths.py`. Icons come from `archer.png` via `desktop/make_icons.py`.

@@ -112,13 +112,9 @@ requires = {toml_list(webview, "        ")}
 requires = {toml_list(webview, "        ")}
 
 [tool.briefcase.app.archer.linux]
-# A system package on the distro's own GTK and WebKit: Briefcase's AppImage template is broken and Qt
-# would add several hundred MB
+# Read by desktop/build_deb.py, not Briefcase: the .deb bundles its own Python and uses the distro's
+# GTK and WebKit (Qt would add several hundred MB)
 requires = {toml_list([w.replace("pywebview", "pywebview[gtk]") for w in webview], "        ")}
-
-[tool.briefcase.app.archer.linux.system.debian]
-system_requires = ["libcairo2-dev", "libgirepository1.0-dev", "pkg-config"]
-system_runtime_requires = ["libgirepository-1.0-1", "libcairo-gobject2", "gir1.2-gtk-3.0", "gir1.2-webkit2-4.1"]
 '''
 
 
@@ -183,6 +179,12 @@ def main():
     for name in sorted(SDIST_ONLY):
         subprocess.run([sys.executable, "-m", "pip", "wheel", "-q", "--no-deps", "-w", str(wheels), pinned.get(name, name)],
                        check=True)
+    if sys.platform == "win32" and platform.machine().upper() == "ARM64":
+        # Several pins publish no Windows ARM64 wheel (aiohttp, pandas, PyYAML, bcrypt, evtx...), and the
+        # releases that do are major upgrades, so those are compiled here (MSVC, and Rust for bcrypt and
+        # evtx); the rest are downloaded as they are
+        bundled = [d for d in project["dependencies"] if requirement_name(d) not in NOT_BUNDLED]
+        subprocess.run([sys.executable, "-m", "pip", "wheel", "-q", "--no-deps", "-w", str(wheels), *bundled], check=True)
     machine = args.mingit or (platform.machine().upper() if sys.platform == "win32" else None)
     extra = []
     if machine:
