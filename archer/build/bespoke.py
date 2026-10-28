@@ -8,6 +8,7 @@ Loads organization-specific configuration from bespoke/ directory:
 """
 
 import os
+import re
 import yaml
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -100,6 +101,8 @@ def get_config() -> Dict[str, Any]:
             config["field_overrides"] = data["field_overrides"]
         if "query_settings" in data:
             config["query_settings"].update(data["query_settings"])
+        if "caldera" in data:
+            config["caldera"] = data["caldera"] or {}
 
         return config
     except Exception as e:
@@ -294,6 +297,176 @@ def apply_exclusions_to_spl(query: str) -> str:
         return exclusion_str + query
 
 
+def _str_literal(value: str) -> str:
+    """Escape a value for a double-quoted ES|QL or YARA-L string literal."""
+    return str(value).replace("\\", "\\\\").replace('"', '\\"')
+
+
+def apply_exclusions_to_esql(query: str) -> str:
+    """
+    Apply bespoke exclusions to an Elastic ES|QL query.
+
+    ES|QL is piped like SPL/KQL, so exclusions append as a trailing `| WHERE`
+    over ECS fields. Appended, not inserted, because the per-detection queries
+    this runs on end on a WHERE, not a STATS — a trailing filter after an
+    aggregation would reference dropped columns.
+    """
+    exclusions = get_exclusions()
+    config = get_config()
+
+    if not config.get("query_settings", {}).get("apply_exclusions", True):
+        return query
+
+    clauses = []
+
+    # Process exclusions (full executable path)
+    for proc in exclusions.get("process_exclusions", []):
+        if "*" in proc:
+            # ES|QL RLIKE is regex: escape, then turn the wildcard back into .*
+            pattern = re.escape(proc).replace("\\*", ".*")
+            clauses.append(f'NOT process.executable RLIKE "{_str_literal(pattern)}"')
+        else:
+            clauses.append(f'process.executable != "{_str_literal(proc)}"')
+
+    # User exclusions
+    for user in exclusions.get("user_exclusions", []):
+        clauses.append(f'user.name != "{_str_literal(user)}"')
+
+    # Host exclusions
+    for host in exclusions.get("host_exclusions", []):
+        clauses.append(f'host.name != "{_str_literal(host)}"')
+
+    # IP exclusions (source and destination)
+    for ip in exclusions.get("ip_exclusions", []):
+        if "/" in ip:
+            clauses.append(f'NOT CIDR_MATCH(source.ip, "{ip}")')
+            clauses.append(f'NOT CIDR_MATCH(destination.ip, "{ip}")')
+        else:
+            clauses.append(f'source.ip != "{_str_literal(ip)}"')
+            clauses.append(f'destination.ip != "{_str_literal(ip)}"')
+
+    # Custom field exclusions
+    for field, values in exclusions.get("custom_exclusions", {}).items():
+        for val in values:
+            clauses.append(f'{field} != "{_str_literal(val)}"')
+
+    if not clauses:
+        return query
+
+    return query.rstrip() + "\n| WHERE " + " AND ".join(clauses)
+
+
+def _yaral_clauses(exclusions: Dict[str, Any], event_var: str) -> List[str]:
+    """
+    Negated YARA-L predicates for one event variable (e.g. "$setup").
+
+    Written as `not <field> = "value"`, not `<field> != "value"`: UDM fields
+    like principal.ip are repeated, and on a repeated field `= "x"` matches if
+    any element equals x, so only `not (= "x")` means "no element equals x".
+    CIDR and wildcard paths use net.ip_in_range_cidr() and re.regex().
+    """
+    e = event_var
+    clauses = []
+
+    # Process path — the process itself (target) and its parent (principal)
+    for proc in exclusions.get("process_exclusions", []):
+        for field in (f"{e}.target.process.file.full_path",
+                      f"{e}.principal.process.file.full_path"):
+            if "*" in proc:
+                pattern = re.escape(proc).replace("\\*", ".*")
+                clauses.append(f"not re.regex({field}, `{pattern}`) nocase")
+            else:
+                clauses.append(f'not {field} = "{_str_literal(proc)}"')
+
+    # User exclusions
+    for user in exclusions.get("user_exclusions", []):
+        for field in (f"{e}.principal.user.userid", f"{e}.target.user.userid"):
+            clauses.append(f'not {field} = "{_str_literal(user)}"')
+
+    # Host exclusions
+    for host in exclusions.get("host_exclusions", []):
+        for field in (f"{e}.principal.hostname", f"{e}.target.hostname"):
+            clauses.append(f'not {field} = "{_str_literal(host)}"')
+
+    # IP exclusions
+    for ip in exclusions.get("ip_exclusions", []):
+        for field in (f"{e}.principal.ip", f"{e}.target.ip"):
+            if "/" in ip:
+                clauses.append(f'not net.ip_in_range_cidr({field}, "{ip}")')
+            else:
+                clauses.append(f'not {field} = "{_str_literal(ip)}"')
+
+    # Custom field exclusions
+    for field, values in exclusions.get("custom_exclusions", {}).items():
+        for val in values:
+            clauses.append(f'not {e}.{field} = "{_str_literal(val)}"')
+
+    return clauses
+
+
+def apply_exclusions_to_yaral(query: str) -> str:
+    """
+    Apply bespoke exclusions to a Google SecOps YARA-L rule.
+
+    YARA-L has no trailing filter: exclusions become negated predicates inside
+    the `events:` section, repeated for every event variable the rule already
+    binds (so each variable stays bound and an excluded host/user drops the whole
+    match, not just one stage).
+    """
+    exclusions = get_exclusions()
+    config = get_config()
+
+    if not config.get("query_settings", {}).get("apply_exclusions", True):
+        return query
+
+    lines = query.split("\n")
+
+    # Find the events: section and its indentation
+    ev_idx = ev_indent = None
+    for i, line in enumerate(lines):
+        m = re.match(r"(\s*)events:\s*$", line)
+        if m:
+            ev_idx, ev_indent = i, len(m.group(1))
+            break
+    if ev_idx is None:
+        return query  # not a YARA-L rule we recognise
+
+    # The section ends at the next sibling block (match/outcome/condition)
+    end_idx = len(lines)
+    for i in range(ev_idx + 1, len(lines)):
+        m = re.match(r"(\s*)(match|outcome|condition):\s*$", lines[i])
+        if m and len(m.group(1)) <= ev_indent:
+            end_idx = i
+            break
+
+    body_lines = lines[ev_idx + 1:end_idx]
+
+    # Event variables are the $name tokens that carry a field path ($setup.x);
+    # bare match vars like $device have no dot and are skipped.
+    event_vars = []
+    for v in re.findall(r"\$(\w+)\.", "\n".join(body_lines)):
+        if v not in event_vars:
+            event_vars.append(v)
+    if not event_vars:
+        return query
+
+    # Indent new predicates like the existing ones
+    pred_indent = " " * (ev_indent + 2)
+    for ln in body_lines:
+        if ln.strip():
+            pred_indent = ln[:len(ln) - len(ln.lstrip())]
+            break
+
+    clauses = []
+    for var in event_vars:
+        clauses.extend(_yaral_clauses(exclusions, f"${var}"))
+    if not clauses:
+        return query
+
+    block = [pred_indent + "// bespoke exclusions"] + [pred_indent + c for c in clauses]
+    return "\n".join(lines[:end_idx] + block + lines[end_idx:])
+
+
 def apply_exclusions(query: str, platform: str) -> str:
     """
     Apply bespoke exclusions to a query based on platform.
@@ -311,7 +484,10 @@ def apply_exclusions(query: str, platform: str) -> str:
         return apply_exclusions_to_kql(query)
     elif platform_lower in ["splunk", "spl"]:
         return apply_exclusions_to_spl(query)
-    # TODO: Add Elastic and GoogleSecOps support
+    elif platform_lower in ["elastic", "esql", "es|ql"]:
+        return apply_exclusions_to_esql(query)
+    elif platform_lower in ["googlesecops", "google secops", "secops", "udm", "yaral", "yara-l"]:
+        return apply_exclusions_to_yaral(query)
 
     return query
 

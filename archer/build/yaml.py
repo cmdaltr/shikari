@@ -976,6 +976,9 @@ def construct_yaml(
         )
 
         if googlesecops_rule and googlesecops_rule.get("query"):
+            # Bespoke exclusions: YARA-L negated predicates inside the events: block
+            from archer.build.bespoke import apply_exclusions
+            googlesecops_rule["query"] = apply_exclusions(googlesecops_rule["query"], "GoogleSecOps")
             # Create Google SecOps YAML file
             yamlfile = os.path.join(GENERATE_DIR, f"{name_safe}_{LANGUAGE_SUFFIX['GoogleSecOps']}.yaml")
             rewrite = detection_action(yamlfile, tag)
@@ -1023,6 +1026,9 @@ def construct_yaml(
         )
 
         if elastic_query_result and elastic_query_result.get("query"):
+            # Bespoke exclusions appended as a trailing | WHERE, before validation
+            from archer.build.bespoke import apply_exclusions
+            elastic_query_result["query"] = apply_exclusions(elastic_query_result["query"], "Elastic")
             is_valid, error = elastic_gen.validate_query(elastic_query_result["query"])
 
             if is_valid:
