@@ -74,6 +74,7 @@ author = "cmdaltr"
 [tool.briefcase.app.archer]
 formal_name = "Archer"
 description = "Threat hunting and detection engineering"
+long_description = """Archer generates SIEM detections (Google SecOps, Microsoft Defender, Splunk, Elastic) from MITRE ATT&CK techniques, threat groups, CVEs and threat reports. Run it on this computer or connect to your organisation's Archer server."""
 icon = "icons/archer"
 sources = ["archer", "templates", "static", "seed"]
 requirement_installer_args = ["--find-links", "{wheels.as_posix()}"]
@@ -87,8 +88,13 @@ requires = {toml_list(webview, "        ")}
 requires = {toml_list(webview, "        ")}
 
 [tool.briefcase.app.archer.linux]
-# Qt rather than GTK: its wheels carry the web engine, so the AppImage doesn't depend on the distro's
-requires = {toml_list([w.replace("pywebview", "pywebview[qt]") for w in webview], "        ")}
+# A system package on the distro's own GTK and WebKit: Briefcase's AppImage template is broken and Qt
+# would add several hundred MB
+requires = {toml_list([w.replace("pywebview", "pywebview[gtk]") for w in webview], "        ")}
+
+[tool.briefcase.app.archer.linux.system.debian]
+system_requires = ["libcairo2-dev", "libgirepository1.0-dev", "pkg-config"]
+system_runtime_requires = ["libgirepository-1.0-1", "libcairo-gobject2", "gir1.2-gtk-3.0", "gir1.2-webkit2-4.1"]
 '''
 
 
@@ -144,12 +150,17 @@ def main():
     (out / "seed" / "VERSION").write_text(project["version"] + "\n")
     shutil.copytree(ROOT / "desktop" / "icons", out / "icons")
     shutil.copy2(ROOT / "LICENSE", out / "LICENSE")
+    # Debian packages must carry one; the release notes live on GitHub
+    (out / "CHANGELOG.md").write_text(f"# {project['version']}\n\nSee https://github.com/cmdaltr/archer/releases\n")
     wheels = out / "wheels"
     pinned = {requirement_name(d): d for d in project["dependencies"]}
     for name in sorted(SDIST_ONLY):
         subprocess.run([sys.executable, "-m", "pip", "wheel", "-q", "--no-deps", "-w", str(wheels), pinned.get(name, name)],
                        check=True)
     (out / "pyproject.toml").write_text(pyproject(project, wheels))
+    # Packages install as root for every user, and a synced or private checkout can hold 0700 files
+    for p in out.rglob("*"):
+        p.chmod(0o755 if p.is_dir() else 0o644)
     print(f"Staged {staged} files ({seeded} seed) in {out}")
     return 0
 

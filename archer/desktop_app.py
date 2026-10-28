@@ -1,5 +1,5 @@
 """
-Archer as an installed application: what the .dmg / .msi / AppImage built by desktop/stage.py
+Archer as an installed application: what the .dmg / .msi / .deb built by desktop/stage.py
 and Briefcase runs (python -m archer). A checkout uses `archer-cli app` (archer/desktop.py)
 instead, which launches the repository's own server.
 

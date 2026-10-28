@@ -1,5 +1,5 @@
 # The installable desktop app (desktop/README.md): a .dmg per Mac architecture, a Windows .msi and a
-# Linux AppImage, built from a clean checkout so nothing gitignored (bespoke/, data/archer.db) can
+# Linux .deb, built from a clean checkout so nothing gitignored (bespoke/, data/archer.db) can
 # reach them. A v* tag attaches them to a GitHub Release; a manual run leaves them as artifacts.
 name: Desktop app
 
@@ -91,7 +91,7 @@ jobs:
           - { os: macos-15, target: macOS, sign: --adhoc-sign, suffix: macos-arm64 }
           - { os: macos-15-intel, target: macOS, sign: --adhoc-sign, suffix: macos-x86_64 }
           - { os: windows-latest, target: windows, sign: --adhoc-sign, suffix: windows-x64 }
-          - { os: ubuntu-24.04, target: linux appimage, sign: "", suffix: linux-x86_64 }
+          - { os: ubuntu-24.04, target: linux system, sign: "", suffix: linux-amd64 }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     defaults:
@@ -116,6 +116,13 @@ jobs:
       - name: Package
         working-directory: ${{ runner.temp }}/desktop
         run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            # A system package builds against the distro's own Python, GTK and WebKit
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq python3-venv python3-dev libcairo2-dev libgirepository1.0-dev pkg-config \
+              libgirepository-1.0-1 libcairo-gobject2 gir1.2-gtk-3.0 gir1.2-webkit2-4.1
+            /usr/bin/python3 -m venv "$RUNNER_TEMP/briefcase" && source "$RUNNER_TEMP/briefcase/bin/activate"
+          fi
           python -m pip install "briefcase==$BRIEFCASE"
           briefcase package ${{ matrix.target }} ${{ matrix.sign }} --no-input
 
@@ -124,7 +131,9 @@ jobs:
         run: |
           mkdir -p "$GITHUB_WORKSPACE/out"
           for f in dist/*; do
-            base=$(basename "$f"); mv "$f" "$GITHUB_WORKSPACE/out/${base%.*}-${{ matrix.suffix }}.${base##*.}"
+            # A .deb's name already says its distro and architecture
+            base=$(basename "$f"); [[ $base == *.deb ]] && { mv "$f" "$GITHUB_WORKSPACE/out/"; continue; }
+            mv "$f" "$GITHUB_WORKSPACE/out/${base%.*}-${{ matrix.suffix }}.${base##*.}"
           done
           ls -la "$GITHUB_WORKSPACE/out"
       - uses: actions/upload-artifact@v4
@@ -133,9 +142,71 @@ jobs:
           path: out/*
           retention-days: 14
 
+  smoke:
+    # Install each package on a clean runner and check it serves Archer in local mode
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-15, suffix: macos-arm64 }
+          - { os: windows-latest, suffix: windows-x64 }
+          - { os: ubuntu-24.04, suffix: linux-amd64 }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      ARCHER_SERVER: local
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: archer-${{ matrix.suffix }}
+          path: pkg
+
+      - name: Install
+        run: |
+          case "$RUNNER_OS" in
+            macOS)
+              hdiutil attach -nobrowse -mountpoint /Volumes/Archer pkg/*.dmg
+              cp -R /Volumes/Archer/Archer.app /Applications/
+              echo "APP=/Applications/Archer.app/Contents/MacOS/Archer" >> "$GITHUB_ENV" ;;
+            Windows)
+              msiexec //i "$(cygpath -w pkg/*.msi)" //qn //l*v install.log || { cat install.log; exit 1; }
+              exe=$(find "/c/Program Files" "$LOCALAPPDATA/Programs" -name Archer.exe 2>/dev/null | head -1)
+              [ -n "$exe" ] || { grep -i "property(s): INSTALLDIR\|TARGETDIR" install.log; exit 1; }
+              echo "APP=$exe" >> "$GITHUB_ENV" ;;
+            Linux)
+              sudo apt-get update -qq
+              sudo apt-get install -y -qq ./pkg/*.deb xvfb
+              echo "APP=xvfb-run -a archer" >> "$GITHUB_ENV" ;;
+          esac
+
+      - name: Launch in local mode
+        run: |
+          $APP > app.out 2>&1 &
+          # The first launch seeds the data folder and builds caches before the server answers
+          for _ in $(seq 1 120); do
+            body=$(curl -sf http://127.0.0.1:8000/health) && break
+            sleep 5
+          done
+          echo "$body"
+          [[ $body == *'"app":"archer"'* ]] || { cat app.out; exit 1; }
+
+      - name: Logs
+        if: always()
+        run: |
+          case "$RUNNER_OS" in
+            macOS) home="$HOME/Library/Application Support/Archer/home" ;;
+            Windows) home="$LOCALAPPDATA/Archer/home" ;;
+            Linux) home="$HOME/.local/share/archer/home" ;;
+          esac
+          tail -50 "$home/logs/archer.log" || true
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: smoke
     runs-on: ubuntu-latest
     permissions:
       contents: write
