@@ -32,6 +32,8 @@ It writes `static/guide/img/*.jpg` and `static/guide/guide.json`, and writes not
 
 `scripts/video/script.yaml` is the narration and what happens on screen, scene by scene, with each scene's YouTube chapter title. `scripts/video/make_video.py` speaks each scene with [Piper](https://github.com/OHF-Voice/piper1-gpl), a neural voice that runs locally, plays the scene's actions in a browser over that time, and joins it all with ffmpeg.
 
+Each scene is its own section: it fades in from black and out to black, so you add a new feature by adding a scene to `script.yaml` (its own `id`, `chapter`, `narration` and `actions`), drop one, or reorder them, and every join stays clean. A scene begins on its own page (`goto: <path>`) so it doesn't depend on the scene before it.
+
 ```bash
 python3.11 -m venv ~/.cache/archer/piper/venv && ~/.cache/archer/piper/venv/bin/pip install piper-tts
 mkdir -p ~/.cache/archer/piper/voices && cd ~/.cache/archer/piper/voices

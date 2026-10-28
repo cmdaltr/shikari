@@ -5,6 +5,10 @@
 # chapter: the scene's YouTube chapter title. Actions: goto <path> · click <selector> · type [<selector>, <text>] · show <selector> (scroll to it and
 # pulse a highlight round it) · scroll <pixels> · guide (open the in-app guide) · key <key>
 # Record against a throwaway instance with sample data (see scripts/guide/capture.py), never a real one.
+#
+# Each scene is a self-contained section: it fades in from black and out to black, so adding a feature is
+# adding a scene here, and scenes can be reordered or dropped. Start every scene on its own page with a
+# `goto` so it doesn't rely on the scene before it.
 
 # How the voice should say what the subtitles spell
 say:
@@ -100,6 +104,7 @@ scenes:
       detections against those rules, and builds detections from them where ATT&CK gives a technique
       no indicators at all, which is more than three hundred techniques.
     actions:
+      - goto: /
       - show: '#tab-generate details.options-section'
 
   - id: results
@@ -125,6 +130,7 @@ scenes:
       Before you deploy anything, work through the validation checklist. Generated queries are a
       starting point, not production rules.
     actions:
+      - goto: /results?group_name=APT29
       - show: '#correlations'
       - show: '#attack-flow'
       - show: '#validation-checklist'
@@ -150,6 +156,7 @@ scenes:
       The review shows an exposure map: what an attacker can see before they act, including whether
       the domain can be spoofed, its exposed services and its breach history.
     actions:
+      - goto: /
       - click: 'button.tab-button[data-tab="profile"]'
       - show: '#profile-form .hp-primary'
       - goto: /review?domain=sample-corp.example

@@ -32,7 +32,10 @@ SCRIPT = Path(__file__).with_name("script.yaml")
 W, H = 1920, 1080
 # The browser window: 1280x720 drawn at 1.5x, so the frames are 1080p with text large enough to read
 VIEW, SCALE = {"width": 1280, "height": 720}, 1.5
-TITLE_SECONDS, END_SECONDS, GAP, FPS = 4.0, 5.0, 0.7, 30
+# Each scene fades in from black and out to black, so a scene is a self-contained section: add,
+# remove or reorder scenes in script.yaml and every join stays clean. GAP is the quiet tail after
+# a scene's narration, long enough to hold black between sections; FADE is each dip's length.
+TITLE_SECONDS, END_SECONDS, GAP, FADE, FPS = 4.0, 5.0, 1.2, 0.5, 30
 
 # A pulsing outline that follows an element as the page scrolls, over a dimmed page
 HIGHLIGHT = r"""
@@ -234,9 +237,27 @@ def main():
 
     print("Encoding:")
     main_mp4 = work / "main.mp4"
-    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", str(seq / "%06d.jpg"),
-                    "-vf", f"scale={W}:{H}:force_original_aspect_ratio=decrease,pad={W}:{H}:(ow-iw)/2:(oh-ih)/2",
-                    "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p", str(main_mp4)], check=True)
+    scale_pad = f"scale={W}:{H}:force_original_aspect_ratio=decrease,pad={W}:{H}:(ow-iw)/2:(oh-ih)/2"
+    # Each scene is encoded as its own clip that fades in from black and out to black — one fade pair
+    # per clip, which (unlike a chain of fades on one stream) actually dips to black at each join.
+    # Concatenating them reproduces the full timeline, so the narration track still lines up. A scene
+    # is now a self-contained section: reorder or drop scenes in script.yaml and every join stays clean.
+    clips, concat_list = [], work / "clips.txt"
+    for i, s in enumerate(scenes):
+        nxt_start = scenes[i + 1]["start"] if i + 1 < len(scenes) else total
+        first = int(round(s["start"] * FPS))
+        count = max(1, int(round(nxt_start * FPS)) - first)
+        dur = count / FPS
+        clip = work / f"clip_{i:03}.mp4"
+        clips.append(clip)
+        vf = f"{scale_pad},fade=t=in:st=0:d={FADE}:color=black,fade=t=out:st={max(0, dur - FADE):.3f}:d={FADE}:color=black"
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS),
+                        "-start_number", str(first), "-i", str(seq / "%06d.jpg"), "-frames:v", str(count),
+                        "-vf", vf, "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p",
+                        str(clip)], check=True)
+    concat_list.write_text("".join(f"file '{c}'\n" for c in clips))
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(concat_list),
+                    "-c", "copy", str(main_mp4)], check=True)
 
     # Narration placed where each scene started, after the title card
     inputs, filters = [], []
