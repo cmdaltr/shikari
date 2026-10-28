@@ -178,8 +178,10 @@ def open_webview(server, storage):
     webview.settings["ALLOW_DOWNLOADS"] = True  # YAML / XLSX exports
     webview.settings["OPEN_EXTERNAL_LINKS_IN_BROWSER"] = True
     # text_select: pywebview blocks selection by default, and queries get copied out by hand
+    # background_color (default white) shows in any native repaint gap, e.g. when
+    # macOS reactivates the app from the Dock; match the dark splash, not white.
     window = webview.create_window(NAME, html=LOADING, width=1440, height=920, min_size=(900, 600),
-                                   text_select=True, zoomable=True)
+                                   text_select=True, zoomable=True, background_color="#111827")
 
     def boot():
         if server.wait():

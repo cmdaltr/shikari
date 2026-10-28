@@ -240,8 +240,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Initialize theme from localStorage or default to light
-  const currentTheme = localStorage.getItem('theme') || 'light';
+  // Initialize theme from localStorage, else follow the OS (matching the early
+  // bootstrap in base.html). Must agree with that bootstrap, or this would
+  // override it back to light for a dark-mode user who hasn't toggled.
+  const currentTheme = localStorage.getItem('theme')
+    || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   html.setAttribute('data-theme', currentTheme);
   updateIcons(currentTheme);
 
