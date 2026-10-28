@@ -10,7 +10,7 @@ import time
 
 from archer.telemetry import datasets as ds
 
-SOURCES = ("splunk", "otrf", "evtx", "macos", "lab")
+SOURCES = ("splunk", "otrf", "evtx", "macos", "lab", "caldera")
 
 
 def _module(name):
@@ -22,6 +22,8 @@ def _module(name):
         from archer.telemetry import macos_attack as m
     elif name == "lab":
         from archer.telemetry import lab as m
+    elif name == "caldera":
+        from archer.telemetry import caldera as m
     else:
         from archer.telemetry import security_datasets as m
     return m
