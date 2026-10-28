@@ -309,8 +309,10 @@ class App:
         managed = bool(self.choice and self.choice.managed)
         menu = [] if managed else [Menu(NAME, [MenuAction("Change Server\u2026", lambda: self.show_chooser())])]
         desktop.brand_process()
-        webview.start(self.boot, private_mode=False, storage_path=str(self.home / "webview"), menu=menu)
-        self.stop_local()
+        try:
+            webview.start(self.boot, private_mode=False, storage_path=str(self.home / "webview"), menu=menu)
+        finally:
+            self.stop_local()
 
 
 def bundled_git():
@@ -341,7 +343,20 @@ def main():
     try:
         from archer import desktop_edge
 
-        (desktop_edge.EdgeApp if desktop_edge.wanted() else App)(home, log).run()
+        if desktop_edge.wanted() and not desktop_edge.use_dotnet(home):
+            desktop_edge.EdgeApp(home, log).run()
+        else:
+            try:
+                App(home, log).run()
+            except Exception:
+                if not desktop_edge.wanted():
+                    raise
+                # ARM64 on .NET: whatever stopped the window, Edge can still show Archer
+                import traceback
+
+                traceback.print_exc()
+                print("The .NET window failed: opening Archer in Edge")
+                desktop_edge.EdgeApp(home, log).run()
     except BaseException:
         # Briefcase's launcher swallows what reaches it (an ARM64 Windows build failed with nothing
         # in the log): write it here first

@@ -4,14 +4,21 @@ Install or upgrade the Archer desktop app on Windows from a GitHub release (desk
     powershell -ExecutionPolicy Bypass -File install.ps1                    the latest release
     powershell -ExecutionPolicy Bypass -File install.ps1 -Version v2.1.0    a given release
     powershell -ExecutionPolicy Bypass -File install.ps1 -File Archer.msi   an installer already downloaded
+    powershell -ExecutionPolicy Bypass -File install.ps1 -NoDotnet         on ARM64, skip the .NET download
 
 The repository is private: set GH_TOKEN (or GITHUB_TOKEN) to a token that can read it, or be logged
 in to the gh CLI. The installer is checked against the release's SHA256SUMS before use. It installs
 for the current user, so it needs no administrator rights. Works in Windows PowerShell 5.1 and pwsh.
+
+On Windows on ARM64 it also downloads Microsoft's .NET Desktop Runtime (8 or later, about 55 MB),
+per user, with Microsoft's own dotnet-install.ps1 after checking its signature, unless one is
+already installed. It isn't in the installer: the ARM64 app's native window needs it, and without
+it Archer opens in an Edge app window instead (archer/desktop_edge.py), so the download is optional.
 #>
 param(
     [string]$Version = "latest",
-    [string]$File
+    [string]$File,
+    [switch]$NoDotnet
 )
 $ErrorActionPreference = "Stop"
 # Windows PowerShell's progress bar slows downloads by an order of magnitude
@@ -22,6 +29,34 @@ $repo = if ($env:ARCHER_REPO) { $env:ARCHER_REPO } else { "cmdaltr/archer" }
 # The processor, not this process: an x64 PowerShell under emulation on ARM still gets the ARM64 build
 $arm = (Get-CimInstance Win32_Processor | Select-Object -First 1).Architecture -eq 12
 $suffix = if ($arm) { "-windows-arm64.msi" } else { "-windows-x64.msi" }
+function Test-DesktopRuntime {
+    foreach ($root in @($env:DOTNET_ROOT, (Join-Path $env:ProgramFiles "dotnet"), (Join-Path $env:LOCALAPPDATA "Microsoft\dotnet"))) {
+        if (-not $root) { continue }
+        $dir = Join-Path $root "shared\Microsoft.WindowsDesktop.App"
+        if (Get-ChildItem $dir -Directory -ErrorAction SilentlyContinue | Where-Object { [int]($_.Name -split '\.')[0] -ge 8 }) { return $true }
+    }
+    return $false
+}
+
+function Install-DesktopRuntime($dir) {
+    if (Test-DesktopRuntime) { Write-Host ".NET Desktop Runtime: already installed"; return }
+    # A failed download costs the native window, not Archer: it opens in Edge instead
+    try {
+        Write-Host "Downloading the .NET Desktop Runtime (ARM64) for Archer's window"
+        $script = Join-Path $dir "dotnet-install.ps1"
+        Invoke-WebRequest -UseBasicParsing -OutFile $script "https://dot.net/v1/dotnet-install.ps1"
+        $sig = Get-AuthenticodeSignature $script
+        if ($sig.Status -ne "Valid" -or $sig.SignerCertificate.Subject -notmatch "O=Microsoft Corporation") {
+            throw "dotnet-install.ps1 isn't signed by Microsoft ($($sig.Status))"
+        }
+        & $script -Runtime windowsdesktop -Channel LTS -Architecture arm64 -InstallDir (Join-Path $env:LOCALAPPDATA "Microsoft\dotnet") -NoPath
+        if (-not (Test-DesktopRuntime)) { throw "it didn't install" }
+    }
+    catch {
+        Write-Warning "No .NET Desktop Runtime ($_): Archer will open in an Edge window instead"
+    }
+}
+
 $tmp = Join-Path ([IO.Path]::GetTempPath()) ("archer-" + [Guid]::NewGuid())
 New-Item -ItemType Directory $tmp | Out-Null
 
@@ -61,6 +96,7 @@ try {
         Get-Content $log -Tail 40
         throw "msiexec failed with $($p.ExitCode)"
     }
+    if ($arm -and -not $NoDotnet) { Install-DesktopRuntime $tmp }
     $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs", "$env:ProgramFiles" -Recurse -Filter Archer.exe -ErrorAction SilentlyContinue |
         Select-Object -First 1
     Write-Host "Installed $(if ($exe) { $exe.FullName } else { 'Archer' }): open it from the Start menu"

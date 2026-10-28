@@ -1,11 +1,15 @@
 """
-The desktop window on Windows on ARM64: Archer in an Edge app window instead of pywebview's.
+The desktop window on Windows on ARM64.
 
-pywebview's Windows window loads WinForms through pythonnet, whose loader (clr_loader) ships its
-native shim for x64 and x86 only, so a native ARM64 build can't open it. Edge is on every Windows
-11 machine and is the same engine pywebview would have used (WebView2), so an --app window (no
-tabs, no address bar) with its own profile looks and behaves the same, and Python stays native
-rather than emulated, which is where Archer's time goes.
+pywebview's Windows window loads WinForms through pythonnet. On the .NET Framework, pythonnet's
+loader (clr_loader) needs a native shim that ships for x64 and x86 only, so a native ARM64 build
+can't use it. On .NET (CoreCLR) it needs no shim, but needs the .NET Desktop Runtime, which
+Windows doesn't include: install.ps1 downloads it on ARM64 (it isn't bundled, at ~55 MB), and
+use_dotnet() finds it. Without it, or if that window fails, Archer opens in an Edge app window.
+
+Edge is on every Windows 11 machine and is the same engine pywebview would have used (WebView2),
+so an --app window (no tabs, no address bar) with its own profile looks and behaves the same, and
+Python stays native rather than emulated, which is where Archer's time goes.
 
 What pywebview's JS bridge did for the chooser, a loopback page does here: the chooser posts to
 127.0.0.1 under a random path, so no other page can drive it. There's no Change Server menu; the
@@ -41,6 +45,50 @@ def wanted() -> bool:
     if sys.platform != "win32" or os.environ.get("ARCHER_WINDOW") == "webview":
         return False
     return platform.machine().lower() in ("arm64", "aarch64") or os.environ.get("ARCHER_WINDOW") == "edge"
+
+
+DESKTOP_RUNTIME = ("shared", "Microsoft.WindowsDesktop.App")
+# Any .NET 8 or later Desktop Runtime: WinForms comes with it
+RUNTIME_CONFIG = {"runtimeOptions": {"tfm": "net8.0", "rollForward": "LatestMajor",
+                                     "framework": {"name": "Microsoft.WindowsDesktop.App", "version": "8.0.0"}}}
+
+
+def dotnet_root() -> Optional[Path]:
+    """Where a .NET with the Desktop Runtime is: DOTNET_ROOT, the machine-wide install, or the
+    per-user one install.ps1 makes."""
+    for base in (os.environ.get("DOTNET_ROOT"), os.path.join(os.environ.get("ProgramFiles") or "", "dotnet"),
+                 os.path.join(os.environ.get("LOCALAPPDATA") or "", "Microsoft", "dotnet")):
+        if not base:
+            continue
+        runtimes = Path(base).joinpath(*DESKTOP_RUNTIME)
+        if runtimes.is_dir() and any(v.name.split(".")[0].isdigit() and int(v.name.split(".")[0]) >= 8
+                                     for v in runtimes.iterdir()):
+            return Path(base)
+    return None
+
+
+def use_dotnet(home: Path) -> bool:
+    """Load pythonnet on .NET's Desktop Runtime, so pywebview's window works on ARM64. False when
+    it isn't installed, Edge was asked for, or it won't load."""
+    if os.environ.get("ARCHER_WINDOW") == "edge":
+        return False
+    root = dotnet_root()
+    if root is None:
+        print("No .NET Desktop Runtime: opening Archer in Edge")
+        return False
+    try:
+        import pythonnet
+
+        config = home / "archer.runtimeconfig.json"
+        config.write_text(json.dumps(RUNTIME_CONFIG))
+        os.environ["DOTNET_ROOT"] = str(root)
+        os.environ["PYTHONNET_RUNTIME"] = "coreclr"
+        pythonnet.load("coreclr", runtime_config=str(config), dotnet_root=str(root))
+        print(f".NET Desktop Runtime in {root}")
+        return True
+    except Exception as e:  # noqa: BLE001 — Edge is always there to fall back on
+        print(f".NET didn't load ({e!r}): opening Archer in Edge")
+        return False
 
 
 def edge_path() -> Optional[str]:

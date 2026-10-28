@@ -79,3 +79,22 @@ def test_local_choice_opens_the_local_server(monkeypatch, tmp_path):
 
 def test_edge_holds_is_false_without_a_lock(tmp_path):
     assert not desktop_edge.edge_holds(tmp_path)
+
+
+def test_dotnet_root_needs_desktop_runtime_8_or_later(monkeypatch, tmp_path):
+    for var in ("DOTNET_ROOT", "ProgramFiles", "LOCALAPPDATA"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("DOTNET_ROOT", str(tmp_path))
+    shared = tmp_path / "shared" / "Microsoft.WindowsDesktop.App"
+    (shared / "6.0.36").mkdir(parents=True)
+    assert desktop_edge.dotnet_root() is None
+    (shared / "8.0.11").mkdir()
+    assert desktop_edge.dotnet_root() == tmp_path
+
+
+def test_use_dotnet_falls_back_to_edge(monkeypatch, tmp_path):
+    monkeypatch.setenv("ARCHER_WINDOW", "edge")
+    assert not desktop_edge.use_dotnet(tmp_path)
+    monkeypatch.delenv("ARCHER_WINDOW")
+    monkeypatch.setattr(desktop_edge, "dotnet_root", lambda: None)
+    assert not desktop_edge.use_dotnet(tmp_path)

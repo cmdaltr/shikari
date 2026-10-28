@@ -259,7 +259,7 @@ jobs:
             Windows) home="$LOCALAPPDATA/Archer/home" ;;
             Linux) home="$HOME/.local/share/archer/home" ;;
           esac
-          grep -E "pywebview|Archer starting|Traceback|Error|failed" "$home/logs/archer.log" | head -60 || true
+          grep -E "pywebview|Archer starting|\.NET|Edge|Traceback|Error|failed" "$home/logs/archer.log" | head -60 || true
           tail -40 "$home/logs/archer.log" || true
           cat app.out 2>/dev/null | tail -40 || true
 

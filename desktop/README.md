@@ -40,6 +40,8 @@ powershell -ExecutionPolicy Bypass -File install.ps1    # or -Version v2.1.0, or
 
 On macOS the app goes to /Applications, or ~/Applications for an account that isn't an administrator; on Linux it's installed with apt (sudo); on Windows it installs for the current user without administrator rights. `-ExecutionPolicy Bypass` applies to that one run: Windows refuses unsigned scripts by default. They're downloaded as files and run, never piped into a shell. A file the scripts download isn't marked as from the internet, so Gatekeeper and SmartScreen don't ask; the checksum is what vouches for it. A file given with `--file` / `-File` is installed as is.
 
+On Windows on ARM64, `install.ps1` also downloads Microsoft's .NET Desktop Runtime (8 or later, about 55 MB) for the current user, using Microsoft's `dotnet-install.ps1` once its signature checks out, unless a Desktop Runtime is already installed; `-NoDotnet` skips it. The installer doesn't carry it. The ARM64 app's native window needs it: on .NET Framework, pythonnet's loader has no ARM64 build. Without it, or if that window fails, Archer opens in an Edge app window instead, with no tabs or address bar and its own Edge profile. That window has no Change Server menu; the chooser shows whenever no server is saved or the saved one doesn't answer. `ARCHER_WINDOW=edge` or `ARCHER_WINDOW=webview` picks one.
+
 The first launch asks how to use it:
 
 - **Connect to your organisation's Archer**: the app becomes a window onto the central server, with that server's users, library, detections and mappings. Nothing is stored or run locally apart from the login session, and upgrading the server upgrades everyone.
