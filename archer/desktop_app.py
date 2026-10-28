@@ -339,7 +339,9 @@ def main():
         print("Already running")
         return 0
     try:
-        App(home, log).run()
+        from archer import desktop_edge
+
+        (desktop_edge.EdgeApp if desktop_edge.wanted() else App)(home, log).run()
     except BaseException:
         # Briefcase's launcher swallows what reaches it (an ARM64 Windows build failed with nothing
         # in the log): write it here first
