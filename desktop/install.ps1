@@ -97,8 +97,15 @@ try {
         throw "msiexec failed with $($p.ExitCode)"
     }
     if ($arm -and -not $NoDotnet) { Install-DesktopRuntime $tmp }
-    $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs", "$env:ProgramFiles" -Recurse -Filter Archer.exe -ErrorAction SilentlyContinue |
+    # It's a per-user install (LocalAppData\Programs\<author>\Archer\Archer.exe, three deep); don't
+    # recurse the whole of Program Files, which takes minutes on an ARM64 machine. Fall back to a
+    # machine-wide install there, but bounded.
+    $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Depth 4 -Filter Archer.exe -ErrorAction SilentlyContinue |
         Select-Object -First 1
+    if (-not $exe) {
+        $exe = Get-ChildItem "$env:ProgramFiles" -Recurse -Depth 4 -Filter Archer.exe -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+    }
     Write-Host "Installed $(if ($exe) { $exe.FullName } else { 'Archer' }): open it from the Start menu"
 }
 finally {

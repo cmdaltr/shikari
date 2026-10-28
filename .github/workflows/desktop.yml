@@ -211,12 +211,13 @@ jobs:
       - name: Install (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
           # msiexec started from Git Bash never returns, so the script runs from PowerShell, as a user's would
           powershell -NoProfile -ExecutionPolicy Bypass -File src\desktop\install.ps1 -File (Get-ChildItem pkg\*.msi).FullName
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-          $exe = Get-ChildItem "$env:ProgramFiles", "$env:LOCALAPPDATA\Programs" -Recurse -Filter Archer.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          # Per-user install; don't recurse all of Program Files (minutes on ARM64)
+          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Depth 4 -Filter Archer.exe -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $exe) { exit 1 }
           "APP=$($exe.FullName)" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
 
