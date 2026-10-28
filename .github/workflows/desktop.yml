@@ -126,6 +126,7 @@ jobs:
           fi
           python -m pip install "briefcase==$BRIEFCASE"
           briefcase package ${{ matrix.target }} ${{ matrix.sign }} --no-input
+          if [ "$RUNNER_OS" = Linux ]; then python "$GITHUB_WORKSPACE/desktop/finish_deb.py" dist/*.deb; fi
 
       - name: Name by platform
         working-directory: ${{ runner.temp }}/desktop
@@ -169,25 +170,37 @@ jobs:
           name: archer-${{ matrix.suffix }}
           path: pkg
 
-      - name: Install
+      - name: Install (macOS)
+        if: runner.os == 'macOS'
         run: |
-          case "$RUNNER_OS" in
-            macOS)
-              hdiutil attach -nobrowse -mountpoint /Volumes/Archer pkg/*.dmg
-              cp -R /Volumes/Archer/Archer.app /Applications/
-              echo "APP=/Applications/Archer.app/Contents/MacOS/Archer" >> "$GITHUB_ENV" ;;
-            Windows)
-              msiexec //i "$(cygpath -w pkg/*.msi)" //qn //l*v install.log || { cat install.log; exit 1; }
-              exe=$(find "/c/Program Files" "$LOCALAPPDATA/Programs" -name Archer.exe 2>/dev/null | head -1)
-              [ -n "$exe" ] || { grep -i "property(s): INSTALLDIR\|TARGETDIR" install.log; exit 1; }
-              echo "APP=$exe" >> "$GITHUB_ENV" ;;
-            Linux)
-              sudo apt-get update -qq
-              sudo apt-get install -y -qq ./pkg/*.deb xvfb
-              echo "APP=xvfb-run -a archer" >> "$GITHUB_ENV" ;;
-          esac
+          hdiutil attach -nobrowse -mountpoint /Volumes/Archer pkg/*.dmg
+          cp -R /Volumes/Archer/Archer.app /Applications/
+          echo "APP=/Applications/Archer.app/Contents/MacOS/Archer" >> "$GITHUB_ENV"
+
+      - name: Install (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        timeout-minutes: 10
+        run: |
+          # msiexec started from Git Bash never returns, so it's run and waited on from PowerShell
+          $msi = (Get-ChildItem pkg\*.msi).FullName
+          $p = Start-Process msiexec.exe -ArgumentList '/i', "`"$msi`"", '/qn', '/l*v', 'install.log' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content install.log -Tail 40; exit $p.ExitCode }
+          $exe = Get-ChildItem "$env:ProgramFiles", "$env:LOCALAPPDATA\Programs" -Recurse -Filter Archer.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $exe) { Select-String -Path install.log -Pattern 'INSTALLDIR|TARGETDIR' | Select-Object -Last 5; exit 1 }
+          "APP=$($exe.FullName)" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+
+      - name: Install (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ./pkg/*.deb xvfb
+          echo "user namespaces restricted: $(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns 2>/dev/null || echo n/a)"
+          sudo aa-status 2>/dev/null | grep -w archer || echo "no archer AppArmor profile loaded"
+          echo "APP=xvfb-run -a archer" >> "$GITHUB_ENV"
 
       - name: Launch in local mode
+        timeout-minutes: 12
         run: |
           $APP > app.out 2>&1 &
           # The first launch seeds the data folder and builds caches before the server answers
@@ -206,7 +219,8 @@ jobs:
             Windows) home="$LOCALAPPDATA/Archer/home" ;;
             Linux) home="$HOME/.local/share/archer/home" ;;
           esac
-          tail -50 "$home/logs/archer.log" || true
+          tail -80 "$home/logs/archer.log" || true
+          cat app.out 2>/dev/null | tail -40 || true
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
