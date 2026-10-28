@@ -72,7 +72,7 @@ SOURCES = [
     ("CISA", "https://www.cisa.gov/cybersecurity-advisories/all.xml"),
     ("NCSC (UK)", "https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml"),
     ("Recorded Future", "https://www.recordedfuture.com/feed"),
-    ("Trend Micro Research", "http://feeds.trendmicro.com/TrendMicroResearch"),
+    ("Trend Micro Research", "https://feeds.feedburner.com/TrendMicroResearch"),
     ("Rapid7", "https://www.rapid7.com/rss.xml"),
     ("FortiGuard Labs", "https://feeds.fortinet.com/fortinet/blog/threat-research"),
     ("Symantec Threat Hunter", "https://www.security.com/rss/v1/blogs/rss.xml/221"),

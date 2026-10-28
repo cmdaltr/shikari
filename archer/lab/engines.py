@@ -205,6 +205,21 @@ class Tart:
         os.remove(tmp)
 
 
+_utm_quiet = False
+
+
+def utmctl(*args: str, timeout: int = 120, check: bool = True, input_text=None) -> str:
+    """utmctl, with UTM kept out of the Dock. utmctl launches the UTM app to do anything, which puts it
+    in the Dock beside Archer; UTM's own Hide dock icon setting moves it to the menu bar. Archer turns
+    it on once, and only when it was never set, so unticking it in UTM sticks."""
+    global _utm_quiet
+    if not _utm_quiet:
+        _utm_quiet = True
+        if not run_ok(["defaults", "read", "com.utmapp.UTM", "HideDockIcon"]):
+            run(["defaults", "write", "com.utmapp.UTM", "HideDockIcon", "-bool", "true"], check=False)
+    return run(["utmctl", *args], timeout=timeout, check=check, input_text=input_text)
+
+
 _UTM_UUID = re.compile(r"^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$")
 
 
@@ -233,7 +248,7 @@ class UTM:
     key = "utm"
 
     def list(self) -> List[Dict]:
-        return parse_utm_list(run(["utmctl", "list", "--hide"], timeout=30))
+        return parse_utm_list(utmctl("list", "--hide", timeout=30))
 
     def create(self, name: str, image: str):
         raise LabError("Build this VM in UTM first",
@@ -242,24 +257,24 @@ class UTM:
                        "here for Archer to manage.")
 
     def start(self, name: str):
-        run(["utmctl", "start", "--hide", name], timeout=180)
+        utmctl("start", "--hide", name, timeout=180)
 
     def stop(self, name: str):
-        run(["utmctl", "stop", "--hide", name], timeout=120, check=False)
+        utmctl("stop", "--hide", name, timeout=120, check=False)
 
     def snapshot(self, name: str, snap: str):
-        run(["utmctl", "snapshot", "create", name, "--name", snap], timeout=600)
+        utmctl("snapshot", "create", name, "--name", snap, timeout=600)
 
     def revert(self, name: str, snap: str):
-        run(["utmctl", "snapshot", "restore", name, "--snapshot", snap], timeout=600)
+        utmctl("snapshot", "restore", name, "--snapshot", snap, timeout=600)
 
     def clone(self, name: str, new_name: str):
         # Copies the disk, so it's slow for a Windows VM — run it as a job. UTM registers the
         # clone itself; it inherits the source's drives, snapshots and guest tools.
-        run(["utmctl", "clone", name, "--name", new_name], timeout=1800)
+        utmctl("clone", name, "--name", new_name, timeout=1800)
 
     def delete(self, name: str):
-        run(["utmctl", "delete", "--hide", name], timeout=60, check=False)
+        utmctl("delete", "--hide", name, timeout=60, check=False)
 
     def status(self, name: str) -> Dict:
         found = [m for m in self.list() if m["name"] == name]
@@ -268,17 +283,17 @@ class UTM:
         return found[0]
 
     def logs(self, name: str, tail: int) -> str:
-        ip = run(["utmctl", "ip-address", "--hide", name], check=False).strip()
+        ip = utmctl("ip-address", "--hide", name, check=False).strip()
         return (f"UTM keeps no console log. The VM's address is {ip}.\n" if ip
                 else "UTM keeps no console log, and the VM has no address yet "
                      "(it may be booting, or missing the guest agent / SPICE tools).\n")
 
     def exec(self, name: str, argv: List[str], timeout: int, input_text=None) -> str:
-        cmd = ["utmctl", "exec", "--hide", name]
+        args = ["exec", "--hide", name]
         if input_text is not None:
-            cmd.append("--input")
-        cmd += ["--cmd", *argv]          # --cmd is variadic, so it has to come last
-        return run(cmd, timeout=timeout, input_text=input_text)
+            args.append("--input")
+        args += ["--cmd", *argv]          # --cmd is variadic, so it has to come last
+        return utmctl(*args, timeout=timeout, input_text=input_text)
 
     def push_file(self, name: str, local_path: str, remote_path: str, windows: bool = False):
         import base64

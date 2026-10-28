@@ -106,6 +106,8 @@ def test_probe_unreachable():
 class FakeWindow:
     def __init__(self):
         self.loaded, self.title = [], ""
+        self.events = type("Events", (), {"shown": threading.Event()})()
+        self.events.shown.set()
 
     def load_url(self, url):
         self.loaded.append(("url", url))
@@ -122,6 +124,16 @@ def _app(tmp_path):
     app = App(tmp_path, "log")
     app.window = FakeWindow()
     return app, ChooserApi(app)
+
+
+def test_a_window_slow_to_appear_is_waited_for(tmp_path):
+    """WebKit's first start on a slow machine passed pywebview's 20 s limit and killed the start-up."""
+    app, _ = _app(tmp_path)
+    app.choice = None
+    app.window.events.shown = threading.Event()
+    threading.Timer(0.3, app.window.events.shown.set).start()
+    app.boot()
+    assert app.window.loaded and app.window.loaded[-1][0] == "html"
 
 
 def test_chooser_connects_and_remembers(tmp_path):

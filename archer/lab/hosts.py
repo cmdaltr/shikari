@@ -9,7 +9,7 @@ install it — Archer detects and guides, it doesn't install hypervisors itself.
 import platform
 from typing import Dict, List
 
-from archer.lab.runner import first_line, run, run_ok, which
+from archer.lab.runner import LabError, first_line, run, run_ok, which
 
 # CPU architecture, normalised: Apple Silicon and x86-64 are the two that matter here
 ARCH = {"arm64": "arm64", "aarch64": "arm64", "x86_64": "amd64", "amd64": "amd64", "x64": "amd64"}
@@ -83,7 +83,13 @@ def _utm_ready() -> bool:
     now = time.time()
     if now - _UTM_READY["t"] < 20:
         return _UTM_READY["ok"]
-    ok = run_ok(["utmctl", "list", "--hide"], timeout=8)
+    from archer.lab.engines import utmctl
+
+    try:
+        utmctl("list", "--hide", timeout=8)
+        ok = True
+    except LabError:
+        ok = False
     _UTM_READY.update(t=now, ok=ok)
     return ok
 

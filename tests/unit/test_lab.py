@@ -9,6 +9,12 @@ from archer.lab import engines, hosts, machines, provision, templates
 from archer.lab.runner import LabError, safe_name
 
 
+@pytest.fixture(autouse=True)
+def utm_already_quiet(monkeypatch):
+    # Otherwise the first utmctl call reads UTM's real preferences
+    monkeypatch.setattr("archer.lab.engines._utm_quiet", True)
+
+
 def test_safe_name_rejects_anything_that_could_reach_a_shell():
     assert safe_name("win11-run1") == "win11-run1"
     assert safe_name("CVE_2024") == "CVE_2024"
@@ -232,6 +238,26 @@ def test_utm_snapshot_restore_and_start_use_utmctl(monkeypatch):
     assert ["utmctl", "snapshot", "create", "win", "--name", "clean"] in calls
     assert ["utmctl", "snapshot", "restore", "win", "--snapshot", "clean"] in calls
     assert any(c[:3] == ["utmctl", "start", "--hide"] for c in calls)
+
+
+def test_utm_is_kept_out_of_the_dock_unless_you_chose_otherwise(monkeypatch):
+    calls = []
+    monkeypatch.setattr("archer.lab.engines.run", lambda argv, **k: calls.append(list(argv)) or "")
+    write = ["defaults", "write", "com.utmapp.UTM", "HideDockIcon", "-bool", "true"]
+
+    # Never set: Archer sets it, once, before its first utmctl call
+    monkeypatch.setattr("archer.lab.engines._utm_quiet", False)
+    monkeypatch.setattr("archer.lab.engines.run_ok", lambda argv, **k: False)
+    engines.UTM().start("win")
+    engines.UTM().stop("win")
+    assert calls.count(write) == 1 and calls.index(write) < calls.index(["utmctl", "start", "--hide", "win"])
+
+    # Set by you, either way: left alone
+    calls.clear()
+    monkeypatch.setattr("archer.lab.engines._utm_quiet", False)
+    monkeypatch.setattr("archer.lab.engines.run_ok", lambda argv, **k: True)
+    engines.UTM().start("win")
+    assert write not in calls
 
 
 def test_utm_create_is_refused_with_guidance():

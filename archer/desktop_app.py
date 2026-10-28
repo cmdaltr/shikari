@@ -272,6 +272,11 @@ class App:
 
     def boot(self):
         """Runs once the window exists (pywebview's start func, on its own thread)."""
+        # pywebview gives up on a window that takes 20 s to show, and WebKit's first start on a slow
+        # or emulated machine can take longer: wait for it here instead
+        if not self.window.events.shown.wait(600):
+            print("The window never appeared")
+            return
         choice = self.choice
         if choice is None:
             self.show_chooser()
