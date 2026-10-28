@@ -685,6 +685,62 @@ briefing.top_techniques.forEach(t => {
 - The LLM prompt is capped at 80 gap techniques to stay within token limits — groups with 150+ techniques will show the 80 highest-priority gaps
 - Requires an LLM provider (Anthropic, OpenAI, or local Ollama) — same as Ask Archer
 
+### Workflow 9: Batch Hunts
+
+Hunt several groups and CVEs with one call. The server runs them one after another, as you, so your SIEM platforms, technology stack and AI settings apply to each; one that fails doesn't stop the rest. Up to 50 per batch.
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/batch -H "Authorization: Bearer $ARCHER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"groups": ["APT29", "Scattered Spider"], "cves": ["CVE-2024-3400"], "correlate": true}'
+# {"id": "118ad0ce5170", "items": 3, "status_url": "/api/batch/118ad0ce5170"}
+
+curl http://127.0.0.1:8000/api/batch/118ad0ce5170 -H "Authorization: Bearer $ARCHER_TOKEN"
+```
+
+Each item reports its run name (the results page is `/results/<run>`), `status` and `created_yaml`; the batch's `status` ends as `complete`, `partial` or `failed`. From Python: `ArcherClient().batch(groups=[...], cves=[...])` and `batch_status(id)`. `GET /api/batch` lists your batches.
+
+### Workflow 10: Streamed Progress
+
+`GET /api/progress/<run>/stream` sends a run's progress as Server-Sent Events: a `progress` event each time it changes, a comment line every 15 seconds while it's quiet, and a `done` event when the run finishes. It replaces polling `/progress_status`.
+
+```bash
+curl -N http://127.0.0.1:8000/api/progress/APT29/stream -H "Authorization: Bearer $ARCHER_TOKEN"
+```
+
+```javascript
+const events = new EventSource("/api/progress/APT29/stream");  // same-origin, with the session cookie
+events.addEventListener("progress", e => console.log(JSON.parse(e.data)));
+events.addEventListener("done", () => events.close());
+```
+
+### Workflow 11: Webhooks
+
+An admin registers URLs that Archer POSTs to when something happens:
+
+| Event | Sent when | `data` |
+|---|---|---|
+| `run.completed` | a hunt finishes | `run`, `phase`, `created_yaml`, `results_url` |
+| `run.failed` | a hunt stops with an error | `run`, `status`, `error` |
+| `watchlist.match` | a Threat Feed watchlist finds new posts | `user_id`, `matches` (`query`, `title`, `url`) |
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/webhooks -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://hooks.example.com/archer", "events": ["run.completed", "run.failed"]}'
+# returns the webhook with its secret: the only time the secret is shown
+```
+
+The body is `{"event", "sent_at", "data"}` with an `X-Archer-Event` header and `X-Archer-Signature: sha256=<hex>`, an HMAC-SHA256 of the raw body under the webhook's secret. Check it before trusting a delivery:
+
+```python
+import hashlib, hmac
+expected = "sha256=" + hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
+assert hmac.compare_digest(expected, request.headers["X-Archer-Signature"])
+```
+
+Deliveries are tried three times with backoff (a 4xx other than 429 isn't retried), and the last 20 per webhook show in `GET /api/webhooks`. `POST /api/webhooks/<id>/test` sends a test event and returns the result; `PATCH` changes `url`, `events`, `enabled` or `description`; `DELETE` removes it. Set `ARCHER_PUBLIC_URL` (e.g. `https://archer.example.com`) to make `results_url` absolute. Webhooks and their secrets are stored in `data/webhooks.json`, never in git.
+
 ---
 
 ## Code Examples

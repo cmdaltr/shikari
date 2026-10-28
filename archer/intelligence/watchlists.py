@@ -162,7 +162,7 @@ def check_user(user_id, bundle=None, send=None) -> int:
     """Run the user's watchlists; returns how many new matches were found."""
     data = _load(user_id)
     found = {w["id"]: matches(w["query"], w["web"], bundle) for w in data["watchlists"]}
-    to_email, total = [], 0
+    to_email, total, hooked = [], 0, []
     with _lock:
         data = _load(user_id)  # re-read: the user may have changed it while the searches ran
         for w in data["watchlists"]:
@@ -170,12 +170,20 @@ def check_user(user_id, bundle=None, send=None) -> int:
                 continue
             added = _merge(w, found[w["id"]])
             total += len(added)
+            hooked += [{"query": w["query"], "title": m.get("title"), "url": m.get("url")} for m in added]
             if w["email"] and added:
                 to_email.append((w["query"], added))
                 w["emailed"] = (w.get("emailed", []) + [m["url"] for m in added])[-MAX_SEEN:]
         _save(user_id, data)
     if to_email and data.get("email"):
         (send or _send)(data["email"], to_email)
+    if hooked:
+        try:
+            from archer import webhooks
+
+            webhooks.emit("watchlist.match", {"user_id": user_id, "matches": hooked})
+        except Exception as e:
+            print(f"⚠️  Watchlist webhooks not sent: {e}")
     return total
 
 

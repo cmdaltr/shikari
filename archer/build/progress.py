@@ -66,6 +66,8 @@ def write_progress(group_name: str, data: Dict[str, Any]):
 
                 if phase == "complete" and existing.get("phase") != "complete":
                     _finish_run(group_name, merged.get("started_at"))
+                terminal = ((phase == "complete" and existing.get("phase") != "complete")
+                            or (merged.get("status") in FAILED and existing.get("status") not in FAILED))
 
                 # Write merged data atomically
                 temp_path = path + ".tmp"
@@ -77,6 +79,8 @@ def write_progress(group_name: str, data: Dict[str, Any]):
 
                 # Success - release lock and return
                 filelock.unlock(lock_file)
+                if terminal:
+                    _notify(group_name, merged)
                 return
 
             finally:
@@ -94,6 +98,18 @@ def write_progress(group_name: str, data: Dict[str, Any]):
             print(f"⚠️  Progress write error for '{group_name}': {e}")
             import traceback
             traceback.print_exc()
+
+
+FAILED = ("error", "failed", "cancelled")
+
+
+def _notify(group_name: str, progress: Dict[str, Any]):
+    try:
+        from archer import webhooks
+
+        webhooks.emit_run(group_name, progress)
+    except Exception as e:
+        print(f"⚠️  Webhooks for '{group_name}' not sent: {e}")
 
 
 def _finish_run(group_name: str, started_at):

@@ -295,6 +295,15 @@ class ArcherClient:
     # Runs and results
     # ------------------------------------------------------------------
 
+    def batch(self, groups: Optional[List[str]] = None, cves: Optional[List[str]] = None,
+              correlate: bool = True) -> str:
+        """Hunt several groups and/or CVEs one after another on the server; returns the batch id."""
+        return self._json("POST", "/api/batch", json={"groups": groups or [], "cves": cves or [],
+                                                      "correlate": correlate})["id"]
+
+    def batch_status(self, batch_id: str) -> Dict:
+        return self._json("GET", f"/api/batch/{batch_id}")
+
     def progress(self, run: str) -> Dict:
         return self._json("GET", "/progress_status", params={"group_name": run}).get("progress") or {}
 

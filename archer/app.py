@@ -1187,6 +1187,12 @@ from archer.elevation import router as elevation_router
 app.include_router(mitresaw_router)
 app.include_router(telemetry_router)
 app.include_router(lab_router)
+
+from archer.runs_api import router as runs_router
+from archer.webhooks import router as webhooks_router
+
+app.include_router(runs_router)
+app.include_router(webhooks_router)
 app.include_router(elevation_router)
 
 
