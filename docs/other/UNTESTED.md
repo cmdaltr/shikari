@@ -22,6 +22,18 @@ Setup, step by step: [Recording a lab](../guide/20-recording-a-lab.md).
 - `--mde-export` matches devices by the manifest's host name (`DeviceName startswith`), and takes up to 5,000 rows per table per test
 - Running atomics from Archer itself (`archer-cli offline emulate`, the console's `emulate`, **Run Emulation** on Results) depended on an `archer.emulation` package that has been removed; those entry points say Coming soon
 
+## CALDERA operations
+
+**Status**: Code written, not yet run against a live CALDERA
+
+`archer/lab/caldera.py` plans and runs CALDERA operations on an agent group, collects each step's command, host, times and output, captures the agent host's logs over each step's window (`scripts/telemetry/capture-window.ps1`) and checks detections and correlations against them statically. Guide: [CALDERA operations](../guide/25-caldera.md).
+
+### Known limitations
+
+- The v2 API calls (abilities, agents, adversaries, operations, links and link results, planner and source lookup by name) are written to CALDERA 5's API and haven't been run against a 5.2 server
+- `capture-window.ps1` hasn't been run on a machine; it reuses the recorder's log readers
+- No unit tests yet for `archer.lab.caldera`
+
 ## Query Execution
 
 **Status**: Splunk client implemented but not validated against a live Splunk; Defender XDR not implemented
