@@ -21,6 +21,7 @@ Download the file for your machine from the repository's Releases page:
 | `Archer-<version>-macos-x86_64.dmg` | Intel Macs |
 | `Archer-<version>-windows-x64.msi` | Windows 10 and 11 |
 | `archer_<version>-1~ubuntu-noble_amd64.deb` | Ubuntu 24.04 and Debian-based distributions (x86_64) |
+| `archer_<version>-1~ubuntu-noble_arm64.deb` | The same on arm64, including Ubuntu VMs on Apple Silicon |
 
 The builds aren't signed with a paid developer certificate yet, so the first launch needs one extra step. On macOS, opening it shows "Apple could not verify Archer"; open System Settings > Privacy & Security and choose Open Anyway. On Windows, SmartScreen shows "Windows protected your PC"; choose More info > Run anyway. On Linux, install the package with `sudo apt install ./archer_<version>-1~ubuntu-noble_amd64.deb`, which pulls in GTK and WebKit, and open Archer from the applications menu.
 
@@ -71,7 +72,7 @@ It can't rebuild the procedures CSV itself: MITRESaw needs its own Python enviro
 
 ## Building
 
-`.github/workflows/desktop.yml` builds all four on a `v*` tag, installs the macOS, Windows and Linux packages on clean runners and checks each one serves Archer, then attaches them to a GitHub Release; run it by hand (Actions > Desktop app > Run workflow) for a test build, left as workflow artifacts. A seed job downloads ATT&CK and runs MITRESaw for the procedures CSV, cached per ATT&CK version, so only a release after an ATT&CK update pays the 90 minutes.
+`.github/workflows/desktop.yml` builds all five on a `v*` tag, installs the macOS, Windows and Linux packages on clean runners and checks each one serves Archer, then attaches them to a GitHub Release; run it by hand (Actions > Desktop app > Run workflow) for a test build, left as workflow artifacts. A seed job downloads ATT&CK and runs MITRESaw for the procedures CSV, cached per ATT&CK version, so only a release after an ATT&CK update pays the 90 minutes.
 
 To build on your own machine (macOS here; each platform builds only its own installer):
 

@@ -92,6 +92,7 @@ jobs:
           - { os: macos-15-intel, target: macOS, sign: --adhoc-sign, suffix: macos-x86_64 }
           - { os: windows-latest, target: windows, sign: --adhoc-sign, suffix: windows-x64 }
           - { os: ubuntu-24.04, target: linux system, sign: "", suffix: linux-amd64 }
+          - { os: ubuntu-24.04-arm, target: linux system, sign: "", suffix: linux-arm64 }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     defaults:
@@ -143,8 +144,10 @@ jobs:
           retention-days: 14
 
   smoke:
-    # Install each package on a clean runner and check it serves Archer in local mode
+    # Install each package on a clean runner and check it serves Archer in local mode. One platform's
+    # failed build shouldn't hide whether the others work; the release still needs every build
     needs: build
+    if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
       matrix:
@@ -152,6 +155,7 @@ jobs:
           - { os: macos-15, suffix: macos-arm64 }
           - { os: windows-latest, suffix: windows-x64 }
           - { os: ubuntu-24.04, suffix: linux-amd64 }
+          - { os: ubuntu-24.04-arm, suffix: linux-arm64 }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     defaults:
@@ -206,7 +210,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: smoke
+    needs: [build, smoke]
     runs-on: ubuntu-latest
     permissions:
       contents: write
