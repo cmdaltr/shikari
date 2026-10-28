@@ -372,6 +372,14 @@
   color: var(--text-secondary);
   font-style: italic;
 }
+.cloud-intro { color: var(--text-secondary); margin: 0 0 12px; line-height: 1.5; }
+.cloud-summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.cloud-summary .chip { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 14px; }
+.cloud-summary .chip strong { display: block; font-size: 1.2em; }
+.cloud-gaps-toggle { display: inline-flex; gap: 6px; align-items: center; margin-bottom: 10px; }
+#cloud-table td.cv-yes { color: #166534; }
+#cloud-table td.cv-gap { color: #b91c1c; font-weight: 600; }
+#cloud-table td.cv-na { color: var(--text-secondary); }
 </style>
 {% endblock %}
 
@@ -540,6 +548,23 @@
         </thead>
         <tbody id="platform-tbody">
         </tbody>
+      </table>
+    </div>
+
+    <!-- Cloud coverage: your detections over each provider's control-plane logs (#36) -->
+    <div class="table-section" id="cloud-section">
+      <h2 class="section-title">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+        </div>
+        Cloud coverage
+      </h2>
+      <p class="cloud-intro">ATT&amp;CK's cloud techniques against your detections: IaaS techniques for each provider's control-plane logs, identity and SaaS techniques for sign-in and directory logs. A tick lists the SIEMs with a detection for the technique or one of its sub-techniques.</p>
+      <div id="cloud-summary" class="cloud-summary"></div>
+      <label class="cloud-gaps-toggle"><input type="checkbox" id="cloud-gaps-only"> Gaps only</label>
+      <table class="coverage-table" id="cloud-table">
+        <thead><tr><th>Technique</th><th>AWS</th><th>Azure</th><th>GCP</th><th>Identity &amp; SaaS</th></tr></thead>
+        <tbody id="cloud-tbody"><tr><td colspan="5">Loading…</td></tr></tbody>
       </table>
     </div>
 
@@ -1046,6 +1071,32 @@ async function loadCoverage() {
 
 // Load on page ready
 document.addEventListener('DOMContentLoaded', () => { wireFilters(); loadCoverage(); });
+// Cloud coverage (#36)
+(async function () {
+  const tbody = document.getElementById('cloud-tbody');
+  if (!tbody) return;
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let data;
+  try {
+    const r = await fetch('/api/coverage/cloud');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    data = await r.json();
+  } catch (e) { tbody.innerHTML = `<tr><td colspan="5">Couldn't load cloud coverage: ${esc(e.message)}</td></tr>`; return; }
+  document.getElementById('cloud-summary').innerHTML = data.providers.map(p => {
+    const s = data.summary[p];
+    return `<div class="chip"><strong>${s.covered} / ${s.applicable}</strong>${esc(data.labels[p])}</div>`;
+  }).join('');
+  const cell = v => v === null ? '<td class="cv-na">n/a</td>'
+    : v.length ? `<td class="cv-yes">✓ ${esc(v.join(', '))}</td>` : '<td class="cv-gap">gap</td>';
+  const render = () => {
+    const gapsOnly = document.getElementById('cloud-gaps-only').checked;
+    const rows = data.techniques.filter(t => !gapsOnly || data.providers.some(p => t.coverage[p] && !t.coverage[p].length));
+    tbody.innerHTML = rows.map(t => `<tr><td><a href="https://attack.mitre.org/techniques/${esc(t.technique_id.replace('.', '/'))}/" target="_blank" rel="noopener">${esc(t.technique_id)}</a> ${esc(t.name)}</td>${data.providers.map(p => cell(t.coverage[p])).join('')}</tr>`).join('')
+      || '<tr><td colspan="5">No gaps.</td></tr>';
+  };
+  document.getElementById('cloud-gaps-only').addEventListener('change', render);
+  render();
+})();
 </script>
 {{ am.dialog() }}
 <script src="{{ url_for('static', path='js/attack_mapping.js') }}?v={{ request.app.state.asset_version }}"></script>

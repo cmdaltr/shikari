@@ -233,7 +233,7 @@
     },
     {
      "title": "Detections",
-     "what": "One card per detection, grouped by SIEM, with its technique, tactics, severity, confidence and query. Badges show OSINT enrichment, reference queries and changed mappings.",
+     "what": "One card per detection, grouped by SIEM, with its technique, tactics, severity, confidence and query. Badges show OSINT enrichment, reference queries and changed mappings, and each card's quality grade (A–F), false-positive risk and, when it's not low, run cost. Hover a badge for the reasons.",
      "who": "Detection engineers.",
      "when": "Reviewing what to deploy. Copy a query straight into your SIEM to test it.",
      "box": [
@@ -400,7 +400,7 @@
    "href": null,
    "image": "/static/guide/img/coverage.jpg",
    "width": 1440,
-   "height": 997,
+   "height": 2600,
    "sections": [
     {
      "title": "Totals",
@@ -436,6 +436,18 @@
       395,
       1252,
       76
+     ]
+    },
+    {
+     "title": "Cloud coverage",
+     "what": "ATT&CK's cloud techniques by provider (AWS, Azure, GCP, identity and SaaS) and which SIEMs have a detection over that provider's logs. Gaps only lists what's missing.",
+     "who": "Cloud security and detection engineers.",
+     "when": "Moving workloads into a cloud, or checking control-plane logging is earning its keep.",
+     "box": [
+      86,
+      693,
+      1252,
+      1907
      ]
     },
     {
@@ -1038,6 +1050,43 @@
       287,
       1189,
       714
+     ]
+    }
+   ]
+  },
+  {
+   "id": "profile-system",
+   "menu": "Profile and Help",
+   "title": "System configuration",
+   "summary": "Settings that apply to every user, for administrators.",
+   "path": "/profile",
+   "href": null,
+   "image": "/static/guide/img/profile-system.jpg",
+   "width": 1440,
+   "height": 2600,
+   "sections": [
+    {
+     "title": "Correlation parameters",
+     "what": "The relevance score a correlation needs, how many each SIEM gets, and how often one technique can start a chain.",
+     "who": "Administrators and detection leads.",
+     "when": "Results carry too many correlations to review, or too few.",
+     "box": [
+      119,
+      409,
+      1189,
+      409
+     ]
+    },
+    {
+     "title": "Webhooks",
+     "what": "URLs Archer posts to when a hunt finishes or fails, or a watchlist finds new posts, signed with a secret shown once. Send test checks the receiver.",
+     "who": "Administrators and SOAR engineers.",
+     "when": "A ticket, chat message or pipeline should follow a hunt without anyone watching it.",
+     "box": [
+      119,
+      1151,
+      1189,
+      418
      ]
     }
    ]

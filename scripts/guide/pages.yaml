@@ -121,7 +121,7 @@ pages:
         when: Reporting coverage against a named threat, or deciding what to build next.
       - selector: '.detection-section:has(h2:text-is("Detections"))'
         title: Detections
-        what: One card per detection, grouped by SIEM, with its technique, tactics, severity, confidence and query. Badges show OSINT enrichment, reference queries and changed mappings.
+        what: One card per detection, grouped by SIEM, with its technique, tactics, severity, confidence and query. Badges show OSINT enrichment, reference queries and changed mappings, and each card's quality grade (A–F), false-positive risk and, when it's not low, run cost. Hover a badge for the reasons.
         who: Detection engineers.
         when: Reviewing what to deploy. Copy a query straight into your SIEM to test it.
       - selector: '#correlations'
@@ -200,6 +200,7 @@ pages:
     menu: Detections
     title: Coverage
     path: /coverage
+    before: [{click: '#cloud-section .section-title'}]
     summary: Which ATT&CK techniques you have queries for, by tactic, technique and platform, and where one SIEM covers what another doesn't.
     sections:
       - selector: .summary-cards
@@ -217,6 +218,11 @@ pages:
         what: One card per tactic, and the full ATT&CK matrix coloured by how many queries each technique has. The layers switch between your reference queries and the detections you've saved.
         who: Detection engineers and purple teams.
         when: Planning the next quarter's detection work, or showing coverage on a familiar picture.
+      - selector: '#cloud-section'
+        title: Cloud coverage
+        what: ATT&CK's cloud techniques by provider (AWS, Azure, GCP, identity and SaaS) and which SIEMs have a detection over that provider's logs. Gaps only lists what's missing.
+        who: Cloud security and detection engineers.
+        when: Moving workloads into a cloud, or checking control-plane logging is earning its keep.
       - selector: '.table-section >> nth=0'
         title: By technique, platform and gaps
         what: Compact cards per technique or platform, exportable as CSV, and Coverage Gaps, techniques covered in one SIEM but not another.
@@ -503,6 +509,24 @@ pages:
         what: A cloud provider's key or a local model's URL, which model answers Ask Archer and which generates, a cap on AI calls per run, and keys for OSINT sources and SIEMs.
         who: Administrators.
         when: Turning on AI-assisted generation, or adding OSINT coverage for company profiles.
+
+  - id: profile-system
+    menu: Profile and Help
+    title: System configuration
+    path: /profile
+    before: [{click: 'button.tab-button[data-tab="mappings"]'}]
+    summary: Settings that apply to every user, for administrators.
+    sections:
+      - selector: '#cfg-correlation'
+        title: Correlation parameters
+        what: The relevance score a correlation needs, how many each SIEM gets, and how often one technique can start a chain.
+        who: Administrators and detection leads.
+        when: Results carry too many correlations to review, or too few.
+      - selector: '#cfg-webhooks'
+        title: Webhooks
+        what: URLs Archer posts to when a hunt finishes or fails, or a watchlist finds new posts, signed with a secret shown once. Send test checks the receiver.
+        who: Administrators and SOAR engineers.
+        when: A ticket, chat message or pipeline should follow a hunt without anyone watching it.
 
   - id: help
     menu: Profile and Help

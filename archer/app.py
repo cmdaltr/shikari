@@ -4162,6 +4162,19 @@ def coverage_json(request: Request, group: str = "", techniques: str = "",
             "covered_count": sum(t in covered for t in wanted), "gap_count": sum(t not in covered for t in wanted)}
 
 
+@app.get("/api/coverage/cloud")
+def cloud_coverage_json(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """ATT&CK's cloud techniques by provider (AWS, Azure, GCP, identity): which the detection library
+    covers, and in which SIEMs (archer.build.cloud_coverage, #36)."""
+    from archer.build.cloud_coverage import cloud_coverage
+
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    auth_result[1].close()
+    return cloud_coverage(GENERATE_DIR, _attack_techniques())
+
+
 @functools.lru_cache(maxsize=1)
 def _attack_techniques() -> dict:
     """{technique ID: attack-pattern} from the cached ATT&CK bundle."""
