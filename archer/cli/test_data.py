@@ -236,7 +236,7 @@ def _sample_profile():
                   "ip_addresses": ["203.0.113.10", "203.0.113.11"], "asns": ["AS64500"],
                   "hosting": ["United Kingdom"]},
         "breach_surface": {"breaches": 1, "exposed_accounts": 3},
-        "exposed_services": [{"port": 443, "service": "https"}, {"port": 25, "service": "smtp"}],
+        "exposed_services": {"per_ip": [], "ports": [25, 443], "cpes": [], "vulns": [], "hostnames": []},
         "detected_stack": {"web_server": "nginx"},
         "sample": True,
     }
