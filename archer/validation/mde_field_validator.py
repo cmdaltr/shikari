@@ -281,7 +281,15 @@ class MDEFieldValidator:
                             ]:
                                 fields.add(field_name)
 
-        return fields
+        # Columns the query makes itself (extend Uri = tostring(...), summarize n = count() by ...,
+        # let lists) exist whatever the table, and a name before "(" is a function, not a column
+        made = set()
+        for stage in re.split(r"\|", query):
+            if re.match(r"\s*(extend|project|project-rename|summarize|parse|let)\b", stage, re.I) or stage.lstrip().startswith("let "):
+                made.update(re.findall(r"\b(\w+)\s*=(?![=~])", stage))
+        made.update(re.findall(r"^\s*let\s+(\w+)\s*=", query, re.M))
+        functions = {f for f in fields if re.search(rf"\b{re.escape(f)}\s*\(", query)}
+        return fields - made - functions
 
     def validate_query(self, query: str, table: str = None) -> Dict:
         """

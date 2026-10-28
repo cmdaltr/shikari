@@ -45,3 +45,14 @@ def test_the_gate_fails_bad_files_and_passes_good_ones(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "::error file=" in out and "broken.yaml" in out
     assert ci.main([str(tmp_path / "nothing")]) == 2
+
+
+def test_made_columns_and_functions_are_not_unknown_fields():
+    from archer.build.exploit_detection import mde_exploit_query
+    from archer.validation.static_check import check_query
+
+    q = mde_exploit_query({"paths": ["/ssl-vpn/hipreport.esp"], "url_markers": ["../"]})
+    assert not [f for f in check_query(q, "kql")["findings"] if f["check"] == "MDE-FIELD"]
+    bad = check_query("DeviceProcessEvents | where Bogus == 1 | extend X = tostring(FileName) | project X", "kql")
+    unknown = [f["message"] for f in bad["findings"] if f["check"] == "MDE-FIELD"]
+    assert len(unknown) == 1 and unknown[0].startswith("Bogus ")  # X is made by extend, tostring is a function

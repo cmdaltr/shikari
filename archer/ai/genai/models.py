@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Tuple
 import importlib.util
 import time
 import hashlib
-from ..config import AI_CACHE_DIR
+from ...config import AI_CACHE_DIR
 
 
 class QueryGeneratorBase:

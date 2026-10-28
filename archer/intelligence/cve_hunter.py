@@ -24,7 +24,6 @@ class CVEHunter:
     3. Analyze exploit techniques and IOCs
     4. Map to MITRE ATT&CK techniques
     5. Generate detection queries (Splunk, MDE)
-    6. If no PoC exists, generate synthetic PoC based on vulnerability description
     """
 
     def __init__(self):
@@ -107,16 +106,8 @@ class CVEHunter:
         step(1, self.STEPS[1])
         result["pocs"] = self._find_pocs(cve_id)
 
-        # 3. If no PoCs found, generate synthetic PoC
-        if not result["pocs"]:
-            result["synthetic_poc"] = self._generate_synthetic_poc(cve_id, result["nvd_data"])
-            result["pocs"].append({
-                "type": "synthetic",
-                "source": "ai_generated",
-                "description": result["synthetic_poc"]["description"],
-                "url": None
-            })
-
+        # No public PoC: carry on from the NVD record, the CWE and the advisories. An AI-written
+        # exploit here would run unasked for every CVE pre-researched in the background
         # 4. Analyze techniques and extract IOCs
         step(2, self.STEPS[2])
         result["techniques"] = self._map_to_attack(result)
@@ -330,61 +321,6 @@ class CVEHunter:
         # Would need to clone/access this repo
         return []
 
-    def _generate_synthetic_poc(self, cve_id: str, nvd_data: Dict) -> Dict[str, Any]:
-        """
-        Generate synthetic PoC when none exists.
-
-        Uses LLM to create hypothetical exploit code based on:
-        - CVE description
-        - CWE type
-        - Affected product/version
-        - CVSS metrics
-        """
-        from archer.ai.genai.models import get_llm_response
-
-        description = nvd_data.get("description", "")
-        cwe = nvd_data.get("cwe", [])
-        product = nvd_data.get("product", "")
-        vendor = nvd_data.get("vendor", "")
-
-        prompt = f"""
-You are a security researcher analyzing CVE {cve_id}.
-
-**CVE Details:**
-- Description: {description}
-- CWE: {', '.join(cwe)}
-- Vendor: {vendor}
-- Product: {product}
-
-Based on this vulnerability, generate a hypothetical Proof-of-Concept exploit that demonstrates how an attacker would exploit this vulnerability.
-
-Provide:
-1. **Exploit Overview**: Brief description of the attack vector
-2. **Prerequisites**: What the attacker needs (network access, credentials, etc.)
-3. **Attack Steps**: Detailed step-by-step exploitation process
-4. **Commands**: Actual commands/code the attacker would run
-5. **IOCs**: Observable indicators (file paths, registry keys, network connections, commands)
-6. **MITRE ATT&CK Techniques**: Map to relevant technique IDs
-
-Format as JSON with these keys: overview, prerequisites, steps, commands, iocs, techniques
-"""
-
-        try:
-            response = get_llm_response(prompt)
-            # Parse JSON response
-            synthetic_poc = json.loads(response)
-            return synthetic_poc
-        except Exception as e:
-            print(f"Error generating synthetic PoC: {e}")
-            return {
-                "overview": "Synthetic PoC generation failed",
-                "prerequisites": [],
-                "steps": [],
-                "commands": [],
-                "iocs": {},
-                "techniques": []
-            }
-
     def _map_to_attack(self, research_data: Dict) -> List[str]:
         """
         Map CVE exploitation to MITRE ATT&CK techniques.
@@ -396,11 +332,6 @@ Format as JSON with these keys: overview, prerequisites, steps, commands, iocs, 
         - Exploit type
         """
         techniques = []
-
-        # Check synthetic PoC for techniques
-        if "synthetic_poc" in research_data:
-            poc_techniques = research_data["synthetic_poc"].get("techniques", [])
-            techniques.extend(poc_techniques)
 
         # CWE to ATT&CK mapping (common patterns)
         cwe_attack_map = {
@@ -425,7 +356,7 @@ Format as JSON with these keys: overview, prerequisites, steps, commands, iocs, 
         return list(set(techniques))  # Deduplicate
 
     def _extract_iocs(self, research_data: Dict) -> Dict[str, List[str]]:
-        """Extract IOCs from CVE data, PoCs, and synthetic exploits."""
+        """Extract IOCs from CVE data and PoCs."""
         iocs = {
             "cmd": [],
             "file": [],
@@ -435,13 +366,6 @@ Format as JSON with these keys: overview, prerequisites, steps, commands, iocs, 
             "ip": [],
             "domain": []
         }
-
-        # Extract from synthetic PoC
-        if "synthetic_poc" in research_data:
-            poc_iocs = research_data["synthetic_poc"].get("iocs", {})
-            for key in iocs:
-                if key in poc_iocs:
-                    iocs[key].extend(poc_iocs[key])
 
         # Extract from NVD description and references
         nvd_data = research_data.get("nvd_data", {})
