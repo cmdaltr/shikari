@@ -195,12 +195,16 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ./pkg/*.deb xvfb
-          echo "APP=xvfb-run -a -s '-screen 0 1280x800x24' archer" >> "$GITHUB_ENV"
+          echo "APP=archer" >> "$GITHUB_ENV"
 
       - name: Launch in local mode
         timeout-minutes: 12
         run: |
-          $APP > app.out 2>&1 &
+          if [ "$RUNNER_OS" = Linux ]; then
+            xvfb-run -a -s "-screen 0 1280x800x24" archer > app.out 2>&1 &
+          else
+            "$APP" > app.out 2>&1 &
+          fi
           # The first launch seeds the data folder and builds caches before the server answers
           for _ in $(seq 1 120); do
             body=$(curl -sf http://127.0.0.1:8000/health) && break
