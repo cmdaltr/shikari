@@ -126,7 +126,6 @@ jobs:
           fi
           python -m pip install "briefcase==$BRIEFCASE"
           briefcase package ${{ matrix.target }} ${{ matrix.sign }} --no-input
-          if [ "$RUNNER_OS" = Linux ]; then python "$GITHUB_WORKSPACE/desktop/finish_deb.py" dist/*.deb; fi
 
       - name: Name by platform
         working-directory: ${{ runner.temp }}/desktop
@@ -164,6 +163,7 @@ jobs:
         shell: bash
     env:
       ARCHER_SERVER: local
+      PYWEBVIEW_LOG: debug
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -195,9 +195,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ./pkg/*.deb xvfb
-          echo "user namespaces restricted: $(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns 2>/dev/null || echo n/a)"
-          sudo aa-status 2>/dev/null | grep -w archer || echo "no archer AppArmor profile loaded"
-          echo "APP=xvfb-run -a archer" >> "$GITHUB_ENV"
+          echo "APP=xvfb-run -a -s '-screen 0 1280x800x24' archer" >> "$GITHUB_ENV"
 
       - name: Launch in local mode
         timeout-minutes: 12
@@ -219,7 +217,8 @@ jobs:
             Windows) home="$LOCALAPPDATA/Archer/home" ;;
             Linux) home="$HOME/.local/share/archer/home" ;;
           esac
-          tail -80 "$home/logs/archer.log" || true
+          grep -E "pywebview|Archer starting|Traceback|Error|failed" "$home/logs/archer.log" | head -60 || true
+          tail -40 "$home/logs/archer.log" || true
           cat app.out 2>/dev/null | tail -40 || true
 
   release:

@@ -19,7 +19,6 @@ hunting: the patch may not be out, or not applied yet.
     python -m archer.intelligence.cve_feed          # refresh now
 """
 
-import fcntl
 import json
 import os
 import threading
@@ -29,6 +28,7 @@ from typing import Callable, Dict, Iterable, List, Optional
 
 import requests
 
+from archer import filelock
 from archer.config import DATA_DIR
 
 WINDOW_DAYS = 30
@@ -160,9 +160,9 @@ def refresh(stacks: Callable[[], Iterable[Iterable[str]]] = lambda: [], research
     if not _running.acquire(blocking=False):
         return {"skipped": "a refresh is running"}
     os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
-    held = open(CACHE_PATH + ".lock", "w")  # and none in another process (the CLI beside the server)
+    held = open(CACHE_PATH + ".lock", "a")  # and none in another process (the CLI beside the server)
     try:
-        fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        filelock.lock(held, block=False)
     except OSError:
         held.close()
         _running.release()

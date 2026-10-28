@@ -258,7 +258,12 @@ class App:
         if self.local.wait():
             self.window.load_url(self.local.url)
         else:
-            self.window.load_html(f"<p style='font:15px sans-serif;padding:40px'>Archer didn't start. See {self.log}.</p>")
+            reason = html.escape(repr(self.local.failed) if self.local.failed else "it took too long to start")
+            self.window.set_title("Archer didn't start")
+            self.window.load_html(
+                "<div style='font:15px/1.5 system-ui,sans-serif;padding:40px;max-width:720px'>"
+                f"<h2 style='margin:0 0 12px'>Archer didn't start</h2><p>{reason}</p>"
+                f"<p>The log is at <code>{html.escape(str(self.log))}</code>.</p></div>")
 
     def stop_local(self):
         if self.local is not None:

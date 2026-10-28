@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import atexit
 import csv
-import fcntl
 import json
 import glob as _glob
 import logging
@@ -39,7 +38,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 import requests
-from archer import paths
+from archer import filelock, paths
 
 logger = logging.getLogger(__name__)
 
@@ -411,15 +410,15 @@ class MitresawBusy(RuntimeError):
 @contextmanager
 def _mitresaw_lock():
     _LOCK.parent.mkdir(parents=True, exist_ok=True)
-    with open(_LOCK, "w") as fh:
+    with open(_LOCK, "a") as fh:
         try:
-            fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            filelock.lock(fh, block=False)
         except BlockingIOError:
             raise MitresawBusy("MITRESaw is already rebuilding the procedures CSV") from None
         try:
             yield
         finally:
-            fcntl.flock(fh, fcntl.LOCK_UN)
+            filelock.unlock(fh)
 
 
 def is_busy() -> bool:
@@ -428,10 +427,10 @@ def is_busy() -> bool:
         return False
     with open(_LOCK, "a") as fh:
         try:
-            fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            filelock.lock(fh, block=False)
         except BlockingIOError:
             return True
-        fcntl.flock(fh, fcntl.LOCK_UN)
+        filelock.unlock(fh)
     return False
 
 

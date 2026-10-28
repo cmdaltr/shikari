@@ -1,8 +1,8 @@
 import os
 import json
-import fcntl
 import time
 from typing import Dict, Any
+from .. import filelock
 from ..config import PROGRESS_DIR
 
 
@@ -33,10 +33,10 @@ def write_progress(group_name: str, data: Dict[str, Any]):
     for attempt in range(max_retries):
         try:
             # Use lock file for synchronization
-            lock_file = open(lock_path, 'w')
+            lock_file = open(lock_path, 'a')
             try:
                 # Acquire exclusive lock (blocks if another process holds it)
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+                filelock.lock(lock_file)
 
                 # Read existing data
                 existing = {}
@@ -76,7 +76,7 @@ def write_progress(group_name: str, data: Dict[str, Any]):
                 os.replace(temp_path, path)
 
                 # Success - release lock and return
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                filelock.unlock(lock_file)
                 return
 
             finally:
@@ -121,15 +121,15 @@ def start_progress(group_name: str, data: Dict[str, Any]):
     from .run_files import begin
 
     begin(group_name, regenerate=bool(data.get("regenerate")))
-    with open(lock_path, "w") as lock_file:
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+    with open(lock_path, "a") as lock_file:
+        filelock.lock(lock_file)
         try:
             temp_path = path + ".tmp"
             with open(temp_path, "w", encoding="utf-8") as fh:
                 json.dump(record, fh, indent=2)
             os.replace(temp_path, path)
         finally:
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+            filelock.unlock(lock_file)
 
 
 def read_progress(group_name: str) -> Dict[str, Any]:
