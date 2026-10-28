@@ -1,4 +1,4 @@
-# The installable desktop app (desktop/README.md): a .dmg per Mac architecture, a Windows .msi and a
+# The installable desktop app (desktop/README.md): a .dmg and a Windows .msi per architecture, and a
 # Linux .deb, built from a clean checkout so nothing gitignored (bespoke/, data/archer.db) can
 # reach them. A v* tag attaches them to a GitHub Release; a manual run leaves them as artifacts.
 name: Desktop app
@@ -91,6 +91,8 @@ jobs:
           - { os: macos-15, target: macOS, sign: --adhoc-sign, suffix: macos-arm64 }
           - { os: macos-15-intel, target: macOS, sign: --adhoc-sign, suffix: macos-x86_64 }
           - { os: windows-latest, target: windows, sign: --adhoc-sign, suffix: windows-x64 }
+          # Briefcase builds for the machine it runs on, so ARM64 needs an ARM64 runner and Python
+          - { os: windows-11-arm, target: windows, sign: --adhoc-sign, suffix: windows-arm64 }
           - { os: ubuntu-24.04, target: linux system, sign: "", suffix: linux-amd64 }
           - { os: ubuntu-24.04-arm, target: linux system, sign: "", suffix: linux-arm64 }
     runs-on: ${{ matrix.os }}
@@ -154,6 +156,7 @@ jobs:
         include:
           - { os: macos-15, suffix: macos-arm64 }
           - { os: windows-latest, suffix: windows-x64 }
+          - { os: windows-11-arm, suffix: windows-arm64 }
           - { os: ubuntu-24.04, suffix: linux-amd64 }
           - { os: ubuntu-24.04-arm, suffix: linux-arm64 }
     runs-on: ${{ matrix.os }}

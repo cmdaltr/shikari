@@ -1996,6 +1996,9 @@ def get_osint_status():
                 updated = out.stdout.strip() or None
             except (OSError, subprocess.SubprocessError):
                 pass
+        else:
+            from archer.build.osint_repos import commit_date
+            updated = commit_date(name)
         repos[name] = {**state, "updated": updated}
     from archer.build import lol
     for name, state in getattr(app.state, "lol_status", {}).items():

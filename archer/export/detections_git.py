@@ -18,7 +18,11 @@ _GIT_ID = ["-c", "user.name=Archer", "-c", "user.email=archer@localhost"]
 
 
 def _run(repo: str, *args: str, check: bool = True) -> subprocess.CompletedProcess:
-    return subprocess.run(["git", "-C", repo, *args], capture_output=True, text=True, check=check)
+    try:
+        return subprocess.run(["git", "-C", repo, *args], capture_output=True, text=True, check=check)
+    except FileNotFoundError:
+        # Windows doesn't come with git, and the installed app doesn't bundle it
+        raise RuntimeError("git isn't installed: install it from git-scm.com to export detections") from None
 
 
 def ensure_repo(repo: str) -> None:

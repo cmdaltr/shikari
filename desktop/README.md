@@ -19,7 +19,8 @@ Download the file for your machine from the repository's Releases page:
 |---|---|
 | `Archer-<version>-macos-arm64.dmg` | Apple Silicon Macs |
 | `Archer-<version>-macos-x86_64.dmg` | Intel Macs |
-| `Archer-<version>-windows-x64.msi` | Windows 10 and 11 |
+| `Archer-<version>-windows-x64.msi` | Windows 10 and 11 (x64) |
+| `Archer-<version>-windows-arm64.msi` | Windows 11 on ARM, including Windows VMs on Apple Silicon (the x64 one runs there too, but emulated and much slower) |
 | `archer_<version>-1~ubuntu-noble_amd64.deb` | Ubuntu 24.04 and Debian-based distributions (x86_64) |
 | `archer_<version>-1~ubuntu-noble_arm64.deb` | The same on arm64, including Ubuntu VMs on Apple Silicon |
 
@@ -68,11 +69,11 @@ The first run fills it from the installer: the reference data in the repository'
 
 ## What the Installed App Doesn't Do
 
-It can't rebuild the procedures CSV itself: MITRESaw needs its own Python environment. A newer ATT&CK release is downloaded at startup as usual, but threat briefings use the CSV from the installer until the next release. The OSINT detection repositories need git; without it (or on a Mac without the developer tools) they're skipped. Ollama is a separate install, which Archer finds as usual.
+It can't rebuild the procedures CSV itself: MITRESaw needs its own Python environment. A newer ATT&CK release is downloaded at startup as usual, but threat briefings use the CSV from the installer until the next release. The OSINT detection repositories are cloned with git where it's installed; without it (Windows, or a Mac without the developer tools) they're downloaded as GitHub tarballs instead, keeping only the rule folders. Azure-Sentinel's tarball is 3.4 GB, so without git it's refreshed weekly rather than hourly, and only when the repository has changed. Exporting detections to a git repository does need git. Ollama is a separate install, which Archer finds as usual.
 
 ## Building
 
-`.github/workflows/desktop.yml` builds all five on a `v*` tag, installs the macOS, Windows and Linux packages on clean runners and checks each one serves Archer, then attaches them to a GitHub Release; run it by hand (Actions > Desktop app > Run workflow) for a test build, left as workflow artifacts. A seed job downloads ATT&CK and runs MITRESaw for the procedures CSV, cached per ATT&CK version, so only a release after an ATT&CK update pays the 90 minutes.
+`.github/workflows/desktop.yml` builds all six on a `v*` tag, installs the macOS, Windows and Linux packages on clean runners and checks each one serves Archer, then attaches them to a GitHub Release; run it by hand (Actions > Desktop app > Run workflow) for a test build, left as workflow artifacts. A seed job downloads ATT&CK and runs MITRESaw for the procedures CSV, cached per ATT&CK version, so only a release after an ATT&CK update pays the 90 minutes.
 
 To build on your own machine (macOS here; each platform builds only its own installer):
 
