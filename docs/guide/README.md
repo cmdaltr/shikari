@@ -49,7 +49,7 @@ Help → **Guide** shows a picture of every page with each part highlighted in t
 |---|---|---|
 | Google SecOps | YARA-L 2.0 | Generated |
 | Microsoft Defender XDR | KQL (advanced hunting) | Generated |
-| Splunk | SPL | Switched off for now; reference queries and coverage still shown |
+| Splunk | SPL | Generated (CEF-aligned indexes by default; your own in `bespoke/mappings`) |
 | Elastic | ES\|QL | Generated (ECS fields; `archer.build.elastic`) |
 
 To generate for fewer SIEMs, tick the ones you want under Environment → SIEM platforms. Adding a SIEM is covered in [SIEM onboarding](../SIEM_ONBOARDING.md).

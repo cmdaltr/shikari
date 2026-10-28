@@ -42,7 +42,7 @@ flowchart TD
         direction LR
         ORCH["Orchestrator"]
         COMPILE["Technology stack filter<br/>→ Extract indicators<br/>→ Build queries<br/>→ Precision checks"]
-        VENDORS["SecOps | MDE<br/><i>Splunk, Elastic: off for now</i>"]
+        VENDORS["SecOps | MDE | Splunk | Elastic"]
         YAML_OUT["Save YAML"]
         ORCH --> COMPILE --> VENDORS --> YAML_OUT
     end

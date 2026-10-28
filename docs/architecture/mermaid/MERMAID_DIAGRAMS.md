@@ -52,7 +52,7 @@ flowchart TD
         direction LR
         ORCH["Orchestrator"]
         COMPILE["Technology stack filter<br/>→ Extract indicators<br/>→ Build queries<br/>→ Precision checks"]
-        VENDORS["SecOps | MDE<br/><i>Splunk, Elastic: off for now</i>"]
+        VENDORS["SecOps | MDE | Splunk | Elastic"]
         YAML_OUT["Save YAML"]
         ORCH --> COMPILE --> VENDORS --> YAML_OUT
     end
@@ -197,7 +197,7 @@ flowchart TD
 
 ## 1. System Overview — What Is Archer?
 
-Archer takes a **threat actor name** (or CVE, report, ATT&CK techniques or company) and automatically produces **detection queries** for your SIEMs (Google SecOps and Microsoft Defender XDR; Splunk and Elastic generation is switched off for now). It does this by looking up what that threat actor actually does (via MITRE ATT&CK), then building tailored searches for each technique.
+Archer takes a **threat actor name** (or CVE, report, ATT&CK techniques or company) and automatically produces **detection queries** for your SIEMs (Google SecOps, Microsoft Defender XDR, Splunk and Elastic). It does this by looking up what that threat actor actually does (via MITRE ATT&CK), then building tailored searches for each technique.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
@@ -219,7 +219,7 @@ graph TB
     subgraph "What You Get Back"
         I["Google SecOps Rules<br/><i>YARA-L 2.0</i>"]
         J["Defender XDR Queries<br/><i>KQL</i>"]
-        K["Splunk & Elastic<br/><i>reference queries;<br/>generation off for now</i>"]
+        K["Splunk & Elastic<br/><i>SPL and ES|QL</i>"]
         L["IOC Sweeps"]
         M["Correlated Attack Chains"]
         N["Coverage Reports & Exports"]

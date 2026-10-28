@@ -741,7 +741,6 @@ def construct_yaml(
     appended_mde_queries, appended_splunk_queries = collate_data(
         identifiers, log_sources, procedure_platforms, software_platforms, name, technique_id=tid, osint_indicators=osint_indicators_to_pass
     )
-    appended_splunk_queries = []  # Splunk disabled -- Stage 1 soft-disable, see docs/SIEM_ONBOARDING.md
 
     # Apply OSINT enhancement if requested (merge OSINT patterns into queries)
     # Track which queries were actually enhanced (not just attempted)

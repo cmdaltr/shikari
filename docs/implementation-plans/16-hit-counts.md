@@ -20,7 +20,7 @@ Per SIEM you want hit counts for, a **read-only** API identity and endpoint. Rea
   - A service identity with read access to the SecOps search/stats API (service account key, or workforce/BYOID per your tenant's auth), the customer/instance ID, and the region.
   - Confirm the search-or-stats endpoint your instance exposes (the SecOps API has changed shape across releases — give me the one your tenant uses).
 - **Elastic (ES|QL)** — the `_query` endpoint URL and a read-only API key.
-- **Splunk** — off for now; skip unless you re-enable it, then a REST search endpoint + a read-only token.
+- **Splunk** — a REST search endpoint (`/services/search/jobs`) and a read-only token.
 
 Where the credentials live: a new admin-only **SIEM connections** config (same pattern as the detections-as-code repo config — stored gitignored, never in git, never logged). Don't put secrets in the repo.
 

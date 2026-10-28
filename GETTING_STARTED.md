@@ -64,7 +64,7 @@ python scripts/admin/reset_password.py                     # a forgotten passwor
 
 ### SIEMs
 
-Archer generates for **Google SecOps** (YARA-L 2.0) and **Microsoft Defender XDR** (KQL). Splunk and Elastic generation is switched off for now. Choose yours under **Profile → SIEM platforms**; Archer generates only for those.
+Archer generates for **Google SecOps** (YARA-L 2.0), **Microsoft Defender XDR** (KQL), **Splunk** (SPL) and **Elastic** (ES|QL). Choose yours under **Profile → SIEM platforms**; Archer generates only for those.
 
 ### Mapping files
 

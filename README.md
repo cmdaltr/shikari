@@ -60,7 +60,7 @@ The app launches this checkout's `.venv`, so it updates with `git pull`; it isn'
 - 🧱 **Technology stack** - Group hunts leave out techniques and procedures for platforms and products you don't run (Profile → Technology stack)
 - 🪚 **MITRESaw** - Every group's ATT&CK procedures and the indicators in them, rebuilt as ATT&CK changes ([guide](docs/guide/12-mitresaw.md))
 - 🗺️ **Attack Flows** - Every flow saved to your library on one page: pick a group, report or CVE to open its ATT&CK flow
-- 🔍 **Multi-Platform Support** - Google SecOps (YARA-L), Microsoft Defender (KQL) and Elastic (ES\|QL); Splunk is switched off for now ([onboarding](docs/SIEM_ONBOARDING.md))
+- 🔍 **Multi-Platform Support** - Google SecOps (YARA-L), Microsoft Defender (KQL), Splunk (SPL) and Elastic (ES\|QL) ([onboarding](docs/SIEM_ONBOARDING.md))
 - 🔗 **STIX / TAXII & MISP** - Import a STIX 2.1 bundle, a TAXII collection or a MISP event as a hunt input, and export a run as a STIX 2.1 bundle ([guide](docs/guide/21-stix-taxii-misp.md))
 - 🧾 **Detections as code** - Commit a run's detections to a git repo and diff two commits to see what a Regenerate changed; dry-run push to Defender XDR / SecOps ([guide](docs/guide/22-detections-as-code.md))
 - 🎛️ **Threat library & assessments** - Intelligence-led test cases from a profile's ranked groups, run in assessments that record red and blue outcomes, with CSV and ATT&CK Navigator export ([guide](docs/guide/23-threat-library-assessments.md))

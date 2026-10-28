@@ -22,7 +22,7 @@ graph TB
     subgraph "What You Get Back"
         I["Google SecOps Rules<br/><i>YARA-L 2.0</i>"]
         J["Defender XDR Queries<br/><i>KQL</i>"]
-        K["Splunk & Elastic<br/><i>reference queries;<br/>generation off for now</i>"]
+        K["Splunk & Elastic<br/><i>SPL and ES|QL</i>"]
         L["IOC Sweeps"]
         M["Correlated Attack Chains"]
         N["Coverage Reports & Exports"]

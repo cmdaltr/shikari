@@ -15,7 +15,7 @@ from pathlib import Path
 from archer import paths
 
 
-ALL_SIEMS = frozenset({"mde", "secops", "elastic"})  # splunk disabled -- Stage 1 soft-disable, see docs/SIEM_ONBOARDING.md
+ALL_SIEMS = frozenset({"mde", "secops", "elastic", "splunk"})
 
 # Display labels for each SIEM key
 _SIEM_LABELS = {
@@ -24,6 +24,12 @@ _SIEM_LABELS = {
     "elastic": "Elastic",
     "secops": "Google SecOps",
 }
+
+
+def excluded_for(siem_filter):
+    """The vendor keys construct_yaml skips for an include-list of SIEMs. It (and the web app) name
+    SecOps "googlesecops": excluding "secops" left a SecOps file written whatever the filter said."""
+    return sorted("googlesecops" if s == "secops" else s for s in ALL_SIEMS - set(siem_filter))
 
 
 def _print_preview_queries(name, tid, tactic, mde_queries, splunk_queries,
@@ -346,7 +352,7 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
 
     # Derive excluded_vendors from siem_filter if provided (include-list → exclude-list)
     if siem_filter is not None:
-        excluded_vendors = list(ALL_SIEMS - set(siem_filter))
+        excluded_vendors = excluded_for(siem_filter)
 
     # Dry-run: print raw queries without file I/O and return early
     if dry_run:
