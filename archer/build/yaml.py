@@ -256,7 +256,9 @@ def write_yaml(query_file, name, tid, tdesc, connector_id, tactic, tag, query, d
         template = queryTemplate.read()
 
     uid = check_id([])
-    desc = re.sub(r"</?code>", r"`", tdesc or "").strip()
+    # Citations go before the indenting below: removed afterwards, one that opens the text left
+    # its trailing space as a third space of indent, which broke the file
+    desc = re.sub(r"\s*\(Citation: [^\)]+\)", "", re.sub(r"</?code>", r"`", tdesc or "")).strip()
     # Every line of the "description: |" block sits at exactly two spaces: the first line's
     # indent sets the block's, so procedure text that starts with a space (" [Vidar] has…")
     # or wraps mid-path ("/lib/systemd/\nsystem/…") would end the block and break the file

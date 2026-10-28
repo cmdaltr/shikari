@@ -99,3 +99,18 @@ def test_a_run_rewrites_a_file_once(env):
     assert _act(path, "APT1", query=QUERY + " and first") == {}
     assert _act(path, "APT1", query=QUERY + " and second") is None
     assert "and first" in path.read_text() and "and second" not in path.read_text()
+
+
+def test_a_description_that_opens_with_a_citation_stays_valid_yaml(tmp_path):
+    import yaml as pyyaml
+
+    from archer.build.yaml import write_yaml
+
+    path = tmp_path / "FileDeletion_UDM.yaml"
+    desc = ("(Citation: Earlier Report) [Vidar](https://attack.mitre.org/software/S9050) deleted it with "
+            "`del /f /q x.exe &\n del C:\\ProgramData\\*.dll`. (Citation: Vidar 2023)")
+    write_yaml(str(path), "File Deletion", "T1070.004", desc, "GoogleSecOps", ["Defense Evasion"],
+               "Scattered Spider", 'metadata.event_type = "PROCESS_LAUNCH"', datatype="PROCESS_LAUNCH")
+    doc = pyyaml.safe_load(path.read_text())
+    assert doc["description"].startswith("[Vidar]")
+    assert "Citation" not in doc["description"]

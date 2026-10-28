@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "shared_macros.html" import render_vendor_logo, render_correlation_techniques %}
+{% from "shared_macros.html" import render_vendor_logo, render_correlation_techniques, render_quality_badges %}
 {% block title %}Archer - Results{% endblock %}
 {% block head %}
 {{ super() }}
@@ -666,6 +666,7 @@
                   {{ am.legacy_badge(detection.legacy) }}
                 </div>
                 <div class="card-right">
+                  {{ render_quality_badges(detection) }}
                   {% if detection.osint_enriched %}
                   <span class="osint-enhanced-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">

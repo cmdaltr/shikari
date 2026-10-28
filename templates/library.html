@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "shared_macros.html" import render_vendor_logo, render_correlation_techniques %}
+{% from "shared_macros.html" import render_vendor_logo, render_correlation_techniques, render_quality_badges %}
 {% block title %}Archer - Library{% endblock %}
 {% block head %}
 {{ super() }}
@@ -566,7 +566,7 @@
               </div>
               <div style="margin-top: 8px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
                 <span style="margin-left: 26px; font-weight: 400; color: #666;">{{ detection.title.replace(', ', ' | ') }}</span>
-                <span style="display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600;" title="Detection Likelihood: {{ likelihood }}% - Estimated probability of successful detection based on indicator strength, data source availability, and query specificity.">Confidence of detection: <span style="color: {{ likelihood_bg }}; font-weight: 700;">{{ likelihood_label }}</span></span>
+                <span style="display:inline-flex;gap:8px;align-items:center;">{{ render_quality_badges(detection) }}<span style="display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.8em; font-weight: 600;" title="Detection Likelihood: {{ likelihood }}% - Estimated probability of successful detection based on indicator strength, data source availability, and query specificity.">Confidence of detection: <span style="color: {{ likelihood_bg }}; font-weight: 700;">{{ likelihood_label }}</span></span></span>
               </div>
               {% if detection.indicators %}
               <div class="detection-indicators">

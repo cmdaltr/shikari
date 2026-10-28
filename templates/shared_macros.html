@@ -193,3 +193,24 @@
     {% endfor %}
   {% endif %}
 {% endmacro %}
+
+{# Quality grade and false-positive risk (archer.validation.quality, #33); hover for the reasons #}
+{% macro render_quality_badges(detection) %}
+{% if detection.quality %}
+{% set q = detection.quality %}
+{% set qcol = {'A': '#166534', 'B': '#15803d', 'C': '#a16207', 'D': '#c2410c', 'F': '#b91c1c'}[q.grade] %}
+{% set qtip %}Quality {{ q.score }}/100{% for f in q.factors %}
+{{ f.name }} {{ f.points }}/{{ f.max }}: {{ f.notes | join('; ') }}{% endfor %}{% endset %}
+<span class="quality-badge" title="{{ qtip }}" style="display:inline-flex;align-items:center;gap:4px;border:1px solid {{ qcol }};color:{{ qcol }};padding:3px 9px;border-radius:5px;font-size:0.78em;font-weight:700;white-space:nowrap;">Quality {{ q.grade }}</span>
+{% endif %}
+{% if detection.fp_risk %}
+{% set r = detection.fp_risk %}
+{% set rcol = {'low': '#166534', 'medium': '#a16207', 'high': '#b91c1c'}[r.level] %}
+{% set rtip %}False-positive risk {{ r.score }}/100{% for reason in r.reasons %}
+- {{ reason }}{% endfor %}{% if r.known_false_positives %}
+
+Documented by community rules:{% for k in r.known_false_positives %}
+- {{ k.text }} ({{ k.source }}: {{ k.rule }}){% endfor %}{% endif %}{% endset %}
+<span class="fp-risk-badge" title="{{ rtip }}" style="display:inline-flex;align-items:center;gap:4px;border:1px solid {{ rcol }};color:{{ rcol }};padding:3px 9px;border-radius:5px;font-size:0.78em;font-weight:700;white-space:nowrap;">FP risk: {{ r.level }}</span>
+{% endif %}
+{% endmacro %}

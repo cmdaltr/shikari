@@ -80,6 +80,32 @@ Before a detection is written, Archer removes conditions that parse but can't fi
 
 The same checks run in the agents' `check_query` tool, reported with the static checks as `PREC-*`, and a query the [repair agent](15-agents-and-ask-archer.md) saves must pass their errors.
 
+## Quality and false-positive risk
+
+Each card carries two badges, worked out without AI (`archer/validation/quality.py`). Hover either for its reasons.
+
+**Quality A–F** scores the detection out of 100:
+
+| Factor | Points | What earns them |
+|---|---|---|
+| Validity | 25 | The static checks pass: it parses, uses known tables and fields, has no placeholders |
+| Precision | 25 | The precision checks above pass (KQL, UDM and YARA-L; SPL and ES\|QL get 20) |
+| Specificity | 20 | Several values, command-line arguments rather than bare names, paths or hashes |
+| Context | 15 | Description, severity, tactics, technique and data connector are all there |
+| Evidence | 15 | Indicators traced to the procedure, plus reference queries or OSINT |
+
+A is 85 and up, B 70, C 55, D 40, F below that.
+
+**FP risk: low, medium or high** predicts how much ordinary activity it will match before you deploy it. The risk goes up for:
+
+- bare built-in binaries, generic words, a port or protocol on its own;
+- a high-volume source (process launches, network events) matched on one value or none;
+- false positives the community's Elastic and Splunk rules document for the same technique and tools. Those notes are listed in the tooltip for triage.
+
+The risk goes down for hash matches and for exclusions of known-good activity.
+
+When several queries share a card, it shows the weakest: the lowest grade and the highest risk. The Library shows the same badges. `/api/results/<run>` returns them as `quality` and `fp_risk`. `python -m archer.validation.quality <files>` prints them for detection files. Hit counts ([#16](https://github.com/cmdaltr/archer/issues/16)) will measure false positives against the SIEM itself.
+
 ## Attack flow
 
 Each column is a tactic in kill-chain order; each card is a technique, with the SIEMs that detect it or **No detection**. Arrows are correlations: the first technique seen before the second on the same host. Hover or select a card to trace its links.

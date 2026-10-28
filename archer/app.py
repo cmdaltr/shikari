@@ -4102,6 +4102,7 @@ def results_json(group_name: str, run: str = ""):
             "platforms": doc.get("detection_platforms") or sorted({q.get("platform", "") for q in queries} - {""}),
             "queries": [{"platform": q.get("platform", ""), "data_source": q.get("data_source", ""),
                          "query": q.get("query", "")} for q in queries],
+            **_assessment(doc),
         })
 
     correlations = []
@@ -6271,6 +6272,19 @@ def _is_attack_group(group_name: str) -> bool:
         return False
 
 
+def _assessment(doc: dict) -> dict:
+    """Quality grade and false-positive risk for a detection (archer.validation.quality, #33)."""
+    if not doc.get("query"):
+        return {}
+    try:
+        from archer.validation.quality import assess
+
+        return assess(doc)
+    except Exception as e:
+        print(f"⚠️  Couldn't assess {doc.get('name')}: {e}")
+        return {}
+
+
 @app.get("/results", response_class=HTMLResponse)
 def results_page(request: Request, group_name: str, run: str = "", archer_session: Optional[str] = Cookie(None)):
     """
@@ -6516,6 +6530,7 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "tactic": primary_tactic,  # Primary tactic for color coding
                     "tactics": tactics_list,  # All tactics
                     "detection_likelihood": detection_likelihood,  # Likelihood score (0-100)
+                    **_assessment(yaml_data),  # quality grade and false-positive risk (#33)
                     "reference_used": reference_used,  # Reference query flag (green badge)
                     "reference_sources": reference_sources,  # List of reference sources used
                     "technique_id": str(yaml_data.get("technique_id") or ""),
@@ -6561,6 +6576,8 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "tactic": file_data.get("tactic", "Unknown"),
                     "tactics": file_data.get("tactics", []),
                     "detection_likelihood": file_data.get("detection_likelihood", 50),
+                    "quality": file_data.get("quality"),
+                    "fp_risk": file_data.get("fp_risk"),
                     "queries": [],  # Store all queries for this group
                     "files": [],
                     "technique_id": file_data.get("technique_id", ""),
@@ -6570,6 +6587,12 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "legacy": file_data.get("legacy"),
                 }
             else:
+                # A card is as good as its weakest query: lowest quality, highest false-positive risk
+                q, r = file_data.get("quality"), file_data.get("fp_risk")
+                if q and (not grouped[key]["quality"] or q["score"] < grouped[key]["quality"]["score"]):
+                    grouped[key]["quality"] = q
+                if r and (not grouped[key]["fp_risk"] or r["score"] > grouped[key]["fp_risk"]["score"]):
+                    grouped[key]["fp_risk"] = r
                 # Merge indicators from multiple detections in the same group
                 existing_indicators = set(grouped[key]["indicators"])
                 new_indicators = file_data.get("indicators", [])
@@ -6625,6 +6648,8 @@ def results_page(request: Request, group_name: str, run: str = "", archer_sessio
                     "detection_likelihood": data.get(
                         "detection_likelihood", 50
                     ),  # Likelihood score
+                    "quality": data.get("quality"),
+                    "fp_risk": data.get("fp_risk"),
                     "files": data["files"],
                     "technique_id": data["technique_id"],
                     "attack_override": data["attack_override"],
@@ -9912,6 +9937,8 @@ async def library_page(request: Request, archer_session: Optional[str] = Cookie(
                 "detection_likelihood": content_data.get(
                     "detection_likelihood", 75
                 ),  # Added to match results page
+                **(_assessment(content_data) if isinstance(content_data, dict) and "combined_query" not in content_data
+                   else {}),
                 # Add correlation-specific fields from content_data (for attack flow visualization)
                 "is_merged": content_data.get("is_merged", False),
                 "techniques": content_data.get("techniques", []),
