@@ -1,0 +1,1083 @@
+{
+ "pages": [
+  {
+   "id": "home-hunt",
+   "menu": "Home",
+   "title": "Hunt",
+   "summary": "Generate detections for a threat group, one or more CVEs, or a list of ATT&CK techniques. Fill in one field and press Generate.",
+   "path": "/",
+   "href": null,
+   "image": "/static/guide/img/home-hunt.jpg",
+   "width": 1440,
+   "height": 1447,
+   "sections": [
+    {
+     "title": "Four ways to start",
+     "what": "Hunt starts from a threat, Analyse from a report, Profile from a company, and Research from a question such as \"who targets finance in Europe?\".",
+     "who": "Everyone who generates detections.",
+     "when": "Choosing the tab is choosing your starting point. Pick the one that matches what you've been handed.",
+     "box": [
+      87,
+      380,
+      1252,
+      77
+     ]
+    },
+    {
+     "title": "Threat group",
+     "what": "Type a group's ATT&CK name or any alias (APT29, Cozy Bear, Midnight Blizzard). Archer collects every technique the group uses, directly, through its campaigns and through its software, and builds a detection for each.",
+     "who": "Detection engineers and threat hunters.",
+     "when": "A group is named in a briefing, an incident or a sector advisory and you need coverage for its whole playbook, not one indicator.",
+     "box": [
+      119,
+      477,
+      1189,
+      84
+     ]
+    },
+    {
+     "title": "CVEs and ATT&CK techniques",
+     "what": "Enter CVE IDs to build exploit-request, runtime-shell, behaviour and IOC-sweep queries from the NVD, advisories and public exploits. Or enter technique IDs to hunt them across every group that uses them. Browse the last 30 days lists new CVEs with KEV status.",
+     "who": "Vulnerability and SOC teams for CVEs; detection engineers for techniques.",
+     "when": "A CVE is being exploited before you can patch, or a red-team report or gap analysis gives you a list of techniques.",
+     "box": [
+      119,
+      549,
+      1189,
+      153
+     ]
+    },
+    {
+     "title": "Options",
+     "what": "Merge sub-techniques into their parent, test queries against containerised SIEMs (Auto-validate), add LOLBAS, LOLDrivers and LOLRMM indicators, merge public detection rules (OSINT Enhancement), and score against them (OSINT Comparison).",
+     "who": "Detection engineers.",
+     "when": "The defaults suit most hunts. Turn on OSINT Comparison when a group's techniques have few indicators in ATT&CK.",
+     "box": [
+      119,
+      705,
+      1189,
+      198
+     ]
+    },
+    {
+     "title": "Start from a hypothesis",
+     "what": "Describe what you think an adversary is doing in your own words; Archer maps it to ATT&CK and generates the detections and correlations for it.",
+     "who": "Threat hunters.",
+     "when": "You have a hunch from an alert, an incident or the news, but not yet a group or technique ID.",
+     "box": [
+      119,
+      985,
+      1189,
+      80
+     ]
+    }
+   ]
+  },
+  {
+   "id": "home-analyse",
+   "menu": "Home",
+   "title": "Analyse a report",
+   "summary": "Build detections from a threat report, by URL or as a file. You review every technique and indicator before anything is generated.",
+   "path": "/",
+   "href": null,
+   "image": "/static/guide/img/home-analyse.jpg",
+   "width": 1440,
+   "height": 1354,
+   "sections": [
+    {
+     "title": "A report's URL",
+     "what": "Paste a blog post or advisory. Archer extracts the ATT&CK techniques, the commands, and the indicators of compromise, defanged ones included, then shows them for review.",
+     "who": "Threat intelligence analysts and detection engineers.",
+     "when": "A vendor publishes an intrusion write-up relevant to you. Feed cards open here with the URL filled in.",
+     "box": [
+      119,
+      477,
+      570,
+      205
+     ]
+    },
+    {
+     "title": "Upload a file",
+     "what": "PDF, text, Markdown, JSON, CSV, XLSX, DOCX or YARA. Drag it onto the box or choose it.",
+     "who": "Threat intelligence analysts.",
+     "when": "The report is a paid or shared PDF, or the site blocks automated fetches.",
+     "box": [
+      738,
+      477,
+      570,
+      205
+     ]
+    },
+    {
+     "title": "Options",
+     "what": "The same enrichment options as Hunt. The IOC sweep leaves out known-good infrastructure such as public DNS resolvers and the platforms' own domains.",
+     "who": "Detection engineers.",
+     "when": "Turn off OSINT Enhancement when you want detections built only from what the report says.",
+     "box": [
+      119,
+      685,
+      1189,
+      218
+     ]
+    }
+   ]
+  },
+  {
+   "id": "home-profile",
+   "menu": "Home",
+   "title": "Profile a company",
+   "summary": "Start from a company instead of a threat. Archer works out its sector, geography and exposure, recommends the groups most likely to target it, and hunts the ones you choose.",
+   "path": "/",
+   "href": null,
+   "image": "/static/guide/img/home-profile.jpg",
+   "width": 1440,
+   "height": 1354,
+   "sections": [
+    {
+     "title": "The company's domain",
+     "what": "Enter a primary domain. Archer reads public sources (Wikidata, DNS, certificate transparency, Shodan InternetDB, HIBP breach metadata) to build the profile and an exposure map. Nothing is harvested.",
+     "who": "Threat intelligence analysts and security managers.",
+     "when": "Onboarding a new client or business unit, or answering \"who is likely to come after us?\".",
+     "box": [
+      119,
+      477,
+      1189,
+      84
+     ]
+    },
+    {
+     "title": "OSINT sources and keys",
+     "what": "Every source the profile uses, with a toggle. Most need no key; Shodan, SecurityTrails, HIBP and GitHub keys add coverage.",
+     "who": "Administrators and threat intelligence analysts.",
+     "when": "Profiles look thin. A key adds sources; a toggle switches one off without deleting the key.",
+     "box": [
+      119,
+      626,
+      1189,
+      277
+     ]
+    }
+   ]
+  },
+  {
+   "id": "home-research",
+   "menu": "Home",
+   "title": "Research groups",
+   "summary": "Find threat groups by keyword, then see which ATT&CK techniques they share, so a detection that covers several of them comes first.",
+   "path": "/",
+   "href": null,
+   "image": "/static/guide/img/home-research.jpg",
+   "width": 1440,
+   "height": 1354,
+   "sections": [
+    {
+     "title": "Keywords",
+     "what": "Words matched against each group's ATT&CK description, a country, sector or technology. AND or OR combines them; Attributed or Targeted reads a country as the group's origin or its victim.",
+     "who": "Threat intelligence analysts.",
+     "when": "The question is \"who targets finance in Europe?\" rather than \"detect APT29\".",
+     "box": [
+      119,
+      477,
+      1189,
+      84
+     ]
+    },
+    {
+     "title": "Add groups by name",
+     "what": "Add particular groups to the keyword matches. Up to 20 are used.",
+     "who": "Threat intelligence analysts.",
+     "when": "Your intelligence names groups the keywords don't find.",
+     "box": [
+      119,
+      549,
+      1189,
+      131
+     ]
+    },
+    {
+     "title": "Consolidate or hunt",
+     "what": "Consolidate Techniques builds a table of which groups use each technique. Hunt Threat Groups and Hunt Techniques fill the Hunt tab, so a technique several groups share is hunted once.",
+     "who": "Detection engineers planning a backlog.",
+     "when": "You have a shortlist of groups and limited time. Shaded rows (used by more than one group) are the best value.",
+     "box": [
+      119,
+      906,
+      1189,
+      74
+     ]
+    }
+   ]
+  },
+  {
+   "id": "results",
+   "menu": "Home",
+   "title": "Results",
+   "summary": "Where every hunt, report and profile ends. Its detections, correlations, attack flow, the anatomy of the attack and a threat briefing, all built without AI.",
+   "path": "/results",
+   "href": "/library",
+   "image": "/static/guide/img/results.jpg",
+   "width": 1440,
+   "height": 2287,
+   "sections": [
+    {
+     "title": "Threat briefing",
+     "what": "How many of the group's techniques you detect, the weakest stage of its attack, and the gaps to close first, ranked by how early they come and how many correlations they're in.",
+     "who": "Security managers and detection leads.",
+     "when": "Reporting coverage against a named threat, or deciding what to build next.",
+     "box": [
+      86,
+      189,
+      1252,
+      800
+     ]
+    },
+    {
+     "title": "Detections",
+     "what": "One card per detection, grouped by SIEM, with its technique, tactics, severity, confidence and query. Badges show OSINT enrichment, reference queries and changed mappings.",
+     "who": "Detection engineers.",
+     "when": "Reviewing what to deploy. Copy a query straight into your SIEM to test it.",
+     "box": [
+      86,
+      1123,
+      1252,
+      102
+     ]
+    },
+    {
+     "title": "Correlations",
+     "what": "Detections chained into one query that fires when several steps of an attack happen on the same host or account within a time window. Three-technique chains are high-confidence leads.",
+     "who": "Detection engineers and SOC leads.",
+     "when": "Single-technique alerts are too noisy. A correlation fires far less often and means more when it does.",
+     "box": [
+      86,
+      1236,
+      1252,
+      102
+     ]
+    },
+    {
+     "title": "Cross-vendor playbooks",
+     "what": "Chains that span two or more of your SIEMs, laid out stage by stage with each SIEM's query and the fields to join them on.",
+     "who": "SOC analysts and SOAR engineers.",
+     "when": "Your endpoint and network telemetry live in different SIEMs.",
+     "box": [
+      86,
+      1349,
+      1252,
+      106
+     ]
+    },
+    {
+     "title": "Attack flow",
+     "what": "The group's techniques by tactic, each marked with the SIEMs that detect it or No detection, with correlations drawn as links. Rearrange it and download it as STIX Attack Flow.",
+     "who": "Threat hunters and purple teams.",
+     "when": "Briefing a team on how an attack unfolds and where you're blind.",
+     "box": [
+      86,
+      1482,
+      1252,
+      101
+     ]
+    }
+   ]
+  },
+  {
+   "id": "library",
+   "menu": "Detections",
+   "title": "Library",
+   "summary": "Every detection and correlation you've saved, your working set. Search, filter, tag and export it.",
+   "path": "/library",
+   "href": null,
+   "image": "/static/guide/img/library.jpg",
+   "width": 1440,
+   "height": 2337,
+   "sections": [
+    {
+     "title": "Metrics",
+     "what": "Totals across the Library, detections, correlations, techniques and tactics, with an estimate of analyst time saved.",
+     "who": "Security managers.",
+     "when": "Reporting on the detection programme.",
+     "box": [
+      86,
+      189,
+      1252,
+      842
+     ]
+    },
+    {
+     "title": "Filters",
+     "what": "Search names, techniques and query text, and narrow by group, SIEM, tactic or technique.",
+     "who": "Detection engineers and SOC analysts.",
+     "when": "Finding the detection that should have fired for an alert, or everything you have for one technique.",
+     "box": [
+      86,
+      1048,
+      1252,
+      261
+     ]
+    },
+    {
+     "title": "Detections and bulk actions",
+     "what": "The saved cards. Tick several to tag, export (JSON, CSV, XML, Word, PDF) or delete them together.",
+     "who": "Detection engineers.",
+     "when": "Handing a set of detections to another team, or tidying after a review.",
+     "box": [
+      86,
+      1374,
+      1252,
+      102
+     ]
+    },
+    {
+     "title": "ATT&CK flows and anatomy",
+     "what": "Links to the attack flow and anatomy of each saved group, report or CVE.",
+     "who": "Threat hunters.",
+     "when": "Going back to a group you covered weeks ago.",
+     "box": [
+      86,
+      1600,
+      1252,
+      102
+     ]
+    }
+   ]
+  },
+  {
+   "id": "detections-code",
+   "menu": "Detections",
+   "title": "Detections as code",
+   "summary": "Commit a run's detections to git, diff two runs, and plan a push into a SIEM's own rule store.",
+   "path": "/detections/code",
+   "href": null,
+   "image": "/static/guide/img/detections-code.jpg",
+   "width": 1440,
+   "height": 1002,
+   "sections": [
+    {
+     "title": "Export a run to git",
+     "what": "Writes each detection to a stable path per group and SIEM, and commits. Detections that need a data source you don't ingest are listed as excluded.",
+     "who": "Detection engineers running detection-as-code.",
+     "when": "You review and deploy rules through pull requests.",
+     "box": [
+      86,
+      243,
+      1252,
+      203
+     ]
+    },
+    {
+     "title": "History and diff",
+     "what": "Pick two commits and see added, removed and changed detections.",
+     "who": "Detection engineers.",
+     "when": "After a Regenerate on a new ATT&CK release, to see exactly which queries moved.",
+     "box": [
+      86,
+      454,
+      1252,
+      113
+     ]
+    },
+    {
+     "title": "Push to a SIEM",
+     "what": "Builds the Defender XDR or Google SecOps rule payloads a push would send, as a dry run.",
+     "who": "Detection engineers.",
+     "when": "Checking what a deployment would create before wiring it up.",
+     "box": [
+      86,
+      574,
+      1252,
+      203
+     ]
+    }
+   ]
+  },
+  {
+   "id": "coverage",
+   "menu": "Detections",
+   "title": "Coverage",
+   "summary": "Which ATT&CK techniques you have queries for, by tactic, technique and platform, and where one SIEM covers what another doesn't.",
+   "path": "/coverage",
+   "href": null,
+   "image": "/static/guide/img/coverage.jpg",
+   "width": 1440,
+   "height": 997,
+   "sections": [
+    {
+     "title": "Totals",
+     "what": "Queries, techniques covered, and queries per SIEM.",
+     "who": "Security managers.",
+     "when": "A one-line answer to \"how much of ATT&CK do we cover?\".",
+     "box": [
+      86,
+      189,
+      1252,
+      97
+     ]
+    },
+    {
+     "title": "Filters",
+     "what": "Narrow by number of queries, SIEM, tactic, platform or a search.",
+     "who": "Detection engineers.",
+     "when": "Looking at one platform (macOS, cloud) or one SIEM's coverage.",
+     "box": [
+      86,
+      303,
+      1252,
+      85
+     ]
+    },
+    {
+     "title": "Coverage by tactic and the matrix",
+     "what": "One card per tactic, and the full ATT&CK matrix coloured by how many queries each technique has. The layers switch between your reference queries and the detections you've saved.",
+     "who": "Detection engineers and purple teams.",
+     "when": "Planning the next quarter's detection work, or showing coverage on a familiar picture.",
+     "box": [
+      86,
+      395,
+      1252,
+      76
+     ]
+    },
+    {
+     "title": "By technique, platform and gaps",
+     "what": "Compact cards per technique or platform, exportable as CSV, and Coverage Gaps, techniques covered in one SIEM but not another.",
+     "who": "Detection engineers.",
+     "when": "Mid-migration between SIEMs, or when two teams run different ones.",
+     "box": [
+      86,
+      580,
+      1252,
+      97
+     ]
+    }
+   ]
+  },
+  {
+   "id": "flows",
+   "menu": "Detections",
+   "title": "Flows",
+   "summary": "The attack flow of every group, report and CVE in your Library, what you can and can't detect across each attack.",
+   "path": "/flows",
+   "href": null,
+   "image": "/static/guide/img/flows.jpg",
+   "width": 1440,
+   "height": 1634,
+   "sections": [
+    {
+     "title": "Choose a flow",
+     "what": "Pick a saved group, report or CVE; Open results goes to its Results page.",
+     "who": "Threat hunters, purple teams and security managers.",
+     "when": "Walking through an attack with people who don't read queries.",
+     "box": [
+      86,
+      189,
+      1252,
+      56
+     ]
+    },
+    {
+     "title": "The flow",
+     "what": "Each column is a tactic, each card a technique with the SIEMs that detect it or No detection. Arrows are correlations. Drag cards between tactics, or draw your own links.",
+     "who": "Threat hunters and purple teams.",
+     "when": "Answering \"if they got this far, would we see the next step?\".",
+     "box": [
+      103,
+      537,
+      1220,
+      622
+     ]
+    },
+    {
+     "title": "Controls",
+     "what": "Filter by SIEM, hide undetected techniques, draw the correlations, focus on selected cards, turn the layout round, undo, and download as STIX Attack Flow.",
+     "who": "Threat hunters.",
+     "when": "Cutting a large flow down to the part you're discussing.",
+     "box": [
+      103,
+      326,
+      1220,
+      103
+     ]
+    }
+   ]
+  },
+  {
+   "id": "anatomy",
+   "menu": "Detections",
+   "title": "Anatomy",
+   "summary": "How an attack runs in plain words, in the style of the DFIR Report's workflow diagrams, ways in, toolkit, actions and where it goes, each step marked detected or not.",
+   "path": "/anatomy",
+   "href": null,
+   "image": "/static/guide/img/anatomy.jpg",
+   "width": 1440,
+   "height": 1161,
+   "sections": [
+    {
+     "title": "Choose a group or CVE",
+     "what": "Every threat group and CVE in your Library. This page counts every detection you have for it, from any run.",
+     "who": "Threat intelligence analysts and security managers.",
+     "when": "Explaining a threat to an executive audience without ATT&CK IDs.",
+     "box": [
+      86,
+      189,
+      1252,
+      56
+     ]
+    },
+    {
+     "title": "The workflow",
+     "what": "Ways in (exploits, phishing, credentials), its toolkit, what it does once in, and the cloud, messaging and storage services it uses. Teal steps are mostly detected, red mostly not. Select a step for the detail behind it.",
+     "who": "Threat intelligence analysts.",
+     "when": "Briefing on a group's tradecraft rather than its technique list.",
+     "box": [
+      103,
+      297,
+      1220,
+      541
+     ]
+    }
+   ]
+  },
+  {
+   "id": "feed",
+   "menu": "Intel",
+   "title": "Threat Feed",
+   "summary": "The last seven days of technical threat research from vendor and government sources, tagged with the industries, nations and products involved. No AI.",
+   "path": "/feed",
+   "href": null,
+   "image": "/static/guide/img/feed.jpg",
+   "width": 1440,
+   "height": 1712,
+   "sections": [
+    {
+     "title": "Filters",
+     "what": "Your industries, your technology stack, opportunistic or financial activity, both, or everything. Posts naming only products you don't run are left out by default.",
+     "who": "Threat intelligence analysts and SOC leads.",
+     "when": "The Monday-morning read of what's new and relevant.",
+     "box": [
+      86,
+      189,
+      1252,
+      194
+     ]
+    },
+    {
+     "title": "Watchlists",
+     "what": "Saved searches (a group, a CVE, a vendor). Archer collects every six hours and flags new matches on the Intel menu, and can email them.",
+     "who": "Threat intelligence analysts.",
+     "when": "Tracking a campaign or actor over weeks without checking by hand.",
+     "box": [
+      86,
+      463,
+      1252,
+      215
+     ]
+    },
+    {
+     "title": "The wall",
+     "what": "One card per post with source, summary and tags. Analyse in Archer turns a post into detections.",
+     "who": "Threat intelligence analysts and detection engineers.",
+     "when": "A post matches your stack or industry. Analysing it takes a minute.",
+     "box": [
+      86,
+      745,
+      1252,
+      597
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cyber-powers",
+   "menu": "Intel",
+   "title": "Cyber Powers",
+   "summary": "National cyber capability on a world map, by IISS tier, by how firmly ATT&CK attributes groups to each country, and by who is targeted.",
+   "path": "/cyber-powers",
+   "href": null,
+   "image": "/static/guide/img/cyber-powers.jpg",
+   "width": 1440,
+   "height": 1495,
+   "sections": [
+    {
+     "title": "The map",
+     "what": "Three views (Nations, Groups, Targets). Hover a country for its tier, attribution, motivations and groups. Your country is green.",
+     "who": "Threat intelligence analysts and security managers.",
+     "when": "Geopolitical briefings, and putting a nation-state advisory in context.",
+     "box": [
+      104,
+      273,
+      1216,
+      598
+     ]
+    },
+    {
+     "title": "Countries by tier",
+     "what": "The countries in each tier, confidence level or target ranking, with their flags.",
+     "who": "Security managers.",
+     "when": "A quick reference for a board paper.",
+     "box": [
+      86,
+      920,
+      1252,
+      245
+     ]
+    }
+   ]
+  },
+  {
+   "id": "stix",
+   "menu": "Intel",
+   "title": "STIX/TAXII & MISP",
+   "summary": "Take STIX bundles, TAXII collections and MISP events as a hunt input, and export a finished run as STIX or a MISP event.",
+   "path": "/intel/stix",
+   "href": null,
+   "image": "/static/guide/img/stix.jpg",
+   "width": 1440,
+   "height": 1035,
+   "sections": [
+    {
+     "title": "Import intelligence",
+     "what": "Upload or paste a STIX 2.1 bundle or MISP event, poll a TAXII collection, or query a MISP instance. Credentials are used for that request only.",
+     "who": "Threat intelligence analysts.",
+     "when": "Intelligence arrives from an ISAC, a sharing community or a TIP rather than a blog post.",
+     "box": [
+      86,
+      189,
+      1252,
+      413
+     ]
+    },
+    {
+     "title": "Export a run",
+     "what": "A STIX 2.1 bundle with techniques, indicators and the detections themselves, or a MISP event with galaxies and attributes.",
+     "who": "Threat intelligence analysts.",
+     "when": "Sharing what you built back to your community or into a TIP.",
+     "box": [
+      86,
+      609,
+      1252,
+      198
+     ]
+    }
+   ]
+  },
+  {
+   "id": "catalogue",
+   "menu": "Intel",
+   "title": "Catalogue and company review",
+   "summary": "Every company profiled so far, and each one's review, the profile, its exposure map and the groups recommended for it.",
+   "path": "/review",
+   "href": "/catalogue",
+   "image": "/static/guide/img/catalogue.jpg",
+   "width": 1440,
+   "height": 1393,
+   "sections": [
+    {
+     "title": "Profile summary",
+     "what": "Company, industry, location, hosting and a risk score, from public sources.",
+     "who": "Threat intelligence analysts.",
+     "when": "Checking the profile is right before generating. A CDN or parent company can mislead it.",
+     "box": [
+      216,
+      176,
+      993,
+      177
+     ]
+    },
+    {
+     "title": "Exposure map",
+     "what": "What an attacker can see before they act, IPs, networks, mail and its spoofability, subdomains, exposed services, known CVEs and breach metadata, linked back to the domain.",
+     "who": "Security managers, attack-surface and red teams.",
+     "when": "Attack-surface reviews, and before a penetration test.",
+     "box": [
+      216,
+      364,
+      993,
+      487
+     ]
+    },
+    {
+     "title": "Generate detections",
+     "what": "The recommended groups in columns, each with its likelihood of targeting this organisation. Tick the ones to hunt.",
+     "who": "Detection engineers.",
+     "when": "Turning a profile into coverage for the threats that matter to that company.",
+     "box": [
+      216,
+      863,
+      993,
+      263
+     ]
+    }
+   ]
+  },
+  {
+   "id": "mitresaw",
+   "menu": "Intel",
+   "title": "MITRESaw",
+   "summary": "The ATT&CK procedure data behind Archer's briefings and detections, every group's techniques, how each reaches the group, and the indicators in the procedure text.",
+   "path": "/mitresaw",
+   "href": null,
+   "image": "/static/guide/img/mitresaw.jpg",
+   "width": 1440,
+   "height": 2600,
+   "sections": [
+    {
+     "title": "The procedures",
+     "what": "The ATT&CK version and build. Update collects only the groups the latest release changed; Full rebuild collects all of them.",
+     "who": "Administrators.",
+     "when": "After an ATT&CK release.",
+     "box": [
+      86,
+      189,
+      1252,
+      280
+     ]
+    },
+    {
+     "title": "OSINT repositories",
+     "what": "The public detection-rule repositories and LOL datasets Archer searches while generating, with each one's status.",
+     "who": "Administrators.",
+     "when": "OSINT enrichment looks thin. Check every repository is ready.",
+     "box": [
+      86,
+      476,
+      1252,
+      330
+     ]
+    },
+    {
+     "title": "Procedures table",
+     "what": "Search and filter every procedure by group, technique, tactic and attribution (the group's own, a campaign's or its software's). Download CSV or XLSX.",
+     "who": "Threat intelligence analysts.",
+     "when": "Checking why a group is linked to a technique, with the evidence.",
+     "box": [
+      86,
+      813,
+      1252,
+      1787
+     ]
+    }
+   ]
+  },
+  {
+   "id": "emulate",
+   "menu": "Build",
+   "title": "Emulate",
+   "summary": "Which logs record each ATT&CK technique, from attacks recorded in public labs, with your detections' indicators checked against those recordings. Nothing is sent to your SIEM.",
+   "path": "/emulate",
+   "href": null,
+   "image": "/static/guide/img/emulate.jpg",
+   "width": 1440,
+   "height": 2600,
+   "sections": [
+    {
+     "title": "Plan an emulation",
+     "what": "Pick a group, CVE or technique and Archer assembles a plan, the best recorded dataset per technique, the matching Atomic Red Team test and the log sources to collect. Export it as a run sheet or MACAT TOML.",
+     "who": "Purple and red teams.",
+     "when": "Before an emulation exercise, to agree what will run and what should be seen.",
+     "box": [
+      86,
+      206,
+      1252,
+      148
+     ]
+    },
+    {
+     "title": "Recordings and the indicator check",
+     "what": "How many recordings are available and whether detections can be checked against them.",
+     "who": "Detection engineers.",
+     "when": "Checking the telemetry data is ready on this machine.",
+     "box": [
+      86,
+      361,
+      1252,
+      97
+     ]
+    },
+    {
+     "title": "Your lab",
+     "what": "Create and manage Docker, Tart and UTM machines from inside Archer, start, stop, snapshot, revert and set them up.",
+     "who": "Purple teams and administrators.",
+     "when": "Recording your own telemetry rather than relying on public labs.",
+     "box": [
+      106,
+      1303,
+      1212,
+      716
+     ]
+    },
+    {
+     "title": "Recorded telemetry",
+     "what": "Every recording by technique, group or data source, with the event types it captured.",
+     "who": "Detection engineers.",
+     "when": "Deciding which log source a detection should be built on.",
+     "box": [
+      86,
+      2042,
+      1252,
+      558
+     ]
+    }
+   ]
+  },
+  {
+   "id": "assessments",
+   "menu": "Build",
+   "title": "Assessments",
+   "summary": "Test cases built from the groups that matter to you, and campaigns that record what each test did and what the defence saw, VECTR-style.",
+   "path": "/assessments",
+   "href": null,
+   "image": "/static/guide/img/assessments.jpg",
+   "width": 1440,
+   "height": 997,
+   "sections": [
+    {
+     "title": "New assessment",
+     "what": "A campaign with a target, an operator and a run date, holding test cases from the Threat library.",
+     "who": "Purple and red teams.",
+     "when": "Planning an exercise.",
+     "box": [
+      86,
+      233,
+      1252,
+      125
+     ]
+    },
+    {
+     "title": "Campaigns",
+     "what": "Record red (executed, failed, blocked) and blue (not logged, logged, alerted, prevented) per technique. Logged but no alert offers a hunt for that technique. Export CSV or an ATT&CK Navigator layer.",
+     "who": "Purple teams and security managers.",
+     "when": "During and after an exercise, to show what changed.",
+     "box": [
+      86,
+      365,
+      1252,
+      165
+     ]
+    }
+   ]
+  },
+  {
+   "id": "manual",
+   "menu": "Build",
+   "title": "Manual",
+   "summary": "Write detections from techniques and procedures you supply, one technique at a time.",
+   "path": "/manual",
+   "href": null,
+   "image": "/static/guide/img/manual.jpg",
+   "width": 1440,
+   "height": 1203,
+   "sections": [
+    {
+     "title": "Group description",
+     "what": "An optional line about the group or your hypothesis, kept with the run.",
+     "who": "Threat intelligence analysts.",
+     "when": "Recording why the run exists for whoever audits it later.",
+     "box": [
+      108,
+      246,
+      1209,
+      130
+     ]
+    },
+    {
+     "title": "Technique entries",
+     "what": "Choose a technique and its tactics, and list what was observed, one procedure per line. Commands, paths, registry keys and tool names become indicators. Append each, then Submit.",
+     "who": "Incident responders and detection engineers.",
+     "when": "A group ATT&CK doesn't know, or your own intelligence from an incident.",
+     "box": [
+      86,
+      189,
+      1252,
+      789
+     ]
+    }
+   ]
+  },
+  {
+   "id": "regex",
+   "menu": "Build",
+   "title": "Regex",
+   "summary": "Test a regular expression against your own text and check it for the SIEM it will run in. Everything runs in your browser.",
+   "path": "/regex",
+   "href": null,
+   "image": "/static/guide/img/regex.jpg",
+   "width": 1440,
+   "height": 1878,
+   "sections": [
+    {
+     "title": "Expression and flavour",
+     "what": "The pattern, its flags, and the SIEM or language it's for. Defender XDR and SecOps run in RE2, Splunk in PCRE2, and Elastic matches the whole value.",
+     "who": "Detection engineers.",
+     "when": "Any regex headed for a production rule.",
+     "box": [
+      86,
+      189,
+      1252,
+      194
+     ]
+    },
+    {
+     "title": "Test string",
+     "what": "Paste command lines, paths or log lines. Matches and capture groups are highlighted as you type.",
+     "who": "Detection engineers.",
+     "when": "Checking against real samples, including near-misses that shouldn't match.",
+     "box": [
+      86,
+      391,
+      667,
+      353
+     ]
+    },
+    {
+     "title": "Checks",
+     "what": "Errors and warnings for the chosen flavour, single backslashes in Windows paths, unescaped dots, empty matches, catastrophic backtracking.",
+     "who": "Detection engineers.",
+     "when": "Before the SIEM finds the problem for you.",
+     "box": [
+      757,
+      391,
+      582,
+      98
+     ]
+    },
+    {
+     "title": "Use it in a query",
+     "what": "The pattern written into a query for each SIEM, escaped for its strings.",
+     "who": "Detection engineers.",
+     "when": "Moving a pattern between SIEMs.",
+     "box": [
+      86,
+      873,
+      667,
+      619
+     ]
+    }
+   ]
+  },
+  {
+   "id": "agents",
+   "menu": "Build",
+   "title": "Agents",
+   "summary": "A model working in a loop with Archer's tools, repairing queries, triaging reports, sweeping coverage gaps, auditing and tuning the Library. Every step is shown and kept.",
+   "path": "/agents",
+   "href": null,
+   "image": "/static/guide/img/agents.jpg",
+   "width": 1440,
+   "height": 997,
+   "sections": [
+    {
+     "title": "The agents",
+     "what": "Detection repair, Ask Archer with tools, Intel triage, Coverage sweep, Library audit and Detection tuning. Each says what it needs and what it does.",
+     "who": "Detection engineers.",
+     "when": "Repetitive review work that follows clear rules.",
+     "box": [
+      58,
+      122,
+      1310,
+      110
+     ]
+    },
+    {
+     "title": "Run one",
+     "what": "Choose the agent, its input and the model. Actions that change something wait for your approval unless you untick it.",
+     "who": "Detection engineers.",
+     "when": "After a big run, let the repair agent fix only what the checks flag.",
+     "box": [
+      58,
+      422,
+      1310,
+      301
+     ]
+    }
+   ]
+  },
+  {
+   "id": "profile-environment",
+   "menu": "Profile and Help",
+   "title": "Environment",
+   "summary": "What your organisation runs, applied to every hunt and to the Threat Feed.",
+   "path": "/profile",
+   "href": null,
+   "image": "/static/guide/img/profile-environment.jpg",
+   "width": 1440,
+   "height": 1982,
+   "sections": [
+    {
+     "title": "SIEMs, industries and technology stack",
+     "what": "The SIEMs to generate for, the industries the Feed keeps, and the products in your estate. Hunts leave out what can't happen there.",
+     "who": "Administrators and detection leads.",
+     "when": "First thing after installing. Every hunt is quicker and closer to your estate afterwards.",
+     "box": [
+      119,
+      287,
+      1189,
+      1261
+     ]
+    }
+   ]
+  },
+  {
+   "id": "profile-apikeys",
+   "menu": "Profile and Help",
+   "title": "API keys",
+   "summary": "AI providers, OSINT sources and SIEM credentials, stored encrypted. All optional.",
+   "path": "/profile",
+   "href": null,
+   "image": "/static/guide/img/profile-apikeys.jpg",
+   "width": 1440,
+   "height": 1377,
+   "sections": [
+    {
+     "title": "Keys and assignments",
+     "what": "A cloud provider's key or a local model's URL, which model answers Ask Archer and which generates, a cap on AI calls per run, and keys for OSINT sources and SIEMs.",
+     "who": "Administrators.",
+     "when": "Turning on AI-assisted generation, or adding OSINT coverage for company profiles.",
+     "box": [
+      119,
+      287,
+      1189,
+      714
+     ]
+    }
+   ]
+  },
+  {
+   "id": "help",
+   "menu": "Profile and Help",
+   "title": "Help",
+   "summary": "What Archer does with each kind of input, what it's for, and the frequently asked questions. The guide and these tips are in the Help menu too.",
+   "path": "/how-it-works",
+   "href": null,
+   "image": "/static/guide/img/help.jpg",
+   "width": 1440,
+   "height": 2600,
+   "sections": [
+    {
+     "title": "What it does",
+     "what": "The inputs Archer takes and what it makes of them.",
+     "who": "Anyone new to Archer.",
+     "when": "Explaining Archer to a colleague.",
+     "box": [
+      125,
+      397,
+      1175,
+      289
+     ]
+    },
+    {
+     "title": "Use it for",
+     "what": "The jobs Archer is built for, from hunting a named group to profiling an organisation.",
+     "who": "Anyone new to Archer.",
+     "when": "Deciding where to start.",
+     "box": [
+      125,
+      704,
+      1175,
+      196
+     ]
+    }
+   ]
+  }
+ ]
+}

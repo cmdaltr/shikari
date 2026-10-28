@@ -43,6 +43,7 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 | [GETTING_STARTED.md](../GETTING_STARTED.md) | Installation, setup, first run |
 | [USAGE.md](USAGE.md) | Where each task is done, and `archer-cli offline` |
 | [desktop/README.md](../desktop/README.md) | Desktop installers: connecting to an organisation's server (MDM, Group Policy), running locally, building releases |
+| [scripts/video/README.md](../scripts/video/README.md) | Remaking the in-app guide's pictures and the narrated walkthrough video |
 | [Deployment comparison](architecture/deployment-comparison.svg) | Web, desktop client, desktop local and checkout: where users, detections and mappings live |
 
 ---

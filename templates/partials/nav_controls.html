@@ -27,6 +27,8 @@
   'code': '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
   'campaign': '<path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
   'emulate': '<polygon points="5 3 19 12 5 21 5 3"/>',
+  'guide': '<rect x="2" y="4" width="20" height="14" rx="2"/><rect x="6" y="8" width="7" height="5" rx="1"/><path d="M8 22h8M12 18v4"/>',
+  'tip': '<path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V18h6v-1.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/>',
   'build': '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
 } %}
 {# Menus: (label, icon, [(href, label, needs an account, icon, what it is)]) #}
@@ -96,7 +98,14 @@
         {% else %}
         <span class="nav-icon-btn has-label is-disabled" aria-disabled="true" title="Log in to use Profile">{{ svg('profile') }}<span class="nav-label">Profile</span></span>
         {% endif %}
-        <a href="/how-it-works" class="nav-icon-btn has-label{% if is_here('/how-it-works') %} is-active{% endif %}"{% if is_here('/how-it-works') %} aria-current="page"{% endif %} title="Help">{{ svg('help') }}<span class="nav-label">Help</span></a>
+        <div class="nav-menu nav-menu-right">
+            <button type="button" class="nav-icon-btn has-label nav-menu-btn{% if is_here('/how-it-works') %} is-active{% endif %}" aria-haspopup="true" aria-expanded="false" title="Help">{{ svg('help') }}<span class="nav-label">Help</span></button>
+            <div class="nav-menu-list" role="menu" aria-label="Help">
+                <a href="/how-it-works" class="nav-menu-item{% if is_here('/how-it-works') %} is-active{% endif %}" role="menuitem">{{ svg('help') }}<span><strong>How it works</strong><small>What Archer does with your input, step by step</small></span></a>
+                <a href="/how-it-works" class="nav-menu-item" role="menuitem" data-guide>{{ svg('guide') }}<span><strong>Guide</strong><small>Every page, each part highlighted and explained</small></span></a>
+                <a href="/how-it-works" class="nav-menu-item" role="menuitem" data-tips>{{ svg('tip') }}<span><strong>Tips and tricks</strong><small>Features and enrichments that are easy to miss</small></span></a>
+            </div>
+        </div>
         <button class="nav-icon-btn" id="dark-mode-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
             <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="5"/>
@@ -124,6 +133,8 @@
         {% endif %}
     </div>
 </nav>
+<link rel="stylesheet" href="/static/css/guide.css?v={{ request.app.state.asset_version }}">
+<script src="/static/js/guide.js?v={{ request.app.state.asset_version }}" defer></script>
 <script>
 // Threat Feed watchlists: new matches as a badge on Intel and Feed (archer.intelligence.watchlists)
 (function () {

@@ -10,6 +10,8 @@ Each page below covers one part of Archer in the same order: what it's for, how 
 
 The menu bar has three menus (Detections, Intel, Build), then Profile and Help. The Home page has four tabs.
 
+Help → **Guide** shows a picture of every page with each part highlighted in turn: what it's for, who uses it and when it helps most. Help → **Tips and tricks** shows one tip at a time, at random, never repeating any of the last ten. Both are offered when Archer starts (the first page of each browser session, or each launch of the desktop app), and each has a tick box to stop it appearing then. Those choices and the tip history are kept in that browser only.
+
 | Part of Archer | Where | What it's for | Guide |
 |---|---|---|---|
 | Running Archer | Terminal | Start, stop and update Archer; sign in | [Running Archer](01-running-archer.md) |
@@ -73,3 +75,4 @@ The guide is the place to start. Deeper material:
 - [GETTING_STARTED.md](../../GETTING_STARTED.md): installation in full, mapping files, bespoke settings
 - [Documentation index](../DOCS_INDEX.md): architecture, correlation engine, OSINT internals, AI and RAG, scripts
 - The in-app **Help** page (`/how-it-works`): the pipeline explained with diagrams
+- [Walkthrough video](../../scripts/video/README.md): how the narrated video of every page is made

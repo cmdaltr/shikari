@@ -125,6 +125,8 @@ a.nav-auth:hover { background: var(--accent); }
 /* A bridge over the gap, so moving down from the button keeps a hovered menu open */
 .nav-menu-list::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; height: 8px; }
 .nav-menu.is-open .nav-menu-list { display: block; }
+/* Help sits at the bar's right edge, so its list opens leftwards */
+.nav-menu-right .nav-menu-list { left: auto; right: 0; }
 @media (hover: hover) { .nav-menu:hover .nav-menu-list { display: block; } }
 /* Archer banner, centred in the bar on every page but Home; absolutely placed so it never
    moves the menus or the bar's height. Transparent, with a faint light edge so the dark

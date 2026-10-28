@@ -1,0 +1,522 @@
+# The in-app guide (Help → Guide): every page, each part highlighted in turn.
+# scripts/guide/capture.py photographs each page and finds each selector (Playwright syntax) to place its
+# highlight; it writes static/guide/guide.json. Edit the words here and capture again.
+#
+# path:    where to photograph it. before: clicks made first (open a tab, open a card by its title), or a script
+# href:    where "Open this page" goes, when not path
+# who:     the people a part is mostly for; when: the circumstances it's most useful in
+# optional: skip the highlight when the page doesn't have that part (a run with one SIEM has no playbooks)
+
+pages:
+
+  - id: home-hunt
+    menu: Home
+    title: Hunt
+    path: /
+    before: [{click: 'button.tab-button[data-tab="generate"]'}]
+    summary: Generate detections for a threat group, one or more CVEs, or a list of ATT&CK techniques. Fill in one field and press Generate.
+    sections:
+      - selector: .home-tabs .tabs-header
+        title: Four ways to start
+        what: Hunt starts from a threat, Analyse from a report, Profile from a company, and Research from a question such as "who targets finance in Europe?".
+        who: Everyone who generates detections.
+        when: Choosing the tab is choosing your starting point. Pick the one that matches what you've been handed.
+      - selector: '#generate-form .hp-primary'
+        title: Threat group
+        what: Type a group's ATT&CK name or any alias (APT29, Cozy Bear, Midnight Blizzard). Archer collects every technique the group uses, directly, through its campaigns and through its software, and builds a detection for each.
+        who: Detection engineers and threat hunters.
+        when: A group is named in a briefing, an incident or a sector advisory and you need coverage for its whole playbook, not one indicator.
+      - selector: '#generate-form .hp-secondary'
+        title: CVEs and ATT&CK techniques
+        what: Enter CVE IDs to build exploit-request, runtime-shell, behaviour and IOC-sweep queries from the NVD, advisories and public exploits. Or enter technique IDs to hunt them across every group that uses them. Browse the last 30 days lists new CVEs with KEV status.
+        who: Vulnerability and SOC teams for CVEs; detection engineers for techniques.
+        when: A CVE is being exploited before you can patch, or a red-team report or gap analysis gives you a list of techniques.
+      - selector: '#tab-generate details.options-section'
+        title: Options
+        what: Merge sub-techniques into their parent, test queries against containerised SIEMs (Auto-validate), add LOLBAS, LOLDrivers and LOLRMM indicators, merge public detection rules (OSINT Enhancement), and score against them (OSINT Comparison).
+        who: Detection engineers.
+        when: The defaults suit most hunts. Turn on OSINT Comparison when a group's techniques have few indicators in ATT&CK.
+      - selector: '#hypo'
+        title: Start from a hypothesis
+        what: Describe what you think an adversary is doing in your own words; Archer maps it to ATT&CK and generates the detections and correlations for it.
+        who: Threat hunters.
+        when: You have a hunch from an alert, an incident or the news, but not yet a group or technique ID.
+
+  - id: home-analyse
+    menu: Home
+    title: Analyse a report
+    path: /
+    before: [{click: 'button.tab-button[data-tab="upload"]'}]
+    summary: Build detections from a threat report, by URL or as a file. You review every technique and indicator before anything is generated.
+    sections:
+      - selector: '#upload-form .hp-primary'
+        title: A report's URL
+        what: Paste a blog post or advisory. Archer extracts the ATT&CK techniques, the commands, and the indicators of compromise, defanged ones included, then shows them for review.
+        who: Threat intelligence analysts and detection engineers.
+        when: A vendor publishes an intrusion write-up relevant to you. Feed cards open here with the URL filled in.
+      - selector: '#upload-form .hp-secondary'
+        title: Upload a file
+        what: PDF, text, Markdown, JSON, CSV, XLSX, DOCX or YARA. Drag it onto the box or choose it.
+        who: Threat intelligence analysts.
+        when: The report is a paid or shared PDF, or the site blocks automated fetches.
+      - selector: '#upload-form details.options-section'
+        title: Options
+        what: The same enrichment options as Hunt. The IOC sweep leaves out known-good infrastructure such as public DNS resolvers and the platforms' own domains.
+        who: Detection engineers.
+        when: Turn off OSINT Enhancement when you want detections built only from what the report says.
+
+  - id: home-profile
+    menu: Home
+    title: Profile a company
+    path: /
+    before: [{click: 'button.tab-button[data-tab="profile"]'}]
+    summary: Start from a company instead of a threat. Archer works out its sector, geography and exposure, recommends the groups most likely to target it, and hunts the ones you choose.
+    sections:
+      - selector: '#profile-form .hp-primary'
+        title: The company's domain
+        what: Enter a primary domain. Archer reads public sources (Wikidata, DNS, certificate transparency, Shodan InternetDB, HIBP breach metadata) to build the profile and an exposure map. Nothing is harvested.
+        who: Threat intelligence analysts and security managers.
+        when: Onboarding a new client or business unit, or answering "who is likely to come after us?".
+      - selector: '#profile-form details.hp-keys'
+        title: OSINT sources and keys
+        what: Every source the profile uses, with a toggle. Most need no key; Shodan, SecurityTrails, HIBP and GitHub keys add coverage.
+        who: Administrators and threat intelligence analysts.
+        when: Profiles look thin. A key adds sources; a toggle switches one off without deleting the key.
+
+  - id: home-research
+    menu: Home
+    title: Research groups
+    path: /
+    before: [{click: 'button.tab-button[data-tab="research"]'}]
+    summary: Find threat groups by keyword, then see which ATT&CK techniques they share, so a detection that covers several of them comes first.
+    sections:
+      - selector: '#actor-consolidation-section .hp-primary'
+        title: Keywords
+        what: Words matched against each group's ATT&CK description, a country, sector or technology. AND or OR combines them; Attributed or Targeted reads a country as the group's origin or its victim.
+        who: Threat intelligence analysts.
+        when: The question is "who targets finance in Europe?" rather than "detect APT29".
+      - selector: '#actor-consolidation-section .hp-secondary'
+        title: Add groups by name
+        what: Add particular groups to the keyword matches. Up to 20 are used.
+        who: Threat intelligence analysts.
+        when: Your intelligence names groups the keywords don't find.
+      - selector: '#actor-consolidation-section .hp-actions'
+        title: Consolidate or hunt
+        what: Consolidate Techniques builds a table of which groups use each technique. Hunt Threat Groups and Hunt Techniques fill the Hunt tab, so a technique several groups share is hunted once.
+        who: Detection engineers planning a backlog.
+        when: You have a shortlist of groups and limited time. Shaded rows (used by more than one group) are the best value.
+
+  - id: results
+    menu: Home
+    title: Results
+    path: /results?group_name=APT29
+    href: /library
+    before: [{click: '#briefing h2'}]
+    summary: Where every hunt, report and profile ends. Its detections, correlations, attack flow, the anatomy of the attack and a threat briefing, all built without AI.
+    sections:
+      - selector: '#briefing'
+        title: Threat briefing
+        what: How many of the group's techniques you detect, the weakest stage of its attack, and the gaps to close first, ranked by how early they come and how many correlations they're in.
+        who: Security managers and detection leads.
+        when: Reporting coverage against a named threat, or deciding what to build next.
+      - selector: '.detection-section:has(h2:text-is("Detections"))'
+        title: Detections
+        what: One card per detection, grouped by SIEM, with its technique, tactics, severity, confidence and query. Badges show OSINT enrichment, reference queries and changed mappings.
+        who: Detection engineers.
+        when: Reviewing what to deploy. Copy a query straight into your SIEM to test it.
+      - selector: '#correlations'
+        title: Correlations
+        what: Detections chained into one query that fires when several steps of an attack happen on the same host or account within a time window. Three-technique chains are high-confidence leads.
+        who: Detection engineers and SOC leads.
+        when: Single-technique alerts are too noisy. A correlation fires far less often and means more when it does.
+      - selector: '#cross-vendor'
+        optional: true
+        title: Cross-vendor playbooks
+        what: Chains that span two or more of your SIEMs, laid out stage by stage with each SIEM's query and the fields to join them on.
+        who: SOC analysts and SOAR engineers.
+        when: Your endpoint and network telemetry live in different SIEMs.
+      - selector: '#attack-flow'
+        title: Attack flow
+        what: The group's techniques by tactic, each marked with the SIEMs that detect it or No detection, with correlations drawn as links. Rearrange it and download it as STIX Attack Flow.
+        who: Threat hunters and purple teams.
+        when: Briefing a team on how an attack unfolds and where you're blind.
+      - selector: '#validation-checklist'
+        title: Validation
+        what: Four checks before deployment, logic, syntax, schema and false positives. Download All needs them ticked.
+        who: Detection engineers.
+        when: Every time. Generated queries are a starting point, not production rules.
+
+  - id: library
+    menu: Detections
+    title: Library
+    path: /library
+    before: [{click: 'h2:text-is("Metrics")'}, {click: 'h2:text-is("Filters")'}]
+    summary: Every detection and correlation you've saved, your working set. Search, filter, tag and export it.
+    sections:
+      - selector: '.ui-card:has(h2:text-is("Metrics"))'
+        title: Metrics
+        what: Totals across the Library, detections, correlations, techniques and tactics, with an estimate of analyst time saved.
+        who: Security managers.
+        when: Reporting on the detection programme.
+      - selector: '.ui-card:has(h2:text-is("Filters"))'
+        title: Filters
+        what: Search names, techniques and query text, and narrow by group, SIEM, tactic or technique.
+        who: Detection engineers and SOC analysts.
+        when: Finding the detection that should have fired for an alert, or everything you have for one technique.
+      - selector: '.detection-section:has(h2:text-is("Detections"))'
+        title: Detections and bulk actions
+        what: The saved cards. Tick several to tag, export (JSON, CSV, XML, Word, PDF) or delete them together.
+        who: Detection engineers.
+        when: Handing a set of detections to another team, or tidying after a review.
+      - selector: '#library-flows'
+        title: ATT&CK flows and anatomy
+        what: Links to the attack flow and anatomy of each saved group, report or CVE.
+        who: Threat hunters.
+        when: Going back to a group you covered weeks ago.
+
+  - id: detections-code
+    menu: Detections
+    title: Detections as code
+    path: /detections/code
+    summary: Commit a run's detections to git, diff two runs, and plan a push into a SIEM's own rule store.
+    sections:
+      - selector: 'section.ms-card:has(h2:has-text("Export a run"))'
+        title: Export a run to git
+        what: Writes each detection to a stable path per group and SIEM, and commits. Detections that need a data source you don't ingest are listed as excluded.
+        who: Detection engineers running detection-as-code.
+        when: You review and deploy rules through pull requests.
+      - selector: 'section.ms-card:has(h2:has-text("History"))'
+        title: History and diff
+        what: Pick two commits and see added, removed and changed detections.
+        who: Detection engineers.
+        when: After a Regenerate on a new ATT&CK release, to see exactly which queries moved.
+      - selector: 'section.ms-card:has(h2:has-text("Push"))'
+        title: Push to a SIEM
+        what: Builds the Defender XDR or Google SecOps rule payloads a push would send, as a dry run.
+        who: Detection engineers.
+        when: Checking what a deployment would create before wiring it up.
+
+  - id: coverage
+    menu: Detections
+    title: Coverage
+    path: /coverage
+    summary: Which ATT&CK techniques you have queries for, by tactic, technique and platform, and where one SIEM covers what another doesn't.
+    sections:
+      - selector: .summary-cards
+        title: Totals
+        what: Queries, techniques covered, and queries per SIEM.
+        who: Security managers.
+        when: A one-line answer to "how much of ATT&CK do we cover?".
+      - selector: .cv-filters
+        title: Filters
+        what: Narrow by number of queries, SIEM, tactic, platform or a search.
+        who: Detection engineers.
+        when: Looking at one platform (macOS, cloud) or one SIEM's coverage.
+      - selector: '.tactic-section >> nth=0'
+        title: Coverage by tactic and the matrix
+        what: One card per tactic, and the full ATT&CK matrix coloured by how many queries each technique has. The layers switch between your reference queries and the detections you've saved.
+        who: Detection engineers and purple teams.
+        when: Planning the next quarter's detection work, or showing coverage on a familiar picture.
+      - selector: '.table-section >> nth=0'
+        title: By technique, platform and gaps
+        what: Compact cards per technique or platform, exportable as CSV, and Coverage Gaps, techniques covered in one SIEM but not another.
+        who: Detection engineers.
+        when: Mid-migration between SIEMs, or when two teams run different ones.
+
+  - id: flows
+    menu: Detections
+    title: Flows
+    path: /flows
+    summary: The attack flow of every group, report and CVE in your Library, what you can and can't detect across each attack.
+    sections:
+      - selector: .fl-bar
+        title: Choose a flow
+        what: Pick a saved group, report or CVE; Open results goes to its Results page.
+        who: Threat hunters, purple teams and security managers.
+        when: Walking through an attack with people who don't read queries.
+      - selector: '#af-canvas'
+        title: The flow
+        what: Each column is a tactic, each card a technique with the SIEMs that detect it or No detection. Arrows are correlations. Drag cards between tactics, or draw your own links.
+        who: Threat hunters and purple teams.
+        when: Answering "if they got this far, would we see the next step?".
+      - selector: .af-toolbar
+        title: Controls
+        what: Filter by SIEM, hide undetected techniques, draw the correlations, focus on selected cards, turn the layout round, undo, and download as STIX Attack Flow.
+        who: Threat hunters.
+        when: Cutting a large flow down to the part you're discussing.
+
+  - id: anatomy
+    menu: Detections
+    title: Anatomy
+    path: /anatomy
+    summary: How an attack runs in plain words, in the style of the DFIR Report's workflow diagrams, ways in, toolkit, actions and where it goes, each step marked detected or not.
+    sections:
+      - selector: .fl-bar
+        title: Choose a group or CVE
+        what: Every threat group and CVE in your Library. This page counts every detection you have for it, from any run.
+        who: Threat intelligence analysts and security managers.
+        when: Explaining a threat to an executive audience without ATT&CK IDs.
+      - selector: '#an-svg'
+        title: The workflow
+        what: Ways in (exploits, phishing, credentials), its toolkit, what it does once in, and the cloud, messaging and storage services it uses. Teal steps are mostly detected, red mostly not. Select a step for the detail behind it.
+        who: Threat intelligence analysts.
+        when: Briefing on a group's tradecraft rather than its technique list.
+
+  - id: feed
+    menu: Intel
+    title: Threat Feed
+    path: /feed
+    summary: The last seven days of technical threat research from vendor and government sources, tagged with the industries, nations and products involved. No AI.
+    sections:
+      - selector: section.fd-intro
+        title: Filters
+        what: Your industries, your technology stack, opportunistic or financial activity, both, or everything. Posts naming only products you don't run are left out by default.
+        who: Threat intelligence analysts and SOC leads.
+        when: The Monday-morning read of what's new and relevant.
+      - selector: '#fd-watch'
+        title: Watchlists
+        what: Saved searches (a group, a CVE, a vendor). Archer collects every six hours and flags new matches on the Intel menu, and can email them.
+        who: Threat intelligence analysts.
+        when: Tracking a campaign or actor over weeks without checking by hand.
+      - selector: '#fd-wall'
+        title: The wall
+        what: One card per post with source, summary and tags. Analyse in Archer turns a post into detections.
+        who: Threat intelligence analysts and detection engineers.
+        when: A post matches your stack or industry. Analysing it takes a minute.
+      - selector: '#fd-sources'
+        optional: true
+        title: Sources
+        what: Each source and its last collection. Administrators can add RSS or Atom feeds.
+        who: Administrators.
+        when: A source you rely on isn't there, or one has stopped.
+
+  - id: cyber-powers
+    menu: Intel
+    title: Cyber Powers
+    path: /cyber-powers
+    summary: National cyber capability on a world map, by IISS tier, by how firmly ATT&CK attributes groups to each country, and by who is targeted.
+    sections:
+      - selector: '#cp-map'
+        title: The map
+        what: Three views (Nations, Groups, Targets). Hover a country for its tier, attribution, motivations and groups. Your country is green.
+        who: Threat intelligence analysts and security managers.
+        when: Geopolitical briefings, and putting a nation-state advisory in context.
+      - selector: '#cp-lists'
+        title: Countries by tier
+        what: The countries in each tier, confidence level or target ranking, with their flags.
+        who: Security managers.
+        when: A quick reference for a board paper.
+
+  - id: stix
+    menu: Intel
+    title: STIX/TAXII & MISP
+    path: /intel/stix
+    summary: Take STIX bundles, TAXII collections and MISP events as a hunt input, and export a finished run as STIX or a MISP event.
+    sections:
+      - selector: 'section.ms-card:has(h2:has-text("Import"))'
+        title: Import intelligence
+        what: Upload or paste a STIX 2.1 bundle or MISP event, poll a TAXII collection, or query a MISP instance. Credentials are used for that request only.
+        who: Threat intelligence analysts.
+        when: Intelligence arrives from an ISAC, a sharing community or a TIP rather than a blog post.
+      - selector: 'section.ms-card:has(h2:has-text("Export"))'
+        title: Export a run
+        what: A STIX 2.1 bundle with techniques, indicators and the detections themselves, or a MISP event with galaxies and attributes.
+        who: Threat intelligence analysts.
+        when: Sharing what you built back to your community or into a TIP.
+
+  - id: catalogue
+    menu: Intel
+    title: Catalogue and company review
+    path: /review?domain=sample-corp.example
+    href: /catalogue
+    summary: Every company profiled so far, and each one's review, the profile, its exposure map and the groups recommended for it.
+    sections:
+      - selector: section.rv-summary
+        title: Profile summary
+        what: Company, industry, location, hosting and a risk score, from public sources.
+        who: Threat intelligence analysts.
+        when: Checking the profile is right before generating. A CDN or parent company can mislead it.
+      - selector: '#exposure'
+        title: Exposure map
+        what: What an attacker can see before they act, IPs, networks, mail and its spoofability, subdomains, exposed services, known CVEs and breach metadata, linked back to the domain.
+        who: Security managers, attack-surface and red teams.
+        when: Attack-surface reviews, and before a penetration test.
+      - selector: section.rv-groups
+        title: Generate detections
+        what: The recommended groups in columns, each with its likelihood of targeting this organisation. Tick the ones to hunt.
+        who: Detection engineers.
+        when: Turning a profile into coverage for the threats that matter to that company.
+
+  - id: mitresaw
+    menu: Intel
+    title: MITRESaw
+    path: /mitresaw
+    summary: The ATT&CK procedure data behind Archer's briefings and detections, every group's techniques, how each reaches the group, and the indicators in the procedure text.
+    sections:
+      - selector: 'section.ms-card:has(h2:has-text("Procedures CSV"))'
+        title: The procedures
+        what: The ATT&CK version and build. Update collects only the groups the latest release changed; Full rebuild collects all of them.
+        who: Administrators.
+        when: After an ATT&CK release.
+      - selector: 'section.ms-card:has(h2:has-text("OSINT"))'
+        title: OSINT repositories
+        what: The public detection-rule repositories and LOL datasets Archer searches while generating, with each one's status.
+        who: Administrators.
+        when: OSINT enrichment looks thin. Check every repository is ready.
+      - selector: 'section.ms-card:has(h2:text-is("Procedures"))'
+        title: Procedures table
+        what: Search and filter every procedure by group, technique, tactic and attribution (the group's own, a campaign's or its software's). Download CSV or XLSX.
+        who: Threat intelligence analysts.
+        when: Checking why a group is linked to a technique, with the evidence.
+
+  - id: emulate
+    menu: Build
+    title: Emulate
+    path: /emulate
+    # The Lab lists this machine's own VMs; the picture shows generic ones
+    before:
+      - script: |
+          () => document.querySelectorAll('#lab-machines .lab-machine-head strong').forEach((s, i) => { s.textContent = ['win11-lab', 'win11-golden', 'ubuntu-lab'][i] || 'lab-' + i; })
+    summary: Which logs record each ATT&CK technique, from attacks recorded in public labs, with your detections' indicators checked against those recordings. Nothing is sent to your SIEM.
+    sections:
+      - selector: '#emulate-planner'
+        title: Plan an emulation
+        what: Pick a group, CVE or technique and Archer assembles a plan, the best recorded dataset per technique, the matching Atomic Red Team test and the log sources to collect. Export it as a run sheet or MACAT TOML.
+        who: Purple and red teams.
+        when: Before an emulation exercise, to agree what will run and what should be seen.
+      - selector: '#em-stats'
+        title: Recordings and the indicator check
+        what: How many recordings are available and whether detections can be checked against them.
+        who: Detection engineers.
+        when: Checking the telemetry data is ready on this machine.
+      - selector: '#lab'
+        title: Your lab
+        what: Create and manage Docker, Tart and UTM machines from inside Archer, start, stop, snapshot, revert and set them up.
+        who: Purple teams and administrators.
+        when: Recording your own telemetry rather than relying on public labs.
+      - selector: '#em-telemetry'
+        title: Recorded telemetry
+        what: Every recording by technique, group or data source, with the event types it captured.
+        who: Detection engineers.
+        when: Deciding which log source a detection should be built on.
+
+  - id: assessments
+    menu: Build
+    title: Assessments
+    path: /assessments
+    summary: Test cases built from the groups that matter to you, and campaigns that record what each test did and what the defence saw, VECTR-style.
+    sections:
+      - selector: 'section.ms-card:has(h2:has-text("New assessment"))'
+        title: New assessment
+        what: A campaign with a target, an operator and a run date, holding test cases from the Threat library.
+        who: Purple and red teams.
+        when: Planning an exercise.
+      - selector: 'section.ms-card:has(h2:has-text("Campaigns"))'
+        title: Campaigns
+        what: Record red (executed, failed, blocked) and blue (not logged, logged, alerted, prevented) per technique. Logged but no alert offers a hunt for that technique. Export CSV or an ATT&CK Navigator layer.
+        who: Purple teams and security managers.
+        when: During and after an exercise, to show what changed.
+
+  - id: manual
+    menu: Build
+    title: Manual
+    path: /manual
+    summary: Write detections from techniques and procedures you supply, one technique at a time.
+    sections:
+      - selector: '#group_desc_block'
+        title: Group description
+        what: An optional line about the group or your hypothesis, kept with the run.
+        who: Threat intelligence analysts.
+        when: Recording why the run exists for whoever audits it later.
+      - selector: section.mn-entry
+        title: Technique entries
+        what: Choose a technique and its tactics, and list what was observed, one procedure per line. Commands, paths, registry keys and tool names become indicators. Append each, then Submit.
+        who: Incident responders and detection engineers.
+        when: A group ATT&CK doesn't know, or your own intelligence from an incident.
+
+  - id: regex
+    menu: Build
+    title: Regex
+    path: /regex
+    summary: Test a regular expression against your own text and check it for the SIEM it will run in. Everything runs in your browser.
+    sections:
+      - selector: 'section.rx-card:has(h2:has-text("Expression"))'
+        title: Expression and flavour
+        what: The pattern, its flags, and the SIEM or language it's for. Defender XDR and SecOps run in RE2, Splunk in PCRE2, and Elastic matches the whole value.
+        who: Detection engineers.
+        when: Any regex headed for a production rule.
+      - selector: 'section.rx-card:has(h2:has-text("Test string"))'
+        title: Test string
+        what: Paste command lines, paths or log lines. Matches and capture groups are highlighted as you type.
+        who: Detection engineers.
+        when: Checking against real samples, including near-misses that shouldn't match.
+      - selector: 'section.rx-card:has(h2:has-text("Checks"))'
+        title: Checks
+        what: Errors and warnings for the chosen flavour, single backslashes in Windows paths, unescaped dots, empty matches, catastrophic backtracking.
+        who: Detection engineers.
+        when: Before the SIEM finds the problem for you.
+      - selector: 'section.rx-card:has(h2:has-text("Use it in a query"))'
+        title: Use it in a query
+        what: The pattern written into a query for each SIEM, escaped for its strings.
+        who: Detection engineers.
+        when: Moving a pattern between SIEMs.
+
+  - id: agents
+    menu: Build
+    title: Agents
+    path: /agents
+    summary: A model working in a loop with Archer's tools, repairing queries, triaging reports, sweeping coverage gaps, auditing and tuning the Library. Every step is shown and kept.
+    sections:
+      - selector: section.ag-intro
+        title: The agents
+        what: Detection repair, Ask Archer with tools, Intel triage, Coverage sweep, Library audit and Detection tuning. Each says what it needs and what it does.
+        who: Detection engineers.
+        when: Repetitive review work that follows clear rules.
+      - selector: form.ag-form
+        title: Run one
+        what: Choose the agent, its input and the model. Actions that change something wait for your approval unless you untick it.
+        who: Detection engineers.
+        when: After a big run, let the repair agent fix only what the checks flag.
+
+  - id: profile-environment
+    menu: Profile and Help
+    title: Environment
+    path: /profile
+    before: [{click: 'button.tab-button[data-tab="environment"]'}]
+    summary: What your organisation runs, applied to every hunt and to the Threat Feed.
+    sections:
+      - selector: '#tab-environment'
+        title: SIEMs, industries and technology stack
+        what: The SIEMs to generate for, the industries the Feed keeps, and the products in your estate. Hunts leave out what can't happen there.
+        who: Administrators and detection leads.
+        when: First thing after installing. Every hunt is quicker and closer to your estate afterwards.
+
+  - id: profile-apikeys
+    menu: Profile and Help
+    title: API keys
+    path: /profile
+    before: [{click: 'button.tab-button[data-tab="apikeys"]'}]
+    summary: AI providers, OSINT sources and SIEM credentials, stored encrypted. All optional.
+    sections:
+      - selector: '#tab-apikeys'
+        title: Keys and assignments
+        what: A cloud provider's key or a local model's URL, which model answers Ask Archer and which generates, a cap on AI calls per run, and keys for OSINT sources and SIEMs.
+        who: Administrators.
+        when: Turning on AI-assisted generation, or adding OSINT coverage for company profiles.
+
+  - id: help
+    menu: Profile and Help
+    title: Help
+    path: /how-it-works
+    summary: What Archer does with each kind of input, what it's for, and the frequently asked questions. The guide and these tips are in the Help menu too.
+    sections:
+      - selector: '#tab-overview .feature-grid >> nth=0'
+        title: What it does
+        what: The inputs Archer takes and what it makes of them.
+        who: Anyone new to Archer.
+        when: Explaining Archer to a colleague.
+      - selector: '#tab-overview .feature-grid >> nth=1'
+        title: Use it for
+        what: The jobs Archer is built for, from hunting a named group to profiling an organisation.
+        who: Anyone new to Archer.
+        when: Deciding where to start.
