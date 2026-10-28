@@ -111,7 +111,25 @@ pages:
     title: Results
     path: /results?group_name=APT29
     href: /library
-    before: [{click: '#briefing h2'}]
+    before:
+      - {click: '#briefing h2'}
+      # Open the Detections body and the first SIEM's first card, so the quality badges show without
+      # pushing the later sections past the capture's height cap: keep one card, drop the rest
+      - script: |
+          (() => {
+            const sec = [...document.querySelectorAll('.detection-section')].find(s => { const h = s.querySelector('h2'); return h && /Detections/.test(h.textContent); });
+            if (!sec) return;
+            const content = sec.querySelector('#detections-section-content');
+            if (content) content.style.maxHeight = 'none';
+            const vendors = [...sec.querySelectorAll('.vendor-section')];
+            vendors.slice(1).forEach(v => v.remove());
+            const first = vendors[0];
+            if (first) {
+              const vc = first.querySelector('.vendor-content');
+              if (vc) vc.classList.add('show');
+              first.querySelectorAll('.detection-item').forEach((it, i) => { if (i) it.remove(); });
+            }
+          })();
     summary: Where every hunt, report and profile ends. Its detections, correlations, attack flow, the anatomy of the attack and a threat briefing, all built without AI.
     sections:
       - selector: '#briefing'
