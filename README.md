@@ -86,7 +86,7 @@ The app launches this checkout's `.venv`, so it updates with `git pull`; it isn'
 - **CVE Hunting** - Generate detections from CVE IDs with NVD enrichment
 - **Query Execution** - Splunk API client (code implemented, see [UNTESTED.md](docs/other/UNTESTED.md)); Defender XDR planned with hit counts (#16)
 - **Running atomics from Archer** - Coming soon; [record a lab](docs/guide/20-recording-a-lab.md) on your own VMs for now (#22)
-- **Threat library with red and blue outcomes (VECTR-style)** - Built (Build → Assessments, #24); CALDERA integration is a feature request ([#30](https://github.com/cmdaltr/archer/issues/30)). MACAT was declined ([#31](https://github.com/cmdaltr/archer/issues/31)): Atomic Red Team's macOS tests and the lab recorder already cover it
+- **Threat library with red and blue outcomes (VECTR-style)** - Built (Build → Assessments, #24); CALDERA operations run from Emulate → Lab ([#30](https://github.com/cmdaltr/archer/issues/30), [guide](docs/guide/25-caldera.md)), for the fact chaining and implant behaviour Atomic runs can't give. MACAT was declined ([#31](https://github.com/cmdaltr/archer/issues/31)): Atomic Red Team's macOS tests and the lab recorder already cover it
 
 ### Security & User Management
 - 🔐 **Enterprise Authentication** - Bcrypt password hashing, session management, MFA support (TOTP)
@@ -147,7 +147,7 @@ About 318 of ATT&CK's 697 techniques name no command, file, registry key or othe
 - **Research:** [Actor consolidation and XLSX export](docs/guide/05-research.md)
 - **Threat Briefing:** [On the Results page](docs/guide/06-results.md) | [API Reference](docs/features/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing)
 - **Ask Archer:** [Agents and Ask Archer](docs/guide/15-agents-and-ask-archer.md)
-- **Emulate:** [Recorded telemetry](docs/guide/19-emulate.md) | [Recording a lab (coming soon)](docs/guide/20-recording-a-lab.md)
+- **Emulate:** [Recorded telemetry](docs/guide/19-emulate.md) | [Recording a lab (coming soon)](docs/guide/20-recording-a-lab.md) | [CALDERA operations](docs/guide/25-caldera.md)
 - **Agents & MCP:** [Agents guide](docs/agents/README.md) | [Minimal agent example](examples/agents/minimal_agent.py)
 - **API Integration:** [API Integration Guide](docs/features/API_INTEGRATION_GUIDE.md)
 - **Correlation Tuning:** [Correlation Engine](docs/architecture/CORRELATION_ENGINE.md) | [Quick Reference](docs/architecture/CORRELATION_QUICK_REFERENCE.md)

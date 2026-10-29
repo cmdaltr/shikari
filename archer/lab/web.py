@@ -320,3 +320,121 @@ async def record(request: Request, archer_session: Optional[str] = Cookie(None))
                        revert_to=revert_to, execute=True, say=say)
 
     return _background(f"Record {','.join(techs)} on {name}", work)
+
+
+# ---------------------------------------------------------------- CALDERA (#30)
+
+def _caldera():
+    from archer.lab import caldera
+
+    return caldera, caldera.Client.from_settings()
+
+
+@router.get("/caldera/status")
+def caldera_status(archer_session: Optional[str] = Cookie(None)):
+    """Whether CALDERA is configured and answering, and its agent groups. Never returns the key."""
+    user, denied = _lab(archer_session)
+    if denied:
+        return denied
+    from archer.lab import caldera
+
+    if not caldera.configured():
+        return {"configured": False, "groups": [],
+                "detail": "Set caldera.url and caldera.api_key in bespoke/config.yaml"}
+    try:
+        _, client = _caldera()
+        return {"configured": True, "url": client.url, "groups": caldera.groups(client.agents())}
+    except LabError as e:
+        return {"configured": True, "error": e.message, "detail": e.detail, "groups": []}
+
+
+@router.post("/caldera/operate")
+async def caldera_operate(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Plan a CALDERA operation for a group, CVE or technique list against an agent group.
+    execute=false (the default) returns the plan and creates nothing; execute=true creates the
+    adversary and starts the operation, then collects its results when it finishes.
+    """
+    user, denied = _lab(archer_session)
+    if denied:
+        return denied
+    from archer.config import GENERATE_DIR
+
+    data = await request.json()
+    kind, value = data.get("kind", "technique"), str(data.get("value", "")).strip()
+    group, name, execute = str(data.get("group", "")).strip(), data.get("name", ""), bool(data.get("execute"))
+    capture = data.get("capture") or None  # {engine, name, os} of the lab machine the agent runs on
+    if not group:
+        return JSONResponse({"error": "Choose an agent group"}, status_code=400)
+    try:
+        caldera, client = _caldera()
+        techs = caldera.resolve_techniques(kind, value, GENERATE_DIR)
+        if not execute:
+            p = caldera.plan(client.abilities(), client.agents(), techs, group)
+            label = caldera.safe_name(name) if name else "archer-operation"
+            return {"preview": True, "plan": caldera.plan_lines(p, label), "warnings": p["warnings"],
+                    "steps": p["steps"], "gaps": p["gaps"], "agents": p["agents"]}
+        if capture and not _owns(user, capture.get("engine", ""), capture.get("name", "")):
+            return _not_yours()
+    except LabError as e:
+        return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
+
+    def work(say):
+        run = caldera.operate(client, techs, group, name=name, target=f"{kind}: {value}", execute=True, say=say)
+        state = caldera.wait(client, run["operation_id"], say=say)
+        say(f"Operation finished: {state}")
+        manifest = caldera.collect(client, run["operation_id"], say=say, rebuild=not capture)
+        if capture:
+            caldera.capture(capture["engine"], capture["name"], capture.get("os", ""), manifest,
+                            host=capture.get("host", ""), say=say)
+
+    return _background(f"CALDERA operation on {group}", work)
+
+
+@router.post("/caldera/collect")
+async def caldera_collect(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Pull an existing operation's results (one started in CALDERA itself, say)."""
+    user, denied = _lab(archer_session)
+    if denied:
+        return denied
+    data = await request.json()
+    op_id = str(data.get("operation_id", "")).strip()
+    if not op_id:
+        return JSONResponse({"error": "Give the operation's id"}, status_code=400)
+    try:
+        caldera, client = _caldera()
+    except LabError as e:
+        return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
+    return _background(f"Collect CALDERA operation {op_id}", lambda say: caldera.collect(client, op_id, say=say))
+
+
+@router.get("/caldera/operations")
+def caldera_operations(archer_session: Optional[str] = Cookie(None)):
+    """The operations collected here, newest first, without their steps' output."""
+    user, denied = _lab(archer_session)
+    if denied:
+        return denied
+    from archer.lab import caldera
+
+    return {"operations": [{"name": m.get("name"), "operation_id": m.get("operation_id"), "state": m.get("state"),
+                            "group": m.get("group"), "collected": m.get("collected"),
+                            "steps": len(m.get("steps") or []),
+                            "hosts": sorted({s.get("host") or s.get("paw") or "" for s in m.get("steps") or []}),
+                            "captured": bool(m.get("captured"))}
+                           for m in caldera.collected()]}
+
+
+@router.get("/caldera/check")
+def caldera_check(name: str, archer_session: Optional[str] = Cookie(None)):
+    """An operation's steps against the saved detections and correlations. Static; no AI."""
+    user, denied = _lab(archer_session)
+    if denied:
+        return denied
+    from archer.config import GENERATE_DIR
+    from archer.lab import caldera
+
+    manifest = caldera.load(name)
+    if not manifest:
+        return JSONResponse({"error": "No such operation collected here"}, status_code=404)
+    return {**caldera.check_operation(manifest, GENERATE_DIR),
+            "correlations": caldera.check_correlations(manifest, GENERATE_DIR)}

@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <html data-theme="light">
 <head>
+    <script>
+      // Apply the saved theme before first paint. Without this the page renders
+      // the hardcoded light theme until common.js runs on DOMContentLoaded, and
+      // on pages without the dark-mode toggle common.js returns early and never
+      // applies it at all — so a reload (e.g. relaunching the desktop app from
+      // the Dock) drops a dark-mode user back to a light background. No explicit
+      // choice follows the OS, matching the loading splash.
+      try {
+        var t = localStorage.getItem('theme')
+          || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    </script>
     <title>{% block title %}Archer{% endblock %}</title>
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='favicon.ico') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', path='favicon-32.png') }}">

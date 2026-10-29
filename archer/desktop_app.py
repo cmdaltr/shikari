@@ -304,8 +304,12 @@ class App:
         webview.settings["OPEN_EXTERNAL_LINKS_IN_BROWSER"] = True
         # Never: a certificate the OS doesn't trust is an error, not a prompt to click through
         webview.settings["IGNORE_SSL_ERRORS"] = False
+        # background_color (default white) is what the native window paints in any
+        # repaint gap — e.g. when macOS reactivates the app from the Dock. Match the
+        # dark loading splash so it never flashes white behind the page.
         self.window = webview.create_window(NAME, html=desktop.LOADING, js_api=ChooserApi(self), width=1440, height=920,
-                                            min_size=(900, 600), text_select=True, zoomable=True)
+                                            min_size=(900, 600), text_select=True, zoomable=True,
+                                            background_color="#111827")
         managed = bool(self.choice and self.choice.managed)
         menu = [] if managed else [Menu(NAME, [MenuAction("Change Server\u2026", lambda: self.show_chooser())])]
         desktop.brand_process()

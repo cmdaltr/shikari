@@ -175,6 +175,35 @@ index=security NOT process_path="C:\\Program Files\\YourEDR\\*.exe" NOT user="sv
 | search EventCode=4688
 ```
 
+### Elastic ES|QL Queries
+
+ES|QL is piped, so exclusions append as a trailing `| WHERE` over ECS fields. IP
+ranges use `CIDR_MATCH`, process wildcards use `RLIKE`:
+
+```esql
+FROM logs-endpoint.events.*
+| WHERE process.name == "cmd.exe"
+| WHERE process.executable != "/opt/YourEDR/agent" AND user.name != "svc_backup"
+    AND host.name != "DC01" AND NOT CIDR_MATCH(source.ip, "10.0.0.0/8")
+```
+
+### Google SecOps YARA-L Rules
+
+YARA-L has no trailing filter, so exclusions are added as negated predicates
+inside the `events:` section, repeated for every event variable the rule binds
+(so an excluded host or user drops the whole match, not one stage). UDM fields
+such as `principal.ip` are repeated, so the form is `not field = "x"` ("no value
+equals"), never `field != "x"`; IP ranges use `net.ip_in_range_cidr()`:
+
+```yaral
+events:
+  $e.metadata.event_type = "PROCESS_LAUNCH"
+  // bespoke exclusions
+  not $e.principal.user.userid = "svc_backup"
+  not $e.principal.hostname = "DC01"
+  not net.ip_in_range_cidr($e.principal.ip, "10.0.0.0/8")
+```
+
 ## Security Notes
 
 - This directory is **gitignored** - contents will not be committed to the public repository
