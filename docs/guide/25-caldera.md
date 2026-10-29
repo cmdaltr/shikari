@@ -1,6 +1,6 @@
 # CALDERA operations
 
-Run a [CALDERA](https://github.com/mitre/caldera) operation from **Emulate → Lab**, pull back what each step ran, and check your saved detections and correlations against it ([#30](https://github.com/cmdaltr/archer/issues/30)). Archer drives the CALDERA server you run in your lab. It never ships an agent or a C2 of its own.
+Run a [CALDERA](https://github.com/mitre/caldera) operation from **Emulate → Lab** (in the web app and the desktop app) or the `lab/caldera` [console module](17-console-api-mcp.md), pull back what each step ran, and check your saved detections and correlations against it ([#30](https://github.com/cmdaltr/archer/issues/30)). Archer drives the CALDERA server you run in your lab. It never ships an agent or a C2 of its own.
 
 ## Why CALDERA as well as Atomic Red Team
 

@@ -33,7 +33,7 @@ graph LR
         B1["<b>Manual</b><br/>One technique at a time"]
         B2["<b>Regex</b><br/>Test per SIEM engine"]
         B3["<b>Agents</b><br/>Repair, triage — opt-in"]
-        B4["<b>Emulate</b><br/>Which logs record each<br/>technique; your detections<br/>against recorded attacks"]
+        B4["<b>Emulate</b><br/>Which logs record each technique;<br/>your detections against recorded<br/>attacks; Lab runs CALDERA operations"]
     end
 
     H1 & H2 & H3 --> RESULT
@@ -43,7 +43,7 @@ graph LR
     RESULT --> D3
     B1 --> D1
     D1 -.-> B4
-    RESULT -.->|"Run Emulation<br/>coming soon"| B4
+    RESULT -.->|"Run Emulation"| B4
 
     style H1 fill:#4a90d9,stroke:#2c5f8a,color:#fff
     style H2 fill:#4a90d9,stroke:#2c5f8a,color:#fff

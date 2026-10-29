@@ -16,7 +16,7 @@ graph TB
         E["Looks up real attack behaviours<br/>from MITRE ATT&CK"]
         F["Builds detection queries<br/>for each behaviour"]
         G["Links related detections<br/>into attack chains"]
-        H["Optionally tests, enriches<br/>& exports results"]
+        H["Optionally tests, emulates,<br/>enriches & exports results"]
     end
 
     subgraph "What You Get Back"

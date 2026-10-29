@@ -213,7 +213,7 @@ graph TB
         E["Looks up real attack behaviours<br/>from MITRE ATT&CK"]
         F["Builds detection queries<br/>for each behaviour"]
         G["Links related detections<br/>into attack chains"]
-        H["Optionally tests, enriches<br/>& exports results"]
+        H["Optionally tests, emulates,<br/>enriches & exports results"]
     end
 
     subgraph "What You Get Back"
@@ -408,7 +408,7 @@ graph TB
         direction LR
         REC["Recordings<br/>Splunk · OTRF · EVTX · macOS"]
         GUIDE["GUIDE<br/>Defender XDR alerting"]
-        LAB["Your lab<br/>Coming soon"]
+        LAB["Your lab<br/>CALDERA operations<br/><i>Atomic recorder coming soon</i>"]
     end
 
     subgraph TOOLS ["Tools"]
@@ -456,7 +456,7 @@ graph TB
     style BUILD fill:#f5a623,stroke:#c17d10,color:#fff
     style REC fill:#50e3c2,stroke:#2ca089,color:#333
     style GUIDE fill:#50e3c2,stroke:#2ca089,color:#333
-    style LAB fill:#f5f5f5,stroke:#999,stroke-dasharray:4 3,color:#777
+    style LAB fill:#50e3c2,stroke:#2ca089,color:#333
     linkStyle default stroke:#ff6600,stroke-width:3px
 ```
 
@@ -666,6 +666,10 @@ graph LR
         DOCKER["Docker SIEMs<br/>runtime validation"]
     end
 
+    subgraph EMU ["Live Emulation — Emulate"]
+        CALDERA["CALDERA server<br/>plan · run · collect<br/>capture logs over C2"]
+    end
+
     subgraph SOON ["Coming Soon / Planned"]
         LAB["Your lab<br/>Atomic Red Team + recorder"]
         VECTR["VECTR import/export<br/>threat library, issue 24"]
@@ -684,6 +688,7 @@ graph LR
     ARCHER -.->|"queries"| SECOPS
     ARCHER -.->|"queries"| MDE
     ARCHER -.-> DOCKER
+    ARCHER -.->|"REST"| CALDERA
     LAB -.-> ARCHER
     ARCHER -.-> VECTR
 
@@ -693,6 +698,7 @@ graph LR
     style LOCAL fill:#bd10e0,stroke:#8a0ba5,color:#fff
     style SECOPS fill:#7ed321,stroke:#4a8c0f,color:#fff
     style MDE fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style CALDERA fill:#50e3c2,stroke:#2ca089,color:#333
     style SPL fill:#50e3c2,stroke:#2ca089,color:#333
     style OTRF fill:#50e3c2,stroke:#2ca089,color:#333
     style EVTX fill:#50e3c2,stroke:#2ca089,color:#333
@@ -740,7 +746,7 @@ graph LR
         B1["<b>Manual</b><br/>One technique at a time"]
         B2["<b>Regex</b><br/>Test per SIEM engine"]
         B3["<b>Agents</b><br/>Repair, triage — opt-in"]
-        B4["<b>Emulate</b><br/>Which logs record each<br/>technique; your detections<br/>against recorded attacks"]
+        B4["<b>Emulate</b><br/>Which logs record each technique;<br/>your detections against recorded<br/>attacks; Lab runs CALDERA operations"]
     end
 
     H1 & H2 & H3 --> RESULT
@@ -750,7 +756,7 @@ graph LR
     RESULT --> D3
     B1 --> D1
     D1 -.-> B4
-    RESULT -.->|"Run Emulation<br/>coming soon"| B4
+    RESULT -.->|"Run Emulation"| B4
 
     style H1 fill:#4a90d9,stroke:#2c5f8a,color:#fff
     style H2 fill:#4a90d9,stroke:#2c5f8a,color:#fff
