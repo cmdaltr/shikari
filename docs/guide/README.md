@@ -35,7 +35,7 @@ Help → **Guide** shows a picture of every page with each part highlighted in t
 | Emulate | Build → Emulate | Which logs record each technique (native OS logs first); your detections' indicators against recorded attacks; Defender XDR's own alerting | [Emulate](19-emulate.md) |
 | Assessments | Build → Assessments | A threat library of test cases, run in campaigns that record red and blue outcomes | [Threat library and assessments](23-threat-library-assessments.md) |
 | Recording a lab | Your own test VMs | **Coming soon**: Atomic Red Team runs, with Defender for Endpoint's rows, into Emulate | [Recording a lab](20-recording-a-lab.md) |
-| CALDERA operations | Build → Emulate → Lab | Chained operations on CALDERA agents (fact chaining, implant behaviour), with detections and correlations checked against what ran | [CALDERA operations](25-caldera.md) |
+| CALDERA operations | Build → Emulate → Lab | Chained operations on CALDERA agents (fact chaining, implant behaviour), optionally capturing each step's endpoint logs over the agent's own C2, with detections and correlations checked against what ran | [CALDERA operations](25-caldera.md) |
 | Regex | Build → Regex | Test a regex and check it for the SIEM it will run in | [Regex](14-regex.md) |
 | Agents and Ask Archer | Build → Agents; the chat button | AI that repairs queries, answers questions, triages reports | [Agents and Ask Archer](15-agents-and-ask-archer.md) |
 | Profile (settings) | Profile | Your account, SIEMs, industries, country, API keys, MFA, users | [Profile and settings](16-profile-and-settings.md) |

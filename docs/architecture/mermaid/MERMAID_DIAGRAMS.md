@@ -889,7 +889,7 @@ flowchart TD
 
 ## 11. CALDERA Workflow — Chained Emulation and Static Checks
 
-How a CALDERA operation validates detections and correlations. CALDERA is used for what Atomic Red Team runs can't give: fact chaining between steps and a real implant (sandcat) on the agents. Archer plans the operation first and changes nothing on CALDERA until it's confirmed, then runs it, collects each step's command, host, times and output, optionally captures the agent host's logs over each step's window, and checks saved detections and correlations against that evidence statically, with no AI.
+How a CALDERA operation validates detections and correlations. CALDERA is used for what Atomic Red Team runs can't give: fact chaining between steps and a real implant (sandcat) on the agents. Archer plans the operation first and changes nothing on CALDERA until it's confirmed, then runs it, collects each step's command, host, times and output, optionally captures the agent host's logs over each step's window — over the agent's own C2 (any OS, nothing installed on the host) or a lab machine Lab manages — and checks saved detections and correlations against that evidence statically, with no AI.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
@@ -909,7 +909,7 @@ flowchart TD
 
     COLLECT --> CAPTURE{"Capture the agent<br/>host's logs?"}
 
-    CAPTURE -- "Yes" --> LOGS["capture-window.ps1 reads each<br/>step's window back from the<br/>endpoint's logs<br/><i>imported as a Your lab run</i>"]
+    CAPTURE -- "Yes" --> LOGS["reads each step's window back from<br/>the endpoint's logs — over the agent's<br/>own C2 (any OS, nothing installed)<br/>or a lab machine Lab manages<br/><i>imported as a Your lab run</i>"]
     CAPTURE -- "No" --> CMDS["Commands only"]
 
     LOGS --> CHECK["Static check <i>(no AI)</i>:<br/>detection indicators against<br/>each step's evidence"]
