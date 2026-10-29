@@ -9,14 +9,17 @@ from .research import ResearchModule
 from .ai import AISettingsModule, AskModule, BriefingModule, ResultsModule
 from .agents import (AgentHistoryModule, AskAgentModule, AuditAgentModule, RepairAgentModule,
                      SweepAgentModule, TriageAgentModule, TuneAgentModule)
+from .lab import CalderaModule
 from archer.config import EMULATION_ENABLED
 
-# generate, correlate, hunt and emulate run in this process; the rest drive a running
-# Archer server (archer.client), so they run exactly what the web app runs
+# generate, correlate, hunt, lab/caldera and emulate run in this process (lab/caldera talks to the
+# CALDERA server directly); the rest drive a running Archer server (archer.client), so they run
+# exactly what the web app runs
 MODULE_REGISTRY = {
     "generate": GenerateModule,
     "correlate": CorrelateModule,
     "hunt": HuntModule,
+    "lab/caldera": CalderaModule,
     "hunt/group": GroupHuntModule,
     "hunt/cve": CveHuntModule,
     "hunt/technique": TechniqueHuntModule,
