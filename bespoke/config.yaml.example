@@ -112,7 +112,9 @@ llm:
 # ---------------------------------------------------------------------------
 # CALDERA (Emulate → Lab → CALDERA operations; docs/guide/25-caldera.md)
 # ---------------------------------------------------------------------------
-# Your lab's CALDERA server. CALDERA_URL and CALDERA_API_KEY in the environment win.
+# Your lab's CALDERA server, as an instance-wide default. Most users set this per account in
+# Profile -> API Keys -> Emulation Tools instead (the key encrypted per user). This file is the
+# shared fallback; CALDERA_URL and CALDERA_API_KEY in the environment override both.
 # The key is only ever sent in CALDERA's KEY header.
 #
 # caldera:

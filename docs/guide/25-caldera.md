@@ -18,16 +18,19 @@ Pushing detections into CALDERA was dropped from #30: CALDERA has nowhere to tak
 
 ## Connecting
 
-Put the connection in `bespoke/config.yaml`, which is gitignored:
+The usual way is in the app: **Profile → API Keys → Emulation Tools**. Set the CALDERA server URL and your red API key there — the key is encrypted at rest (Fernet), like your SIEM and AI keys, and is scoped to your own account. The **Verify the server's TLS certificate** toggle is on by default; turn it off only for a lab server with a self-signed certificate.
+
+Two server-side alternatives, for a shared instance or an unattended run, take precedence over the per-user setting:
 
 ```yaml
+# bespoke/config.yaml (gitignored) — an instance-wide default
 caldera:
   url: "https://caldera.lab:8888"
   api_key: "<red API key from CALDERA's local.yml>"
   verify_tls: true
 ```
 
-`CALDERA_URL` and `CALDERA_API_KEY` in the environment override the file. The key goes only in CALDERA's `KEY` header: it is never logged, returned by Archer's API or written to a manifest. Using it needs the Operational analyst role, like the rest of Lab.
+`CALDERA_URL` and `CALDERA_API_KEY` in the environment override both the per-user setting and the file (handy for a throwaway run). Wherever it comes from, the key goes only in CALDERA's `KEY` header: it is never logged, returned by Archer's API or written to a manifest. Using it needs the Operational analyst role, like the rest of Lab.
 
 Deploy sandcat agents on your lab machines from CALDERA itself, and put them in a group. The CALDERA card on **Emulate → Lab** shows the server, its groups and their platforms.
 

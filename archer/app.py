@@ -11933,6 +11933,76 @@ async def save_api_keys(request: Request, archer_session: Optional[str] = Cookie
         db.close()
 
 
+@app.get("/api/profile/caldera")
+async def get_caldera_config(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    The user's CALDERA settings for Profile → Emulation Tools. The api_key is masked (last 4 only);
+    the url and verify flag are shown in full. `env` is true when CALDERA_URL/CALDERA_API_KEY are set
+    in the environment, which override these fields (the page says so).
+    """
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return {"error": "Not authenticated"}
+    user, db = auth_result
+    try:
+        row = (db.query(APIKey)
+               .filter(APIKey.user_id == user.id, APIKey.platform == "caldera").first())
+        api_key = ""
+        if row:
+            try:
+                api_key = mask_api_key(decrypt_api_key(row.encrypted_key))
+            except Exception as e:
+                logger.error(f"Failed to decrypt CALDERA key: {e}")
+        return {"url": user.caldera_url or "", "api_key": api_key,
+                "verify_tls": True if user.caldera_verify_tls is None else bool(user.caldera_verify_tls),
+                "env": bool(os.environ.get("CALDERA_URL") and os.environ.get("CALDERA_API_KEY"))}
+    finally:
+        db.close()
+
+
+@app.post("/api/profile/caldera")
+async def save_caldera_config(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Save the user's CALDERA settings. The url and verify flag live on the user; the api_key is
+    encrypted in the api_keys table (platform "caldera"), exactly like the SIEM and AI keys. A masked
+    api_key posted back unchanged is kept; an empty one clears the stored key.
+    """
+    auth_result = require_auth(request, archer_session)
+    if isinstance(auth_result, RedirectResponse):
+        return {"success": False, "error": "Not authenticated"}
+    user, db = auth_result
+    try:
+        data = await request.json()
+        if "url" in data:
+            user.caldera_url = (str(data.get("url") or "").strip().rstrip("/")) or None
+        if "verify_tls" in data:
+            user.caldera_verify_tls = bool(data.get("verify_tls"))
+        if "api_key" in data:
+            key_value = str(data.get("api_key") or "").strip()
+            row = (db.query(APIKey)
+                   .filter(APIKey.user_id == user.id, APIKey.platform == "caldera").first())
+            if key_value.startswith(KEY_MASK):
+                pass  # the masked value the page was given: unchanged
+            elif not key_value:
+                if row:
+                    db.delete(row)
+            else:
+                encrypted = encrypt_api_key(key_value)
+                if row:
+                    row.encrypted_key = encrypted
+                    row.updated_at = datetime.utcnow()
+                else:
+                    db.add(APIKey(user_id=user.id, platform="caldera", encrypted_key=encrypted))
+        db.commit()
+        return {"success": True, "message": "CALDERA settings saved"}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error saving CALDERA settings: {e}")
+        return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+    finally:
+        db.close()
+
+
 @app.post("/api/osint-key")
 async def osint_key(request: Request, archer_session: Optional[str] = Cookie(None)):
     """

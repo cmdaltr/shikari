@@ -525,3 +525,34 @@ def test_capture_command_sh_linux_and_macos():
     # the step's window is embedded as epoch seconds for the log queries
     frm = int(_dt.datetime(2026, 10, 28, 10, 0, 0, tzinfo=_dt.timezone.utc).timestamp())
     assert f"-v a={frm}" in linux
+
+
+# --------------------------------------------------------------------------- settings precedence
+
+def test_settings_prefers_env_then_user_overrides_then_file(monkeypatch):
+    """env > per-user overrides > bespoke/config.yaml, as the web layer relies on."""
+    monkeypatch.delenv("CALDERA_URL", raising=False)
+    monkeypatch.delenv("CALDERA_API_KEY", raising=False)
+    # no file config in the test environment, so overrides are the only layer
+    import archer.build.bespoke as _bespoke
+    monkeypatch.setattr(_bespoke, "get_config", lambda: {})
+
+    ov = {"url": "https://user.lab:8888", "api_key": "USER-KEY", "verify_tls": False}
+    s = caldera.settings(ov)
+    assert s == {"url": "https://user.lab:8888", "api_key": "USER-KEY", "verify_tls": False}
+
+    # the environment overrides the per-user values
+    monkeypatch.setenv("CALDERA_URL", "https://env.lab:8888")
+    monkeypatch.setenv("CALDERA_API_KEY", "ENV-KEY")
+    s2 = caldera.settings(ov)
+    assert s2["url"] == "https://env.lab:8888" and s2["api_key"] == "ENV-KEY"
+
+
+def test_configured_with_overrides(monkeypatch):
+    monkeypatch.delenv("CALDERA_URL", raising=False)
+    monkeypatch.delenv("CALDERA_API_KEY", raising=False)
+    import archer.build.bespoke as _bespoke
+    monkeypatch.setattr(_bespoke, "get_config", lambda: {})
+    assert caldera.configured({"url": "https://x", "api_key": "y"}) is True
+    assert caldera.configured({"url": "https://x"}) is False  # no key
+    assert caldera.configured({}) is False

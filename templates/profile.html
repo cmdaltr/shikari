@@ -670,19 +670,18 @@
               </div>
 
               <div class="key-panel" data-keypanel="emulation" role="tabpanel" hidden>
-              <!-- Emulation Tools Section (Greyed Out) -->
-              <div class="apikey-section disabled">
+              <div class="apikey-section">
                 <h3 class="section-title">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
                   </svg>
                   Emulation Tools
-                  <span class="coming-soon-badge">Coming Soon</span>
                 </h3>
 
                 <div class="apikey-item disabled">
                   <label class="apikey-label">
                     Atomic Red Team
+                    <span class="coming-soon-badge">Coming Soon</span>
                   </label>
                   <div class="apikey-input-group">
                     <input type="text"
@@ -690,19 +689,54 @@
                            placeholder="Configuration path"
                            disabled>
                   </div>
+                  <div class="apikey-hint">Running atomics from Archer itself is coming soon; record a lab on your own VMs for now</div>
                 </div>
 
-                <div class="apikey-item disabled">
-                  <label class="apikey-label">
-                    Caldera API Endpoint
+                <div class="apikey-item">
+                  <label class="apikey-label" for="caldera-url">
+                    CALDERA server
                   </label>
                   <div class="apikey-input-group">
                     <input type="text"
                            class="form-input apikey-input"
-                           placeholder="https://..."
-                           disabled>
+                           placeholder="https://caldera.lab:8888"
+                           id="caldera-url">
                   </div>
+                  <div class="apikey-hint">Your lab's CALDERA server, for <b>Emulate → Lab → CALDERA operations</b>. Archer drives it over its REST API; it never ships an agent or a C2 of its own.</div>
                 </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label" for="caldera-api-key">
+                    CALDERA API key
+                  </label>
+                  <div class="apikey-input-group">
+                    <input type="password"
+                           class="form-input apikey-input"
+                           placeholder="Your CALDERA red API key"
+                           id="caldera-api-key">
+                  </div>
+                  <div class="apikey-hint">Encrypted at rest and sent only in CALDERA's <code>KEY</code> header. Find it in CALDERA under Settings, as the red <code>api_key</code>.</div>
+                </div>
+
+                <div class="apikey-item">
+                  <label class="apikey-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="caldera-verify-tls" checked style="width: auto; margin: 0;">
+                    Verify the server's TLS certificate
+                  </label>
+                  <div class="apikey-hint">Leave on for a real certificate; turn off only for a lab server with a self-signed one.</div>
+                </div>
+
+                <div class="apikey-hint" id="caldera-env-note" hidden>⚙ <code>CALDERA_URL</code> / <code>CALDERA_API_KEY</code> are set in the environment and override these fields.</div>
+              </div>
+              <div class="form-actions">
+                <button type="button" class="btn-primary" onclick="saveCaldera()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                    <polyline points="17 21 17 13 7 13 7 21"/>
+                    <polyline points="7 3 7 8 15 8"/>
+                  </svg>
+                  Save
+                </button>
               </div>
               </div>
             </div>

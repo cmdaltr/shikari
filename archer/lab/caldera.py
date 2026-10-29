@@ -45,24 +45,29 @@ _OUTPUT_CAP = 20000  # characters of each step's output kept; a manifest is evid
 
 # --------------------------------------------------------------------------- settings
 
-def settings() -> Dict:
+def settings(overrides: Optional[Dict] = None) -> Dict:
     """
-    The caldera: block from bespoke/config.yaml, with the environment overriding the file so a
-    throwaway run needn't edit anyone's config. Returns url, api_key and verify_tls.
+    Where the CALDERA server and key come from, in order: the environment (a throwaway run needn't
+    touch anyone's config), then `overrides` — the signed-in user's own settings (Profile → Emulation
+    Tools), passed in by the web layer — then the caldera: block in bespoke/config.yaml. Returns url,
+    api_key and verify_tls.
     """
     from archer.build import bespoke
 
     block = (bespoke.get_config() or {}).get("caldera") or {}
-    url = os.environ.get("CALDERA_URL") or block.get("url") or ""
-    api_key = os.environ.get("CALDERA_API_KEY") or block.get("api_key") or ""
-    verify = block.get("verify_tls")
+    ov = overrides or {}
+    url = os.environ.get("CALDERA_URL") or ov.get("url") or block.get("url") or ""
+    api_key = os.environ.get("CALDERA_API_KEY") or ov.get("api_key") or block.get("api_key") or ""
+    verify = ov.get("verify_tls")
+    if verify is None:
+        verify = block.get("verify_tls")
     return {"url": url.rstrip("/"), "api_key": api_key,
             "verify_tls": True if verify is None else bool(verify)}
 
 
-def configured() -> bool:
+def configured(overrides: Optional[Dict] = None) -> bool:
     """True once there is both a server to talk to and a key to talk with."""
-    s = settings()
+    s = settings(overrides)
     return bool(s["url"] and s["api_key"])
 
 
@@ -78,7 +83,8 @@ class Client:
                  transport: Optional[httpx.BaseTransport] = None):
         if not url or not api_key:
             raise LabError("CALDERA is not configured",
-                           "Set caldera.url and caldera.api_key in bespoke/config.yaml")
+                           "Set the server and key in Profile → Emulation Tools (or caldera.url and "
+                           "caldera.api_key in bespoke/config.yaml)")
         self.url = url.rstrip("/")  # the base url only — echoed by the status route, never the key
         kw = {"base_url": f"{self.url}/api/v2",
               "headers": {"KEY": api_key, "Content-Type": "application/json"},
@@ -98,8 +104,8 @@ class Client:
             self._http = httpx.Client(**kw)
 
     @classmethod
-    def from_settings(cls) -> "Client":
-        s = settings()
+    def from_settings(cls, overrides: Optional[Dict] = None) -> "Client":
+        s = settings(overrides)
         return cls(s["url"], s["api_key"], s["verify_tls"])
 
     # The key is in a header, so it can't surface here; raise a clean LabError on any transport

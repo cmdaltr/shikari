@@ -324,10 +324,37 @@ async def record(request: Request, archer_session: Optional[str] = Cookie(None))
 
 # ---------------------------------------------------------------- CALDERA (#30)
 
-def _caldera():
+def _caldera_overrides(user) -> dict:
+    """The user's own CALDERA settings (Profile → Emulation Tools), decrypted. caldera.settings()
+    layers the environment over this and falls back to bespoke/config.yaml, so this is just the
+    per-user layer. Returns {} when nothing is stored for them."""
+    if not user:
+        return {}
+    from archer.auth.encryption import decrypt_api_key
+    from archer.database.models import APIKey
+
+    ov: dict = {}
+    if getattr(user, "caldera_url", None):
+        ov["url"] = user.caldera_url
+    if getattr(user, "caldera_verify_tls", None) is not None:
+        ov["verify_tls"] = bool(user.caldera_verify_tls)
+    db = next(get_db())
+    try:
+        row = db.query(APIKey).filter(APIKey.user_id == user.id, APIKey.platform == "caldera").first()
+        if row:
+            try:
+                ov["api_key"] = decrypt_api_key(row.encrypted_key)
+            except Exception:  # a key that won't decrypt is treated as unset, not a 500
+                pass
+    finally:
+        db.close()
+    return ov
+
+
+def _caldera(user=None):
     from archer.lab import caldera
 
-    return caldera, caldera.Client.from_settings()
+    return caldera, caldera.Client.from_settings(_caldera_overrides(user))
 
 
 @router.get("/caldera/status")
@@ -338,11 +365,12 @@ def caldera_status(archer_session: Optional[str] = Cookie(None)):
         return denied
     from archer.lab import caldera
 
-    if not caldera.configured():
+    overrides = _caldera_overrides(user)
+    if not caldera.configured(overrides):
         return {"configured": False, "groups": [],
-                "detail": "Set caldera.url and caldera.api_key in bespoke/config.yaml"}
+                "detail": "Set your CALDERA server and key in Profile → API Keys → Emulation Tools"}
     try:
-        _, client = _caldera()
+        _, client = _caldera(user)
         return {"configured": True, "url": client.url, "groups": caldera.groups(client.agents())}
     except LabError as e:
         return {"configured": True, "error": e.message, "detail": e.detail, "groups": []}
@@ -369,7 +397,7 @@ async def caldera_operate(request: Request, archer_session: Optional[str] = Cook
     if not group:
         return JSONResponse({"error": "Choose an agent group"}, status_code=400)
     try:
-        caldera, client = _caldera()
+        caldera, client = _caldera(user)
         techs = caldera.resolve_techniques(kind, value, GENERATE_DIR)
         if not execute:
             p = caldera.plan(client.abilities(), client.agents(), techs, group)
@@ -408,7 +436,7 @@ async def caldera_collect(request: Request, archer_session: Optional[str] = Cook
     if not op_id:
         return JSONResponse({"error": "Give the operation's id"}, status_code=400)
     try:
-        caldera, client = _caldera()
+        caldera, client = _caldera(user)
     except LabError as e:
         return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
     return _background(f"Collect CALDERA operation {op_id}", lambda say: caldera.collect(client, op_id, say=say))

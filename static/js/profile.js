@@ -403,7 +403,50 @@ async function loadApiKeys() {
   } catch (error) {
     console.error('Error loading API keys:', error);
   }
+  loadCaldera();
   await loadAiSettings();
+}
+
+async function loadCaldera() {
+  try {
+    const r = await fetch('/api/profile/caldera');
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.error) return;
+    const urlEl = document.getElementById('caldera-url');
+    const keyEl = document.getElementById('caldera-api-key');
+    const verifyEl = document.getElementById('caldera-verify-tls');
+    const note = document.getElementById('caldera-env-note');
+    if (urlEl) urlEl.value = d.url || '';
+    if (keyEl) keyEl.value = d.api_key || '';
+    if (verifyEl) verifyEl.checked = d.verify_tls !== false;
+    if (note) note.hidden = !d.env;
+  } catch (error) {
+    console.error('Error loading CALDERA settings:', error);
+  }
+}
+
+async function saveCaldera() {
+  const url = (document.getElementById('caldera-url') || {}).value || '';
+  const key = (document.getElementById('caldera-api-key') || {}).value || '';
+  const verify = (document.getElementById('caldera-verify-tls') || {}).checked;
+  try {
+    const r = await fetch('/api/profile/caldera', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url, api_key: key, verify_tls: verify })
+    });
+    const res = await r.json().catch(() => ({}));
+    if (!r.ok || res.success === false) {
+      showNotification(`Failed to save CALDERA settings${res.error ? ': ' + res.error : ''}`, 'error');
+      return;
+    }
+    showNotification('CALDERA settings saved', 'success');
+    loadCaldera();  // re-mask the saved key
+  } catch (error) {
+    console.error('Error saving CALDERA settings:', error);
+    showNotification('An error occurred while saving', 'error');
+  }
 }
 
 // --- Key-type tabs: AI Models | OSINT Sources | SIEM Platforms | Emulation Tools ---

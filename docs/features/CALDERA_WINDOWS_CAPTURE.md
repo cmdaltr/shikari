@@ -36,7 +36,7 @@ The "direct integration" is that last column end to end: you run one operation, 
 
 ## Running the capture on the Windows host
 
-Point Archer at your CALDERA server first — **Profile → Caldera API Endpoint**, or the `caldera:` block in `bespoke/config.yaml` (`url`, `api_key`), or `CALDERA_URL` / `CALDERA_API_KEY`. The Windows sandcat agent must be checked in to a disposable agent group.
+Point Archer at your CALDERA server first — **Profile → API Keys → Emulation Tools** (server URL + red API key, encrypted per user), or the `caldera:` block in `bespoke/config.yaml`, or the `CALDERA_URL` / `CALDERA_API_KEY` environment variables (which override both). The Windows sandcat agent must be checked in to a disposable agent group.
 
 > ⚠ A live run detonates a real implant and beacons over C2. Run it only against a throwaway Windows VM, and treat it as a sandboxed task.
 

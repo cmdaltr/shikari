@@ -63,8 +63,9 @@ class CalderaModule(BaseModule):
         from archer.lab.runner import LabError
 
         if not caldera.configured():
-            print("\n  CALDERA isn't configured. Set caldera.url and caldera.api_key in bespoke/config.yaml")
-            print("  (or the CALDERA_URL / CALDERA_API_KEY environment variables).\n")
+            print("\n  CALDERA isn't configured. Set the server and key in Profile → API Keys → Emulation Tools,")
+            print("  or caldera.url / caldera.api_key in bespoke/config.yaml, or the CALDERA_URL /")
+            print("  CALDERA_API_KEY environment variables.\n")
             return
 
         action = (self.options["ACTION"].effective_value or "status").lower()
