@@ -390,3 +390,116 @@ def test_windows_widen_each_step():
     assert w["folder"] == "T1057-1"
     assert w["start"] == "2026-10-28T09:59:55Z"   # decide - 5s
     assert w["end"] == "2026-10-28T10:00:50Z"     # finish + 20s
+
+
+# ----------------------------------------------- capture over the agent's own C2 (zero host access)
+
+def _tarball(run_name, tids):
+    """A gzip tar shaped like a capture-window.ps1 run: <run>/manifest.json and <run>/<tid>-<n>/events.xml."""
+    import io
+    import tarfile
+
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as t:
+        def add(name, data):
+            info = tarfile.TarInfo(name)
+            info.size = len(data)
+            t.addfile(info, io.BytesIO(data))
+
+        add(f"{run_name}/manifest.json", json.dumps({"run": run_name, "tests": []}).encode())
+        for i, tid in enumerate(tids, 1):
+            add(f"{run_name}/{tid}-{i}/events.xml", b"<Events/>")
+    return buf.getvalue()
+
+
+def _c2_result(tarball_bytes):
+    """A CALDERA link result whose stdout carries the base64 tarball between Archer's markers."""
+    stdout = caldera._C2_OPEN + base64.b64encode(tarball_bytes).decode() + caldera._C2_CLOSE
+    return base64.b64encode(json.dumps({"stdout": stdout, "stderr": ""}).encode()).decode()
+
+
+def test_capture_command_shape():
+    cmd = caldera._capture_command("U0NSSVBU", "V0lO", "caldera-op")
+    assert caldera._C2_OPEN in cmd and caldera._C2_CLOSE in cmd
+    assert "U0NSSVBU" in cmd and "V0lO" in cmd            # both base64 blobs are embedded
+    assert "-Run 'caldera-op'" in cmd and "cap.ps1" in cmd
+    assert "*> $log" in cmd                               # redirects to a variable, not an expression
+
+
+def test_safe_extract_rejects_traversal(tmp_path):
+    import io
+    import tarfile
+
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as t:
+        info = tarfile.TarInfo("../escape.txt")
+        info.size = 1
+        t.addfile(info, io.BytesIO(b"x"))
+    buf.seek(0)
+    with tarfile.open(fileobj=buf) as t:
+        with pytest.raises(LabError):
+            caldera._safe_extract(t, str(tmp_path / "dest"))
+
+
+def test_capture_via_agent_round_trip(tmp_home, monkeypatch):
+    # LAB_DIR is a module constant fixed at import; point it (and the lab build) at the tmp home.
+    lab_dir = tmp_home / "data" / "telemetry" / "lab"
+    monkeypatch.setattr("archer.telemetry.lab.LAB_DIR", str(lab_dir))
+    monkeypatch.setattr("archer.telemetry.__main__.build", lambda *a, **k: None)
+
+    tar = _tarball("caldera-op", ["T1057"])
+    seen = {"posts": {}, "deletes": []}
+
+    def handler(request):
+        p, m = request.url.path, request.method
+        if m == "POST" and p.endswith("/abilities"):
+            seen["posts"]["ability"] = json.loads(request.content)
+            return _json({"ability_id": "AB1"})
+        if m == "POST" and p.endswith("/adversaries"):
+            seen["posts"]["adversary"] = json.loads(request.content)
+            return _json({"adversary_id": "ADV1"})
+        if m == "POST" and p.endswith("/operations"):
+            seen["posts"]["operation"] = json.loads(request.content)
+            return _json({"id": "OP1"})
+        if m == "GET" and p.endswith("/operations/OP1"):
+            return _json({"id": "OP1", "state": "finished"})
+        if m == "GET" and p.endswith("/operations/OP1/links"):
+            return _json([{"id": "L1", "paw": "paw1", "host": "WS01", "status": 0}])
+        if m == "GET" and p.endswith("/links/L1/result"):
+            return _json({"link": {"id": "L1"}, "result": _c2_result(tar)})
+        if m == "DELETE":
+            seen["deletes"].append(p)
+            return _json({})
+        return _json({}, status=404)
+
+    manifest = _manifest([{"technique_id": "T1057", "ability": "Process Discovery", "host": "WS01",
+                           "decide": "2026-10-28T10:00:00Z", "finish": "2026-10-28T10:00:05Z"}])
+    out = caldera.capture_via_agent(make_client(handler), manifest, say=lambda *_: None)
+
+    # the run folder came back over the link result and landed in the lab dir
+    assert (lab_dir / "caldera-op" / "manifest.json").is_file()
+    assert (lab_dir / "caldera-op" / "T1057-1" / "events.xml").is_file()
+    # the manifest is marked captured and each step points at its lab run
+    assert out["captured"] is True
+    assert out["steps"][0]["recorded"] == "lab:caldera-op/T1057"
+    # the ability carried all three OS executors and our markers
+    execs = {e["platform"] for e in seen["posts"]["ability"]["executors"]}
+    assert execs == {"windows", "linux", "darwin"}
+    assert caldera._C2_OPEN in seen["posts"]["ability"]["executors"][0]["command"]
+    # the throwaway ability + adversary were cleaned up afterwards
+    assert any("AB1" in d for d in seen["deletes"])
+    assert any("ADV1" in d for d in seen["deletes"])
+
+
+def test_capture_via_agent_no_windows_posts_nothing(tmp_home):
+    calls = []
+
+    def handler(request):
+        calls.append(request.method)
+        return _json({}, status=404)
+
+    # steps with no decide/finish produce no windows → nothing to capture, nothing posted
+    manifest = _manifest([{"technique_id": "T1057", "ability": "x", "host": "WS01"}])
+    out = caldera.capture_via_agent(make_client(handler), manifest, say=lambda *_: None)
+    assert out.get("captured") in (False, None)
+    assert "POST" not in calls

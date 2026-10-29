@@ -54,7 +54,12 @@ Each operation also becomes a recording source, **CALDERA**, one dataset per tec
 
 ### Capturing the endpoint's logs
 
-A command line overstates a detection: the query runs on what the endpoint logged. Choose the lab machine the agent runs on under **Capture logs afterwards**, and once collected Archer runs `scripts/telemetry/capture-window.ps1` in that machine. The script runs nothing but log readers. It reads each step's window (decide minus 5 s, to finish plus 20 s for clock skew and late events) back from the same logs the [lab recorder](20-recording-a-lab.md) uses, and imports them as a **Your lab** run named `caldera-<operation>`.
+A command line overstates a detection: the query runs on what the endpoint logged. Under **Capture the endpoint's logs afterwards** choose how, and once collected Archer runs `scripts/telemetry/capture-window.ps1` on the agent's host. The script runs nothing but log readers. It reads each step's window (decide minus 5 s, to finish plus 20 s for clock skew and late events) back from the same logs the [lab recorder](20-recording-a-lab.md) uses, and imports them as a **Your lab** run named `caldera-<operation>`.
+
+Two ways to reach the host:
+
+- **Via the agent, over CALDERA** (any OS, no machine to set up): the capture runs as a one-ability CALDERA operation on the agent that just ran, which returns the whole run back in its own link result. Nothing but the sandcat agent and the REST API is needed — no host Lab manages, no PowerShell 7 host, no hypervisor access. This is the zero-touch path and works wherever the agent runs.
+- **Via a lab machine Lab manages** (the hypervisor-exec path): pick the machine the agent runs on, and Lab pushes and runs the script over its engine (Docker, tart or UTM). Use this when you'd rather not run an extra CALDERA operation.
 
 | OS | Captured after the fact |
 |---|---|
@@ -62,7 +67,7 @@ A command line overstates a detection: the query runs on what the endpoint logge
 | Linux | auditd by record epoch (`audit.log`), the journal (`journal.log`) |
 | macOS | The unified log (`unified.ndjson`). Endpoint Security and the launch-item diff only exist live, so they aren't captured |
 
-Capturing needs the machine to be one Lab manages. It runs only log readers: on Windows under the built-in Windows PowerShell (5.1), on Linux and macOS under PowerShell 7 (Lab's **Set up**). An operation that ran on several hosts is captured one host at a time.
+Either way it runs only log readers: on Windows under the built-in Windows PowerShell (5.1), on Linux and macOS under PowerShell 7 (which the agent host needs for the capture). Capturing via the agent handles every host the operation ran on in one pass — a separate **Your lab** run per host; the lab-machine path captures one managed host at a time.
 
 ## The check
 

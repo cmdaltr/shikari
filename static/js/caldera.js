@@ -105,9 +105,10 @@
           <input type="text" id="cal-value" placeholder="T1057, T1053.005 — or a group name" autocomplete="off"></label>
         <label class="lab-field">Agent group
           <select id="cal-group">${groups.map(g => `<option value="${esc(g.group)}">${esc(g.group || '(no group)')} — ${g.agents} agent(s)</option>`).join('')}</select></label>
-        <label class="lab-field">Capture logs afterwards from the lab machine the agent runs on (optional)
+        <label class="lab-field">Capture the endpoint's logs afterwards (optional)
           <select id="cal-capture"><option value="">No — check against the commands only</option>
-          ${withOs.map(m => `<option value="${esc(m.engine)}|${esc(m.name)}|${esc(m.os)}">${esc(m.name)} (${esc(m.os)})</option>`).join('')}</select></label>
+          <option value="caldera">Yes — via the agent, over CALDERA (any OS, no machine needed)</option>
+          ${withOs.map(m => `<option value="${esc(m.engine)}|${esc(m.name)}|${esc(m.os)}">Via the lab machine ${esc(m.name)} (${esc(m.os)})</option>`).join('')}</select></label>
         <p class="lab-hint">Plan reads CALDERA's abilities and agents and changes nothing. Running creates the adversary and starts the operation on real agents.</p>
         <div class="lab-preview" id="cal-preview" hidden></div>
         <label class="lab-confirm"><input type="checkbox" id="cal-ok"> These agents are on disposable lab machines</label>
@@ -116,9 +117,12 @@
           <button type="button" class="btn-primary lab-danger" id="cal-go" disabled>Run operation</button>
         </div>`);
       const body = () => {
-        const cap = el('cal-capture').value.split('|');
-        return { kind: el('cal-kind').value, value: el('cal-value').value, group: el('cal-group').value,
-                 capture: cap.length === 3 ? { engine: cap[0], name: cap[1], os: cap[2] } : null };
+        const capv = el('cal-capture').value;
+        const cap = capv.split('|');
+        // "caldera" = capture over the agent's own C2 (no machine); otherwise engine|name|os of a lab machine
+        const capture = capv === 'caldera' ? { engine: 'caldera' }
+          : cap.length === 3 ? { engine: cap[0], name: cap[1], os: cap[2] } : null;
+        return { kind: el('cal-kind').value, value: el('cal-value').value, group: el('cal-group').value, capture };
       };
       let planned = false;
       const sync = () => { el('cal-go').disabled = !(planned && el('cal-ok').checked); };

@@ -18,8 +18,11 @@ written to a manifest. The check is static: no AI, no SIEM.
 """
 
 import base64
+import io
 import json
 import os
+import shutil
+import tarfile
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -106,6 +109,9 @@ class Client:
 
     def _post(self, path: str, body: Dict):
         return self._request("POST", path, json=body)
+
+    def _delete(self, path: str):
+        return self._request("DELETE", path)
 
     def _request(self, method: str, path: str, **kw):
         try:
@@ -500,6 +506,165 @@ def capture(engine: str, name: str, os_name: str, manifest: Dict, host: str = ""
     with open(os.path.join(folder, "manifest.json"), "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2)
     say(f"Captured endpoint logs for {manifest['name']} as {run_name}")
+    return manifest
+
+
+# ------------------------------------------------- capture over the agent's own C2 (no host access)
+
+_C2_OPEN, _C2_CLOSE = "ARCHERB64:", ":ENDB64"
+
+
+def _capture_command(script_b64: str, win_b64: str, run_name: str) -> str:
+    """
+    The PowerShell the agent runs for a C2 capture: write capture-window.ps1 and the windows out,
+    run them (every stream to a log, so only our marker reaches stdout), tar the run folder and print
+    it base64 between markers. The whole run then comes back in the link result — no exfil dir, no
+    host access. Valid under both Windows PowerShell 5.1 and pwsh 7, so one body serves every OS.
+    """
+    # Joined with ';', not newlines: CALDERA runs a psh command as a single line, collapsing newlines,
+    # so statements must be semicolon-separated. Paths go in variables first because PowerShell can
+    # only redirect (*>) to a variable or literal, never to a parenthesised expression.
+    return ";".join([
+        "$ErrorActionPreference='Stop'",
+        "$d=Join-Path ([IO.Path]::GetTempPath()) 'archer-cap'",
+        "if(Test-Path $d){Remove-Item -Recurse -Force $d}",
+        "New-Item -ItemType Directory -Force $d|Out-Null",
+        "$cap=Join-Path $d 'cap.ps1'",
+        "$wj=Join-Path $d 'w.json'",
+        "$o=Join-Path $d 'out'",
+        "$log=Join-Path $d 'log.txt'",
+        "$tgz=Join-Path $d 'r.tgz'",
+        f"[IO.File]::WriteAllText($cap,[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{script_b64}')))",
+        f"[IO.File]::WriteAllText($wj,[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{win_b64}')))",
+        f"& $cap -Windows $wj -Run '{run_name}' -Out $o -Tool CALDERA *> $log",
+        f"& tar -c -z -f $tgz -C $o '{run_name}'",
+        f"'{_C2_OPEN}'+[Convert]::ToBase64String([IO.File]::ReadAllBytes($tgz))+'{_C2_CLOSE}'",
+    ])
+
+
+def _safe_extract(tar: tarfile.TarFile, path: str) -> None:
+    """extractall, but refuse any member that would land outside `path` (defence in depth; the tar
+    is our own capture, but it arrived over the network)."""
+    base = os.path.realpath(path)
+    for m in tar.getmembers():
+        target = os.path.realpath(os.path.join(path, m.name))
+        if target != base and not target.startswith(base + os.sep):
+            raise LabError("Unsafe path in the capture archive", m.name)
+    tar.extractall(path)
+
+
+def capture_via_agent(client: "Client", manifest: Dict, say: Callable[[str], None] = print) -> Dict:
+    """
+    Zero-touch endpoint-log capture: task the operation's own agents, over CALDERA's C2, to read each
+    step's logs back as a lab run. Needs only a running sandcat agent — no host Lab manages, no
+    hypervisor exec, no PowerShell 7 host (Windows uses its built-in Windows PowerShell). The agent
+    runs capture-window.ps1 and returns the run folder as a base64 tarball in its link result, so
+    only the REST API is used. The result imports exactly as capture() does, and the check is the same.
+    """
+    from archer.telemetry.lab import LAB_DIR
+
+    wins = windows(manifest)
+    if not wins:
+        say("No step had both a decide and a finish time; nothing to capture")
+        return manifest
+    script = os.path.join(paths.ROOT, "scripts", "telemetry", "capture-window.ps1")
+    if not os.path.isfile(script):
+        raise LabError("capture-window.ps1 is missing", script)
+
+    base_run = safe_name(f"caldera-{manifest['name']}")
+    hosts = sorted({(s.get("host") or s.get("paw") or "") for s in manifest.get("steps") or []})
+    multi = len([h for h in hosts if h]) > 1
+
+    def run_for(host: str) -> str:  # a per-host run name only when the operation spanned >1 host
+        return safe_name(f"{base_run}-{host}") if multi and host else base_run
+
+    with open(script, "rb") as fh:
+        script_b64 = base64.b64encode(fh.read()).decode()
+    win_b64 = base64.b64encode(json.dumps(wins).encode()).decode()
+    ps = _capture_command(script_b64, win_b64, base_run)
+    # Linux/macOS run pwsh via -EncodedCommand (UTF-16LE base64) to dodge all shell quoting.
+    enc = base64.b64encode(ps.encode("utf-16-le")).decode()
+
+    say("Creating the capture ability…")
+    ability = client._post("/abilities", {
+        "name": "Archer: capture endpoint logs", "tactic": "collection",
+        "technique_id": "T1005", "technique_name": "Data from Local System",
+        "executors": [
+            {"platform": "windows", "name": "psh", "command": ps, "timeout": 900, "cleanup": []},
+            {"platform": "linux", "name": "sh", "command": f"pwsh -NoProfile -EncodedCommand {enc}",
+             "timeout": 900, "cleanup": []},
+            {"platform": "darwin", "name": "sh", "command": f"pwsh -NoProfile -EncodedCommand {enc}",
+             "timeout": 900, "cleanup": []}]}) or {}
+    ability_id = ability.get("ability_id") or ability.get("id")
+    if not ability_id:
+        raise LabError("CALDERA did not create the capture ability", "no ability id returned")
+
+    group = manifest.get("group") or ""
+    adversary = client._post("/adversaries", {
+        "name": f"Archer capture {base_run}", "description": "Archer: read endpoint logs back",
+        "atomic_ordering": [ability_id]}) or {}
+    adversary_id = adversary.get("adversary_id") or adversary.get("id")
+
+    got = set()
+    try:
+        say(f"Running the capture on group {group} over C2…")
+        op = client._post("/operations", {
+            "name": f"capture-{base_run}", "group": group, "state": "running", "auto_close": True,
+            "obfuscator": OBFUSCATOR, "visibility": 51, "adversary": {"adversary_id": adversary_id},
+            "planner": {"id": PLANNER}, "source": {"id": SOURCE}}) or {}
+        op_id = op.get("id") or op.get("operation_id")
+        if not op_id:
+            raise LabError("CALDERA did not start the capture operation", "no operation id returned")
+        wait(client, op_id, say=say)
+
+        os.makedirs(LAB_DIR, exist_ok=True)
+        for ln in client._get(f"/operations/{op_id}/links") or []:
+            res = _link_result(client, op_id, ln.get("id") or ln.get("unique") or "")
+            if not res or _C2_OPEN not in res:
+                continue
+            blob = res.split(_C2_OPEN, 1)[1].split(_C2_CLOSE, 1)[0].strip()
+            try:
+                data = base64.b64decode(blob)
+            except ValueError:  # binascii.Error subclasses ValueError
+                continue
+            host = ln.get("host") or ln.get("paw") or ""
+            run_name = run_for(host)
+            tmp = os.path.join(LAB_DIR, f".{run_name}.incoming")
+            shutil.rmtree(tmp, ignore_errors=True)
+            os.makedirs(tmp, exist_ok=True)
+            with tarfile.open(fileobj=io.BytesIO(data)) as t:
+                _safe_extract(t, tmp)
+            dest = os.path.join(LAB_DIR, run_name)
+            shutil.rmtree(dest, ignore_errors=True)
+            os.replace(os.path.join(tmp, base_run), dest)
+            shutil.rmtree(tmp, ignore_errors=True)
+            got.add(host)
+            say(f"Captured {host or 'agent'} → {run_name}")
+        if not got:
+            raise LabError("No agent returned captured logs",
+                           "the capture ability ran but no link carried a result")
+    finally:
+        for path in (f"/abilities/{ability_id}", f"/adversaries/{adversary_id}" if adversary_id else ""):
+            if path:
+                try:
+                    client._delete(path)
+                except LabError:
+                    pass  # best-effort tidy-up; leftover definitions don't affect anything
+
+    say("Rebuilding Your lab…")
+    from archer.telemetry.__main__ import build
+
+    build(["lab"], log=say)
+
+    manifest["captured"] = True
+    for s in manifest.get("steps") or []:
+        host = s.get("host") or s.get("paw") or ""
+        s["recorded"] = f"lab:{run_for(host)}/{s.get('technique_id')}"
+    folder = os.path.join(_caldera_dir(), manifest["name"])
+    os.makedirs(folder, exist_ok=True)
+    with open(os.path.join(folder, "manifest.json"), "w", encoding="utf-8") as fh:
+        json.dump(manifest, fh, indent=2)
+    say(f"Captured endpoint logs for {manifest['name']} over C2 ({len(got)} host(s))")
     return manifest
 
 
