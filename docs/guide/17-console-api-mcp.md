@@ -34,7 +34,8 @@ archer-cli (hunt/group) > run
 | `ai/ask`, `ai/briefing`, `ai/settings` | Ask Archer, a threat briefing, and the AI assignment |
 | `agent/repair`, `agent/ask`, `agent/triage`, `agent/sweep`, `agent/audit`, `agent/tune`, `agent/history` | The [agents](15-agents-and-ask-archer.md) |
 | `generate`, `correlate`, `hunt` | Run the pipeline locally, without the server |
-| `emulate` | Adversary emulation (coming soon) |
+| `lab/caldera` | Plan, run, collect and check CALDERA operations ([Emulate → Lab](25-caldera.md)); talks to your CALDERA server directly |
+| `emulate` | Adversary emulation — the Atomic Red Team recorder (coming soon) |
 
 The hunt modules share options: `CORRELATE`, `LOL` (on), `OSINT`, `OSINT_COMPARE`, `MERGE_BY_TACTIC`, `MERGE_BY_PARENT`, `EXCLUDE` (SIEMs to leave out), `VALIDATE`, and `PROVIDER`/`MODEL` for AI. `show options` lists each module's own.
 

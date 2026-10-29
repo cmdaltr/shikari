@@ -28,7 +28,7 @@ NAME = "lab"
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 LAB_DIR = str(paths.DATA / "telemetry" / "lab")
 INFO = {"name": "Your lab", "url": "", "licence": "Yours", "local": True,
-        "note": "Atomic Red Team tests recorded on your own machines (scripts/telemetry). Never committed"}
+        "note": "Atomic Red Team tests, and CALDERA steps captured, on your own machines (scripts/telemetry). Never committed"}
 
 
 def runs() -> Iterable[Tuple[str, Dict]]:
@@ -70,5 +70,5 @@ def datasets(previous: Dict[str, Dict], log=print) -> Iterable[Tuple[Dict, Optio
             counts, values = summarise(events)
             yield {"id": did, "source": NAME, "title": f"{test.get('name') or test['technique']} ({test['technique']})",
                    "techniques": [test["technique"]], "platform": [platform] if platform else [],
-                   "tools": ["Atomic Red Team"], "description": f"{run}: test {test.get('test', 1)} on {platform or 'unknown'}",
+                   "tools": [manifest.get("tool") or "Atomic Red Team"], "description": f"{run}: test {test.get('test', 1)} on {platform or 'unknown'}",
                    "events": counts, "date": str(test.get("start") or "")[:10], "url": ""}, values, key

@@ -243,12 +243,16 @@ scenes:
     narration: >
       Emulate shows which logs record each technique, from attacks recorded in public labs, and checks
       your detections' indicators against those recordings. Plan an emulation for a group or CVE and
-      export it for MACAT. Assessments record what each test did and what the defence saw, and export
+      export it for MACAT. In the Lab you can run a CALDERA operation against an agent group — each
+      step's facts feed the next and the sandcat agent behaves like a real implant — then check your
+      detections and correlations against what actually ran, capturing each step's endpoint logs over
+      the agent's own C2. Assessments record what each test did and what the defence saw, and export
       an ATT&CK Navigator layer.
     actions:
       - goto: /emulate
       - show: '#emulate-planner'
       - show: '#em-telemetry'
+      - show: '#lab'
       - goto: /assessments
       - show: 'section.ms-card:has(h2:has-text("Campaigns"))'
 

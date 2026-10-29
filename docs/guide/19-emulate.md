@@ -71,6 +71,8 @@ These change the machine, so snapshot it first — the section says so, and Reve
 
 Nothing a hypervisor doesn't already expose is sent anywhere, and the machine names Archer tracks stay in `data/lab/` (gitignored).
 
+Beyond the Atomic recorder, the Lab also runs **CALDERA operations** against an agent group — chained emulation with a real implant (sandcat), captured over the agent's own C2 and checked against your saved detections and correlations. See [CALDERA operations](25-caldera.md).
+
 ## Recording your own lab
 
 No public set of attacks recorded by Defender for Endpoint, or by macOS's unified log, exists that Archer has found, so the gaps are filled by recording your own. A machine's **Record** button (admins) drives this from inside Archer: give it the ATT&CK technique IDs, it copies `scripts/telemetry/record-atomics.ps1` into the machine, runs the atomics, pulls each test's logs back into `data/telemetry/lab/<run>`, reverts the machine to the snapshot you name, and rebuilds **Your lab**. **Preview** shows exactly what a run would do and runs nothing; the run itself is gated on confirming the machine is snapshotted and disposable.

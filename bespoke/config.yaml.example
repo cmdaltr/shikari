@@ -109,6 +109,17 @@ llm:
   # model: "llama3"
   # max_tokens: 4096
 
+# ---------------------------------------------------------------------------
+# CALDERA (Emulate → Lab → CALDERA operations; docs/guide/25-caldera.md)
+# ---------------------------------------------------------------------------
+# Your lab's CALDERA server. CALDERA_URL and CALDERA_API_KEY in the environment win.
+# The key is only ever sent in CALDERA's KEY header.
+#
+# caldera:
+#   url: "https://caldera.lab:8888"
+#   api_key: "your-caldera-red-api-key"
+#   verify_tls: true
+
 # Custom detection categories to prioritize
 # Detections matching these categories will be highlighted
 priority_categories:

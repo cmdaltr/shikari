@@ -18,9 +18,9 @@ class EmulateModule(BaseModule):
             ),
             "FRAMEWORK": ModuleOption(
                 name="FRAMEWORK",
-                description="Emulation framework to use",
+                description="Emulation framework (CALDERA now lives in the lab/caldera module)",
                 default="atomic",
-                choices=["atomic", "caldera", "macat"],
+                choices=["atomic"],
             ),
             "EXECUTE": ModuleOption(
                 name="EXECUTE",

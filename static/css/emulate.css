@@ -361,3 +361,15 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .em-dg-pub { fill: rgba(197, 48, 48, .06); stroke: var(--accent); }
 [data-theme="dark"] .em-dg-pub { fill: rgba(255, 107, 107, .08); }
 .em-ic-red { stroke: var(--accent); }
+
+/* CALDERA operations (#30) */
+.lab-caldera { margin-top: 20px; }
+.lab-caldera-status { font-size: .88em; margin-bottom: 8px; }
+.lab-caldera-ops { margin-top: 10px; }
+.lab-caldera-check { margin-top: 14px; }
+.lab-caldera-check h4 { margin: 14px 0 6px; font-size: .92em; }
+.lab-caldera-cmd { font-family: var(--font-mono, monospace); font-size: .8em; word-break: break-all; }
+.lab-badge.is-fired { color: #0d9488; background: rgba(13, 148, 136, .12); }
+.lab-badge.is-half { color: #d97706; background: rgba(217, 119, 6, .12); }
+.lab-badge.is-missed { color: var(--accent); background: var(--bg-secondary); }
+.lab-field select { width: 100%; box-sizing: border-box; margin-top: 4px; }

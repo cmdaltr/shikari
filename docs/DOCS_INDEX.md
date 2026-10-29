@@ -31,6 +31,7 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 | [Data and updates](guide/18-data-and-updates.md) | What's downloaded, when, and where everything is kept |
 | [Emulate](guide/19-emulate.md) | Which logs record each technique (native, Sysmon, EDR; Windows, Linux, macOS, ESXi, cloud), detections checked against lab recordings, Defender XDR's own alerting |
 | [Recording a lab](guide/20-recording-a-lab.md) | **Coming soon**: Atomic Red Team on your own VMs, with Defender for Endpoint's rows, into Emulate |
+| [CALDERA operations](guide/25-caldera.md) | Plan and run CALDERA operations on lab agents, collect each step, optionally capture its endpoint logs over the agent's own C2, check detections and correlations against it statically |
 | [Glossary](guide/glossary.md) | The terms used throughout |
 
 ---
