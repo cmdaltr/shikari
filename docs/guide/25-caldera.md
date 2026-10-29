@@ -62,7 +62,7 @@ A command line overstates a detection: the query runs on what the endpoint logge
 | Linux | auditd by record epoch (`audit.log`), the journal (`journal.log`) |
 | macOS | The unified log (`unified.ndjson`). Endpoint Security and the launch-item diff only exist live, so they aren't captured |
 
-Capturing needs the machine to be one Lab manages, with PowerShell 7 (Lab's **Set up**). An operation that ran on several hosts is captured one host at a time.
+Capturing needs the machine to be one Lab manages. It runs only log readers: on Windows under the built-in Windows PowerShell (5.1), on Linux and macOS under PowerShell 7 (Lab's **Set up**). An operation that ran on several hosts is captured one host at a time.
 
 ## The check
 
@@ -77,6 +77,5 @@ The order the parts matched in is shown, not required: ATT&CK tactics aren't a s
 
 ## Limits
 
-- Endpoint-log capture (`capture-window.ps1`) hasn't been run on a live host yet; the plan, run, collect and check path has (CALDERA 5.2). See [Untested](../other/UNTESTED.md#caldera-operations--endpoint-log-capture).
 - One ability per technique per operation. Run another operation for the alternatives.
 - The CALDERA API's planner and fact-source lookups go by the shipped names, `atomic` and `basic`.
