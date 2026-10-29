@@ -12,24 +12,32 @@ import sys
 import tempfile
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "archer.png"
 OUT = ROOT / "desktop" / "icons"
 
 SIZE = 1024
-MARGIN = 0.06  # of the canvas, each side
+PAD = 100           # transparent margin around the rounded square (macOS leaves the corners clear)
+RADIUS = 186        # corner radius of the square, ~22.5% of its side, as macOS icons use
+BG = (233, 221, 190, 255)  # parchment: a warm cream, clearly not white against the Dock
+FIGURE = 0.70       # the archer's height as a fraction of the square
 
 
 def master():
-    """archer.png as it is, cropped to the figure and centred on a transparent square."""
+    """The archer centred on an opaque light rounded square. Opaque, not transparent:
+    a transparent icon shows see-through in the Dock once the app sets it at runtime."""
     art = Image.open(SOURCE).convert("RGBA")
     # The source has faint stray pixels around the figure; crop to what's actually visible
     art = art.crop(art.getchannel("A").point(lambda a: 255 if a > 64 else 0).getbbox())
-    fit = int(SIZE * (1 - 2 * MARGIN))
-    art.thumbnail((fit, fit), Image.LANCZOS)
+
     canvas = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(canvas)
+    draw.rounded_rectangle([PAD, PAD, SIZE - PAD, SIZE - PAD], radius=RADIUS, fill=BG)
+
+    fit = int((SIZE - 2 * PAD) * FIGURE)
+    art.thumbnail((fit, fit), Image.LANCZOS)
     canvas.alpha_composite(art, ((SIZE - art.width) // 2, (SIZE - art.height) // 2))
     return canvas
 
