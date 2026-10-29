@@ -142,20 +142,44 @@ def single_instance(directory):
     return handle
 
 
+def _set_dock_icon_now():
+    """The actual AppKit call. Must run on the main thread."""
+    from AppKit import NSApplication, NSImage
+    icns = ICONS / "archer.icns"
+    if icns.exists():
+        # Eager load, not initByReferencingFile_: keep the bitmap in memory so a Dock redraw
+        # never re-reads the file from OneDrive (that read came back blank → white tile).
+        image = NSImage.alloc().initWithContentsOfFile_(str(icns))
+        if image and image.isValid():
+            NSApplication.sharedApplication().setApplicationIconImage_(image)
+
+
+def set_dock_icon(*_):
+    """Set the Dock tile to Archer's icon. Safe to call repeatedly, from any thread. On macOS the
+    app icon has to be re-asserted after the WKWebView finishes loading the real page: that
+    navigation makes the process active and macOS resets a non-bundled process's tile to the
+    generic (white) icon, so a one-off set before the GUI loop starts shows on the splash and is
+    then lost on load. pywebview fires the `loaded` event on a background thread, and AppKit only
+    takes a new app icon from the main thread, so marshal the call onto the main run loop."""
+    if not MACOS:
+        return
+    try:
+        from PyObjCTools.AppHelper import callAfter
+        callAfter(_set_dock_icon_now)
+    except Exception as e:
+        app_log(f"couldn't set the Dock icon: {e}")
+
+
 def brand_process():
     """Name and icon for the Dock / taskbar entry while the window is open."""
     if MACOS:
         try:
-            from AppKit import NSApplication, NSImage
             from Foundation import NSBundle
             info = NSBundle.mainBundle().localizedInfoDictionary() or NSBundle.mainBundle().infoDictionary()
             info["CFBundleName"] = NAME
-            # A checkout runs the venv's Python, whose icon is Python's; the installed app has its own
-            if (ICONS / "archer.icns").exists():
-                image = NSImage.alloc().initByReferencingFile_(str(ICONS / "archer.icns"))
-                NSApplication.sharedApplication().setApplicationIconImage_(image)
         except Exception as e:
-            app_log(f"couldn't set the Dock name/icon: {e}")
+            app_log(f"couldn't set the Dock name: {e}")
+        set_dock_icon()
     elif WINDOWS:
         try:
             import ctypes
@@ -188,10 +212,19 @@ def open_webview(server, storage):
             window.load_html(f"<p style='font:15px sans-serif;padding:40px'>Archer didn't start. "
                              f"See {server.log}.</p>")
 
+    # Re-assert the Dock icon every time a navigation completes: loading server.url makes the
+    # process active and macOS drops a non-bundled process back to the generic white tile.
+    if MACOS:
+        window.events.loaded += set_dock_icon
+
     brand_process()
     icon = ICONS / "archer.png"
+    # On macOS, brand_process + the loaded handler set the Dock icon. Don't pass it to pywebview too:
+    # pywebview sets it with a lazy NSImage, which re-read the OneDrive file after load and went white.
+    # Other platforms use this for the window/taskbar icon.
+    use_icon = None if MACOS else (str(icon) if icon.exists() else None)
     # Not private, so the login cookie and theme survive between launches
-    webview.start(boot, private_mode=False, storage_path=str(storage), icon=str(icon) if icon.exists() else None)
+    webview.start(boot, private_mode=False, storage_path=str(storage), icon=use_icon)
 
 
 def chromium():
