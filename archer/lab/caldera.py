@@ -74,7 +74,7 @@ class Client:
     instance never stores it anywhere it could be logged or serialised by mistake.
     """
 
-    def __init__(self, url: str, api_key: str, verify_tls: bool = True, timeout: float = 30.0,
+    def __init__(self, url: str, api_key: str, verify_tls: bool = True, timeout: float = 120.0,
                  transport: Optional[httpx.BaseTransport] = None):
         if not url or not api_key:
             raise LabError("CALDERA is not configured",
@@ -512,6 +512,8 @@ def capture(engine: str, name: str, os_name: str, manifest: Dict, host: str = ""
 # ------------------------------------------------- capture over the agent's own C2 (no host access)
 
 _C2_OPEN, _C2_CLOSE = "ARCHERB64:", ":ENDB64"
+_MAC_LOG_CAP = 2_000_000  # bytes per window of `log show` output — the unified log is huge; this is
+#                           ample for indicator matching and keeps the link result small.
 
 
 def _capture_command(script_b64: str, win_b64: str, run_name: str) -> str:
@@ -542,6 +544,65 @@ def _capture_command(script_b64: str, win_b64: str, run_name: str) -> str:
     ])
 
 
+def _capture_command_sh(wins: List[Dict], run_name: str, os_name: str) -> str:
+    """
+    The native shell a Linux or macOS agent runs for a C2 capture — the no-dependency analogue of
+    capture-window.ps1, so no PowerShell is needed on the host. It reads only logs (auditd and the
+    journal on Linux, the unified log on macOS) into the lab-recorder layout, tars the run and prints
+    it base64 between markers, so the run returns in the link result. Statements are ';'-joined because
+    CALDERA runs a command as one line; each log read is best-effort so a missing source can't fail it.
+    """
+    platform = "macos" if os_name == "darwin" else "linux"
+    rd = f"$d/out/{run_name}"
+
+    def epoch(iso) -> int:
+        dt = _parse_time(iso)
+        if not dt:
+            return 0
+        return int((dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)).timestamp())
+
+    tests, parts = [], [
+        "set -u",
+        'd="${TMPDIR:-/tmp}/archer-cap"',
+        'rm -rf "$d" 2>/dev/null',
+        f'mkdir -p "{rd}"',
+        "host=$(hostname 2>/dev/null | tr 'A-Z' 'a-z')",
+        "started=$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    ]
+    for i, w in enumerate(wins, 1):
+        folder, fp = w["folder"], f"{rd}/{w['folder']}"
+        frm, to = epoch(w["start"]), epoch(w["end"])
+        parts.append(f'mkdir -p "{fp}"')
+        if platform == "macos":
+            # The unified log is huge and unfiltered; cap each window so the tarball fits in the link
+            # result (plenty for indicator matching, which keeps few values per field).
+            parts.append(
+                f"log show --start \"$(date -r {frm} '+%Y-%m-%d %H:%M:%S')\" "
+                f"--end \"$(date -r {to} '+%Y-%m-%d %H:%M:%S')\" --style ndjson 2>/dev/null "
+                f"| head -c {_MAC_LOG_CAP} > \"{fp}/unified.ndjson\" || true")
+        else:
+            parts.append(
+                f"awk -v a={frm} -v b={to} '{{p=index($0,\"audit(\");if(p){{n=substr($0,p+6)+0;"
+                f"if(n>=a&&n<=b)print}}}}' /var/log/audit/audit.log 2>/dev/null > \"{fp}/audit.log\" || true")
+            parts.append(
+                f"journalctl --since @{frm} --until @{to} -o short --no-pager > \"{fp}/journal.log\" 2>/dev/null || true")
+        tests.append({"technique": w["technique"], "test": i, "name": w.get("name") or w["technique"],
+                      "folder": folder, "start": w["start"], "end": w["end"]})
+
+    # Build the manifest in Python (names escaped by json), fill host/started on the agent via sed.
+    manifest = json.dumps({"run": run_name, "host": "__HOST__", "platform": platform,
+                           "tool": "CALDERA", "started": "__STARTED__", "tests": tests})
+    safe = manifest.replace("'", "'\\''")  # survive the single-quoted shell literal
+    parts += [
+        f"printf '%s' '{safe}' > \"{rd}/manifest.json.tmpl\"",
+        f'sed "s/__HOST__/$host/;s/__STARTED__/$started/" "{rd}/manifest.json.tmpl" > "{rd}/manifest.json"',
+        f'rm -f "{rd}/manifest.json.tmpl"',
+        f'tar -czf "$d/r.tgz" -C "$d/out" "{run_name}"',
+        f"printf '{_C2_OPEN}'; base64 < \"$d/r.tgz\" | tr -d '\\n'; printf '{_C2_CLOSE}\\n'",
+    ]
+    return ";".join(parts)
+
+
 def _safe_extract(tar: tarfile.TarFile, path: str) -> None:
     """extractall, but refuse any member that would land outside `path` (defence in depth; the tar
     is our own capture, but it arrived over the network)."""
@@ -556,10 +617,10 @@ def _safe_extract(tar: tarfile.TarFile, path: str) -> None:
 def capture_via_agent(client: "Client", manifest: Dict, say: Callable[[str], None] = print) -> Dict:
     """
     Zero-touch endpoint-log capture: task the operation's own agents, over CALDERA's C2, to read each
-    step's logs back as a lab run. Needs only a running sandcat agent — no host Lab manages, no
-    hypervisor exec, no PowerShell 7 host (Windows uses its built-in Windows PowerShell). The agent
-    runs capture-window.ps1 and returns the run folder as a base64 tarball in its link result, so
-    only the REST API is used. The result imports exactly as capture() does, and the check is the same.
+    step's logs back as a lab run. Needs only a running sandcat agent — nothing installed on the host:
+    Windows reads its logs with the built-in PowerShell (capture-window.ps1), Linux and macOS with the
+    native shell. The agent returns the run folder as a base64 tarball in its link result, so only the
+    REST API is used. The result imports exactly as capture() does, and the check is the same.
     """
     from archer.telemetry.lab import LAB_DIR
 
@@ -581,20 +642,20 @@ def capture_via_agent(client: "Client", manifest: Dict, say: Callable[[str], Non
     with open(script, "rb") as fh:
         script_b64 = base64.b64encode(fh.read()).decode()
     win_b64 = base64.b64encode(json.dumps(wins).encode()).decode()
-    ps = _capture_command(script_b64, win_b64, base_run)
-    # Linux/macOS run pwsh via -EncodedCommand (UTF-16LE base64) to dodge all shell quoting.
-    enc = base64.b64encode(ps.encode("utf-16-le")).decode()
+    # Windows runs capture-window.ps1 under its built-in PowerShell; Linux and macOS read the logs
+    # with the native shell — so every OS is captured with nothing installed on the host.
+    win_cmd = _capture_command(script_b64, win_b64, base_run)
+    linux_cmd = _capture_command_sh(wins, base_run, "linux")
+    macos_cmd = _capture_command_sh(wins, base_run, "darwin")
 
     say("Creating the capture ability…")
     ability = client._post("/abilities", {
         "name": "Archer: capture endpoint logs", "tactic": "collection",
         "technique_id": "T1005", "technique_name": "Data from Local System",
         "executors": [
-            {"platform": "windows", "name": "psh", "command": ps, "timeout": 900, "cleanup": []},
-            {"platform": "linux", "name": "sh", "command": f"pwsh -NoProfile -EncodedCommand {enc}",
-             "timeout": 900, "cleanup": []},
-            {"platform": "darwin", "name": "sh", "command": f"pwsh -NoProfile -EncodedCommand {enc}",
-             "timeout": 900, "cleanup": []}]}) or {}
+            {"platform": "windows", "name": "psh", "command": win_cmd, "timeout": 900, "cleanup": []},
+            {"platform": "linux", "name": "sh", "command": linux_cmd, "timeout": 900, "cleanup": []},
+            {"platform": "darwin", "name": "sh", "command": macos_cmd, "timeout": 900, "cleanup": []}]}) or {}
     ability_id = ability.get("ability_id") or ability.get("id")
     if not ability_id:
         raise LabError("CALDERA did not create the capture ability", "no ability id returned")

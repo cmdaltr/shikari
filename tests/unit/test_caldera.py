@@ -503,3 +503,25 @@ def test_capture_via_agent_no_windows_posts_nothing(tmp_home):
     out = caldera.capture_via_agent(make_client(handler), manifest, say=lambda *_: None)
     assert out.get("captured") in (False, None)
     assert "POST" not in calls
+
+
+def test_capture_command_sh_linux_and_macos():
+    import datetime as _dt
+
+    wins = [{"technique": "T1057", "folder": "T1057-1", "name": "Process Discovery",
+             "start": "2026-10-28T10:00:00Z", "end": "2026-10-28T10:00:30Z"}]
+    linux = caldera._capture_command_sh(wins, "caldera-op", "linux")
+    mac = caldera._capture_command_sh(wins, "caldera-op", "darwin")
+
+    # both return the run the same way (tar + markers) and install nothing (no PowerShell)
+    for cmd in (linux, mac):
+        assert caldera._C2_OPEN in cmd and caldera._C2_CLOSE in cmd
+        assert "tar -czf" in cmd and "manifest.json" in cmd
+        assert "pwsh" not in cmd and "powershell" not in cmd.lower()
+    # Linux reads auditd + the journal; macOS reads the unified log — each only its own sources
+    assert "journalctl" in linux and "/var/log/audit/audit.log" in linux and "unified.ndjson" not in linux
+    assert "log show" in mac and "unified.ndjson" in mac and "journalctl" not in mac
+    assert "head -c" in mac  # the unified log is capped so the link result stays small
+    # the step's window is embedded as epoch seconds for the log queries
+    frm = int(_dt.datetime(2026, 10, 28, 10, 0, 0, tzinfo=_dt.timezone.utc).timestamp())
+    assert f"-v a={frm}" in linux

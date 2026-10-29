@@ -58,7 +58,7 @@ A command line overstates a detection: the query runs on what the endpoint logge
 
 Two ways to reach the host:
 
-- **Via the agent, over CALDERA** (any OS, no machine to set up): the capture runs as a one-ability CALDERA operation on the agent that just ran, which returns the whole run back in its own link result. Nothing but the sandcat agent and the REST API is needed — no host Lab manages, no PowerShell 7 host, no hypervisor access. This is the zero-touch path and works wherever the agent runs.
+- **Via the agent, over CALDERA** (any OS, no machine to set up): the capture runs as a one-ability CALDERA operation on the agent that just ran, which returns the whole run back in its own link result. Nothing but the sandcat agent and the REST API is needed — no host Lab manages, no hypervisor access, and nothing installed on the host: Windows reads its logs with the built-in PowerShell, Linux and macOS with the native shell. This is the zero-touch path and works wherever the agent runs.
 - **Via a lab machine Lab manages** (the hypervisor-exec path): pick the machine the agent runs on, and Lab pushes and runs the script over its engine (Docker, tart or UTM). Use this when you'd rather not run an extra CALDERA operation.
 
 | OS | Captured after the fact |
@@ -67,7 +67,7 @@ Two ways to reach the host:
 | Linux | auditd by record epoch (`audit.log`), the journal (`journal.log`) |
 | macOS | The unified log (`unified.ndjson`). Endpoint Security and the launch-item diff only exist live, so they aren't captured |
 
-Either way it runs only log readers: on Windows under the built-in Windows PowerShell (5.1), on Linux and macOS under PowerShell 7 (which the agent host needs for the capture). Capturing via the agent handles every host the operation ran on in one pass — a separate **Your lab** run per host; the lab-machine path captures one managed host at a time.
+Either way it runs only log readers. Over the agent, nothing is installed: Windows uses the built-in Windows PowerShell (5.1) and Linux/macOS the native shell (`journalctl`/auditd, `log show`). The lab-machine path runs `capture-window.ps1`, so a non-Windows managed machine needs PowerShell 7 (Lab's **Set up**). Capturing via the agent handles every host the operation ran on in one pass — a separate **Your lab** run per host; the lab-machine path captures one managed host at a time.
 
 ## The check
 
