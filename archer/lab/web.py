@@ -363,7 +363,9 @@ async def caldera_operate(request: Request, archer_session: Optional[str] = Cook
     data = await request.json()
     kind, value = data.get("kind", "technique"), str(data.get("value", "")).strip()
     group, name, execute = str(data.get("group", "")).strip(), data.get("name", ""), bool(data.get("execute"))
-    capture = data.get("capture") or None  # {engine, name, os} of the lab machine the agent runs on
+    # capture: {engine:"caldera"} to capture over the agent's own C2 (no machine needed), or
+    # {engine, name, os} of the lab machine the agent runs on for the hypervisor-exec path.
+    capture = data.get("capture") or None
     if not group:
         return JSONResponse({"error": "Choose an agent group"}, status_code=400)
     try:
@@ -374,7 +376,8 @@ async def caldera_operate(request: Request, archer_session: Optional[str] = Cook
             label = caldera.safe_name(name) if name else "archer-operation"
             return {"preview": True, "plan": caldera.plan_lines(p, label), "warnings": p["warnings"],
                     "steps": p["steps"], "gaps": p["gaps"], "agents": p["agents"]}
-        if capture and not _owns(user, capture.get("engine", ""), capture.get("name", "")):
+        if capture and capture.get("engine") != "caldera" \
+                and not _owns(user, capture.get("engine", ""), capture.get("name", "")):
             return _not_yours()
     except LabError as e:
         return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
@@ -385,8 +388,11 @@ async def caldera_operate(request: Request, archer_session: Optional[str] = Cook
         say(f"Operation finished: {state}")
         manifest = caldera.collect(client, run["operation_id"], say=say, rebuild=not capture)
         if capture:
-            caldera.capture(capture["engine"], capture["name"], capture.get("os", ""), manifest,
-                            host=capture.get("host", ""), say=say)
+            if capture.get("engine") == "caldera":
+                caldera.capture_via_agent(client, manifest, say=say)
+            else:
+                caldera.capture(capture["engine"], capture["name"], capture.get("os", ""), manifest,
+                                host=capture.get("host", ""), say=say)
 
     return _background(f"CALDERA operation on {group}", work)
 
