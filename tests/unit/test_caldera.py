@@ -98,6 +98,16 @@ def test_client_never_leaks_key_in_errors():
     assert key not in repr(client)
 
 
+def test_client_survives_malformed_proxy_env(monkeypatch):
+    # A sandbox/corporate NO_PROXY with an entry httpx can't parse ("[::1]") must not stop the
+    # client from being built — it falls back to ignoring the environment's proxies.
+    for var in ("NO_PROXY", "no_proxy"):
+        monkeypatch.setenv(var, "localhost,127.0.0.1,::1,[::1],gateway.docker.internal")
+    client = caldera.Client("https://caldera.test", "k")  # no transport: goes through trust_env
+    assert client.url == "https://caldera.test"
+    client._http.close()
+
+
 def test_client_http_error_is_laberror():
     client = make_client(lambda r: _json({"error": "nope"}, status=500))
     with pytest.raises(LabError) as e:
@@ -225,7 +235,8 @@ def test_collect_writes_manifest(tmp_home):
                            "executor": {"platform": "windows", "name": "psh"},
                            "decide": "2026-10-28T10:00:05Z", "finish": "2026-10-28T10:00:09Z"}])
         if p.endswith("/links/lnk1/result"):
-            return _json({"output": result})
+            # CALDERA 5.2 shape: {"link": {...}, "result": "<base64 of {stdout,stderr}>"}
+            return _json({"link": {"id": "lnk1"}, "result": result})
         return _json({}, status=404)
 
     client = make_client(handler)

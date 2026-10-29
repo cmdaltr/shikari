@@ -84,7 +84,15 @@ class Client:
         if transport is not None:
             kw["transport"] = transport
             kw["trust_env"] = False
-        self._http = httpx.Client(**kw)
+        try:
+            self._http = httpx.Client(**kw)
+        except httpx.InvalidURL:
+            # A malformed proxy setting in the environment (e.g. a NO_PROXY entry like "[::1]")
+            # makes httpx fail while building its proxy mounts. A lab CALDERA is a direct
+            # connection, so fall back to ignoring the environment's proxy configuration rather
+            # than refusing to start.
+            kw["trust_env"] = False
+            self._http = httpx.Client(**kw)
 
     @classmethod
     def from_settings(cls) -> "Client":
@@ -332,7 +340,8 @@ def _link_result(client: Client, op_id: str, link_id: str) -> str:
     except LabError:
         return ""  # a link with no result yet 404s; that is not a failure of the collect
     if isinstance(res, dict):
-        res = res.get("output", res)
+        # CALDERA 5.2 returns {"link": {...}, "result": "<base64>"}; older builds used "output".
+        res = res.get("result") or res.get("output") or ""
     return _decode(res)
 
 

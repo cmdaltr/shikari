@@ -77,6 +77,6 @@ The order the parts matched in is shown, not required: ATT&CK tactics aren't a s
 
 ## Limits
 
-- Not yet run against a live CALDERA (see [Untested](../other/UNTESTED.md#caldera-operations)).
+- Endpoint-log capture (`capture-window.ps1`) hasn't been run on a live host yet; the plan, run, collect and check path has (CALDERA 5.2). See [Untested](../other/UNTESTED.md#caldera-operations--endpoint-log-capture).
 - One ability per technique per operation. Run another operation for the alternatives.
 - The CALDERA API's planner and fact-source lookups go by the shipped names, `atomic` and `basic`.
