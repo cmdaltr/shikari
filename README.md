@@ -8,6 +8,8 @@
 
 Archer automates threat hunting and detection engineering from MITRE ATT&CK. Give it a threat group, CVE or threat report and it generates, validates and correlates detections for Google SecOps (YARA-L), Microsoft Defender (KQL) and Elastic (ES\|QL), with coverage mapping, attack flows and MITRESaw procedure intel. AI is optional.
 
+**🧭 How Archer compares to other detection tooling: [COMPARISON.md](COMPARISON.md)**
+
 ## 🛠️ Setup and Usage
 
 **📘 User guide, one page per part of Archer: [docs/guide](docs/guide/README.md)**
