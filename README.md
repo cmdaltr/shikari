@@ -78,6 +78,15 @@ The app launches this checkout's `.venv`, so it updates with `git pull`; it isn'
 - 🎯 **RAG Fidelity Enhancement** - Improve query quality using 3,400+ community detection examples ([docs](docs/rag/README.md))
 - 🏢 **Organization-Specific Customization** - Bespoke sample searches and global exclusions for your environment
 
+### ⚔️ Adversary Emulation with CALDERA
+
+Archer closes the loop between red and blue: it runs a real adversary and then checks your detections against what that adversary actually left in the logs. It drives a [CALDERA](https://github.com/mitre/caldera) server you run in your own lab — Archer never ships an agent or a C2 of its own — and tests what single-shot Atomic runs can't ([#30](https://github.com/cmdaltr/archer/issues/30), [guide](docs/guide/25-caldera.md)).
+
+- **Chained operations with a real implant** - the sandcat agent beacons and takes tasks over C2, and each step's facts feed the next, so detections keyed on process lineage, beaconing and multi-step behaviour are exercised — not just a command run in a local shell.
+- **Zero-touch log capture** - each step's endpoint logs are read back over the agent's own C2 channel, on Windows, Linux or macOS, with nothing installed on the host and no hypervisor access.
+- **Static detection and correlation checks** - saved detections and correlations are checked against what ran — per technique (matched / missed / no detection) and per correlation (every part on one host, inside its window) — with no AI and no SIEM.
+- **Wherever you work** - run and check it from the web UI, the desktop app, or the `lab/caldera` console module.
+
 ### Additional Features
 
 - **Detection Validation** - Every detection carries an AI-free quality grade (A–F), false-positive risk and run cost; optionally test queries against containerised SIEMs with sample events, timed. A CI gate (`python -m archer.validation.ci`) fails a build on detections below your thresholds ([docs](docs/features/RUNTIME_VALIDATION.md))
