@@ -81,6 +81,7 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 | [PARENT_TECHNIQUE_OPTION.md](features/PARENT_TECHNIQUE_OPTION.md) | Automatic sub-technique expansion |
 | [REPORT_GENERATION.md](features/REPORT_GENERATION.md) | Export detections as Word, PDF, HTML reports |
 | [RESPONSE_ACTIONS.md](features/RESPONSE_ACTIONS.md) | Automated response action recommendations |
+| [CALDERA_WINDOWS_CAPTURE.md](features/CALDERA_WINDOWS_CAPTURE.md) | CALDERA endpoint-log capture on a Windows host — how it integrates with Archer and where each capture's results land |
 | [SECURITY_FEATURES.md](features/SECURITY_FEATURES.md) | Authentication, encryption, MFA, audit logging |
 | [DOCKER.md](features/DOCKER.md) | Docker deployment guide |
 

@@ -69,6 +69,8 @@ Two ways to reach the host:
 
 Either way it runs only log readers. Over the agent, nothing is installed: Windows uses the built-in Windows PowerShell (5.1) and Linux/macOS the native shell (`journalctl`/auditd, `log show`). The lab-machine path runs `capture-window.ps1`, so a non-Windows managed machine needs PowerShell 7 (Lab's **Set up**). Capturing via the agent handles every host the operation ran on in one pass — a separate **Your lab** run per host; the lab-machine path captures one managed host at a time.
 
+For how the capture hooks into Archer step by step and exactly where each operation's results land, see [CALDERA endpoint-log capture on a Windows host](../features/CALDERA_WINDOWS_CAPTURE.md).
+
 ## The check
 
 **Check** on a collected operation is static: no AI and no SIEM. It works at two levels.
