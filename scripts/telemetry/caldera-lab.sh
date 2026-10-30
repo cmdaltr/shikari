@@ -7,10 +7,12 @@
 #   caldera-lab.sh config           print the caldera: block for Archer's bespoke/config.yaml
 #   caldera-lab.sh down             delete the agent machines  (STOP_SERVER=1 also stops the server)
 #   caldera-lab.sh win <vm>         install + run the agent on an existing UTM Windows VM (group WIN_GROUP)
+#   caldera-lab.sh mac <vm>         create (if needed) a Tart macOS VM and enrol the agent (group MAC_GROUP)
 #   caldera-lab.sh capture-test <vm>  run a Windows operation and validate endpoint-log capture
 #
 # Tunables (env): COUNT=2 GROUP=disposable DISTRO=ubuntu PREFIX=cal TAG=5.2.0
-#                 WIN_GROUP=winlab  REPO=<archer-caldera checkout>  CANON=<checkout with data/groups>
+#                 WIN_GROUP=winlab  MAC_GROUP=maclab  MAC_IMAGE=ghcr.io/cirruslabs/macos-sequoia-base:latest
+#                 REPO=<archer-caldera checkout>  CANON=<checkout with data/groups>
 #
 # Assumptions: macOS host, Docker (OrbStack) for the server, OrbStack Linux machines for the
 # agents (reached over `ssh <name>@orb`). Everything is idempotent — re-run `up` any time.
@@ -19,6 +21,10 @@ set -euo pipefail
 COUNT="${COUNT:-2}"; GROUP="${GROUP:-disposable}"
 DISTRO="${DISTRO:-ubuntu}"; PREFIX="${PREFIX:-cal}"; TAG="${TAG:-5.2.0}"
 WIN_GROUP="${WIN_GROUP:-winlab}"
+MAC_GROUP="${MAC_GROUP:-maclab}"
+# cirruslabs' macOS base images ship the Tart guest agent and an admin/admin login, so `tart exec`
+# drives them with nothing to install. The first pull is large (~25–30 GB).
+MAC_IMAGE="${MAC_IMAGE:-ghcr.io/cirruslabs/macos-sequoia-base:latest}"
 # This script lives in scripts/telemetry/, so the repo root is two levels up. REPO is the checkout
 # whose code + venv capture-test uses; CANON is a checkout whose data/groups holds the detections to
 # check against (the same one by default). Override either with an env var when running a copy.
@@ -134,6 +140,42 @@ cmd_win() {   # $1 = an existing UTM Windows VM name (build it + install SPICE g
   echo ">> done. Confirm it enrolled:  $0 agents   (look for host=$vm group=$WIN_GROUP)"
 }
 
+cmd_mac() {   # $1 = a Tart macOS VM name; clones the base image if it doesn't exist, then enrols the agent
+  local vm="${1:-${VM:-}}" ip; ip="$(lan_ip)"
+  [ -n "$vm" ] || { echo "usage: $0 mac <tart-macos-vm-name>"; exit 2; }
+  command -v tart >/dev/null || { echo "!! tart not found — install it: brew install cirruslabs/cli/tart"; exit 1; }
+
+  # Unlike UTM, Tart can create from an image, so this is as turnkey as the Linux lab: clone if the
+  # VM isn't there yet (the agent then runs in a disposable VM, never on this Mac).
+  if ! tart list --format json 2>/dev/null | grep -q "\"$vm\""; then
+    echo ">> cloning the macOS base image into $vm (first pull is large; slow)…"
+    tart clone "$MAC_IMAGE" "$vm"
+  fi
+
+  echo ">> starting $vm headless…"
+  tart run "$vm" --no-graphics >/dev/null 2>&1 &
+  echo ">> waiting for the Tart guest agent…"
+  local ok=0
+  for _ in $(seq 1 60); do
+    tart exec "$vm" true 2>/dev/null && { ok=1; break; }
+    sleep 5
+  done
+  [ "$ok" = 1 ] || { echo "!! guest agent not responding in $vm — check 'tart run $vm' opens, then re-run."; exit 1; }
+
+  echo ">> downloading the macOS agent on the Mac…"
+  curl -s -XPOST -Hfile:sandcat.go -Hplatform:darwin "http://$ip:8888/file/download" -o "$WORK/sc-mac"
+  [ -s "$WORK/sc-mac" ] || { echo "!! agent download failed"; exit 1; }
+
+  # The binary is written inside the guest (not downloaded there), so it carries no quarantine xattr
+  # and runs without Gatekeeper prompts. Fixed -paw = stable identity; kill any prior one first.
+  echo ">> pushing + starting the agent in group '$MAC_GROUP' (paw=$vm)…"
+  base64 < "$WORK/sc-mac" | tart exec "$vm" bash -lc \
+    "base64 -d > ~/sc; chmod +x ~/sc; pkill -f -- '-server http://' 2>/dev/null; sleep 1; \
+     nohup ~/sc -paw '$vm' -server http://$ip:8888 -group '$MAC_GROUP' -v >/tmp/sc.log 2>&1 & \
+     sleep 1; echo \"   $vm: \$(pgrep -c sc) agent process\""
+  echo ">> done. Confirm it enrolled:  $0 agents   (look for host=$vm group=$MAC_GROUP)"
+}
+
 cmd_capture_test() {   # $1 = the UTM Windows VM running an agent in WIN_GROUP
   local vm="${1:-${VM:-}}"
   [ -n "$vm" ] || { echo "usage: $0 capture-test <utm-windows-vm-name>"; exit 2; }
@@ -185,7 +227,8 @@ case "${1:-up}" in
   agents) cmd_agents ;;
   config) cmd_config ;;
   win) shift; cmd_win "${1:-}" ;;
+  mac) shift; cmd_mac "${1:-}" ;;
   capture-test) shift; cmd_capture_test "${1:-}" ;;
   down) cmd_down ;;
-  *) echo "usage: $0 up|status|agents|config|win <vm>|capture-test <vm>|down"; exit 2 ;;
+  *) echo "usage: $0 up|status|agents|config|win <vm>|mac <vm>|capture-test <vm>|down"; exit 2 ;;
 esac

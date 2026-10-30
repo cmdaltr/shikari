@@ -185,10 +185,13 @@ def test_agent_nodes_resolves_environment():
          "last_seen": "2026-10-30T01:00:00Z"},                      # matched to an Archer UTM machine
         {"paw": "mac", "host": "studio.local", "platform": "darwin", "group": "disposable",
          "last_seen": "2026-10-30T01:00:00Z"},                      # the host itself
+        {"paw": "macvm", "host": "macvm", "platform": "darwin", "group": "maclab",
+         "last_seen": "2026-10-30T01:00:00Z"},                      # a Tart macOS VM (caldera-lab.sh mac)
     ]
     machines = [{"name": "archer-win11", "engine": "utm"}]
     nodes = {n["paw"]: n for n in caldera.agent_nodes(agents, machines, host_name="studio.local")}
-    assert {p: n["env"] for p, n in nodes.items()} == {"cal1": "OrbStack", "archer-win11": "UTM", "mac": "this host"}
+    assert {p: n["env"] for p, n in nodes.items()} == {
+        "cal1": "OrbStack", "archer-win11": "UTM", "mac": "this host", "macvm": "Tart"}
     # Only the Archer-managed match carries the engine + machine name the node menu acts on.
     assert (nodes["archer-win11"]["engine"], nodes["archer-win11"]["machine"]) == ("utm", "archer-win11")
     assert (nodes["cal1"]["engine"], nodes["cal1"]["machine"]) == ("", "")

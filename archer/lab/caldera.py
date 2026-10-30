@@ -261,7 +261,7 @@ def plan(abilities: List[Dict], agents: List[Dict], techniques: List[str], group
 # builds each CALDERA group in — so an agent the machine registry doesn't know (a lab-script VM, say)
 # is still placed by the group it enrolled under.
 _ENGINE_LABEL = {"docker": "Docker", "tart": "Tart", "utm": "UTM"}
-_GROUP_ENV = {"disposable": "OrbStack", "winlab": "UTM"}
+_GROUP_ENV = {"disposable": "OrbStack", "winlab": "UTM", "maclab": "Tart"}
 
 
 def _agent_env(a: Dict, by_name: Dict[str, Dict], host_name: str) -> Dict:

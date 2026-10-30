@@ -107,7 +107,7 @@
     box.className = 'netmap-menu';
     const note = (engine && machine) ? ''
       : env === 'this host' ? '<div class="netmap-menu-note">Runs on the host itself — forget it and detonate macOS in a disposable Tart VM instead.</div>'
-      : '<div class="netmap-menu-note">Not an Archer-managed machine — rebuild it with its lab tool.</div>';
+      : '<div class="netmap-menu-note">Archer didn\'t create this VM, so it can\'t start/stop/delete it here — manage it with the tool that made it (e.g. caldera-lab.sh).</div>';
     box.innerHTML = `<div class="netmap-menu-head">${esc(paw)}${env ? ` <small>${esc(env)}</small>` : ''}</div>${items}${note}`;
     const nm = el('caldera-netmap'); nm.appendChild(box);
     const nr = nm.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
@@ -363,7 +363,8 @@
           Linux agents (group <code>disposable</code>); <code>caldera-lab.sh config</code> prints its URL and key. Or point Archer at a CALDERA you already run.</li>
         <li><strong>Give Archer the key.</strong> Paste the server URL and red key in <a href="/profile?keytab=emulation#apikeys">Profile → API Keys → Emulation Tools</a> (encrypted per account).</li>
         <li><strong>An agent on a disposable VM, in a group.</strong> Linux agents come up with <code>up</code>; for Windows,
-          <code>caldera-lab.sh win &lt;utm-vm&gt;</code> installs and runs sandcat on a UTM VM you've built (group <code>winlab</code>). Or deploy sandcat from CALDERA's own UI.</li>
+          <code>caldera-lab.sh win &lt;utm-vm&gt;</code> runs sandcat on a UTM VM you've built (group <code>winlab</code>); for macOS,
+          <code>caldera-lab.sh mac &lt;vm&gt;</code> clones a Tart VM and runs it (group <code>maclab</code>). Or deploy sandcat from CALDERA's own UI.</li>
         <li><strong>Run it here.</strong> Plan an operation, pick the group, run. Capturing “over the agent” reads each step's endpoint logs back over its own
           C2 — nothing installed, any OS — and the Check scores your saved detections and correlations against them.</li>
       </ol>
