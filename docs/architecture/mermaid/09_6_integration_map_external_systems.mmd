@@ -41,6 +41,12 @@ graph LR
         CALDERA["CALDERA server<br/>plan · run · collect<br/>capture logs over C2"]
     end
 
+    subgraph ATTR ["Incidents & Attribution — Adversary List"]
+        VCDB["VERIS Community DB<br/>incidents by org & sector"]
+        KEV["CISA KEV<br/>CVEs exploited in the wild"]
+        RL["ransomware.live<br/>recent victims by group"]
+    end
+
     subgraph SOON ["Coming Soon / Planned"]
         LAB["Your lab<br/>Atomic Red Team + recorder"]
         VECTR["VECTR import/export<br/>threat library, issue 24"]
@@ -60,6 +66,7 @@ graph LR
     ARCHER -.->|"queries"| MDE
     ARCHER -.-> DOCKER
     ARCHER -.->|"REST"| CALDERA
+    VCDB & KEV & RL -.->|"cached feeds"| ARCHER
     LAB -.-> ARCHER
     ARCHER -.-> VECTR
 
@@ -75,6 +82,9 @@ graph LR
     style EVTX fill:#50e3c2,stroke:#2ca089,color:#333
     style MAC fill:#50e3c2,stroke:#2ca089,color:#333
     style GUIDE fill:#50e3c2,stroke:#2ca089,color:#333
+    style VCDB fill:#50e3c2,stroke:#2ca089,color:#333
+    style KEV fill:#50e3c2,stroke:#2ca089,color:#333
+    style RL fill:#50e3c2,stroke:#2ca089,color:#333
     style SOON fill:#fafafa,stroke:#bbb,stroke-dasharray:4 3
     style LAB fill:#f5f5f5,stroke:#999,stroke-dasharray:4 3,color:#777
     style VECTR fill:#f5f5f5,stroke:#999,stroke-dasharray:4 3,color:#777

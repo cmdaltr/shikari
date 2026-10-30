@@ -25,9 +25,24 @@ The Mail node also carries email **spoofability**: whether SPF, DMARC and DKIM a
 
 Select any node or link for the detail behind it; the CVE node links each CVE to its NVD entry, and the breach node links out to HIBP.
 
+## Ordered Adversary List
+
+Below the exposure map (and on the Review page) Archer ranks the **ten ATT&CK groups most likely to target the organisation**. No AI — it is computed from data Archer already holds or caches, and each row shows which signals drove it and a short why.
+
+| Signal | What it matches |
+|---|---|
+| **Industry** | the org's sector against each group's target sectors |
+| **Geography** | the org's country → region against each group's target regions (and groups that target victims globally) |
+| **Exposure** | the OSINT surface mapped to initial-access techniques — exploit public-facing application (**T1190**), external remote services (**T1133**), valid accounts (**T1078**), phishing (**T1566**) — and to the groups that use them, plus a product-keyword match on the group's ATT&CK description. An exposed CVE confirmed in CISA KEV weighs more, and ransomware-linked CVEs are called out |
+| **Incidents** | demonstrated activity (named ATT&CK campaigns, as an amplifier) and public incidents on the org or its sector peers |
+
+Each actor carries a **likelihood** and a band. **High** means the organisation's own attack surface or a demonstrated incident is in play — not just a sector or region overlap.
+
+The incident signal merges three reputable, structured feeds — **VCDB** (VERIS Community Database), **CISA KEV** and **ransomware.live** — with an analyst-curated `bespoke/mappings/incidents.json` (schema in the committed `.example`). The feeds are cached locally so ranking never touches the network; an admin refreshes them with `python -m archer.intelligence.incident_sources` (or `kev vcdb` to skip the leak-site feed), or `POST /api/incidents/refresh`. A footnote under the list shows which feeds are cached and when.
+
 ## Companies Catalogue
 
-**Intel → Catalogue** (`/catalogue`, top of the Intel menu) lists every organisation profiled so far, newest first — a Library for companies. Each card opens that company's exposure map.
+**Intel → Catalogue** (`/catalogue`, top of the Intel menu) lists every organisation profiled so far, newest first — a Library for companies. Each card opens that company's exposure map. Set your own organisation's domain in **Profile → Organisation** and Archer profiles it automatically and **stars** it here (sorted first); its exposure map and Ordered Adversary List then carry a *your organisation* badge.
 
 ## Options
 

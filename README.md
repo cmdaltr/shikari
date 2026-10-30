@@ -94,6 +94,7 @@ Archer closes the loop between red and blue: it runs a real adversary and then c
 - **API and automation** - Batch hunts, streamed run progress (SSE) and signed webhooks on run and watchlist events ([guide](docs/features/API_INTEGRATION_GUIDE.md#workflow-11-webhooks))
 - **Detection Library** - Save, search, tag, share, and export your generated detections
 - **Company Profiling** - Industry-aware threat landscape analysis for targeted detection
+- **Ordered Adversary List** - The top-10 ATT&CK groups most likely to target an organisation, ranked (no AI) from industry, geography, exposed OSINT and public incidents — VCDB, CISA KEV and ransomware.live merged with your own curated set. Shown on the exposure map; set your own domain in Profile → Organisation to auto-profile and star it ([guide](docs/guide/04-company-profile.md#ordered-adversary-list))
 - **CVE Hunting** - Generate detections from CVE IDs with NVD enrichment
 - **Query Execution** - Splunk API client (code implemented, see [UNTESTED.md](docs/other/UNTESTED.md)); Defender XDR planned with hit counts (#16)
 - **Running atomics from Archer** - Coming soon; [record a lab](docs/guide/20-recording-a-lab.md) on your own VMs for now (#22)
