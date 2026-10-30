@@ -350,6 +350,160 @@ def plan_lines(plan: Dict, label: str) -> List[str]:
     return lines
 
 
+# ------------------------------------------------------- provisioning agents (web + CLI, #30)
+
+# OS name (Archer's templates) -> sandcat's GOOS.
+_PLATFORM = {"windows": "windows", "macos": "darwin", "linux": "linux"}
+# A default group per OS, matching the lab script's convention so the topology colours agree.
+GROUP_FOR = {"linux": "disposable", "macos": "maclab", "windows": "winlab"}
+# The templates Archer can provision a CALDERA agent from, by OS. "Offer both" for Linux.
+TEMPLATES_FOR = {"linux": ["ubuntu-vm", "ubuntu-container"], "macos": ["macos-vm"]}
+
+
+def _agent_arch(os_name: str) -> str:
+    """The sandcat architecture to compile. Linux/macOS VMs are the host's architecture (Tart/UTM
+    virtualise the host CPU); Windows on Apple Silicon is ARM64 Windows but runs x64 under emulation,
+    and CALDERA builds windows/amd64 reliably, so ask for amd64 there."""
+    import platform as _p
+
+    if os_name == "windows":
+        return "amd64"
+    return "arm64" if _p.machine().lower() in ("arm64", "aarch64") else "amd64"
+
+
+def enrol_agent(engine_key: str, name: str, os_name: str, group: str, server_url: str,
+                say: Callable[[str], None] = print) -> None:
+    """
+    Enrol an Archer-managed, running machine as a CALDERA agent in `group`, with the machine name as
+    its paw. The machine fetches the architecture-correct sandcat itself and runs it detached, so
+    nothing large streams over the guest agent (which chokes on it):
+      - Tart Linux : curl in the VM, hostname set to `name`, run under systemd (systemd-run)
+      - Docker     : push the binary with `docker cp`, run with `docker exec -d`
+      - Tart macOS : curl in the VM, run under launchd — needs the Tart guest agent (a cirruslabs base)
+      - UTM Windows: download in the VM with PowerShell, run hidden with Start-Process
+    The arch header matters: the amd64 default fails on an arm64 Tart VM (Exec format error).
+    """
+    from archer.lab.engines import engine_for
+    from archer.lab.runner import run as _run
+
+    platform = _PLATFORM.get(os_name)
+    if not platform:
+        raise LabError("Unknown OS", os_name)
+    # Which OS each engine can carry: a container is Linux, Tart does Linux/macOS, UTM does Windows.
+    valid = {"docker": {"linux"}, "tart": {"linux", "macos"}, "utm": {"windows"}}
+    if os_name not in valid.get(engine_key, set()):
+        raise LabError("Can't enrol this machine", f"no enrol path for {os_name} on {engine_key}")
+    url = server_url.rstrip("/")
+    arch = _agent_arch(os_name)
+    eng = engine_for(engine_key)
+    dl = f"-XPOST -Hfile:sandcat.go -Hplatform:{platform} -Harchitecture:{arch} {url}/file/download"
+    say(f"Enrolling {name} ({os_name}/{engine_key}) in group {group}…")
+
+    if engine_key == "docker":
+        # A bare container may lack curl; fetch the arch-correct binary on the host and copy it in.
+        # The container's hostname is already `name` (set at create), and -d detaches the agent.
+        import os as _os
+        import tempfile
+
+        import httpx
+
+        with httpx.Client(timeout=120) as c:
+            r = c.post(f"{url}/file/download",
+                       headers={"file": "sandcat.go", "platform": platform, "architecture": arch})
+            r.raise_for_status()
+            binary = r.content
+        if not binary:
+            raise LabError("Agent download failed", "the server returned no sandcat binary")
+        tmp = tempfile.NamedTemporaryFile(prefix="sc-", delete=False)
+        try:
+            tmp.write(binary)
+            tmp.close()
+            eng.push_file(name, tmp.name, "/tmp/sc")
+            eng.exec(name, ["chmod", "+x", "/tmp/sc"], timeout=30)
+            _run(["docker", "exec", "-d", name, "/tmp/sc", "-paw", name,
+                  "-server", url, "-group", group, "-v"], timeout=30)
+        finally:
+            _os.unlink(tmp.name)
+
+    elif engine_key == "tart" and os_name == "linux":
+        # systemd-run returns at once and hands the agent to systemd, so it survives the exec session;
+        # the cirruslabs base's hostname is "ubuntu", so set it to `name` or the diagram collapses nodes.
+        script = (f"curl -s {dl} -o /tmp/sc && chmod +x /tmp/sc && "
+                  f"sudo hostnamectl set-hostname {name} 2>/dev/null; "
+                  f"sudo systemctl stop caldera-sc 2>/dev/null; sudo systemctl reset-failed caldera-sc 2>/dev/null; "
+                  f"sudo systemd-run --unit=caldera-sc --property=Restart=always /tmp/sc "
+                  f"-paw {name} -server {url} -group {group} -v")
+        eng.exec(name, ["bash", "-lc", script], timeout=180)
+
+    elif engine_key == "tart" and os_name == "macos":
+        # Needs the Tart guest agent (a cirruslabs base). launchd keeps it running past the session.
+        label = "io.archer.caldera-sc"
+        plist = (f'<?xml version="1.0" encoding="UTF-8"?>'
+                 f'<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
+                 f'<plist version="1.0"><dict><key>Label</key><string>{label}</string>'
+                 f'<key>ProgramArguments</key><array><string>/tmp/sc</string>'
+                 f'<string>-paw</string><string>{name}</string><string>-server</string><string>{url}</string>'
+                 f'<string>-group</string><string>{group}</string><string>-v</string></array>'
+                 f'<key>RunAtLoad</key><true/><key>KeepAlive</key><true/></dict></plist>')
+        script = (f"curl -s {dl} -o /tmp/sc && chmod +x /tmp/sc && "
+                  f"sudo scutil --set HostName {name} 2>/dev/null; "
+                  f"printf '%s' '{plist}' | sudo tee /Library/LaunchDaemons/{label}.plist >/dev/null && "
+                  f"sudo launchctl bootout system/{label} 2>/dev/null; "
+                  f"sudo launchctl bootstrap system /Library/LaunchDaemons/{label}.plist")
+        eng.exec(name, ["bash", "-lc", script], timeout=180)
+
+    elif engine_key == "utm" and os_name == "windows":
+        ps = (f"$ErrorActionPreference='Stop'; "
+              f"$h=@{{'file'='sandcat.go';'platform'='windows';'architecture'='{arch}'}}; "
+              f"Invoke-WebRequest -Uri '{url}/file/download' -Method Post -Headers $h -OutFile 'C:\\Windows\\Temp\\sc.exe'; "
+              f"Start-Process -WindowStyle Hidden 'C:\\Windows\\Temp\\sc.exe' "
+              f"-ArgumentList '-server','{url}','-group','{group}','-paw','{name}','-v'")
+        eng.exec(name, ["powershell", "-NoProfile", "-Command", ps], timeout=180)
+
+    else:
+        raise LabError("Can't enrol this machine", f"no enrol path for {os_name} on {engine_key}")
+    say(f"{name} enrolled — it will appear in the topology on its next beacon")
+
+
+def _wait_ready(engine_key: str, name: str, say: Callable[[str], None] = print,
+                tries: int = 60, interval: int = 5) -> None:
+    """Wait until a just-started machine will accept exec — a VM needs to boot its guest agent."""
+    from archer.lab.engines import engine_for
+
+    if engine_key == "docker":
+        return  # a container is ready the moment it is running
+    eng = engine_for(engine_key)
+    for _ in range(tries):
+        try:
+            eng.exec(name, ["true"] if engine_key == "tart" else ["cmd", "/c", "echo", "ok"], timeout=15)
+            return
+        except LabError:
+            time.sleep(interval)
+    raise LabError("Machine never became ready",
+                   f"{name} did not accept exec in {tries * interval}s — is its guest agent installed?")
+
+
+def provision_for_caldera(template_id: str, name: str, group: str, server_url: str, owner=None,
+                          say: Callable[[str], None] = print) -> Dict:
+    """Create an Archer-managed machine from a template, start it, wait for it, and enrol it as a
+    CALDERA agent — the one-call 'provision a host for CALDERA' used by the web and the CLI."""
+    from archer.lab import machines
+    from archer.lab.templates import BY_ID
+
+    tpl = BY_ID.get(template_id)
+    if not tpl:
+        raise LabError("Unknown template", template_id)
+    name = safe_name(name)
+    say(f"Creating {tpl['name']} '{name}'…")
+    machines.create(template_id, name, owner=owner)
+    say("Starting the machine…")
+    machines.start(tpl["engine"], name)
+    _wait_ready(tpl["engine"], name, say)
+    enrol_agent(tpl["engine"], name, tpl["os"], group or GROUP_FOR.get(tpl["os"], "disposable"),
+                server_url, say)
+    return {"name": name, "engine": tpl["engine"], "os": tpl["os"], "template": template_id}
+
+
 # --------------------------------------------------------------------------- running
 
 def operate(client: Client, techniques: List[str], group: str, name: str = "",

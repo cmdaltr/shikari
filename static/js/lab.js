@@ -121,6 +121,7 @@
         ${setOs}
         ${m.os ? '<button type="button" class="ui-pill lab-act" data-a="provision">Set up</button>' : ''}
         ${m.os ? '<button type="button" class="ui-pill lab-act" data-a="record">Record</button>' : ''}
+        ${m.os && on ? '<button type="button" class="ui-pill lab-act" data-a="enrol" title="Run a CALDERA sandcat agent on this machine">Enrol in CALDERA</button>' : ''}
         <button type="button" class="ui-pill" data-a="logs">Logs</button>
         <button type="button" class="ui-pill lab-danger" data-a="delete">Delete</button>
       </div>`;
@@ -234,6 +235,9 @@
       provisionDialog(engine, name, os);
     } else if (act === 'record') {
       recordDialog(engine, name, os);
+    } else if (act === 'enrol') {
+      if (confirm(`Run a CALDERA sandcat agent on ${name}? It enrols as a live agent and beacons to your CALDERA server.`))
+        post('/api/lab/caldera/enrol', { engine, name, os }).then(r => { if (r && !r.started && r.error) alert(r.error + (r.detail ? '\n\n' + r.detail : '')); pollJob(); });
     } else if (act === 'clone') {
       cloneDialog(engine, name);
     } else if (act === 'adopt') {

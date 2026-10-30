@@ -577,6 +577,7 @@ HANDOVER = {
     "offline": ("archer.cli.offline", False),
     "test": ("archer.cli.test_data", False),
     "app": ("archer.desktop", False),
+    "caldera": ("archer.cli.caldera", False),
 }
 
 
@@ -620,6 +621,7 @@ def main(argv=None):
     docker.add_argument("args", nargs=argparse.REMAINDER)
     parser.epilog = ("Also: serve [--port N] (foreground, no supervisor) · clear-cache · console (interactive) · "
                      "preview <group> · mcp (MCP server on stdio) · offline generate|correlate|hunt|emulate · "
+                     "caldera provision|enrol|list (provision + enrol CALDERA agents) · "
                      "test populate|depopulate|status (sample data for a guided tour) · "
                      "app install|uninstall|open (a desktop app with a Dock / Start menu entry)")
 

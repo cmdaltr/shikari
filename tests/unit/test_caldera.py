@@ -212,6 +212,28 @@ def test_agent_nodes_dedupes_stale_records_per_host():
     assert nodes[0]["paw"] == "cal1" and nodes[0]["last_seen"] == "2026-10-30T01:31:15Z"
 
 
+def test_agent_arch_windows_is_amd64_others_follow_host(monkeypatch):
+    import platform as _p
+    # Windows runs x64 under emulation and CALDERA builds windows/amd64, so always amd64 there.
+    assert caldera._agent_arch("windows") == "amd64"
+    monkeypatch.setattr(_p, "machine", lambda: "arm64")
+    assert caldera._agent_arch("linux") == "arm64" and caldera._agent_arch("macos") == "arm64"
+    monkeypatch.setattr(_p, "machine", lambda: "x86_64")
+    assert caldera._agent_arch("linux") == "amd64"
+
+
+def test_enrol_agent_rejects_unknown_os_and_engine():
+    with pytest.raises(LabError):
+        caldera.enrol_agent("tart", "m", "plan9", "disposable", "http://h:8888")
+    with pytest.raises(LabError):
+        caldera.enrol_agent("docker", "m", "macos", "maclab", "http://h:8888")  # no macOS-on-docker path
+
+
+def test_provision_defaults_group_and_template_map():
+    assert caldera.GROUP_FOR == {"linux": "disposable", "macos": "maclab", "windows": "winlab"}
+    assert caldera.TEMPLATES_FOR["linux"] == ["ubuntu-vm", "ubuntu-container"]
+
+
 def test_coverage_matches_techniques_to_groups_by_os():
     # T1057 runs on Windows and Linux; T1082 only on Linux. The Windows group should show T1082 as a
     # gap, the Linux group should run both — the OS matching the Detonate dialog relies on.

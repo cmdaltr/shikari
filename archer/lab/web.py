@@ -422,6 +422,51 @@ async def caldera_agent_forget(request: Request, archer_session: Optional[str] =
         return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
 
 
+@router.post("/caldera/enrol")
+async def caldera_enrol(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Run a sandcat agent on an Archer-managed machine, enrolling it as a CALDERA agent. Slow for a
+    VM (it may still be settling), so it runs as a background job the page polls."""
+    user, denied = _lab(archer_session)
+    if denied:
+        return denied
+    data = await request.json()
+    engine, name, os_name = data.get("engine", ""), data.get("name", ""), str(data.get("os", ""))
+    if not _owns(user, engine, name):
+        return _not_yours()
+    try:
+        cald, client = _caldera(user)
+    except LabError as e:
+        return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
+    group, url = cald.GROUP_FOR.get(os_name, "disposable"), client.url
+    return _background(f"Enrol {name} in CALDERA",
+                       lambda say: cald.enrol_agent(engine, name, os_name, group, url, say=say))
+
+
+@router.post("/caldera/provision-agent")
+async def caldera_provision_agent(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Create an Archer-managed machine for an OS and enrol it as a CALDERA agent, in one job — the
+    web half of `archer-cli caldera provision`. Linux offers tart (VM) or docker (container)."""
+    user, denied = _lab(archer_session)
+    if denied:
+        return denied
+    data = await request.json()
+    os_name = str(data.get("os", ""))
+    engine = str(data.get("engine", "tart"))
+    name = str(data.get("name", "")).strip()
+    try:
+        cald, client = _caldera(user)
+    except LabError as e:
+        return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
+    template = {"linux": "ubuntu-container" if engine == "docker" else "ubuntu-vm",
+                "macos": "macos-vm"}.get(os_name)
+    if not template or not name:
+        return JSONResponse({"error": "Pick an OS and a name (Windows: build the UTM VM, then Enrol it)"},
+                            status_code=400)
+    group, url = cald.GROUP_FOR.get(os_name, "disposable"), client.url
+    return _background(f"Provision {name} for CALDERA",
+                       lambda say: cald.provision_for_caldera(template, name, group, url, owner=user.id, say=say))
+
+
 @router.post("/caldera/operate")
 async def caldera_operate(request: Request, archer_session: Optional[str] = Cookie(None)):
     """
