@@ -11,7 +11,7 @@
   const modal = el('lab-modal'), modalBody = el('lab-modal-body'), modalTitle = el('lab-modal-title');
   const open = (title, html) => { modalTitle.textContent = title; modalBody.innerHTML = html; modal.hidden = false; };
   const close = () => { modal.hidden = true; modalBody.innerHTML = ''; document.querySelector('.lab-modal-box')?.classList.remove('lab-modal-wide'); };
-  let groups = [], timer = null;
+  let groups = [], timer = null, agentNames = [];  // agentNames: paws already enrolled, for Add agent
 
   function poll() {
     api('/api/lab/job').then(({ job, log }) => {
@@ -142,6 +142,7 @@
       } else {
         s.innerHTML = `<span class="lab-badge is-ready">Connected</span> ${esc(r.url)}`;
       }
+      agentNames = (r.agents || []).map(a => (a.paw || a.host || '').toLowerCase()).filter(Boolean);
       // Agent topology: the server and its agents as a small network diagram, once connected
       const nm = el('caldera-netmap');
       if (r.configured && !r.error) {
@@ -352,6 +353,59 @@
     });
   }
 
+  // Add a CALDERA agent for an OS that isn't present: provision a fresh managed machine and enrol it,
+  // or enrol one Archer already manages. Backed by /caldera/provision-agent and /caldera/enrol.
+  function addAgentDialog() {
+    api('/api/lab/machines').then(({ machines }) => {
+      const ms = machines || [];
+      const enrolled = new Set(agentNames);
+      const free = ms.filter(m => m.manageable && m.state === 'running' && m.os && !enrolled.has((m.name || '').toLowerCase()));
+      const GROUP = { linux: 'disposable', macos: 'maclab', windows: 'winlab' };
+      const nextName = os => { const n = new Set(ms.map(m => m.name)); let i = 1; while (n.has(os + i)) i++; return os + i; };
+      open('Add a CALDERA agent', `
+        <div class="add-agent">
+          <h4>Provision a new disposable machine</h4>
+          <div class="lab-field-row">
+            <label class="lab-field">OS<select id="aa-os"><option value="linux">Linux</option><option value="macos">macOS</option></select></label>
+            <label class="lab-field" id="aa-engine-wrap">Engine<select id="aa-engine"><option value="tart">Tart VM (full kernel)</option><option value="docker">Docker container (light)</option></select></label>
+          </div>
+          <div class="lab-field-row">
+            <label class="lab-field">Name<input type="text" id="aa-name" autocomplete="off"></label>
+            <label class="lab-field">Group<input type="text" id="aa-group" autocomplete="off"></label>
+          </div>
+          <p class="lab-hint" id="aa-note"></p>
+          <div class="lab-modal-actions" style="justify-content:flex-start"><button type="button" class="btn-primary" id="aa-provision">Provision + enrol</button></div>
+        </div>
+        <div class="add-agent add-agent-existing">
+          <h4>Or enrol a machine you already have</h4>
+          ${free.length ? `<div class="lab-field-row">
+            <label class="lab-field">Machine<select id="aa-existing">${free.map(m => `<option value="${esc(m.engine)}|${esc(m.name)}|${esc(m.os)}">${esc(m.name)} — ${esc(m.os)}/${esc(m.engine)}</option>`).join('')}</select></label>
+            <button type="button" class="ui-pill" id="aa-enrol">Enrol</button>
+          </div>` : '<p class="lab-hint">No running managed machine to enrol. Provision one above, or build one in Create a machine — a UTM Windows VM you build appears here too.</p>'}
+        </div>`);
+      const sync = () => {
+        const os = el('aa-os').value;
+        el('aa-engine-wrap').style.display = os === 'linux' ? '' : 'none';
+        el('aa-name').value = nextName(os);
+        el('aa-group').value = GROUP[os];
+        el('aa-note').textContent = os === 'macos' ? 'macOS needs a cirruslabs base image (it ships the Tart guest agent).' : '';
+      };
+      el('aa-os').addEventListener('change', sync); sync();
+      el('aa-provision').addEventListener('click', () => {
+        const os = el('aa-os').value, name = el('aa-name').value.trim();
+        if (!name) return;
+        close();
+        post('/api/lab/caldera/provision-agent', { os, engine: os === 'linux' ? el('aa-engine').value : 'tart', name, group: el('aa-group').value.trim() })
+          .then(r => { if (r && !r.started && r.error) alert(r.error + (r.detail ? '\n\n' + r.detail : '')); poll(); });
+      });
+      if (free.length) el('aa-enrol').addEventListener('click', () => {
+        const [engine, name, os] = el('aa-existing').value.split('|');
+        close();
+        post('/api/lab/caldera/enrol', { engine, name, os }).then(r => { if (r && !r.started && r.error) alert(r.error + (r.detail ? '\n\n' + r.detail : '')); poll(); });
+      });
+    });
+  }
+
   function stepsDialog() {
     // Archer drives a CALDERA server you run; it never ships an implant. scripts/telemetry/caldera-lab.sh
     // does the whole disposable-lab setup, so the steps lead with it.
@@ -458,6 +512,7 @@
     });
   }
 
+  el('caldera-add-agent').addEventListener('click', addAgentDialog);
   el('caldera-plan').addEventListener('click', planDialog);
   el('caldera-detonate').addEventListener('click', detonateDialog);
   el('caldera-collect').addEventListener('click', collectDialog);
