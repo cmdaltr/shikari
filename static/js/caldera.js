@@ -45,8 +45,9 @@
     const VW = Math.max(rowW, SW) + PAD * 2;
     const serverX = (VW - SW) / 2, serverY = TOP, agentY = TOP + SH + VGAP, h = agentY + NH + TOP;
     const agentX = i => PAD + i * (NW + GAPX);
-    // Rendered at 2× the coordinate space: the viewBox stays natural, the width/height double it.
-    let svg = `<svg viewBox="0 0 ${VW} ${h}" width="${VW * 2}" height="${h * 2}" class="netmap-svg" role="img" aria-label="CALDERA agent topology">`;
+    // Rendered at 1.8× the coordinate space: the viewBox stays natural, the width/height scale it up.
+    const Z = 1.8;
+    let svg = `<svg viewBox="0 0 ${VW} ${h}" width="${VW * Z}" height="${h * Z}" class="netmap-svg" role="img" aria-label="CALDERA agent topology">`;
     const sx = serverX + SW / 2, my = (serverY + SH + agentY) / 2;
     rows.forEach((a, i) => {
       const ax = agentX(i) + NW / 2;
@@ -68,18 +69,23 @@
       '</g>';
     rows.forEach((a, i) => {
       const x = agentX(i), my2 = agentY + NH / 2, envImg = ENV_IMG[a.env];
+      // An agent on the host itself is a misconfiguration: macOS should detonate in a disposable
+      // Tart VM, never on this Mac. Flag it amber and say so, rather than detonate on the host.
+      const onHost = a.env === 'this host';
       // Labelled by paw, not host: the server runs on this Mac too, so an agent host of e.g.
       // macbook.local would otherwise read as the server. The paw is the agent's stable identity.
       // Subtext: the environment's icon (or its name when it has none) then the CALDERA group.
-      const sub = (envImg ? '' : (a.env ? esc(a.env) + ' · ' : '')) + esc(a.group || '(no group)');
+      const sub = onHost ? 'on host — use a Tart VM'
+        : (envImg ? '' : (a.env ? esc(a.env) + ' · ' : '')) + esc(a.group || '(no group)');
       const data = ` data-paw="${esc(a.paw || a.host)}" data-engine="${esc(a.engine || '')}" data-machine="${esc(a.machine || '')}" data-env="${esc(a.env || '')}"`;
-      svg += `<g class="netmap-node is-agent"${data}><rect x="${x}" y="${agentY}" width="${NW}" height="${NH}" rx="9"/>` +
+      svg += `<g class="netmap-node is-agent${onHost ? ' is-host' : ''}"${data}><rect x="${x}" y="${agentY}" width="${NW}" height="${NH}" rx="9"/>` +
+        (onHost ? '<title>Runs on the host itself — forget it and detonate macOS in a disposable Tart VM instead.</title>' : '') +
         osMark(a.platform, x + 9, my2 - 8) +
         envIc(a.env, x + 31, my2 + 3) +
         `<text x="${x + 31}" y="${my2 - 3}" class="netmap-t">${esc(a.paw || a.host)}</text>` +
-        `<text x="${x + (envImg ? 47 : 31)}" y="${my2 + 13}" class="netmap-s">${sub}</text></g>`;
+        `<text x="${x + (!onHost && envImg ? 47 : 31)}" y="${my2 + 13}" class="netmap-s">${sub}</text></g>`;
     });
-    return svg + '</svg>' +
+    return '<div class="netmap-scroll">' + svg + '</svg></div>' +
       '<p class="lab-hint netmap-note">Click an agent to act on it. Operations detonate the implant on the <strong>agents</strong> — disposable lab machines — never on this host. ' +
       'For a lab Provisioned here, the agents are OrbStack Linux VMs running on this Mac, which also hosts the CALDERA server.</p>';
   }
@@ -99,8 +105,10 @@
     items += act('Forget agent', 'is-danger', 'forget');
     const box = document.createElement('div');
     box.className = 'netmap-menu';
-    box.innerHTML = `<div class="netmap-menu-head">${esc(paw)}${env ? ` <small>${esc(env)}</small>` : ''}</div>${items}` +
-      (engine && machine ? '' : '<div class="netmap-menu-note">Not an Archer-managed machine — rebuild it with its lab tool.</div>');
+    const note = (engine && machine) ? ''
+      : env === 'this host' ? '<div class="netmap-menu-note">Runs on the host itself — forget it and detonate macOS in a disposable Tart VM instead.</div>'
+      : '<div class="netmap-menu-note">Not an Archer-managed machine — rebuild it with its lab tool.</div>';
+    box.innerHTML = `<div class="netmap-menu-head">${esc(paw)}${env ? ` <small>${esc(env)}</small>` : ''}</div>${items}${note}`;
     const nm = el('caldera-netmap'); nm.appendChild(box);
     const nr = nm.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
     box.style.left = Math.min(ar.left - nr.left, nm.clientWidth - box.offsetWidth - 4) + 'px';

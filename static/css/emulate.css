@@ -362,8 +362,8 @@ table.em-rows { table-layout: fixed; width: 100%; }
 [data-theme="dark"] .em-ds-cell .em-logo-n { background: #14b8a6; }
 
 /* Lab subsection: a touch larger, with teal icon'd subheadings matching the diagram */
-.em-lab-block { font-size: 1.1em; --lab-teal: #0d9488; }
-[data-theme="dark"] .em-lab-block { --lab-teal: #2dd4bf; }
+.em-lab-block { font-size: 1.1em; --lab-teal: #0d9488; --lab-amber: #d97706; }
+[data-theme="dark"] .em-lab-block { --lab-teal: #2dd4bf; --lab-amber: #f59e0b; }
 .em-lab-block .lab-head { display: flex; align-items: center; gap: 7px; color: var(--lab-teal); }
 .lab-head-ic { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.5;
   stroke-linecap: round; stroke-linejoin: round; flex: none; }
@@ -393,7 +393,10 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-caldera-bar .ms-log, #prov-log { margin-top: 10px; max-height: 180px; }
 
 /* CALDERA agent topology diagram (horizontal: server on top, agents in a row) */
-.lab-netmap { position: relative; margin: 14px 0; overflow-x: auto; text-align: center; }
+/* overflow stays visible so the action menu isn't clipped (and overflow-x:auto doesn't force a
+   vertical scrollbar); the SVG gets its own horizontal scroller for diagrams wider than the card */
+.lab-netmap { position: relative; margin: 14px 0; overflow: visible; text-align: center; }
+.netmap-scroll { overflow-x: auto; }
 .netmap-svg { max-width: 100%; height: auto; display: inline-block; }
 .netmap-note { margin: 8px 0 0; text-align: center; }
 .netmap-edge { fill: none; stroke: var(--border-color); stroke-width: 1.5; }
@@ -401,6 +404,9 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .netmap-node.is-server rect { fill: rgba(13, 148, 136, .08); stroke: var(--lab-teal); stroke-width: 1.5; }
 .netmap-node.is-agent { cursor: pointer; }
 .netmap-node.is-agent:hover rect { stroke: var(--lab-teal); stroke-width: 1.5; }
+/* An agent on the host itself: flagged amber — macOS belongs in a disposable Tart VM */
+.netmap-node.is-host rect { stroke: var(--lab-amber); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.netmap-node.is-host .netmap-s { fill: var(--lab-amber); }
 .netmap-t { font: 600 12px/1 Inter, system-ui, sans-serif; fill: var(--text-primary); }
 .netmap-s { font: 400 10.5px/1 Inter, system-ui, sans-serif; fill: var(--text-secondary); }
 /* Per-agent action menu, anchored under the clicked node */
@@ -437,9 +443,9 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-task.is-done .lab-task-mark { color: var(--lab-teal); }
 .lab-task.is-failed .lab-task-mark { color: var(--accent); }
 .lab-task.is-pending { opacity: .6; }
-.btn-primary.is-detonate { background: var(--accent); border-color: var(--accent); }
+.btn-primary.is-detonate { background: #f59e0b; border-color: #f59e0b; color: #0d1b2a; }
 /* Detonate reads as the live/dangerous action: a solid red pill, not an outline one */
-.lab-actions.is-caldera .ui-pill.is-detonate { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
+.lab-actions.is-caldera .ui-pill.is-detonate { background: #f59e0b !important; color: #0d1b2a !important; border-color: #f59e0b !important; }
 .lab-actions.is-caldera .ui-pill.is-detonate:hover:not(:disabled) { filter: brightness(1.08); }
 
 /* Provision modal: checklist left, explanation + result right, equal height */
