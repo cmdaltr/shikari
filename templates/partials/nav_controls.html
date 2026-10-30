@@ -24,6 +24,7 @@
   'intel': '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
   'catalogue': '<path d="M3 21h18M6 21V8l6-4 6 4v13M10 12h.01M14 12h.01M10 16h.01M14 16h.01"/>',
   'stix': '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>',
+  'ioc': '<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
   'code': '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
   'campaign': '<path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
   'emulate': '<polygon points="5 3 19 12 5 21 5 3"/>',
@@ -42,6 +43,7 @@
   ]),
   ('Intel', 'intel', [
     ('/feed', 'Feed', true, 'feed', 'The last 7 days of threat research'),
+    ('/ioc', 'IOC Search', true, 'ioc', 'Search reputable reporting from the last 7 days for an indicator'),
     ('/cyber-powers', 'Cyber Powers', false, 'map', 'National cyber capability on a world map'),
     ('/intel/stix', 'STIX/TAXII & MISP', true, 'stix', 'Import/export using STIX, TAXII or MISP'),
     ('/catalogue', 'Catalogue', true, 'catalogue', 'Profiled organisations and their exposure'),

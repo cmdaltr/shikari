@@ -1,0 +1,118 @@
+# Reputable cyber-intelligence and public cyber-reporting sources for IOC search
+# (archer.intelligence.ioc_search). Web pages via RSS/Atom — not full PDF/document reports.
+#
+# tier: 1 vendor threat research · 2 CERT / government · 3 reputable news & community
+#       4 structured / aggregator
+#
+# The first 26 are the proven-working feeds Archer's Threat Feed already uses
+# (archer.intelligence.feed.SOURCES). The rest are curated and should be verified over time; a
+# feed that fails to fetch or parse is simply skipped, so a wrong URL never breaks a search.
+# Admins can add installation-specific feeds via the Threat Feed page (shared) without editing this.
+
+sources:
+  # ── Tier 1 — vendor threat research ────────────────────────────────────────────
+  - {name: "Microsoft Threat Intelligence", url: "https://www.microsoft.com/en-us/security/blog/topic/threat-intelligence/feed/", tier: 1}
+  - {name: "Google Threat Intelligence", url: "https://cloudblog.withgoogle.com/topics/threat-intelligence/rss/", tier: 1}
+  - {name: "Unit 42", url: "https://unit42.paloaltonetworks.com/feed/", tier: 1}
+  - {name: "Cisco Talos", url: "https://blog.talosintelligence.com/rss/", tier: 1}
+  - {name: "CrowdStrike", url: "https://www.crowdstrike.com/en-us/blog/feed", tier: 1}
+  - {name: "SentinelLABS", url: "https://www.sentinelone.com/labs/feed/", tier: 1}
+  - {name: "Kaspersky Securelist", url: "https://securelist.com/feed/", tier: 1}
+  - {name: "ESET WeLiveSecurity", url: "https://www.welivesecurity.com/en/rss/feed/", tier: 1}
+  - {name: "Proofpoint", url: "https://www.proofpoint.com/us/threat-insight-blog.xml", tier: 1}
+  - {name: "The DFIR Report", url: "https://thedfirreport.com/feed/", tier: 1}
+  - {name: "Red Canary", url: "https://redcanary.com/blog/feed/", tier: 1}
+  - {name: "Huntress", url: "https://www.huntress.com/blog/rss.xml", tier: 1}
+  - {name: "Elastic Security Labs", url: "https://www.elastic.co/security-labs/rss/feed.xml", tier: 1}
+  - {name: "Recorded Future", url: "https://www.recordedfuture.com/feed", tier: 1}
+  - {name: "Trend Micro Research", url: "https://feeds.feedburner.com/TrendMicroResearch", tier: 1}
+  - {name: "Rapid7", url: "https://www.rapid7.com/rss.xml", tier: 1}
+  - {name: "FortiGuard Labs", url: "https://feeds.fortinet.com/fortinet/blog/threat-research", tier: 1}
+  - {name: "Symantec Threat Hunter", url: "https://www.security.com/rss/v1/blogs/rss.xml/221", tier: 1}
+  - {name: "Volexity", url: "https://www.volexity.com/feed/", tier: 1}
+  - {name: "Zscaler ThreatLabz", url: "https://www.zscaler.com/blogs/feeds/security-research", tier: 1}
+  - {name: "Sekoia", url: "https://blog.sekoia.io/feed/", tier: 1}
+  - {name: "Group-IB", url: "https://www.group-ib.com/blog/feed/", tier: 1}
+  - {name: "Bitdefender Labs", url: "https://www.bitdefender.com/blog/api/rss/labs/", tier: 1}
+  # ── Tier 2 — CERT / government (from the Threat Feed set) ───────────────────────
+  - {name: "CISA", url: "https://www.cisa.gov/cybersecurity-advisories/all.xml", tier: 2}
+  - {name: "NCSC (UK)", url: "https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml", tier: 2}
+  - {name: "JPCERT/CC", url: "https://blogs.jpcert.or.jp/en/atom.xml", tier: 2}
+
+  # ── Tier 1 — further vendor threat research (curated; verify over time) ─────────
+  - {name: "Check Point Research", url: "https://research.checkpoint.com/feed/", tier: 1}
+  - {name: "Sophos News", url: "https://news.sophos.com/en-us/feed/", tier: 1}
+  - {name: "Malwarebytes Labs", url: "https://www.malwarebytes.com/blog/feed/index.xml", tier: 1}
+  - {name: "Microsoft MSRC", url: "https://msrc.microsoft.com/blog/feed/", tier: 1}
+  - {name: "Cybereason", url: "https://www.cybereason.com/blog/rss.xml", tier: 1}
+  - {name: "Dragos (OT/ICS)", url: "https://www.dragos.com/blog/feed/", tier: 1}
+  - {name: "Mandiant", url: "https://www.mandiant.com/resources/blog/rss.xml", tier: 1}
+  - {name: "DomainTools", url: "https://www.domaintools.com/resources/blog/feed/", tier: 1}
+  - {name: "Intel 471", url: "https://intel471.com/blog/feed", tier: 1}
+  - {name: "Flashpoint", url: "https://flashpoint.io/blog/feed/", tier: 1}
+  - {name: "NCC Group Research", url: "https://research.nccgroup.com/feed/", tier: 1}
+  - {name: "Lumen Black Lotus Labs", url: "https://blog.lumen.com/feed/", tier: 1}
+  - {name: "Datadog Security Labs", url: "https://securitylabs.datadoghq.com/rss/feed.xml", tier: 1}
+  - {name: "Netskope Threat Labs", url: "https://www.netskope.com/blog/feed", tier: 1}
+  - {name: "GreyNoise", url: "https://www.greynoise.io/blog/rss.xml", tier: 1}
+  - {name: "Qualys", url: "https://blog.qualys.com/feed", tier: 1}
+  - {name: "Tenable", url: "https://www.tenable.com/blog/feed", tier: 1}
+  - {name: "Deep Instinct", url: "https://www.deepinstinct.com/blog/feed", tier: 1}
+  - {name: "Morphisec", url: "https://blog.morphisec.com/rss.xml", tier: 1}
+  - {name: "Intezer", url: "https://intezer.com/blog/feed/", tier: 1}
+  - {name: "ANY.RUN", url: "https://any.run/cybersecurity-blog/feed/", tier: 1}
+  - {name: "Securonix", url: "https://www.securonix.com/blog/feed/", tier: 1}
+  - {name: "Expel", url: "https://expel.com/blog/feed/", tier: 1}
+  - {name: "Binary Defense", url: "https://www.binarydefense.com/feed/", tier: 1}
+  - {name: "Varonis", url: "https://www.varonis.com/blog/rss.xml", tier: 1}
+  - {name: "PortSwigger Research", url: "https://portswigger.net/research/rss", tier: 1}
+  - {name: "Cloudflare Security", url: "https://blog.cloudflare.com/tag/security/rss/", tier: 1}
+  - {name: "WithSecure Labs", url: "https://labs.withsecure.com/rss", tier: 1}
+  - {name: "Akamai Security Research", url: "https://www.akamai.com/blog/security-research/feed", tier: 1}
+  - {name: "Palo Alto Networks Blog", url: "https://www.paloaltonetworks.com/blog/feed/", tier: 1}
+  - {name: "Fortinet Blog", url: "https://feeds.fortinet.com/fortinet/blog/threat-research", tier: 1}
+  - {name: "Securelist APT", url: "https://securelist.com/category/apt-reports/feed/", tier: 1}
+  - {name: "Cado Security", url: "https://www.cadosecurity.com/blog/rss.xml", tier: 1}
+  - {name: "Pomerium / Censys", url: "https://censys.com/blog/rss/", tier: 1}
+  - {name: "Team Cymru", url: "https://www.team-cymru.com/blog-feed.xml", tier: 1}
+
+  # ── Tier 2 — further CERT / government (curated; verify over time) ──────────────
+  - {name: "CISA ICS Advisories", url: "https://www.cisa.gov/cybersecurity-advisories/ics-advisories.xml", tier: 2}
+  - {name: "CERT-FR", url: "https://www.cert.ssi.gouv.fr/feed/", tier: 2}
+  - {name: "CERT-EU", url: "https://cert.europa.eu/publications/security-advisories-rss", tier: 2}
+  - {name: "ACSC (Australia)", url: "https://www.cyber.gov.au/rss/alerts", tier: 2}
+  - {name: "CCCS (Canada)", url: "https://www.cyber.gc.ca/webservice/en/rss/alerts", tier: 2}
+  - {name: "CERT-In (India)", url: "https://www.cert-in.org.in/RSS/CERT-In.xml", tier: 2}
+  - {name: "NCSC-NL", url: "https://feeds.english.ncsc.nl/advisories.rss", tier: 2}
+  - {name: "CISA Blog", url: "https://www.cisa.gov/news-events/cybersecurity-advisories/all.xml", tier: 2}
+
+  # ── Tier 3 — reputable news & community ────────────────────────────────────────
+  - {name: "BleepingComputer", url: "https://www.bleepingcomputer.com/feed/", tier: 3}
+  - {name: "The Hacker News", url: "https://feeds.feedburner.com/TheHackersNews", tier: 3}
+  - {name: "The Record", url: "https://therecord.media/feed/", tier: 3}
+  - {name: "Dark Reading", url: "https://www.darkreading.com/rss.xml", tier: 3}
+  - {name: "SecurityWeek", url: "https://feeds.feedburner.com/securityweek", tier: 3}
+  - {name: "Krebs on Security", url: "https://krebsonsecurity.com/feed/", tier: 3}
+  - {name: "Schneier on Security", url: "https://www.schneier.com/feed/atom/", tier: 3}
+  - {name: "Graham Cluley", url: "https://grahamcluley.com/feed/", tier: 3}
+  - {name: "Infosecurity Magazine", url: "https://www.infosecurity-magazine.com/rss/news/", tier: 3}
+  - {name: "CyberScoop", url: "https://cyberscoop.com/feed/", tier: 3}
+  - {name: "Help Net Security", url: "https://www.helpnetsecurity.com/feed/", tier: 3}
+  - {name: "SC Media", url: "https://www.scmagazine.com/feed", tier: 3}
+  - {name: "Security Affairs", url: "https://securityaffairs.com/feed", tier: 3}
+  - {name: "The Register Security", url: "https://www.theregister.com/security/headlines.atom", tier: 3}
+  - {name: "Ars Technica Security", url: "https://feeds.arstechnica.com/arstechnica/security", tier: 3}
+  - {name: "GBHackers", url: "https://gbhackers.com/feed/", tier: 3}
+  - {name: "Cyber Security News", url: "https://cybersecuritynews.com/feed/", tier: 3}
+  - {name: "Hackread", url: "https://www.hackread.com/feed/", tier: 3}
+  - {name: "Industrial Cyber (OT)", url: "https://industrialcyber.co/feed/", tier: 3}
+  - {name: "DataBreaches.net", url: "https://databreaches.net/feed/", tier: 3}
+
+  # ── Tier 4 — structured / aggregator ───────────────────────────────────────────
+  - {name: "SANS Internet Storm Center", url: "https://isc.sans.edu/rssfeed_full.xml", tier: 4}
+  - {name: "Malware Traffic Analysis", url: "https://www.malware-traffic-analysis.net/blog-entries.rss", tier: 4}
+  - {name: "CIRCL Luxembourg", url: "https://www.circl.lu/rss.xml", tier: 4}
+  - {name: "abuse.ch (news)", url: "https://abuse.ch/feed/", tier: 4}
+  - {name: "Spamhaus", url: "https://www.spamhaus.org/news/rss/", tier: 4}
+  - {name: "Pulsedive Blog", url: "https://blog.pulsedive.com/rss/", tier: 4}
+  - {name: "StopMalvertising / MalwareBytes feed", url: "https://www.malwarebytes.com/blog/category/threat-intelligence/feed/index.xml", tier: 4}

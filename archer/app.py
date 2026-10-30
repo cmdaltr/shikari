@@ -9520,6 +9520,71 @@ def incidents_refresh(request: Request, archer_session: Optional[str] = Cookie(N
     return JSONResponse({"started": True, "message": "Refreshing VCDB, CISA KEV and ransomware.live in the background"})
 
 
+@app.get("/ioc", response_class=HTMLResponse)
+def ioc_search_page(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """IOC Search: find reputable reporting from the last 7 days that mentions an indicator."""
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return auth
+    user, db = auth
+    db.close()
+    from archer.intelligence import ioc_search
+    return templates.TemplateResponse("ioc_search.html",
+                                      {"request": request, "user": user, "sources": ioc_search.status()})
+
+
+@app.get("/api/ioc/search")
+def ioc_search_api(request: Request, ioc: str, days: int = 7, tiers: str = "",
+                   archer_session: Optional[str] = Cookie(None)):
+    """
+    Search the curated reputable feeds for an indicator and its defanged forms over the last `days`.
+    Networked (feeds cached an hour); a cold cache can take up to a minute. tiers is an optional
+    comma-separated filter (e.g. "1,2").
+    """
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in"}, status_code=401)
+    _, db = auth
+    db.close()
+    from archer.intelligence import ioc_search as ioc_mod
+    picked = [int(t) for t in tiers.split(",") if t.strip().isdigit()] or None
+    return ioc_mod.search(ioc.strip(), days=max(1, min(days, 30)), tiers=picked)
+
+
+@app.get("/api/ioc/recent")
+def ioc_recent(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Recently searched IOCs still within the 7-day retention window (newest first)."""
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in"}, status_code=401)
+    _, db = auth
+    db.close()
+    from archer.intelligence import ioc_search as ioc_mod
+    return {"recent": ioc_mod.recent_iocs()}
+
+
+@app.post("/api/ioc/feeds/refresh")
+def ioc_feeds_refresh(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Warm the feed cache in the background so the next search is fast (admin; outbound fetches)."""
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in"}, status_code=401)
+    user, db = auth
+    try:
+        if user.role != UserRole.ADMIN:
+            return JSONResponse({"error": "Admin only"}, status_code=403)
+    finally:
+        db.close()
+    from archer.intelligence import ioc_search as ioc_mod
+    import threading
+
+    def _warm():
+        for s in ioc_mod.load_sources():
+            ioc_mod._fetch(s["url"], ttl=0)  # force-refresh each feed's cache
+    threading.Thread(target=_warm, daemon=True).start()
+    return JSONResponse({"started": True, "sources": len(ioc_mod.load_sources())})
+
+
 @app.get("/profile-progress", response_class=HTMLResponse)
 def profile_progress_page(request: Request, domain: str = "", group_name: str = "",
                           archer_session: Optional[str] = Cookie(None)):
