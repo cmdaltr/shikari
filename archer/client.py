@@ -219,6 +219,18 @@ class ArcherClient:
         """The threat feed for the signed-in user's industries (last 7 days)."""
         return self._json("GET", "/api/feed")
 
+    def rank_adversaries(self, domain: str) -> Dict:
+        """The Ordered Adversary List for a profiled domain (the actors most likely to target it)."""
+        return self._json("GET", "/api/adversaries", params={"domain": domain})
+
+    def ioc_search(self, ioc: str, days: int = 7, tiers: str = "") -> Dict:
+        """Reputable reporting from the last `days` that mentions an indicator (and its defanged forms)."""
+        return self._json("GET", "/api/ioc/search", params={"ioc": ioc, "days": days, "tiers": tiers})
+
+    def profile_company(self, domain: str) -> Dict:
+        """Start a background company profile for a domain (OSINT, exposure, adversary list)."""
+        return self._json("POST", "/profile", data={"domain": domain})
+
     def refresh_feed(self) -> bool:
         return bool(self._json("POST", "/api/feed/refresh").get("started"))
 

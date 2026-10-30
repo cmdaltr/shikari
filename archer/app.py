@@ -9486,6 +9486,21 @@ def catalogue_page(request: Request, archer_session: Optional[str] = Cookie(None
     return templates.TemplateResponse("catalogue.html", {"request": request, "user": user, "companies": companies})
 
 
+@app.get("/api/adversaries")
+def adversaries_api(request: Request, domain: str, archer_session: Optional[str] = Cookie(None)):
+    """The Ordered Adversary List for a profiled domain — the actors most likely to target it."""
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in"}, status_code=401)
+    _, db = auth
+    db.close()
+    profile, safe = _load_profile(domain)
+    if not profile:
+        return JSONResponse({"error": f"No profile for {safe}. Profile the domain first."}, status_code=404)
+    from archer.intelligence.adversary_ranking import rank_adversaries
+    return {"domain": safe, "adversaries": rank_adversaries(profile)}
+
+
 @app.get("/api/incidents/status")
 def incidents_status(request: Request, archer_session: Optional[str] = Cookie(None)):
     """Which public-incident feeds are cached and when (archer.intelligence.incident_sources)."""

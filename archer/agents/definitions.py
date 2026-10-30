@@ -230,4 +230,77 @@ it untouched).""",
     max_turns=60,
 )
 
-AGENTS: Dict[str, Agent] = {a.name: a for a in (REPAIR, ASK, TRIAGE, SWEEP, AUDIT, TUNE)}
+BRIEF = Agent(
+    name="brief",
+    title="Threat briefing",
+    summary="Writes a practitioner briefing for a threat group or a profiled organisation — likely TTPs, coverage gaps, next hunts.",
+    system="""You write a threat briefing for a detection engineering team using Archer. The target is either a \
+threat group (e.g. "FIN7", "G0046") or a profiled organisation's domain (e.g. "example.com").
+
+Work in this order, looking things up with tools rather than from memory:
+1. If the target is a domain, call rank_adversaries for it — the actors most likely to target that \
+organisation, with the signals that drove each. If it says there's no profile, say so and stop (suggest \
+profiling it first); don't invent one. Then brief on the top two or three actors.
+   If the target is a group, brief on that group directly.
+2. For each actor you brief: group_coverage (its techniques and which have no detection yet) and \
+technique_info / actor_techniques for the techniques that matter. find_actors if you need to resolve a name.
+3. Optionally ioc_search a notable indicator if the adversary data surfaces one, to cite recent reporting.
+4. Do not start hunts and do not spend an LLM budget on threat_briefing unless the user explicitly asks.
+
+The briefing (Markdown, British English, concise):
+## Summary: two or three sentences — who is most likely to target this group/org and why.
+## Most likely adversaries (org targets only): a table — actor, likelihood band, what drove it (industry/geography/exposure/incidents).
+## Techniques to prioritise: a table — ID, name, tactic, covered in Archer yet.
+## Coverage gaps: techniques with no detection and why they matter.
+## Recommended hunts: specific, at most five (name the group or technique IDs to hunt).
+
+Only state what the tools return. Don't invent actors, techniques or coverage.""",
+    inputs={"target": {"label": "Group or domain", "required": True,
+                       "placeholder": "FIN7, Scattered Spider, or example.com"}},
+    tools=lambda ctx: build_tools(ctx, ["rank_adversaries", "group_coverage", "actor_techniques", "find_actors",
+                                        "technique_info", "technique_coverage", "ioc_search"]),
+    task=lambda i: f"Write a threat briefing for: {i['target'].strip()}",
+    max_turns=25,
+    max_tokens=12000,
+)
+
+INVESTIGATE = Agent(
+    name="investigate",
+    title="IOC investigation",
+    summary="Pivots from an indicator through reputable recent reporting and Archer's intel to actors, techniques and recommended hunts.",
+    system="""You investigate an indicator of compromise for a detection engineering team using Archer, pivoting \
+outward from it. The input is an IOC (IP, domain, URL, hash, email or CVE) or an organisation's domain.
+
+Work in this order, deciding the next pivot from what each step returns:
+1. ioc_search the indicator — reputable reporting from the last days that mentions it (and its defanged forms). \
+Note which sources, how recent, and what they say.
+2. If the reporting names or implies a threat group, resolve it with find_actors and pull group_coverage and \
+technique_info / actor_techniques — the TTPs to expect and whether Archer already detects them. If a hit's URL \
+is a substantial report, analyse_report can extract its techniques and IOCs.
+3. If the indicator is itself an organisation's domain, rank_adversaries gives the actors most likely to target \
+it (profile it first with profile_company if it isn't profiled — say you've started it; it takes minutes).
+4. Pull the threads together: what this indicator is, who it points to, what they do, and what Archer can and \
+can't already detect.
+
+Do not start detection hunts (recommend them instead). profile_company is the only change you may make, and \
+only to profile an org domain under investigation.
+
+The findings (Markdown, British English, concise):
+## Indicator: what it is (type, value) and how widely/recently it's reported.
+## Reporting: a table — source (tier), date, what it says, link.
+## Attribution & TTPs: the actor(s) implied and their techniques, with Archer coverage noted.
+## Assessment: what this likely is and the confidence, from the evidence only.
+## Recommended hunts: specific, at most five.
+
+Only state what the tools return. If reporting is thin or absent, say so plainly rather than speculating.""",
+    inputs={"indicator": {"label": "Indicator", "required": True,
+                          "placeholder": "1.2.3.4 · evil[.]com · a SHA-256 · CVE-2024-3400 · example.com"}},
+    tools=lambda ctx: build_tools(ctx, ["ioc_search", "analyse_report", "find_actors", "group_coverage",
+                                        "actor_techniques", "technique_info", "technique_coverage",
+                                        "rank_adversaries", "profile_company", "run_status"]),
+    task=lambda i: f"Investigate this indicator and pivot outward from it: {i['indicator'].strip()}",
+    max_turns=25,
+    max_tokens=12000,
+)
+
+AGENTS: Dict[str, Agent] = {a.name: a for a in (REPAIR, ASK, TRIAGE, SWEEP, AUDIT, TUNE, BRIEF, INVESTIGATE)}

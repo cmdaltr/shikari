@@ -138,6 +138,19 @@ def build_tools(ctx: ToolContext, names: Optional[List[str]] = None) -> List[Too
     def threat_briefing(group: str, top_n: int = 5) -> Dict:
         return c.threat_briefing(group, top_n)
 
+    def rank_adversaries(domain: str) -> Dict:
+        return c.rank_adversaries(domain)
+
+    def ioc_search(ioc: str, days: int = 7, tiers: str = "") -> Dict:
+        r = c.ioc_search(ioc, days=max(1, min(days, 30)), tiers=tiers)
+        if r.get("hits"):  # trim for token economy
+            r["hits"] = [{k: h.get(k) for k in ("source", "tier", "title", "url", "published", "snippet")}
+                         for h in r["hits"][:40]]
+        return r
+
+    def profile_company(domain: str) -> Dict:
+        return c.profile_company(domain)
+
     def run_status(run: str) -> Dict:
         p = c.progress(run)
         return {k: p.get(k) for k in ("status", "phase", "created_yaml", "error")}
@@ -239,6 +252,17 @@ def build_tools(ctx: ToolContext, names: Optional[List[str]] = None) -> List[Too
              actor_techniques),
         Tool("analyse_report", "Extract ATT&CK techniques and IOCs from a threat report URL (no hunt is run).",
              _schema({"url": _str("Report URL")}, ["url"]), analyse_report),
+        Tool("rank_adversaries", "The ATT&CK groups most likely to target a profiled organisation, ranked (no AI) "
+             "from its industry, geography, exposed OSINT and public incidents, each with the signals that drove it. "
+             "Profile the domain first (profile_company).",
+             _schema({"domain": _str("The organisation's domain, e.g. example.com")}, ["domain"]), rank_adversaries),
+        Tool("ioc_search", "Search ~100 reputable sources' reporting from the last few days for an indicator — IP, "
+             "domain, URL, hash, email or CVE — matching its defanged forms too. Returns hits ranked by source tier.",
+             _schema({"ioc": _str("The indicator"), "days": {"type": "integer", "description": "Days back, 1–30 (default 7)"},
+                      "tiers": _str("Optional source-tier filter, e.g. '1,2'")}, ["ioc"]), ioc_search),
+        Tool("profile_company", "Start a background OSINT profile of a company by domain (exposure map and adversary "
+             "list). Returns once it has started; the profile takes a few minutes.",
+             _schema({"domain": _str("The company's domain")}, ["domain"]), profile_company, changes=True),
         Tool("threat_briefing", "An AI threat briefing for a group: prioritised techniques and coverage gaps. Costs an LLM call.",
              _schema({"group": _str("Group name or ID"), "top_n": {"type": "integer"}}, ["group"]), threat_briefing),
         Tool("run_status", "The progress of a run.", _schema({"run": _str("Run name")}, ["run"]), run_status),
