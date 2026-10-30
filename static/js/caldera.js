@@ -29,24 +29,32 @@
   // The CALDERA server and its agents as a small horizontal network diagram: server on top, each
   // agent a node in the row below (OS-coloured dot, host and group), joined by a curved edge.
   const OS_COLOUR = { windows: '#2563eb', linux: '#d97706', macos: '#6b7280', darwin: '#6b7280' };
-  function netmap(url, agents, hostOs) {
+  function netmap(url, agents, hostOs, hostName) {
     const rows = agents.slice().sort((a, b) => (a.group || '').localeCompare(b.group || ''));
     const NW = 150, NH = 46, GAPX = 18, PAD = 12, TOP = 12, VGAP = 44;
+    const urlHost = esc(String(url).replace(/^https?:\/\//, '')), name = hostName ? esc(hostName) : '';
+    // The server node is a touch wider, and taller when it also carries the host's hostname line.
+    const SW = 200, SH = name ? 60 : NH;
     const rowW = rows.length * NW + Math.max(0, rows.length - 1) * GAPX;
-    const VW = Math.max(rowW, NW) + PAD * 2;
-    const serverX = (VW - NW) / 2, serverY = TOP, agentY = TOP + NH + VGAP, h = agentY + NH + TOP;
-    const host = esc(String(url).replace(/^https?:\/\//, '')), agentX = i => PAD + i * (NW + GAPX);
+    const VW = Math.max(rowW, SW) + PAD * 2;
+    const serverX = (VW - SW) / 2, serverY = TOP, agentY = TOP + SH + VGAP, h = agentY + NH + TOP;
+    const agentX = i => PAD + i * (NW + GAPX);
     let svg = `<svg viewBox="0 0 ${VW} ${h}" width="${VW}" height="${h}" class="netmap-svg" role="img" aria-label="CALDERA agent topology">`;
-    const sx = serverX + NW / 2, my = (serverY + NH + agentY) / 2;
+    const sx = serverX + SW / 2, my = (serverY + SH + agentY) / 2;
     rows.forEach((a, i) => {
       const ax = agentX(i) + NW / 2;
-      svg += `<path d="M${sx} ${serverY + NH} C ${sx} ${my}, ${ax} ${my}, ${ax} ${agentY}" class="netmap-edge"/>`;
+      svg += `<path d="M${sx} ${serverY + SH} C ${sx} ${my}, ${ax} ${my}, ${ax} ${agentY}" class="netmap-edge"/>`;
     });
-    const sc = OS_COLOUR[hostOs] || '#6b7280';
-    svg += `<g class="netmap-node is-server"><rect x="${serverX}" y="${serverY}" width="${NW}" height="${NH}" rx="9"/>` +
-      `<circle cx="${serverX + 13}" cy="${serverY + NH / 2}" r="4.5" fill="${sc}"/>` +
-      `<text x="${serverX + 25}" y="${serverY + NH / 2 - 3}" class="netmap-t">CALDERA server</text>` +
-      `<text x="${serverX + 25}" y="${serverY + NH / 2 + 13}" class="netmap-s">${host}</text></g>`;
+    const sc = OS_COLOUR[hostOs] || '#6b7280', cy = serverY + SH / 2;
+    svg += `<g class="netmap-node is-server"><rect x="${serverX}" y="${serverY}" width="${SW}" height="${SH}" rx="9"/>` +
+      `<circle cx="${serverX + 13}" cy="${cy}" r="4.5" fill="${sc}"/>` +
+      (name
+        ? `<text x="${serverX + 25}" y="${cy - 10}" class="netmap-t">CALDERA server</text>` +
+          `<text x="${serverX + 25}" y="${cy + 5}" class="netmap-s">${name}</text>` +
+          `<text x="${serverX + 25}" y="${cy + 19}" class="netmap-s">${urlHost}</text>`
+        : `<text x="${serverX + 25}" y="${cy - 3}" class="netmap-t">CALDERA server</text>` +
+          `<text x="${serverX + 25}" y="${cy + 13}" class="netmap-s">${urlHost}</text>`) +
+      '</g>';
     rows.forEach((a, i) => {
       const x = agentX(i), c = OS_COLOUR[a.platform] || '#6b7280';
       // Labelled by paw, not host: the server runs on this Mac too, so an agent host of e.g.
@@ -78,7 +86,7 @@
       const nm = el('caldera-netmap');
       if (r.configured && !r.error) {
         nm.hidden = false;
-        nm.innerHTML = (r.agents || []).length ? netmap(r.url, r.agents, r.host_os) : '<p class="lab-empty">No agents checked in yet.</p>';
+        nm.innerHTML = (r.agents || []).length ? netmap(r.url, r.agents, r.host_os, r.host_name) : '<p class="lab-empty">No agents checked in yet.</p>';
       } else {
         nm.hidden = true; nm.innerHTML = '';
       }

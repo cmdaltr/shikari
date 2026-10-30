@@ -380,11 +380,14 @@ def caldera_status(archer_session: Optional[str] = Cookie(None)):
     # provisioned is up right now — so the panel shows Provision, or green Re-provision/De-provision.
     can_provision = caldera_provision.can_provision(_is_admin(user))[0]
     provisioned = can_provision and caldera_provision.lab_up()
-    # host_os is this machine's platform — the host the diagram shows the CALDERA server running on
-    # (for a lab Provisioned here that's literally this box; the server node wears its OS dot).
+    # host_os/host_name describe this machine — the host the diagram shows the CALDERA server
+    # running on (for a lab Provisioned here that's literally this box; the server node wears its
+    # OS dot and hostname).
     import platform as _plat
     host_os = {"Darwin": "darwin", "Linux": "linux", "Windows": "windows"}.get(_plat.system(), "")
-    base = {"can_provision": can_provision, "provisioned": provisioned, "host_os": host_os}
+    host_name = _plat.node() or ""
+    base = {"can_provision": can_provision, "provisioned": provisioned,
+            "host_os": host_os, "host_name": host_name}
     if not caldera.configured(overrides):
         return {"configured": False, "groups": [],
                 "detail": "Set your CALDERA server and key in Profile → API Keys → Emulation Tools", **base}
