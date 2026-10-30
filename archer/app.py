@@ -5319,6 +5319,59 @@ def apply_osint_keys_to_env(db, user_id):
             os.environ[env_name] = value
 
 
+def _launch_company_profile(domain: str, archer_session: Optional[str], use_ai: bool = False,
+                            include_supply_chain: bool = False) -> dict:
+    """
+    Clean a domain and start profiling it in the background (the same job /profile runs). Returns
+    {domain, group_name} on success. Shared by the Profile page and the user's organisation setting
+    so setting an organisation auto-creates its company profile.
+    """
+    from archer.intelligence import profile_company as do_profile
+
+    domain = (domain or "").strip().lower().replace("http://", "").replace("https://", "").split("/")[0]
+    if not domain:
+        raise ValueError("No domain given")
+    group_name = domain.replace(".", "_").replace("/", "_")
+    options = {"include_industry": True, "include_geography": True,
+               "include_tech_stack": True, "include_supply_chain": include_supply_chain}
+
+    # Make the user's saved OSINT keys available to the profiler (it reads os.environ)
+    try:
+        _kdb = next(get_db())
+        try:
+            _ku = get_user_from_session_id(archer_session, _kdb) if archer_session else None
+            if _ku:
+                apply_osint_keys_to_env(_kdb, _ku.id)
+        finally:
+            _kdb.close()
+    except Exception:
+        pass
+
+    profile_dir = Path("data") / "profiles"
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    profile_path = profile_dir / f"{group_name}_profile.json"
+    write_progress(group_name, {"status": "profiling", "stage": 1, "total_stages": 7,
+                                "message": "Starting profile…", "source_type": "profile", "error": None})
+
+    def _profile_bg():
+        try:
+            print(f"\nProfiling domain: {domain}")
+            profile = do_profile(domain, options, use_openai=use_ai, group_name=group_name)
+            with open(profile_path, "w", encoding="utf-8") as f:
+                json.dump(profile, f, indent=2)
+            print(f"Profile saved to: {profile_path}")
+            write_progress(group_name, {"status": "profile_complete", "stage": 7,
+                                        "total_stages": 7, "message": "Profile complete"})
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            write_progress(group_name, {"status": "failed", "error": str(e)})
+
+    import threading
+    threading.Thread(target=_profile_bg, daemon=True).start()
+    return {"domain": domain, "group_name": group_name}
+
+
 @app.post("/profile")
 def profile_company(
     request: Request,
@@ -5343,74 +5396,15 @@ def profile_company(
     Returns profile data and optionally generates detection queries.
     """
     try:
-        from archer.intelligence import profile_company as do_profile
-        from archer.build.orchestrator import process_group
-
-        # Clean domain input
-        domain = domain.strip().lower()
-        # Remove http:// or https:// if present
-        domain = domain.replace("http://", "").replace("https://", "").split("/")[0]
-
-        # Build options dict
-        # Note: Auto-Generate, Industry, Geography, and Tech Stack are always enabled by default
-        options = {
-            "include_industry": True,  # Always enabled
-            "include_geography": True,  # Always enabled
-            "include_tech_stack": True,  # Always enabled
-            "include_supply_chain": include_supply_chain == "true",
-        }
-
-        use_ai = use_openai == "true"
-        auto_generate = True  # Always generate detections by default
-
-        # Use domain as group_name for progress tracking
-        group_name = domain.replace(".", "_").replace("/", "_")
-
-        # Make the user's saved OSINT keys available to the profiler (it reads os.environ)
-        try:
-            _kdb = next(get_db())
-            try:
-                _ku = get_user_from_session_id(archer_session, _kdb) if archer_session else None
-                if _ku:
-                    apply_osint_keys_to_env(_kdb, _ku.id)
-            finally:
-                _kdb.close()
-        except Exception:
-            pass
-
         # Profiling runs in the background so the browser can follow it on a progress page,
         # the same as a hunt, instead of holding a blocking request open. The profiler emits
-        # its own stage updates through write_progress; we seed a fresh record first so a
-        # previous profile of this domain doesn't make the page redirect straight away.
-        safe_domain = domain.replace(".", "_").replace("/", "_")
-        profile_dir = Path("data") / "profiles"
-        profile_dir.mkdir(parents=True, exist_ok=True)
-        profile_path = profile_dir / f"{safe_domain}_profile.json"
-
-        write_progress(group_name, {"status": "profiling", "stage": 1, "total_stages": 7,
-                                    "message": "Starting profile…", "source_type": "profile",
-                                    "error": None})
-
-        def _profile_bg():
-            try:
-                print(f"\nProfiling domain: {domain}")
-                profile = do_profile(domain, options, use_openai=use_ai, group_name=group_name)
-                with open(profile_path, "w", encoding="utf-8") as f:
-                    json.dump(profile, f, indent=2)
-                print(f"Profile saved to: {profile_path}")
-                write_progress(group_name, {"status": "profile_complete", "stage": 7,
-                                            "total_stages": 7, "message": "Profile complete"})
-            except Exception as e:
-                import traceback
-                traceback.print_exc()
-                write_progress(group_name, {"status": "failed", "error": str(e)})
-
-        import threading
-        threading.Thread(target=_profile_bg, daemon=True).start()
-
+        # its own stage updates through write_progress; the helper seeds a fresh record first so
+        # a previous profile of this domain doesn't make the page redirect straight away.
+        started = _launch_company_profile(domain, archer_session, use_ai=use_openai == "true",
+                                          include_supply_chain=include_supply_chain == "true")
         return JSONResponse({
             "success": True,
-            "redirect_url": "/profile-progress?" + urlencode({"domain": domain, "group_name": group_name}),
+            "redirect_url": "/profile-progress?" + urlencode(started),
             "message": "Profiling started",
         })
 
@@ -8533,16 +8527,23 @@ def exposure_page(request: Request, domain: str, archer_session: Optional[str] =
     profiles_dir = Path("data") / "profiles"
     path = profiles_dir / f"{safe_file}_profile.json"
     expo = None
+    adversaries = []
+    is_home = bool(user and (user.organisation or "").strip().lower() == safe)
     if safe_file and os.path.dirname(os.path.abspath(path)) == os.path.abspath(profiles_dir) and path.is_file():
         try:
             with open(path, encoding="utf-8") as fh:
                 profile = json.load(fh)
             from archer.visualization import exposure as exposure_mod
+            from archer.intelligence.adversary_ranking import rank_adversaries
             expo = exposure_mod.build(profile)
+            adversaries = rank_adversaries(profile)
         except (OSError, ValueError):
             expo = None
+    from archer.intelligence import incident_sources
     return templates.TemplateResponse("exposure.html", {"request": request, "user": user,
-                                                        "domain": safe, "exposure": expo})
+                                                        "domain": safe, "exposure": expo,
+                                                        "adversaries": adversaries, "is_home": is_home,
+                                                        "incident_feeds": incident_sources.status()})
 
 
 # ---------------------------------------------------------------- STIX / TAXII & MISP (#19)
@@ -9450,6 +9451,7 @@ def catalogue_page(request: Request, archer_session: Optional[str] = Cookie(None
     user, db = auth_result
     db.close()
 
+    home_org = ((user.organisation if user else "") or "").strip().lower()
     companies = []
     profiles_dir = Path("data") / "profiles"
     if profiles_dir.is_dir():
@@ -9468,6 +9470,7 @@ def catalogue_page(request: Request, archer_session: Optional[str] = Cookie(None
             companies.append({
                 "domain": domain,
                 "name": ci.get("company_name") or domain,
+                "is_home": bool(home_org) and str(domain).strip().lower() == home_org,  # the user's own org — starred
                 "country": ci.get("country"),
                 "risk": prof.get("risk_score") or 0,
                 "groups": len(prof.get("recommended_groups") or []),
@@ -9478,8 +9481,43 @@ def catalogue_page(request: Request, archer_session: Optional[str] = Cookie(None
                 "hosting": net.get("hosting_countries") or [],
                 "breaches": (prof.get("breach_surface") or {}).get("count") or 0,
             })
-    companies.sort(key=lambda c: c["timestamp"] or "", reverse=True)
+    # The user's own organisation first (starred), then most-recently profiled
+    companies.sort(key=lambda c: (c["is_home"], c["timestamp"] or ""), reverse=True)
     return templates.TemplateResponse("catalogue.html", {"request": request, "user": user, "companies": companies})
+
+
+@app.get("/api/incidents/status")
+def incidents_status(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Which public-incident feeds are cached and when (archer.intelligence.incident_sources)."""
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in"}, status_code=401)
+    _, db = auth
+    db.close()
+    from archer.intelligence import incident_sources
+    return incident_sources.status()
+
+
+@app.post("/api/incidents/refresh")
+def incidents_refresh(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """
+    Refresh the public-incident feeds (VCDB, CISA KEV, ransomware.live) that feed the Ordered
+    Adversary List. Admin only — it makes outbound connections, so it's a deliberate action, not a
+    page render. Runs in the background; poll /api/incidents/status for the result.
+    """
+    auth = require_auth(request, archer_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in"}, status_code=401)
+    user, db = auth
+    try:
+        if user.role != UserRole.ADMIN:
+            return JSONResponse({"error": "Admin only"}, status_code=403)
+    finally:
+        db.close()
+    from archer.intelligence import incident_sources
+    import threading
+    threading.Thread(target=lambda: incident_sources.refresh(log=print), daemon=True).start()
+    return JSONResponse({"started": True, "message": "Refreshing VCDB, CISA KEV and ransomware.live in the background"})
 
 
 @app.get("/profile-progress", response_class=HTMLResponse)
@@ -9532,7 +9570,9 @@ def review_page(request: Request, domain: str, archer_session: Optional[str] = C
         return RedirectResponse(url="/", status_code=303)
 
     from archer.visualization import exposure as exposure_mod
+    from archer.intelligence.adversary_ranking import rank_adversaries
     expo = exposure_mod.build(profile)
+    adversaries = rank_adversaries(profile)
 
     ci = profile.get("company_info") or {}
     tp = profile.get("threat_profile") or {}
@@ -9553,9 +9593,11 @@ def review_page(request: Request, domain: str, archer_session: Optional[str] = C
         "products": profile.get("detected_stack") or [],
         "risk_score": profile.get("risk_score") or 0,
     }
+    from archer.intelligence import incident_sources
     return templates.TemplateResponse("review.html", {
         "request": request, "user": user, "domain": safe, "exposure": expo,
         "summary": summary, "groups": details, "group_count": len(details),
+        "adversaries": adversaries, "incident_feeds": incident_sources.status(),
     })
 
 
@@ -11396,10 +11438,32 @@ async def update_profile(request: Request, archer_session: Optional[str] = Cooki
         user.team = team if team else None
         if "country" in data:
             user.country = country or None
+
+        # Organisation: the user's own org domain. Setting it stars that company in the catalogue
+        # and, if it isn't profiled yet, kicks off a background profile so the Ordered Adversary
+        # List and exposure map are there when they open it.
+        profiling = None
+        if "organisation" in data:
+            org = (data.get("organisation") or "").strip().lower()
+            org = org.replace("http://", "").replace("https://", "").split("/")[0]
+            if org and "." not in org:
+                return {"success": False, "error": "Enter the organisation's domain, e.g. example.com"}
+            user.organisation = org or None
+            if org:
+                safe = re.sub(r"[^a-z0-9._-]", "_", org).replace(".", "_")
+                if not (Path("data") / "profiles" / f"{safe}_profile.json").is_file():
+                    try:
+                        profiling = _launch_company_profile(org, archer_session)
+                    except Exception as e:
+                        print(f"Organisation auto-profile failed to start: {e}")
+
         db.commit()
         db.refresh(user)
 
-        return {"success": True, "message": "Profile updated successfully"}
+        result = {"success": True, "message": "Profile updated successfully"}
+        if profiling:
+            result["profiling"] = profiling  # {domain, group_name} — a profile was started
+        return result
 
     except Exception as e:
         db.rollback()

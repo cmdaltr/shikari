@@ -108,6 +108,7 @@ document.getElementById('profile-form')?.addEventListener('submit', async functi
   const fullName = fullNameInput?.value;
   const team = teamInput?.value || '';
   const country = document.getElementById('country')?.value || '';
+  const organisation = document.getElementById('organisation')?.value || '';
 
   // Validate full name using validation.js
   const validation = validateFullName(fullName);
@@ -123,7 +124,8 @@ document.getElementById('profile-form')?.addEventListener('submit', async functi
   const formData = {
     full_name: validation.value,  // Use the sanitized value
     team: team.trim(),  // Include team field
-    country
+    country,
+    organisation: organisation.trim()  // own org domain — auto-profiled and starred in the catalogue
   };
 
   try {
@@ -138,7 +140,14 @@ document.getElementById('profile-form')?.addEventListener('submit', async functi
     const data = await response.json();
 
     if (data.success) {
-      showNotification(data.message || 'Profile updated successfully', 'success');
+      // Setting an organisation for the first time kicks off its company profile — follow it
+      if (data.profiling && data.profiling.domain) {
+        showNotification('Profiling ' + data.profiling.domain + '… building its adversary list', 'success');
+        const q = new URLSearchParams(data.profiling).toString();
+        setTimeout(() => { window.location.href = '/profile-progress?' + q; }, 900);
+      } else {
+        showNotification(data.message || 'Profile updated successfully', 'success');
+      }
     } else {
       showNotification(data.error || 'Failed to update profile', 'error');
     }

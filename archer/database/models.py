@@ -87,6 +87,7 @@ class User(Base):
     industries = Column(Text, nullable=True)  # JSON array: threat feed industries (archer.intelligence.feed)
     siem_platforms = Column(Text, nullable=True)  # JSON array: SIEMs hunts generate for (empty: all)
     tech_stack = Column(Text, nullable=True)  # JSON array: product ids (archer.intelligence.tech_stack; empty: everything applies)
+    organisation = Column(String(255), nullable=True)  # the user's own org domain; auto-profiled and starred in the catalogue (archer.intelligence.adversary_ranking)
     caldera_url = Column(String(255), nullable=True)  # the user's CALDERA server (Emulate → Lab); the api_key is an encrypted APIKey row
     caldera_verify_tls = Column(Boolean, nullable=True)  # NULL = verify (the safe default)
     password_hash = Column(String(255), nullable=False)  # bcrypt hash

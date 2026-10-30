@@ -59,3 +59,58 @@
 .ex-breach-list { list-style: none; padding: 0; margin: 0; }
 .ex-breach-list li { padding: 6px 0; border-top: 1px solid var(--an-ring); font-size: 0.92em; }
 .ex-breach-list .pwn { color: var(--af-muted); }
+
+/* ── Ordered Adversary List (partials/adversary_list.html) ────────────────────
+   The top-10 groups most likely to target the org, ranked from industry, geography, exposed
+   OSINT and demonstrated activity. Shares the exposure page's section chrome. */
+.adv-section .adv-home { margin-left: 10px; font-size: .6em; font-weight: 600; vertical-align: 3px;
+  color: #f59e0b; border: 1px solid rgba(245, 158, 11, .4); border-radius: 999px; padding: 2px 9px; }
+.adv-note { color: var(--text-secondary); margin: 0 0 16px; max-width: 70ch; line-height: 1.5; }
+.adv-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.adv-item { display: grid; grid-template-columns: 34px 1fr 128px; align-items: center; gap: 14px;
+  padding: 14px 16px; border: 1px solid var(--border-color); border-left: 4px solid var(--border-color);
+  border-radius: 10px; background: var(--bg-secondary); }
+.adv-band-high { border-left-color: #ef4444; }
+.adv-band-medium { border-left-color: #f59e0b; }
+.adv-band-low { border-left-color: #64748b; }
+.adv-rank { font-size: 1.3em; font-weight: 700; color: var(--text-tertiary); text-align: center; }
+.adv-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.adv-name { font-size: 1.08em; font-weight: 600; color: var(--text-primary); text-decoration: none; }
+.adv-name:hover { text-decoration: underline; }
+.adv-nexus { font-size: .82em; color: var(--text-secondary); }
+.adv-nexus::before { content: "◈ "; color: var(--text-tertiary); }
+.adv-id { font-size: .76em; color: var(--text-tertiary); font-family: ui-monospace, monospace; }
+.adv-sources { display: flex; gap: 6px; flex-wrap: wrap; margin: 7px 0 2px; }
+.adv-chip { font-size: .72em; font-weight: 600; padding: 2px 9px; border-radius: 999px;
+  border: 1px solid transparent; }
+.adv-chip-industry { color: #2563eb; border-color: rgba(37, 99, 235, .4); background: rgba(37, 99, 235, .08); }
+.adv-chip-geography { color: #0d9488; border-color: rgba(13, 148, 136, .4); background: rgba(13, 148, 136, .08); }
+.adv-chip-exposure { color: #d97706; border-color: rgba(217, 119, 6, .4); background: rgba(217, 119, 6, .08); }
+.adv-chip-incidents { color: #dc2626; border-color: rgba(220, 38, 38, .4); background: rgba(220, 38, 38, .08); }
+[data-theme="dark"] .adv-chip-industry { color: #60a5fa; }
+[data-theme="dark"] .adv-chip-geography { color: #2dd4bf; }
+[data-theme="dark"] .adv-chip-exposure { color: #fbbf24; }
+[data-theme="dark"] .adv-chip-incidents { color: #f87171; }
+.adv-reasons { list-style: none; margin: 4px 0 0; padding: 0; font-size: .85em; color: var(--text-secondary); }
+.adv-reasons li { line-height: 1.5; }
+.adv-reasons li::before { content: "— "; color: var(--text-tertiary); }
+.adv-score { text-align: center; }
+.adv-meter { height: 6px; border-radius: 3px; background: var(--border-color); overflow: hidden; margin-bottom: 5px; }
+.adv-meter span { display: block; height: 100%; border-radius: 3px; background: #64748b; }
+.adv-band-high .adv-meter span { background: #ef4444; }
+.adv-band-medium .adv-meter span { background: #f59e0b; }
+.adv-pct { font-size: 1.15em; font-weight: 700; color: var(--text-primary); }
+.adv-pct::after { content: ""; }
+.adv-band { display: block; font-size: .72em; text-transform: uppercase; letter-spacing: .04em; color: var(--text-tertiary); }
+@media (max-width: 640px) {
+  .adv-item { grid-template-columns: 28px 1fr; }
+  .adv-score { grid-column: 2; display: flex; align-items: center; gap: 10px; text-align: left; }
+  .adv-meter { flex: 1; margin: 0; }
+}
+.adv-feeds { margin: 16px 0 0; font-size: .82em; color: var(--text-secondary); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.adv-feed { font-weight: 600; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--border-color); }
+.adv-feed.is-on { color: #0d9488; border-color: rgba(13, 148, 136, .4); }
+[data-theme="dark"] .adv-feed.is-on { color: #2dd4bf; }
+.adv-feed.is-off { color: var(--text-tertiary); opacity: .7; }
+.adv-feed-note { flex: 1 1 100%; color: var(--text-tertiary); font-weight: 400; }
+.adv-feed-note code { font-size: .92em; }

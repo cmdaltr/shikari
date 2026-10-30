@@ -19,6 +19,9 @@
   .cat-card h3 { margin: 0; font-size: 1.1rem; min-width: 0; }
   .cat-card h3 a { color: var(--text-primary); text-decoration: none; }
   .cat-card h3 a:hover { color: #0284C7; }
+  /* The user's own organisation — starred and highlighted, sorted first */
+  .cat-card-home { border-color: rgba(245, 158, 11, .5); box-shadow: 0 0 0 1px rgba(245, 158, 11, .25); }
+  .cat-home-star { flex: 0 0 auto; margin-left: auto; color: #f59e0b; font-size: 1.2rem; line-height: 1; }
   .cat-meta { color: var(--text-secondary); font-size: .88rem; display: flex; flex-wrap: wrap; gap: 4px 10px; }
   .cat-stats { display: flex; flex-wrap: wrap; gap: 8px; }
   .cat-stat { font-size: .82rem; padding: 3px 9px; border-radius: 999px; background: var(--bg-primary); border: 1px solid var(--border-color); }
@@ -47,7 +50,7 @@
   {% if companies %}
   <div class="cat-grid">
     {% for c in companies %}
-    <div class="cat-card" data-card-static>
+    <div class="cat-card{% if c.is_home %} cat-card-home{% endif %}" data-card-static>
       <div class="cat-card-head">
         <span class="cat-logo" aria-hidden="true">
           <img class="cat-logo-img" alt="" src="https://logo.clearbit.com/{{ c.domain }}?size=128"
@@ -56,6 +59,7 @@
           <span class="cat-logo-mono" hidden>{{ (c.name or c.domain)[:1]|upper }}</span>
         </span>
         <h3><a href="/exposure?domain={{ c.domain | urlencode }}">{{ c.name }}</a></h3>
+        {% if c.is_home %}<span class="cat-home-star" title="Your organisation">★</span>{% endif %}
       </div>
       <div class="cat-meta">
         <span>{{ c.domain }}</span>

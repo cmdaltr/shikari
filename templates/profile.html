@@ -291,6 +291,21 @@
                   </div>
                 </div>
 
+                <!-- Row: Organisation — the user's own org domain; auto-profiled and starred in the catalogue -->
+                <div style="display: flex; gap: 12px; align-items: flex-end; margin-top: 12px;">
+                  <div class="form-section" style="flex: 1 1 0; min-width: 0; margin: 0;">
+                    <label for="organisation" class="form-label">Organisation</label>
+                    <input type="text"
+                           name="organisation"
+                           id="organisation"
+                           class="form-input"
+                           placeholder="e.g. yourcompany.com"
+                           value="{{ user.organisation if user and user.organisation else '' }}">
+                    <p class="industries-hint" style="margin-top: 6px;">Your own organisation's domain. Archer profiles it, stars it in the
+                      <a href="/catalogue">company catalogue</a>, and builds its <strong>Ordered Adversary List</strong> — the actors most likely to target you.</p>
+                  </div>
+                </div>
+
                 <!-- Row 2: Team | Country | Save -->
                 <div style="display: flex; gap: 12px; align-items: flex-end; margin-top: 12px;">
                   <div class="form-section" style="flex: 2 1 0; min-width: 0; margin: 0;">
