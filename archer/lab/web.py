@@ -138,7 +138,7 @@ def overview(archer_session: Optional[str] = Cookie(None)):
         # can't collide, for the create dialog's suggestion
         taken = sorted({m["name"] for m in current} | set(machines.all_host_names(caps["ready"])))
     return {"host": caps, "templates": offered(caps), "machines": current, "taken": taken,
-            "job": dict(_job), "can_lab": can_lab, "is_admin": is_admin}
+            "job": dict(_job), "can_lab": can_lab, "is_admin": is_admin, "naming": _caldera_naming()}
 
 
 @router.get("/machines")
@@ -153,7 +153,14 @@ def list_machines(archer_session: Optional[str] = Cookie(None)):
     hosts = caldera.agent_hosts(_caldera_overrides(user))
     for m in rows:
         m["enrolled"] = (m.get("name") or "").lower() in hosts
-    return {"machines": rows, "job": dict(_job)}
+    return {"machines": rows, "job": dict(_job), "naming": _caldera_naming()}
+
+
+def _caldera_naming() -> dict:
+    """The lab naming/group convention, from the backend, so web and CLI can't drift apart."""
+    from archer.lab import caldera
+
+    return {"os_tag": caldera.OS_TAG, "group_for": caldera.GROUP_FOR}
 
 
 @router.get("/job")

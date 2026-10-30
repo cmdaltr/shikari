@@ -42,7 +42,30 @@ caldera:
 
 `CALDERA_URL` and `CALDERA_API_KEY` in the environment override both the per-user setting and the file (handy for a throwaway run). Wherever it comes from, the key goes only in CALDERA's `KEY` header: it is never logged, returned by Archer's API or written to a manifest. Using it needs the Operational analyst role, like the rest of Lab.
 
-Deploy sandcat agents on your lab machines from CALDERA itself, and put them in a group. The CALDERA card on **Emulate → Lab** shows the server, its groups and their platforms.
+Once connected, the CALDERA card on **Emulate → Lab** shows the **agent topology**: the server (with its host's OS icon and hostname) and every agent beneath it, each labelled by paw with its OS icon, the environment it runs in (Docker, Tart, UTM, OrbStack) and its group. Click an agent to act on it — start, stop or delete it when Archer manages its machine, or forget it either way. An agent enrolled outside Archer is drawn dashed and greyed, so it's clear which machines Archer can drive.
+
+## Adding agents
+
+You don't have to leave Archer to add an agent. **+ Add agent** on the CALDERA card either provisions a fresh disposable machine and enrols it, or enrols one you already have:
+
+- **Provision** — pick the OS (Linux or macOS; for Linux a full **Tart VM** or a light **Docker container**) and Archer creates the managed machine, boots it, and runs a sandcat agent in it, as one background job.
+- **Enrol** — run a sandcat agent on any running machine Archer already manages, a UTM Windows VM you've built included.
+
+The machine pulls the architecture-correct agent itself and runs it detached (systemd on Linux, launchd on macOS, a hidden process on Windows), so nothing streams over the hypervisor's guest agent — the amd64 default would fail on an arm64 Tart VM, so the right `architecture` is requested. macOS needs a base image with the Tart guest agent (the cirruslabs images ship it).
+
+Names follow a convention so the lab stays legible: `cal-<OSVer>` for a machine provisioned for CALDERA, `archer-<OSVer>` otherwise — `cal-Ubuntu2404`, `cal-macOSSeq`, `archer-Win11`, with a `-N` suffix on a clash. **Your machines** sorts Windows, then macOS, then Linux, hides Rivendell's own VMs (`rivendell-*`), and marks each as a CALDERA **agent** or **not enrolled**.
+
+The same from the command line:
+
+```
+archer-cli caldera provision linux              # a Tart Ubuntu VM, enrolled
+archer-cli caldera provision linux --engine docker
+archer-cli caldera provision macos              # needs a cirruslabs base
+archer-cli caldera enrol tart cal1              # enrol a machine Archer manages
+archer-cli caldera list                         # managed machines, and which are agents
+```
+
+The web, the desktop app (the same UI) and the CLI share one backend source for the naming and group convention, so they can't drift. For a throwaway lab from scratch, `scripts/telemetry/caldera-lab.sh` still does the whole bring-up end to end (`up` for the server and OrbStack Linux agents, `win <vm>` for a UTM Windows VM, `mac <vm>` for a Tart macOS VM), or deploy sandcat from CALDERA's own UI.
 
 ## Planning and running
 

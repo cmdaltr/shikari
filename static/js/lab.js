@@ -152,12 +152,14 @@
 
   let taken = new Set();  // every machine name on the host, for suggesting a clash-free new one
   let lastMachines = [];  // the last machines listing, for the clone-from-create picker
+  let naming = {};        // the lab naming convention, from the backend (shared with the CLI)
   function refresh() {
     api('/api/lab/overview').then(data => {
       canLab = !!data.can_lab;
       isAdmin = !!data.is_admin;
       host(data.host);
       taken = new Set(data.taken || []);
+      naming = data.naming || {};
       // Windows (the UTM card) leads, then macOS, then Linux/Ubuntu last
       const tpls = (data.templates || []).slice().sort((a, b) => (a.os === 'macos' ? 0 : 1) - (b.os === 'macos' ? 0 : 1));
       el('lab-templates').innerHTML = utmCard(data.host) + templateCards(tpls);
@@ -185,9 +187,11 @@
       .then(r => { if (r.error) alert(r.error + (r.detail ? '\n\n' + r.detail : '')); return r; });
   }
 
-  // A clash-free name in the lab convention: archer-<OSVer> (cal-<OSVer> is for CALDERA provisioning)
-  const OS_TAG = { linux: 'Ubuntu2404', macos: 'macOSSeq', windows: 'Win11' };
+  // A clash-free name in the lab convention: archer-<OSVer> (cal-<OSVer> is for CALDERA provisioning).
+  // The OS tags come from the backend (data.naming), shared with the CLI, with a fallback.
+  const OS_TAG_FALLBACK = { linux: 'Ubuntu2404', macos: 'macOSSeq', windows: 'Win11' };
   function suggestName(id) {
+    const OS_TAG = naming.os_tag || OS_TAG_FALLBACK;
     const os = id.startsWith('macos') ? 'macos' : id.startsWith('ubuntu') ? 'linux' : id.startsWith('windows') ? 'windows' : '';
     const base = `archer-${OS_TAG[os] || id.replace(/-(vm|container)$/, '')}`;
     if (!taken.has(base)) return base;

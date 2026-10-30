@@ -85,7 +85,8 @@ Archer closes the loop between red and blue: it runs a real adversary and then c
 - **Chained operations with a real implant** - the sandcat agent beacons and takes tasks over C2, and each step's facts feed the next, so detections keyed on process lineage, beaconing and multi-step behaviour are exercised — not just a command run in a local shell.
 - **Zero-touch log capture** - each step's endpoint logs are read back over the agent's own C2 channel, on Windows, Linux or macOS, with nothing installed on the host and no hypervisor access.
 - **Static detection and correlation checks** - saved detections and correlations are checked against what ran — per technique (matched / missed / no detection) and per correlation (every part on one host, inside its window) — with no AI and no SIEM.
-- **Wherever you work** - run and check it from the web UI, the desktop app, or the `lab/caldera` console module.
+- **Provision agents in Archer** - an agent-topology diagram, and **+ Add agent** to provision a disposable VM or container (Tart/Docker Linux, Tart macOS, UTM Windows) and enrol it, or enrol one you already manage — the machine pulls the architecture-correct sandcat itself. Names follow a convention (`cal-Ubuntu2404`, `archer-Win11`), and every view shows which machines are enrolled.
+- **Wherever you work** - run, check and provision from the web UI, the desktop app, the `archer-cli caldera` command, or the `lab/caldera` console module — one shared backend, so they can't drift.
 
 ### Additional Features
 

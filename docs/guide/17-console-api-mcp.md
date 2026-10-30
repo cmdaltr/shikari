@@ -39,6 +39,8 @@ archer-cli (hunt/group) > run
 
 The hunt modules share options: `CORRELATE`, `LOL` (on), `OSINT`, `OSINT_COMPARE`, `MERGE_BY_TACTIC`, `MERGE_BY_PARENT`, `EXCLUDE` (SIEMs to leave out), `VALIDATE`, and `PROVIDER`/`MODEL` for AI. `show options` lists each module's own.
 
+Provisioning and enrolling CALDERA agents has its own top-level command, `archer-cli caldera provision|enrol|list` — the CLI half of the web **+ Add agent** flow, sharing the same backend naming and group convention ([CALDERA](25-caldera.md)).
+
 ## Python client
 
 `archer.client.ArcherClient` is what the console and MCP server use; use it in your own scripts.

@@ -361,12 +361,13 @@
   // Add a CALDERA agent for an OS that isn't present: provision a fresh managed machine and enrol it,
   // or enrol one Archer already manages. Backed by /caldera/provision-agent and /caldera/enrol.
   function addAgentDialog() {
-    api('/api/lab/machines').then(({ machines }) => {
+    api('/api/lab/machines').then(({ machines, naming }) => {
       const ms = machines || [];
       const enrolled = new Set(agentNames);
       const free = ms.filter(m => m.manageable && m.state === 'running' && m.os && !enrolled.has((m.name || '').toLowerCase()) && !/^rivendell-/i.test(m.name || ''));
-      const GROUP = { linux: 'disposable', macos: 'maclab', windows: 'winlab' };
-      const OS_TAG = { linux: 'Ubuntu2404', macos: 'macOSSeq', windows: 'Win11' };
+      // Convention from the backend (single source shared with the CLI), with a safe fallback.
+      const GROUP = (naming && naming.group_for) || { linux: 'disposable', macos: 'maclab', windows: 'winlab' };
+      const OS_TAG = (naming && naming.os_tag) || { linux: 'Ubuntu2404', macos: 'macOSSeq', windows: 'Win11' };
       const nextName = os => {  // the lab convention: cal-<OSVer>, -N on a clash
         const taken = new Set(ms.map(m => (m.name || '').toLowerCase())), base = 'cal-' + (OS_TAG[os] || 'VM');
         if (!taken.has(base.toLowerCase())) return base;
