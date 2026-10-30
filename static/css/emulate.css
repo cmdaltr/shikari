@@ -407,6 +407,9 @@ table.em-rows { table-layout: fixed; width: 100%; }
 /* An agent on the host itself: flagged amber — macOS belongs in a disposable Tart VM */
 .netmap-node.is-host rect { stroke: var(--lab-amber); stroke-width: 1.5; stroke-dasharray: 4 3; }
 .netmap-node.is-host .netmap-s { fill: var(--lab-amber); }
+/* Enrolled outside Archer (not a managed machine): dashed grey, so it's visible without clicking */
+.netmap-node.is-external rect { stroke-dasharray: 4 3; }
+.netmap-node.is-external .netmap-s { fill: var(--text-secondary); font-style: italic; }
 .netmap-t { font: 600 12px/1 Inter, system-ui, sans-serif; fill: var(--text-primary); }
 .netmap-s { font: 400 10.5px/1 Inter, system-ui, sans-serif; fill: var(--text-secondary); }
 /* Per-agent action menu, anchored under the clicked node */
@@ -421,6 +424,12 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .netmap-menu-item.is-danger { color: var(--accent); }
 .netmap-menu-item.is-danger:hover { background: rgba(239, 68, 68, .12); }
 .netmap-menu-note { padding: 5px 8px 3px; font-size: .8em; color: var(--text-secondary); }
+/* Enrolled-as-a-CALDERA-agent cue on a machine row (mirrors the diagram and the CLI) */
+.lab-agent-badge { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; padding: 1px 7px;
+  border: 1px solid var(--border-color); border-radius: 999px; font-size: .72em; font-weight: 600;
+  color: var(--text-secondary); white-space: nowrap; vertical-align: 1px; }
+.lab-agent-badge svg { width: 11px; height: 11px; }
+.lab-agent-badge.is-on { color: var(--lab-teal); border-color: color-mix(in srgb, var(--lab-teal) 45%, transparent); }
 /* Add-agent modal: two-up fields, and a divider before the "enrol existing" section */
 .add-agent h4 { margin: 0 0 8px; font-size: .95em; }
 .lab-field-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }

@@ -141,7 +141,14 @@ def list_machines(archer_session: Optional[str] = Cookie(None)):
     user, denied = _lab(archer_session)
     if denied:
         return denied
-    return {"machines": machines.listing(user_id=user.id, is_admin=_is_admin(user)), "job": dict(_job)}
+    from archer.lab import caldera
+
+    rows = machines.listing(user_id=user.id, is_admin=_is_admin(user))
+    # Mark which machines are currently CALDERA agents, so the UI can show enrolled vs not.
+    hosts = caldera.agent_hosts(_caldera_overrides(user))
+    for m in rows:
+        m["enrolled"] = (m.get("name") or "").lower() in hosts
+    return {"machines": rows, "job": dict(_job)}
 
 
 @router.get("/job")

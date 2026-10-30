@@ -72,14 +72,19 @@
       // An agent on the host itself is a misconfiguration: macOS should detonate in a disposable
       // Tart VM, never on this Mac. Flag it amber and say so, rather than detonate on the host.
       const onHost = a.env === 'this host';
+      // Enrolled outside Archer: a live agent whose machine Archer doesn't manage (no engine match).
+      const external = !onHost && !a.engine;
       // Labelled by paw, not host: the server runs on this Mac too, so an agent host of e.g.
       // macbook.local would otherwise read as the server. The paw is the agent's stable identity.
       // Subtext: the environment's icon (or its name when it has none) then the CALDERA group.
       const sub = onHost ? 'on host — use a Tart VM'
         : (envImg ? '' : (a.env ? esc(a.env) + ' · ' : '')) + esc(a.group || '(no group)');
       const data = ` data-paw="${esc(a.paw || a.host)}" data-engine="${esc(a.engine || '')}" data-machine="${esc(a.machine || '')}" data-env="${esc(a.env || '')}"`;
-      svg += `<g class="netmap-node is-agent${onHost ? ' is-host' : ''}"${data}><rect x="${x}" y="${agentY}" width="${NW}" height="${NH}" rx="9"/>` +
-        (onHost ? '<title>Runs on the host itself — forget it and detonate macOS in a disposable Tart VM instead.</title>' : '') +
+      const title = onHost ? 'Runs on the host itself — forget it and detonate macOS in a disposable Tart VM instead.'
+        : external ? 'Enrolled outside Archer — not a managed machine, so Archer can\'t start/stop/delete it.'
+        : `Managed by Archer (${esc(a.env)})`;
+      svg += `<g class="netmap-node is-agent${onHost ? ' is-host' : ''}${external ? ' is-external' : ''}"${data}><rect x="${x}" y="${agentY}" width="${NW}" height="${NH}" rx="9"/>` +
+        `<title>${title}</title>` +
         osMark(a.platform, x + 9, my2 - 8) +
         envIc(a.env, x + 31, my2 + 3) +
         `<text x="${x + 31}" y="${my2 - 3}" class="netmap-t">${esc(a.paw || a.host)}</text>` +

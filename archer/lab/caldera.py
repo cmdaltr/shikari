@@ -465,6 +465,24 @@ def enrol_agent(engine_key: str, name: str, os_name: str, group: str, server_url
     say(f"{name} enrolled — it will appear in the topology on its next beacon")
 
 
+def agent_hosts(overrides: Optional[Dict] = None) -> set:
+    """Lower-cased paws and hosts of the CALDERA agents currently checked in — for marking which
+    Archer machines are enrolled. Best-effort: an empty set when CALDERA isn't configured or is down,
+    so a caller can always treat 'not in the set' as 'not enrolled'."""
+    if not configured(overrides):
+        return set()
+    try:
+        client = Client.from_settings(overrides)
+        names = set()
+        for a in client.agents():
+            for k in (a.get("paw"), a.get("host")):
+                if k:
+                    names.add(str(k).lower())
+        return names
+    except LabError:
+        return set()
+
+
 def _wait_ready(engine_key: str, name: str, say: Callable[[str], None] = print,
                 tries: int = 60, interval: int = 5) -> None:
     """Wait until a just-started machine will accept exec — a VM needs to boot its guest agent."""

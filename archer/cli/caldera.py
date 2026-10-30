@@ -79,8 +79,12 @@ def _list(args) -> int:
     if not rows:
         print("No Archer-managed machines. Create one with: archer-cli caldera provision linux")
         return 0
+    hosts = caldera.agent_hosts()  # which are live CALDERA agents (empty if the server isn't configured here)
     for m in rows:
-        print(f"  {m['engine']:7} {m['name']:20} {m.get('os') or '?':7} {m.get('state') or '?'}")
+        mark = "agent" if (m.get("name") or "").lower() in hosts else "-"
+        print(f"  {m['engine']:7} {m['name']:22} {m.get('os') or '?':7} {m.get('state') or '?':8} {mark}")
+    if not hosts:
+        print("  (enrolment unknown — set CALDERA_URL/CALDERA_API_KEY, or the caldera block in bespoke/config.yaml)")
     return 0
 
 
