@@ -358,6 +358,21 @@ _PLATFORM = {"windows": "windows", "macos": "darwin", "linux": "linux"}
 GROUP_FOR = {"linux": "disposable", "macos": "maclab", "windows": "winlab"}
 # The templates Archer can provision a CALDERA agent from, by OS. "Offer both" for Linux.
 TEMPLATES_FOR = {"linux": ["ubuntu-vm", "ubuntu-container"], "macos": ["macos-vm"]}
+# Short OS+version tag for a machine name, by OS (the lab naming convention).
+OS_TAG = {"linux": "Ubuntu2404", "macos": "macOSSeq", "windows": "Win11"}
+
+
+def suggested_name(os_name: str, existing, for_caldera: bool = True) -> str:
+    """A machine name in the lab convention: cal-<OSVer> for a CALDERA machine, archer-<OSVer>
+    otherwise, with a -N suffix to dodge a clash (cal-Ubuntu2404, cal-Ubuntu2404-2, …)."""
+    base = f"{'cal' if for_caldera else 'archer'}-{OS_TAG.get(os_name, 'VM')}"
+    taken = {str(n).lower() for n in (existing or [])}
+    if base.lower() not in taken:
+        return base
+    i = 2
+    while f"{base}-{i}".lower() in taken:
+        i += 1
+    return f"{base}-{i}"
 
 
 def _agent_arch(os_name: str) -> str:

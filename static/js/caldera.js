@@ -364,9 +364,14 @@
     api('/api/lab/machines').then(({ machines }) => {
       const ms = machines || [];
       const enrolled = new Set(agentNames);
-      const free = ms.filter(m => m.manageable && m.state === 'running' && m.os && !enrolled.has((m.name || '').toLowerCase()));
+      const free = ms.filter(m => m.manageable && m.state === 'running' && m.os && !enrolled.has((m.name || '').toLowerCase()) && !/^rivendell-/i.test(m.name || ''));
       const GROUP = { linux: 'disposable', macos: 'maclab', windows: 'winlab' };
-      const nextName = os => { const n = new Set(ms.map(m => m.name)); let i = 1; while (n.has(os + i)) i++; return os + i; };
+      const OS_TAG = { linux: 'Ubuntu2404', macos: 'macOSSeq', windows: 'Win11' };
+      const nextName = os => {  // the lab convention: cal-<OSVer>, -N on a clash
+        const taken = new Set(ms.map(m => (m.name || '').toLowerCase())), base = 'cal-' + (OS_TAG[os] || 'VM');
+        if (!taken.has(base.toLowerCase())) return base;
+        let i = 2; while (taken.has((base + '-' + i).toLowerCase())) i++; return base + '-' + i;
+      };
       open('Add a CALDERA agent', `
         <div class="add-agent">
           <h4>Provision a new disposable machine</h4>

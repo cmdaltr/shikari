@@ -129,6 +129,11 @@ def overview(archer_session: Optional[str] = Cookie(None)):
             current = machines.listing(caps["ready"], user_id=user.id, is_admin=is_admin)
         except LabError:
             current = []
+        from archer.lab import caldera
+
+        hosts_enrolled = caldera.agent_hosts(_caldera_overrides(user))
+        for m in current:
+            m["enrolled"] = (m.get("name") or "").lower() in hosts_enrolled
         # Every name already on the host — Archer's and the host's other VMs too — so a new name
         # can't collide, for the create dialog's suggestion
         taken = sorted({m["name"] for m in current} | set(machines.all_host_names(caps["ready"])))

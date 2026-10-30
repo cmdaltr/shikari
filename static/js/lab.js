@@ -162,7 +162,11 @@
       const tpls = (data.templates || []).slice().sort((a, b) => (a.os === 'macos' ? 0 : 1) - (b.os === 'macos' ? 0 : 1));
       el('lab-templates').innerHTML = utmCard(data.host) + templateCards(tpls);
       el('lab-templates-empty').hidden = tpls.length > 0;
-      const ms = data.machines || [];
+      // Exclude Rivendell's own VMs, and order by OS: Windows, then macOS, then Linux.
+      const osRank = { windows: 0, macos: 1, linux: 2 };
+      const ms = (data.machines || [])
+        .filter(m => !/^rivendell-/i.test(m.name || ''))
+        .sort((a, b) => (osRank[a.os] ?? 3) - (osRank[b.os] ?? 3) || (a.name || '').localeCompare(b.name || ''));
       lastMachines = ms;
       el('lab-machines').innerHTML = ms.map(machineRow).join('');
       el('lab-machines-empty').hidden = ms.length > 0;
@@ -181,13 +185,13 @@
       .then(r => { if (r.error) alert(r.error + (r.detail ? '\n\n' + r.detail : '')); return r; });
   }
 
-  // A free name that starts with "archer" and can't clash with a machine already on the host
+  // A clash-free name in the lab convention: archer-<OSVer> (cal-<OSVer> is for CALDERA provisioning)
+  const OS_TAG = { linux: 'Ubuntu2404', macos: 'macOSSeq', windows: 'Win11' };
   function suggestName(id) {
-    const slug = id.replace(/-(vm|container)$/, '');
-    for (let n = 1; ; n++) {
-      const name = `archer-${slug}-${n}`;
-      if (!taken.has(name)) return name;
-    }
+    const os = id.startsWith('macos') ? 'macos' : id.startsWith('ubuntu') ? 'linux' : id.startsWith('windows') ? 'windows' : '';
+    const base = `archer-${OS_TAG[os] || id.replace(/-(vm|container)$/, '')}`;
+    if (!taken.has(base)) return base;
+    for (let n = 2; ; n++) if (!taken.has(`${base}-${n}`)) return `${base}-${n}`;
   }
 
   // Create

@@ -40,15 +40,10 @@ def _server(arg: str) -> str:
 
 
 def _autoname(os_name: str) -> str:
-    """A free machine name like linux1, linux2 — the first that no engine already holds."""
+    """A free machine name in the lab convention (cal-Ubuntu2404, cal-macOSSeq, …)."""
     from archer.lab.machines import all_host_names
 
-    taken = set(all_host_names())
-    for n in range(1, 100):
-        cand = f"{os_name}{n}"
-        if cand not in taken:
-            return cand
-    return f"{os_name}-agent"
+    return caldera.suggested_name(os_name, all_host_names(), for_caldera=True)
 
 
 def _provision(args) -> int:
@@ -75,10 +70,13 @@ def _enrol(args) -> int:
 def _list(args) -> int:
     from archer.lab import machines
 
-    rows = machines.listing(is_admin=True)
+    # Rivendell's own VMs are excluded — this is Archer's lab.
+    rows = [m for m in machines.listing(is_admin=True) if not m["name"].lower().startswith("rivendell-")]
     if not rows:
         print("No Archer-managed machines. Create one with: archer-cli caldera provision linux")
         return 0
+    rank = {"windows": 0, "macos": 1, "linux": 2}
+    rows.sort(key=lambda m: (rank.get(m.get("os"), 3), m["name"]))
     hosts = caldera.agent_hosts()  # which are live CALDERA agents (empty if the server isn't configured here)
     for m in rows:
         mark = "agent" if (m.get("name") or "").lower() in hosts else "-"
