@@ -161,6 +161,24 @@ def test_plan_reports_gaps_for_unrunnable():
     assert p["gaps"] == ["T1555"]
 
 
+def test_coverage_matches_techniques_to_groups_by_os():
+    # T1057 runs on Windows and Linux; T1082 only on Linux. The Windows group should show T1082 as a
+    # gap, the Linux group should run both — the OS matching the Detonate dialog relies on.
+    abilities = [
+        _ability("win-and-lin", "T1057", "stockpile", platform="windows"),
+        _ability("lin-dup", "T1057", "stockpile", platform="linux", executor="sh"),
+        _ability("lin-only", "T1082", "stockpile", platform="linux", executor="sh"),
+    ]
+    cov = caldera.coverage(abilities, _agents(), ["T1057", "T1082"])
+    by_tech = {t["id"]: t["platforms"] for t in cov["techniques"]}
+    assert by_tech["T1057"] == ["linux", "windows"]
+    assert by_tech["T1082"] == ["linux"]
+    by_group = {g["group"]: g for g in cov["groups"]}
+    assert by_group["red"]["runnable"] == ["T1057"] and by_group["red"]["gaps"] == ["T1082"]
+    assert sorted(by_group["blue"]["runnable"]) == ["T1057", "T1082"] and by_group["blue"]["gaps"] == []
+    assert by_group["red"]["vms"] == [{"host": "paw1", "paw": "paw1", "platform": "windows"}]
+
+
 def test_plan_lines_shape():
     abilities = [_ability("a1", "T1057", "stockpile", command="Get-Process")]
     p = caldera.plan(abilities, _agents(), ["T1057", "T9999"], "red")

@@ -22,9 +22,17 @@ from archer.lab.runner import LabError
 from archer.lab.templates import offered
 
 router = APIRouter(prefix="/api/lab", tags=["lab"])
-_job: Dict = {"state": "idle", "what": "", "started": None, "finished": None, "error": None}
+_job: Dict = {"state": "idle", "what": "", "started": None, "finished": None, "error": None, "tasks": []}
 _log: deque = deque(maxlen=200)
 _lock = threading.Lock()
+
+
+def _task(tid: str, **changes):
+    """Update one entry in the running job's task list (what the Provision modal renders)."""
+    for t in _job.get("tasks", []):
+        if t["id"] == tid:
+            t.update(changes)
+            return
 
 
 def _user(archer_session: Optional[str]):
@@ -78,12 +86,14 @@ def _say(line: str):
     _log.append(f"{time.strftime('%H:%M:%S')}  {line}")
 
 
-def _background(what: str, fn):
-    """Run one slow job at a time; its progress is in _job and _log for the page to poll."""
+def _background(what: str, fn, tasks=None):
+    """Run one slow job at a time; its progress is in _job and _log for the page to poll. `tasks`
+    seeds the structured task list (Provision); other jobs leave it empty."""
     with _lock:
         if _job["state"] == "running":
             return {"started": False, "job": dict(_job)}
         _job.update(state="running", what=what, started=time.time(), finished=None, error=None)
+        _job["tasks"] = list(tasks or [])
         _log.clear()
     _say(what)
 
@@ -363,17 +373,22 @@ def caldera_status(archer_session: Optional[str] = Cookie(None)):
     user, denied = _lab(archer_session)
     if denied:
         return denied
-    from archer.lab import caldera
+    from archer.lab import caldera, caldera_provision
 
     overrides = _caldera_overrides(user)
+    # Whether this host can stand CALDERA up in-app (macOS, admin, opt-in), and whether a lab it
+    # provisioned is up right now — so the panel shows Provision, or green Re-provision/De-provision.
+    can_provision = caldera_provision.can_provision(_is_admin(user))[0]
+    provisioned = can_provision and caldera_provision.lab_up()
+    base = {"can_provision": can_provision, "provisioned": provisioned}
     if not caldera.configured(overrides):
         return {"configured": False, "groups": [],
-                "detail": "Set your CALDERA server and key in Profile → API Keys → Emulation Tools"}
+                "detail": "Set your CALDERA server and key in Profile → API Keys → Emulation Tools", **base}
     try:
         _, client = _caldera(user)
-        return {"configured": True, "url": client.url, "groups": caldera.groups(client.agents())}
+        return {"configured": True, "url": client.url, "groups": caldera.groups(client.agents()), **base}
     except LabError as e:
-        return {"configured": True, "error": e.message, "detail": e.detail, "groups": []}
+        return {"configured": True, "error": e.message, "detail": e.detail, "groups": [], **base}
 
 
 @router.post("/caldera/operate")
@@ -423,6 +438,149 @@ async def caldera_operate(request: Request, archer_session: Optional[str] = Cook
                                 host=capture.get("host", ""), say=say)
 
     return _background(f"CALDERA operation on {group}", work)
+
+
+@router.post("/caldera/plan-matrix")
+async def caldera_plan_matrix(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """For the Detonate dialog: resolve a group/CVE/technique target to techniques, and show per
+    agent group which VMs it has and which of those techniques each can run. Reads only."""
+    user, denied = _lab(archer_session)
+    if denied:
+        return denied
+    from archer.config import GENERATE_DIR
+
+    data = await request.json()
+    kind, value = data.get("kind", "technique"), str(data.get("value", "")).strip()
+    if not value:
+        return JSONResponse({"error": "Choose a target"}, status_code=400)
+    try:
+        caldera, client = _caldera(user)
+        techs = caldera.resolve_techniques(kind, value, GENERATE_DIR)
+        if not techs:
+            return JSONResponse({"error": f"Nothing resolved from {kind} {value!r}"}, status_code=400)
+        return {"ok": True, **caldera.coverage(client.abilities(), client.agents(), techs)}
+    except LabError as e:
+        return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
+
+
+@router.post("/caldera/detonate")
+async def caldera_detonate(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Run the target against one or more agent groups, capturing each step's logs over the agent's
+    own C2 and checking detections against them. One background job runs the groups in turn."""
+    user, denied = _lab(archer_session)
+    if denied:
+        return denied
+    from archer.config import GENERATE_DIR
+
+    data = await request.json()
+    kind, value = data.get("kind", "technique"), str(data.get("value", "")).strip()
+    name = data.get("name", "")
+    groups_sel = [str(g).strip() for g in (data.get("groups") or []) if str(g).strip()]
+    if not value:
+        return JSONResponse({"error": "Choose a target"}, status_code=400)
+    if not groups_sel:
+        return JSONResponse({"error": "Choose at least one agent group"}, status_code=400)
+    try:
+        caldera, client = _caldera(user)
+        techs = caldera.resolve_techniques(kind, value, GENERATE_DIR)
+        if not techs:
+            return JSONResponse({"error": f"Nothing resolved from {kind} {value!r}"}, status_code=400)
+    except LabError as e:
+        return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
+
+    def work(say):
+        for group in groups_sel:
+            say(f"— Group {group} —")
+            try:
+                run = caldera.operate(client, techs, group, name=name, target=f"{kind}: {value}",
+                                      execute=True, say=say)
+            except LabError as e:
+                say(f"Skipped {group}: {e.message}")  # e.g. no ability this group can run — carry on
+                continue
+            state = caldera.wait(client, run["operation_id"], say=say)
+            say(f"Operation on {group} finished: {state}")
+            manifest = caldera.collect(client, run["operation_id"], say=say, rebuild=False)
+            caldera.capture_via_agent(client, manifest, say=say)
+
+    return _background(f"Detonate {kind} {value} on {', '.join(groups_sel)}", work)
+
+
+@router.post("/caldera/provision")
+def caldera_provision_run(archer_session: Optional[str] = Cookie(None)):
+    """Stand up a disposable CALDERA lab on this macOS host and save its URL/key to the user's
+    profile (#30, Stage 1). Nothing detonates — this only installs and starts the server/agents.
+    Progress is a structured task list on the job, which the Provision modal polls."""
+    user, denied = _lab(archer_session)
+    if denied:
+        return denied
+    from archer.lab import caldera_provision as prov
+
+    ok, why = prov.can_provision(_is_admin(user))
+    if not ok:
+        return JSONResponse({"error": "In-app provisioning isn't available here", "detail": why}, status_code=400)
+
+    uid = user.id
+
+    def save_key(url: str, key: str, verify_tls: bool):
+        """Store the provisioned server's URL/key on the user, encrypted, like Profile does."""
+        from archer.auth.encryption import encrypt_api_key
+        from archer.database.models import APIKey, User
+
+        db = next(get_db())
+        try:
+            u = db.query(User).filter(User.id == uid).first()
+            if u:
+                u.caldera_url = url.rstrip("/")
+                u.caldera_verify_tls = verify_tls
+            row = db.query(APIKey).filter(APIKey.user_id == uid, APIKey.platform == "caldera").first()
+            if row:
+                row.encrypted_key = encrypt_api_key(key)
+            else:
+                db.add(APIKey(user_id=uid, platform="caldera", encrypted_key=encrypt_api_key(key)))
+            db.commit()
+        finally:
+            db.close()
+
+    return _background("Provision CALDERA", lambda say: prov.provision(say, _task, save_key),
+                       tasks=prov.initial_tasks())
+
+
+@router.post("/caldera/deprovision")
+def caldera_deprovision(archer_session: Optional[str] = Cookie(None)):
+    """Tear down the provisioned lab (stop the server, delete the agents) and remove CALDERA from
+    the user's profile. Only where in-app provisioning is allowed."""
+    user, denied = _lab(archer_session)
+    if denied:
+        return denied
+    from archer.lab import caldera_provision as prov
+
+    ok, why = prov.can_provision(_is_admin(user))
+    if not ok:
+        return JSONResponse({"error": "In-app provisioning isn't available here", "detail": why}, status_code=400)
+
+    uid = user.id
+
+    def clear_key():
+        from archer.database.models import APIKey, User
+
+        db = next(get_db())
+        try:
+            u = db.query(User).filter(User.id == uid).first()
+            if u:
+                u.caldera_url = None
+            row = db.query(APIKey).filter(APIKey.user_id == uid, APIKey.platform == "caldera").first()
+            if row:
+                db.delete(row)
+            db.commit()
+        finally:
+            db.close()
+
+    def work(say):
+        prov.deprovision(say)
+        clear_key()
+        say("CALDERA removed from your profile.")
+
+    return _background("De-provision CALDERA", work)
 
 
 @router.post("/caldera/collect")

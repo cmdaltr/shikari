@@ -249,6 +249,10 @@ class App:
         self.window.set_title("Archer")
         self.window.load_html(desktop.LOADING)
         if self.local is None:
+            # The local app runs its own server on the user's machine, so provisioning a CALDERA lab
+            # here (archer.lab.caldera_provision) is in scope — a client of a central server never
+            # reaches this path. setdefault so ARCHER_ALLOW_LAB_PROVISION=0 can still turn it off.
+            os.environ.setdefault("ARCHER_ALLOW_LAB_PROVISION", "1")
             # Only a local Archer needs the bundled data and its own server
             seed(self.home, version())
             from archer import paths

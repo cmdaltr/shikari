@@ -181,7 +181,7 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-engine-runs { font-size: .82em; color: var(--text-secondary); margin-top: 2px; }
 .lab-install { display: block; font-size: .78em; padding: 4px 6px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; white-space: nowrap; overflow: auto; max-width: 48%; }
 
-.lab-cols { display: grid; gap: 20px; grid-template-columns: 1fr 1fr; }
+.lab-cols { display: grid; gap: 20px; grid-template-columns: 1fr 1fr; margin-top: 24px; }
 @media (max-width: 860px) { .lab-cols { grid-template-columns: 1fr; } }
 .lab-templates { display: grid; gap: 10px; }
 .lab-template { border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; background: var(--bg-primary); }
@@ -210,7 +210,8 @@ table.em-rows { table-layout: fixed; width: 100%; }
 
 .lab-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, .45); }
 .lab-modal[hidden] { display: none; }
-.lab-modal-box { width: min(520px, calc(100vw - 32px)); max-height: 80vh; overflow: auto; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 16px 40px rgba(0, 0, 0, .3); }
+.lab-modal-box { width: min(600px, calc(100vw - 32px)); max-height: 80vh; overflow: auto; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 16px 40px rgba(0, 0, 0, .3); }
+.lab-modal-box.lab-modal-wide { width: min(880px, calc(100vw - 32px)); }
 .lab-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: inherit; }
 .lab-modal-close { border: 0; background: none; font-size: 1.4em; line-height: 1; cursor: pointer; color: var(--text-secondary); }
 .lab-modal-body { padding: 16px; }
@@ -320,7 +321,11 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .em-rec-cell { white-space: normal; }
 .em-sources-head { display: flex; align-items: center; gap: 12px; }
 .em-sources-head h3 { margin-right: auto; }
-.em-sources-head .ms-state { font-size: .85em; color: var(--text-secondary); }
+/* Update sits to the right of the recordings note, on the same row */
+.em-rec-row { display: flex; align-items: flex-start; gap: 16px; }
+.em-rec-row .ms-note { margin: 0; flex: 1; }
+.em-build-row { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.em-build-row .ms-state { font-size: .85em; color: var(--text-secondary); }
 .em-rec-total { font-weight: 600; }
 .em-rec-total small { font-weight: 400; color: var(--text-secondary); }
 .em-plats { display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap; row-gap: 10px; }
@@ -363,12 +368,64 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .em-ic-red { stroke: var(--accent); }
 
 /* CALDERA operations (#30) */
-.lab-caldera { margin-top: 20px; }
-.lab-caldera-status { font-size: .88em; margin-bottom: 8px; }
+.lab-caldera { margin-top: 26px; }
+/* Status on the left, the actions (set-up, or plan/collect) pinned to the right of the panel */
+.lab-caldera-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.lab-caldera-bar .lab-actions { margin-top: 0; }
+.lab-caldera-status { font-size: .88em; }
+.lab-caldera-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+/* The CALDERA actions read as one set: red outline, filling on hover */
+.lab-actions.is-caldera .ui-pill { border-color: var(--accent) !important; color: var(--accent) !important; }
+.lab-actions.is-caldera .ui-pill:hover:not(:disabled) { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
+/* Green once a lab is provisioned here (the Re-provision button) */
+.lab-actions.is-caldera .ui-pill.is-provisioned { border-color: #16a34a !important; color: #16a34a !important; }
+.lab-actions.is-caldera .ui-pill.is-provisioned:hover:not(:disabled) { background: #16a34a !important; color: #fff !important; border-color: #16a34a !important; }
+.lab-caldera-bar .ms-log, #prov-log { margin-top: 10px; max-height: 180px; }
 .lab-caldera-ops { margin-top: 10px; }
 .lab-caldera-check { margin-top: 14px; }
 .lab-caldera-check h4 { margin: 14px 0 6px; font-size: .92em; }
 .lab-caldera-cmd { font-family: var(--font-mono, monospace); font-size: .8em; word-break: break-all; }
+
+/* Provision modal: the live task checklist (#30 Stage 1) */
+.lab-tasks { list-style: none; margin: 10px 0; padding: 0; }
+.lab-task { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; font-size: .9em; border-top: 1px solid var(--border-color); }
+.lab-task:first-child { border-top: 0; }
+.lab-task-mark { flex-shrink: 0; width: 1.2em; text-align: center; color: var(--text-secondary); }
+.lab-task-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lab-task-body small { color: var(--text-secondary); }
+.lab-task-action { font-family: var(--font-mono, monospace); font-size: .82em; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 7px; margin-top: 3px; white-space: pre-wrap; word-break: break-all; }
+.lab-task.is-running { color: var(--lab-teal); }
+.lab-task.is-running .lab-task-mark { color: var(--lab-teal); }
+.lab-task.is-waiting .lab-task-mark { color: #d97706; }
+.lab-task.is-done .lab-task-mark { color: var(--lab-teal); }
+.lab-task.is-failed .lab-task-mark { color: var(--accent); }
+.lab-task.is-pending { opacity: .6; }
+.btn-primary.is-detonate { background: var(--accent); border-color: var(--accent); }
+/* Detonate reads as the live/dangerous action: a solid red pill, not an outline one */
+.lab-actions.is-caldera .ui-pill.is-detonate { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
+.lab-actions.is-caldera .ui-pill.is-detonate:hover:not(:disabled) { filter: brightness(1.08); }
+
+/* Provision modal: checklist left, explanation + result right, equal height */
+.prov-grid { display: flex; gap: 18px; align-items: stretch; }
+.prov-col { flex: 1 1 0; min-width: 0; }
+.prov-side { display: flex; flex-direction: column; gap: 10px; }
+.prov-result { margin-top: auto; border: 1px solid #16a34a; border-radius: 8px; padding: 12px; background: rgba(22, 163, 74, .06); }
+.prov-ok { font-weight: 600; color: #16a34a; }
+.prov-url { font-family: var(--font-mono, monospace); font-size: .85em; word-break: break-all; margin: 4px 0; }
+@media (max-width: 640px) { .prov-grid { flex-direction: column; } }
+
+/* Detonate dialog: resolved techniques (with OS badges) and the per-group VM/coverage picker */
+.det-block { margin: 12px 0; }
+.det-head { display: block; font-size: .72em; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); margin-bottom: 6px; }
+.det-techs { display: flex; flex-wrap: wrap; gap: 6px; }
+.det-tech { font-size: .82em; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; padding: 3px 7px; display: inline-flex; align-items: center; gap: 5px; }
+.det-os { font-size: .7em; text-transform: uppercase; border: 1px solid var(--border-color); border-radius: 4px; padding: 0 4px; color: var(--text-secondary); }
+.det-grp { display: flex; align-items: flex-start; gap: 9px; padding: 8px 0; border-top: 1px solid var(--border-color); font-size: .88em; cursor: pointer; }
+.det-grp.is-empty { opacity: .55; cursor: default; }
+.det-grp input { margin-top: 3px; }
+.det-grp-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.det-grp-body small { color: var(--text-secondary); }
+.det-gaps { color: #d97706; font-size: .92em; }
 .lab-badge.is-fired { color: #0d9488; background: rgba(13, 148, 136, .12); }
 .lab-badge.is-half { color: #d97706; background: rgba(217, 119, 6, .12); }
 .lab-badge.is-missed { color: var(--accent); background: var(--bg-secondary); }

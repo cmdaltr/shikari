@@ -200,3 +200,4 @@ bespoke/llm_references/*
 !bespoke/llm_references/README.md
 archer/contract/docs/01-diagnosis.md
 archer/contract/docs/05-exemplars.md
+.envrc

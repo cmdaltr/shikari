@@ -252,6 +252,41 @@ def plan(abilities: List[Dict], agents: List[Dict], techniques: List[str], group
     return {"steps": steps, "gaps": gaps, "agents": paws, "warnings": warnings}
 
 
+def _technique_platforms(abilities: List[Dict], want: str) -> set:
+    """The OSes some ability could run this technique on — for the Detonate dialog's OS badges."""
+    out = set()
+    for ab in abilities or []:
+        if _match_rank(ab.get("technique_id", ""), want) is None:
+            continue
+        for ex in ab.get("executors") or []:
+            if ex.get("platform"):
+                out.add(ex["platform"])
+    return out
+
+
+def coverage(abilities: List[Dict], agents: List[Dict], techniques: List[str]) -> Dict:
+    """For the Detonate dialog: the resolved techniques (with the OSes they can run on), and for
+    each agent group its VMs and which of those techniques it can and can't run. Reads only.
+
+    Targeting is by group because a sandcat agent re-asserts its enrolment group on every beacon,
+    so a group — not an ad-hoc selection — is what an operation can reliably hit. Within a group,
+    CALDERA runs each ability only on the agents whose OS matches, so OS-specific techniques land on
+    the right VMs on their own; the gaps below are the techniques no VM in that group can run."""
+    techs = [{"id": t, "platforms": sorted(_technique_platforms(abilities, t))} for t in techniques]
+    grps = []
+    for g in groups(agents):
+        p = plan(abilities, agents, techniques, g["group"])
+        grps.append({
+            "group": g["group"], "platforms": g["platforms"],
+            "vms": [{"host": a.get("host") or a.get("paw") or "?", "paw": a.get("paw") or "",
+                     "platform": a.get("platform") or "?"}
+                    for a in agents if (a.get("group") or "") == g["group"]],
+            "runnable": [s["technique_id"] for s in p["steps"]],
+            "gaps": p["gaps"],
+        })
+    return {"techniques": techs, "groups": grps}
+
+
 def plan_lines(plan: Dict, label: str) -> List[str]:
     """The dry-run lines the guide's Planning table describes, in order."""
     steps, gaps = plan.get("steps") or [], plan.get("gaps") or []

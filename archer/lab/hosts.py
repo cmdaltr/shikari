@@ -3,7 +3,9 @@ What this machine is, and which engines it can drive.
 
 OS and CPU architecture decide which templates are offered and which image a template uses
 (archer.lab.templates). An engine that isn't installed is reported with the command to
-install it — Archer detects and guides, it doesn't install hypervisors itself.
+install it — Archer detects and guides, it doesn't install hypervisors itself. The one
+exception is CALDERA provisioning (archer.lab.caldera_provision), which does install OrbStack,
+but only on an opt-in local macOS host, never on a shared server.
 """
 
 import platform

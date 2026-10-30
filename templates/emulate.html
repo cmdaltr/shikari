@@ -147,13 +147,17 @@
       Each is mapped to ATT&amp;CK, then Archer checks whether the indicators your detections match actually appear in the recorded events. The result is the <strong>Recorded telemetry</strong> views below, organised by technique, group or data source. No AI is involved.</p>
     <div class="em-sources-head">
       <h3 class="ui-subtitle">Public datasets</h3>
-      <span class="ms-state" id="em-state" aria-live="polite"></span>
-      <button type="button" class="btn-primary" id="em-build" hidden>Update</button>
     </div>
     <ul class="em-sources" id="em-sources"></ul>
-    <p class="ms-note">Each recording is one tool run in a lab with logging on (Sysmon, Windows auditing, PowerShell, cloud audit logs), mapped to ATT&amp;CK by the people who recorded it.
-      It shows that a technique can be recorded and by which log, for that tool in that lab; not every way the technique can be done.
-      The recordings ship with Archer; <strong>Update</strong> (or <code>python -m archer.telemetry --build</code>) fetches what the sources have changed since.</p>
+    <div class="em-rec-row">
+      <p class="ms-note">Each recording is one tool run in a lab with logging on (Sysmon, Windows auditing, PowerShell, cloud audit logs), mapped to ATT&amp;CK by the people who recorded it.
+        It shows that a technique can be recorded and by which log, for that tool in that lab; not every way the technique can be done.
+        The recordings ship with Archer; <strong>Update</strong> (or <code>python -m archer.telemetry --build</code>) fetches what the sources have changed since.</p>
+      <div class="em-build-row">
+        <button type="button" class="btn-primary" id="em-build" hidden>Update</button>
+        <span class="ms-state" id="em-state" aria-live="polite"></span>
+      </div>
+    </div>
     <pre class="ms-log" id="em-log" hidden></pre>
 
     <!-- Your lab: the machines you record on (archer.lab). Admins create and manage; everyone sees the host -->
@@ -164,6 +168,34 @@
         The machines are disposable — snapshot one before you turn logging on or run atomics, and revert when you're done.</p>
 
       <div class="lab-host" id="lab-host"></div>
+
+      <!-- CALDERA (#30): operations on agent groups, results and the static check (archer.lab.caldera).
+           Sits above the machines: the implant and its C2 are the point of difference from the atomics below. -->
+      <div class="lab-caldera" id="caldera" hidden>
+        <h3 class="ui-subtitle lab-head"><svg class="lab-head-ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 4.5V8l2.5 1.5"/></svg>CALDERA operations</h3>
+        <p class="ms-note">Chained emulation on CALDERA agents: each step's facts feed the next, and the agent behaves like an implant, which the Atomic runs below can't do.
+          Plan first, then run; Archer pulls back what each step ran and checks your detections and correlations against it. No AI.</p>
+        <div class="lab-caldera-bar">
+          <div class="lab-caldera-status" id="caldera-status"></div>
+          <div class="lab-caldera-acts">
+            <div class="lab-actions is-caldera" id="caldera-actions" hidden>
+              <button type="button" class="ui-pill" id="caldera-plan">Plan an operation</button>
+              <button type="button" class="ui-pill is-detonate" id="caldera-detonate" title="Runs a live operation — a real implant detonates and beacons over C2">Detonate</button>
+              <button type="button" class="ui-pill" id="caldera-collect">Collect an existing operation</button>
+            </div>
+            <div class="lab-actions is-caldera" id="caldera-prov" hidden>
+              <button type="button" class="ui-pill" id="caldera-provision">Provision</button>
+              <button type="button" class="ui-pill lab-danger" id="caldera-deprovision" hidden>De-provision</button>
+              <button type="button" class="ui-pill" id="caldera-steps" hidden>Deploy</button>
+            </div>
+          </div>
+        </div>
+        <table class="em-table lab-caldera-ops" id="caldera-ops" hidden>
+          <thead><tr><th>Operation</th><th>Group</th><th>Hosts</th><th>Steps</th><th>Logs</th><th>Collected</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="lab-caldera-check" id="caldera-check" hidden></div>
+      </div>
 
       <div class="lab-cols">
         <div class="lab-col">
@@ -176,23 +208,6 @@
           <p class="lab-empty" id="lab-machines-empty">No machines yet. Create one on the left.</p>
           <ul class="lab-machines" id="lab-machines"></ul>
         </div>
-      </div>
-
-      <!-- CALDERA (#30): operations on agent groups, results and the static check (archer.lab.caldera) -->
-      <div class="lab-caldera" id="caldera" hidden>
-        <h3 class="ui-subtitle lab-head"><svg class="lab-head-ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 4.5V8l2.5 1.5"/></svg>CALDERA operations</h3>
-        <p class="ms-note">Chained emulation on CALDERA agents: each step's facts feed the next, and the agent behaves like an implant, which the Atomic runs above can't do.
-          Plan first, then run; Archer pulls back what each step ran and checks your detections and correlations against it. No AI.</p>
-        <div class="lab-caldera-status" id="caldera-status"></div>
-        <div class="lab-actions" id="caldera-actions" hidden>
-          <button type="button" class="ui-pill" id="caldera-plan">Plan an operation</button>
-          <button type="button" class="ui-pill" id="caldera-collect">Collect an existing operation</button>
-        </div>
-        <table class="em-table lab-caldera-ops" id="caldera-ops" hidden>
-          <thead><tr><th>Operation</th><th>Group</th><th>Hosts</th><th>Steps</th><th>Logs</th><th>Collected</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div class="lab-caldera-check" id="caldera-check" hidden></div>
       </div>
 
       <div class="lab-job" id="lab-job" hidden>

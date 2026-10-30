@@ -18,6 +18,16 @@ Pushing detections into CALDERA was dropped from #30: CALDERA has nowhere to tak
 
 ## Connecting
 
+### Provision it in one go (local macOS)
+
+On a macOS host you run Archer on yourself, the **Provision** button on the CALDERA card stands the whole lab up for you: it installs OrbStack, builds and runs a disposable CALDERA server, enrols agents, and saves the server and key to your profile — the in-app equivalent of `scripts/telemetry/caldera-lab.sh`. A step that needs you (your password for Homebrew, OrbStack's first launch) shows exactly what to do and carries on by itself once it's done, re-checking every 10 seconds. Nothing detonates during provisioning.
+
+It's deliberately narrow — an **admin** account, a **macOS** host, and the opt-in `ARCHER_ALLOW_LAB_PROVISION=1` in the environment — so it can never fire on a shared server, where the host isn't your own machine. The **local desktop app** sets that flag for you (it runs its own server on your machine); running Archer any other way, set it yourself, e.g. in `.envrc` or before `archer-cli start`. Without all three gates you get the manual **Deploy** guide instead, and the server-side options below.
+
+Once a lab is up, the button turns green and reads **Re-provision** (run it again), with **De-provision** beside it to tear the lab down — stop the server, delete the agents, and remove CALDERA from your profile.
+
+### Set it by hand
+
 The usual way is in the app: **Profile → API Keys → Emulation Tools**. Set the CALDERA server URL and your red API key there — the key is encrypted at rest (Fernet), like your SIEM and AI keys, and is scoped to your own account. The **Verify the server's TLS certificate** toggle is on by default; turn it off only for a lab server with a self-signed certificate.
 
 Two server-side alternatives, for a shared instance or an unattended run, take precedence over the per-user setting:

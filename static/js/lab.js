@@ -152,8 +152,9 @@
       isAdmin = !!data.is_admin;
       host(data.host);
       taken = new Set(data.taken || []);
-      const tpls = data.templates || [];
-      el('lab-templates').innerHTML = templateCards(tpls) + utmCard(data.host);
+      // Windows (the UTM card) leads, then macOS, then Linux/Ubuntu last
+      const tpls = (data.templates || []).slice().sort((a, b) => (a.os === 'macos' ? 0 : 1) - (b.os === 'macos' ? 0 : 1));
+      el('lab-templates').innerHTML = utmCard(data.host) + templateCards(tpls);
       el('lab-templates-empty').hidden = tpls.length > 0;
       const ms = data.machines || [];
       lastMachines = ms;

@@ -464,6 +464,9 @@ function initKeyTabs() {
       });
     });
   });
+  // Deep link: /profile?keytab=emulation#apikeys opens that sub-tab (from the Emulate page's Deploy guide)
+  const want = new URLSearchParams(location.search).get('keytab');
+  if (want) document.querySelector(`.key-tab[data-keytab="${CSS.escape(want)}"]`)?.click();
 }
 
 // --- AI providers: one row per provider, + adds another (GitHub #10) ---
