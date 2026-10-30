@@ -29,24 +29,31 @@
 .gd-x:hover { background: var(--bg-primary, #f7fafc); color: var(--text-primary, #1a1a1a); }
 
 .gd-btn {
+  display: inline-flex; align-items: center; gap: 7px;
   border: 1px solid var(--accent, #C53030); background: var(--accent, #C53030); color: #fff;
   border-radius: 8px; padding: 9px 16px; font: 600 14px/1.2 Inter, system-ui, sans-serif; cursor: pointer;
 }
 .gd-btn:hover { filter: brightness(1.08); }
 .gd-btn:disabled { opacity: 0.4; cursor: default; filter: none; }
-.gd-btn-quiet { background: transparent; color: var(--text-primary, #1a1a1a); border-color: var(--border-color, #e2e8f0); }
+.gd-ico { display: inline-flex; margin-left: -2px; }
+.gd-ico svg { display: block; }
 .gd-tick { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary, #666); cursor: pointer; user-select: none; }
 .gd-tick input { accent-color: var(--accent, #C53030); width: 15px; height: 15px; margin: 0; }
 
 /* Start-up and tips */
 .gd-start { width: min(1290px, 100%); padding: 32px; overflow: auto; }
-.gd-start-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 24px; }
+/* Four shared rows — label · text · picture · actions — so the two cards' pictures line up
+   on one row however much the text above each differs (subgrid pulls both to the taller text). */
+.gd-start-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  grid-template-rows: auto auto auto auto; column-gap: 24px; row-gap: 14px; }
 /* The guide and tip cards share one look and stretch to the same height */
-.gd-start-card { display: flex; flex-direction: column; gap: 14px; min-width: 0; background: var(--bg-primary, #f7fafc);
-  border: 1px solid var(--border-color, #e2e8f0); border-radius: 10px; padding: 24px; }
+.gd-start-card { display: grid; grid-template-rows: subgrid; grid-row: span 4; min-width: 0;
+  background: var(--bg-primary, #f7fafc); border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px; padding: 24px; }
 .gd-start .gd-tip-body h3, .gd-tips .gd-tip-body h3 { font-size: 1.3rem; margin-bottom: 8px; }
 .gd-start .gd-tip-body p, .gd-tips .gd-tip-body p { font-size: 16px; }
-.gd-tip-body .gd-start-thumb { width: 100%; margin-top: 14px; }
+.gd-tip-thumb-wrap { align-self: start; }
+.gd-tip-thumb-wrap .gd-start-thumb { width: 100%; }
 .gd-start-thumb { display: block; position: relative; padding: 0; border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px;
   overflow: hidden; cursor: pointer; background: var(--bg-secondary, #fff); aspect-ratio: 16 / 9; }
 .gd-start-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }

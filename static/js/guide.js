@@ -43,6 +43,15 @@
     return n;
   };
 
+  // Small inline icons so the two start-up buttons read as a pair, told apart by their glyph
+  const icon = (paths) => {
+    const span = el('span', { class: 'gd-ico', 'aria-hidden': 'true' });
+    span.innerHTML = `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+    return span;
+  };
+  const ICO_BOOK = '<path d="M8 3.2C6.6 2.3 4.9 2 2.9 2.2a.6.6 0 0 0-.5.6v8.6c0 .4.3.6.6.5 1.8-.2 3.4.1 4.7 1 1.3-.9 2.9-1.2 4.7-1 .3.1.6-.1.6-.5V2.8a.6.6 0 0 0-.5-.6C11.1 2 9.4 2.3 8 3.2zm0 0V12"/>';
+  const ICO_ARROW = '<path d="M2.8 8h9.6"/><path d="M8.6 4.2 12.4 8l-3.8 3.8"/>';
+
   // ---- Tips: random, but never one of the last ten shown ----
 
   function nextTip(list) {
@@ -69,7 +78,10 @@
     el('span', {}, `${page.menu} → ${page.title}`));
 
   function tipCard(list, pages) {
+    // Text and picture are separate slots so each sits in its own row, lining the picture
+    // up with the guide card's picture beside it (see .gd-start-grid's subgrid).
     const body = el('div', { class: 'gd-tip-body' });
+    const pic = el('div', { class: 'gd-tip-thumb-wrap' });
     let page = null;
     const show = () => {
       const t = nextTip(list);
@@ -78,11 +90,11 @@
         el('h3', {}, t.title),
         el('p', {}, t.text),
         t.href ? el('a', { class: 'gd-tip-where', href: t.href }, t.where || 'Open') : null,
-        page ? thumb(page) : null,
       );
+      pic.replaceChildren(page ? thumb(page) : '');
     };
     show();
-    return { body, show, page: () => page };
+    return { body, pic, show, page: () => page };
   }
 
   // ---- Dialog shell ----
@@ -137,9 +149,9 @@
             el('h3', {}, 'New to Archer, or to a page?'),
             el('p', {}, 'A picture of every page, each part highlighted in turn: what it’s for, who uses it, and when it helps most.'),
           ),
-          pick ? thumb(pick) : null,
+          el('div', { class: 'gd-tip-thumb-wrap' }, pick ? thumb(pick) : ''),
           el('div', { class: 'gd-tip-foot' },
-            el('button', { type: 'button', class: 'gd-btn', onclick: () => showGuideViewer() }, 'Take the guide'),
+            el('button', { type: 'button', class: 'gd-btn', onclick: () => showGuideViewer() }, icon(ICO_BOOK), 'Take the guide'),
             tick(KEY_GUIDE, 'Show the guide at startup'),
           ),
         ));
@@ -148,8 +160,9 @@
         parts.push(el('div', { class: 'gd-start-card' },
           el('div', { class: 'gd-tip-label' }, 'Tip'),
           card.body,
+          card.pic,
           el('div', { class: 'gd-tip-foot' },
-            el('button', { type: 'button', class: 'gd-btn gd-btn-quiet', onclick: card.show }, 'Another tip'),
+            el('button', { type: 'button', class: 'gd-btn', onclick: card.show }, icon(ICO_ARROW), 'Another tip'),
             tick(KEY_TIPS, 'Show tips at startup'),
           ),
         ));
@@ -166,8 +179,9 @@
         closeBtn(),
         el('div', { class: 'gd-tip-label' }, 'Tips and tricks'),
         card.body,
+        card.pic,
         el('div', { class: 'gd-tip-foot' },
-          el('button', { type: 'button', class: 'gd-btn', onclick: card.show }, 'Another tip'),
+          el('button', { type: 'button', class: 'gd-btn', onclick: card.show }, icon(ICO_ARROW), 'Another tip'),
           tick(KEY_TIPS, 'Show tips at startup'),
         ),
       ]);
