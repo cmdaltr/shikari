@@ -129,7 +129,8 @@ class Tart:
         return parse_tart_list(run(["tart", "list", "--format", "json"]))
 
     def create(self, name: str, image: str):
-        run(["tart", "clone", image, name], timeout=1800)  # pulls the image if it's remote
+        # Pulls the image if it's remote; a macOS base is ~30 GB, so allow a slow link (2h), not 30m.
+        run(["tart", "clone", image, name], timeout=7200)
 
     def start(self, name: str):
         spawn(["tart", "run", name, "--no-graphics"])  # holds the VM open; returns at once
