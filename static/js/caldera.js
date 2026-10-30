@@ -26,6 +26,41 @@
     });
   }
 
+  // The CALDERA server and its agents as a small horizontal network diagram: server on top, each
+  // agent a node in the row below (OS-coloured dot, host and group), joined by a curved edge.
+  const OS_COLOUR = { windows: '#2563eb', linux: '#d97706', macos: '#6b7280', darwin: '#6b7280' };
+  function netmap(url, agents, hostOs) {
+    const rows = agents.slice().sort((a, b) => (a.group || '').localeCompare(b.group || ''));
+    const NW = 150, NH = 46, GAPX = 18, PAD = 12, TOP = 12, VGAP = 44;
+    const rowW = rows.length * NW + Math.max(0, rows.length - 1) * GAPX;
+    const VW = Math.max(rowW, NW) + PAD * 2;
+    const serverX = (VW - NW) / 2, serverY = TOP, agentY = TOP + NH + VGAP, h = agentY + NH + TOP;
+    const host = esc(String(url).replace(/^https?:\/\//, '')), agentX = i => PAD + i * (NW + GAPX);
+    let svg = `<svg viewBox="0 0 ${VW} ${h}" width="${VW}" height="${h}" class="netmap-svg" role="img" aria-label="CALDERA agent topology">`;
+    const sx = serverX + NW / 2, my = (serverY + NH + agentY) / 2;
+    rows.forEach((a, i) => {
+      const ax = agentX(i) + NW / 2;
+      svg += `<path d="M${sx} ${serverY + NH} C ${sx} ${my}, ${ax} ${my}, ${ax} ${agentY}" class="netmap-edge"/>`;
+    });
+    const sc = OS_COLOUR[hostOs] || '#6b7280';
+    svg += `<g class="netmap-node is-server"><rect x="${serverX}" y="${serverY}" width="${NW}" height="${NH}" rx="9"/>` +
+      `<circle cx="${serverX + 13}" cy="${serverY + NH / 2}" r="4.5" fill="${sc}"/>` +
+      `<text x="${serverX + 25}" y="${serverY + NH / 2 - 3}" class="netmap-t">CALDERA server</text>` +
+      `<text x="${serverX + 25}" y="${serverY + NH / 2 + 13}" class="netmap-s">${host}</text></g>`;
+    rows.forEach((a, i) => {
+      const x = agentX(i), c = OS_COLOUR[a.platform] || '#6b7280';
+      // Labelled by paw, not host: the server runs on this Mac too, so an agent host of e.g.
+      // macbook.local would otherwise read as the server. The paw is the agent's stable identity.
+      svg += `<g class="netmap-node"><rect x="${x}" y="${agentY}" width="${NW}" height="${NH}" rx="9"/>` +
+        `<circle cx="${x + 13}" cy="${agentY + NH / 2}" r="4.5" fill="${c}"/>` +
+        `<text x="${x + 25}" y="${agentY + NH / 2 - 3}" class="netmap-t">${esc(a.paw || a.host)}</text>` +
+        `<text x="${x + 25}" y="${agentY + NH / 2 + 13}" class="netmap-s">${esc(a.platform || '?')} · ${esc(a.group || '(no group)')}</text></g>`;
+    });
+    return svg + '</svg>' +
+      '<p class="lab-hint netmap-note">Operations detonate the implant on the <strong>agents</strong> — disposable lab machines — never on this host. ' +
+      'For a lab Provisioned here, the agents are OrbStack Linux VMs running on this Mac, which also hosts the CALDERA server.</p>';
+  }
+
   function status() {
     api('/api/lab/caldera/status').then(r => {
       if (!r.ok) { root.hidden = true; return; }  // below the Operational analyst role: the Lab's notice says why
@@ -37,9 +72,15 @@
       } else if (r.error) {
         s.innerHTML = `<span class="lab-badge is-missed">Unreachable</span> ${esc(r.error)}${r.detail ? ' — ' + esc(r.detail) : ''}`;
       } else {
-        s.innerHTML = `<span class="lab-badge is-ready">Connected</span> ${esc(r.url)} · ` +
-          (groups.length ? groups.map(g => `${esc(g.group || '(no group)')}: ${g.agents} agent${g.agents === 1 ? '' : 's'} (${esc(g.platforms.join(', '))})`).join('; ')
-            : 'no agents yet');
+        s.innerHTML = `<span class="lab-badge is-ready">Connected</span> ${esc(r.url)}`;
+      }
+      // Agent topology: the server and its agents as a small network diagram, once connected
+      const nm = el('caldera-netmap');
+      if (r.configured && !r.error) {
+        nm.hidden = false;
+        nm.innerHTML = (r.agents || []).length ? netmap(r.url, r.agents, r.host_os) : '<p class="lab-empty">No agents checked in yet.</p>';
+      } else {
+        nm.hidden = true; nm.innerHTML = '';
       }
       const ready = r.configured && !r.error;
       const canP = !!r.can_provision, isP = !!r.provisioned;
@@ -321,8 +362,9 @@
       <div class="prov-grid">
         <div class="prov-col"><ol class="lab-tasks" id="prov-tasks"></ol><pre class="ms-log" id="prov-log" hidden></pre></div>
         <div class="prov-col prov-side">
-          <p class="lab-hint">Installs OrbStack, builds and runs a disposable CALDERA server, enrols agents, and saves the server and key to your profile.
-            Nothing detonates here. A step that needs you — a password, or OrbStack's first launch — shows what to do and carries on by itself once it's done (re-checked every 10 s).</p>
+          <p class="lab-hint">Installs OrbStack, then builds a disposable CALDERA server and Linux agent VMs <strong>on this Mac</strong>, and saves the server and key to your profile.
+            Nothing detonates during provisioning — later operations detonate the implant <strong>inside the agent VMs</strong>, not on macOS itself.
+            A step that needs you — a password, or OrbStack's first launch — shows what to do and carries on by itself once it's done (re-checked every 10 s).</p>
           <div class="prov-result" id="prov-result" hidden></div>
         </div>
       </div>

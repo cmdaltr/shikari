@@ -161,6 +161,35 @@ def test_plan_reports_gaps_for_unrunnable():
     assert p["gaps"] == ["T1555"]
 
 
+def test_agent_nodes_trims_and_falls_back_to_paw():
+    nodes = caldera.agent_nodes([
+        {"paw": "w1", "host": "win-vm", "platform": "windows", "group": "winlab",
+         "last_seen": "2026-10-30T01:00:00Z", "secret": "x"},
+        {"paw": "l1", "platform": "linux", "last_seen": "2026-10-30T01:00:00Z"},  # no host -> paw; no group -> ""
+    ])
+    assert nodes == [
+        {"host": "win-vm", "paw": "w1", "platform": "windows", "group": "winlab",
+         "last_seen": "2026-10-30T01:00:00Z"},
+        {"host": "l1", "paw": "l1", "platform": "linux", "group": "",
+         "last_seen": "2026-10-30T01:00:00Z"},
+    ]
+
+
+def test_agent_nodes_dedupes_stale_records_per_host():
+    # A VM re-enrolled under fresh random paws leaves ghosts on the same host; keep only the most
+    # recently seen agent per host (case-insensitively), so the diagram shows live VMs, not ghosts.
+    nodes = caldera.agent_nodes([
+        {"paw": "bovphx", "host": "cal1", "platform": "linux", "group": "disposable",
+         "last_seen": "2026-10-29T13:57:22Z"},
+        {"paw": "mhuxdu", "host": "cal1", "platform": "linux", "group": "disposable",
+         "last_seen": "2026-10-29T13:57:14Z"},
+        {"paw": "cal1", "host": "cal1", "platform": "linux", "group": "disposable",
+         "last_seen": "2026-10-30T01:31:15Z"},
+    ])
+    assert len(nodes) == 1
+    assert nodes[0]["paw"] == "cal1" and nodes[0]["last_seen"] == "2026-10-30T01:31:15Z"
+
+
 def test_coverage_matches_techniques_to_groups_by_os():
     # T1057 runs on Windows and Linux; T1082 only on Linux. The Windows group should show T1082 as a
     # gap, the Linux group should run both — the OS matching the Detonate dialog relies on.

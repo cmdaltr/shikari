@@ -159,21 +159,34 @@
       </div>
     </div>
     <pre class="ms-log" id="em-log" hidden></pre>
+  </section>
 
-    <!-- Your lab: the machines you record on (archer.lab). Admins create and manage; everyone sees the host -->
-    <div class="em-lab-block" id="lab">
-      <h3 class="ui-subtitle lab-head"><svg class="lab-head-ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 2.5h3M7 2.5V6.5L4 12.2a1 1 0 0 0 .9 1.5h6.2a1 1 0 0 0 .9-1.5L9 6.5V2.5"/></svg>Your lab</h3>
+  <!-- Lab: its own section — the host, the machines you record on, and CALDERA operations (archer.lab) -->
+  <section class="ui-card ms-card em-lab-block" id="lab">
+      <h2>Your lab</h2>
       <p class="ms-note">Install, create and manage the containers and VMs an emulation records on, without leaving Archer.
         Archer drives Docker and Tart to create Linux and macOS machines, and UTM for Windows (and other OSes QEMU runs) — you build the UTM VM once, then Archer manages it.
         The machines are disposable — snapshot one before you turn logging on or run atomics, and revert when you're done.</p>
 
       <div class="lab-host" id="lab-host"></div>
 
-      <!-- CALDERA (#30): operations on agent groups, results and the static check (archer.lab.caldera).
-           Sits above the machines: the implant and its C2 are the point of difference from the atomics below. -->
+      <div class="lab-cols">
+        <div class="lab-col">
+          <h3 class="ui-subtitle lab-head"><svg class="lab-head-ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="9" rx="1.5"/><path d="M8 6v4M6 8h4"/></svg>Create a machine</h3>
+          <p class="lab-empty" id="lab-templates-empty" hidden>No engine is ready on this host. Install one above, then reload.</p>
+          <div class="lab-templates" id="lab-templates"></div>
+        </div>
+        <div class="lab-col">
+          <h3 class="ui-subtitle lab-head"><svg class="lab-head-ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3" width="11" height="4" rx="1"/><rect x="2.5" y="9" width="11" height="4" rx="1"/><path d="M5 5h.01M5 11h.01"/></svg>Your machines</h3>
+          <p class="lab-empty" id="lab-machines-empty">No machines yet. Create one on the left.</p>
+          <ul class="lab-machines" id="lab-machines"></ul>
+        </div>
+      </div>
+
+      <!-- CALDERA (#30): operations on agent groups, their topology, results and the static check (archer.lab.caldera) -->
       <div class="lab-caldera" id="caldera" hidden>
         <h3 class="ui-subtitle lab-head"><svg class="lab-head-ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 4.5V8l2.5 1.5"/></svg>CALDERA operations</h3>
-        <p class="ms-note">Chained emulation on CALDERA agents: each step's facts feed the next, and the agent behaves like an implant, which the Atomic runs below can't do.
+        <p class="ms-note">Chained emulation on CALDERA agents: each step's facts feed the next, and the agent behaves like an implant, which the Atomic runs above can't do.
           Plan first, then run; Archer pulls back what each step ran and checks your detections and correlations against it. No AI.</p>
         <div class="lab-caldera-bar">
           <div class="lab-caldera-status" id="caldera-status"></div>
@@ -190,6 +203,7 @@
             </div>
           </div>
         </div>
+        <div class="lab-netmap" id="caldera-netmap" hidden></div>
         <table class="em-table lab-caldera-ops" id="caldera-ops" hidden>
           <thead><tr><th>Operation</th><th>Group</th><th>Hosts</th><th>Steps</th><th>Logs</th><th>Collected</th><th></th></tr></thead>
           <tbody></tbody>
@@ -197,25 +211,11 @@
         <div class="lab-caldera-check" id="caldera-check" hidden></div>
       </div>
 
-      <div class="lab-cols">
-        <div class="lab-col">
-          <h3 class="ui-subtitle lab-head"><svg class="lab-head-ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="9" rx="1.5"/><path d="M8 6v4M6 8h4"/></svg>Create a machine</h3>
-          <p class="lab-empty" id="lab-templates-empty" hidden>No engine is ready on this host. Install one above, then reload.</p>
-          <div class="lab-templates" id="lab-templates"></div>
-        </div>
-        <div class="lab-col">
-          <h3 class="ui-subtitle lab-head"><svg class="lab-head-ic" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3" width="11" height="4" rx="1"/><rect x="2.5" y="9" width="11" height="4" rx="1"/><path d="M5 5h.01M5 11h.01"/></svg>Your machines</h3>
-          <p class="lab-empty" id="lab-machines-empty">No machines yet. Create one on the left.</p>
-          <ul class="lab-machines" id="lab-machines"></ul>
-        </div>
-      </div>
-
       <div class="lab-job" id="lab-job" hidden>
         <span class="ms-state" id="lab-job-state" aria-live="polite"></span>
         <pre class="ms-log" id="lab-job-log"></pre>
       </div>
       <p class="lab-guest" id="lab-guest" hidden>Sign in as an admin to create and manage machines.</p>
-    </div>
   </section>
 
   <!-- Telemetry: the filters and the views over the recordings -->

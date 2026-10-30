@@ -17,12 +17,16 @@
     + '<path d="M7 16 L17 16 L18 19a2 2 0 0 1 -2 3H8a2 2 0 0 1 -2 -3Z" fill="#8b5cf6" stroke="none"/>'
     + '<circle cx="11" cy="13" r="1.1" fill="#8b5cf6" stroke="none"/><circle cx="13.6" cy="10" r="0.8" fill="#8b5cf6" stroke="none"/><circle cx="12" cy="7.3" r="0.6" fill="#8b5cf6" stroke="none"/>'
     + '<path d="M9 3h6M10 3v6L4 19a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-6-10V3"/></svg>';
+  // CALDERA: the crosshair from the Lab section header — marks recordings detonated live on agents
+  const CALDERA_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">'
+    + '<circle cx="8" cy="8" r="5.5"/><path d="M8 4.5V8l2.5 1.5"/></svg>';
   const SOURCES = {
     splunk: { name: 'Splunk attack_data', img: '/static/images/siem/splunk.png' },
     otrf: { name: 'Security-Datasets (OTRF)', img: '/static/images/brands/otrf.png' },
     evtx: { name: 'EVTX-to-MITRE-Attack', img: '/static/images/brands/evtx.png' },
     guide: { name: 'Microsoft GUIDE', img: '/static/images/brands/microsoft.png' },
     lab: { name: 'Your lab', svg: LAB_ICON },
+    caldera: { name: 'Detonated via CALDERA', svg: CALDERA_ICON },
     macos: { name: 'macOS-ATTACK-DATASET', img: '/static/images/brands/attack.png' },
   };
   const logo = (src, cls = 'em-logo') => {
@@ -30,6 +34,10 @@
     const inner = s.img ? `<img src="${s.img}" alt="">` : (s.svg || esc(src));
     return `<span class="${cls} is-${esc(src)}" title="${esc(s.name)}">${inner}</span>`;
   };
+  // A Your-lab recording that was detonated live on a CALDERA agent (hypervisor-captured, so it
+  // lands in the lab source) rather than run as an Atomic test — flagged so the origin is clear.
+  const calderaBadge = d => (d.tools || []).includes('CALDERA') && d.source !== 'caldera'
+    ? `<span class="em-caldera-tag" title="Detonated live on a CALDERA agent">${CALDERA_ICON} CALDERA</span>` : '';
   // SIEM platform marks, used wherever a result is labelled with the chosen SIEM
   const SIEM_LOGO = { secops: '/static/images/siem/secops.png', mde: '/static/images/siem/mde.png' };
   const siemLogo = () => `<img class="em-siem-logo" src="${SIEM_LOGO[state.siem] || SIEM_LOGO.secops}" alt="${esc(siemName())}">`;
@@ -94,14 +102,14 @@
     };
     const card = (k, name, url, meta, tip, cls = '') => {
       const [tag, line] = CARD[k] || ['', ''];
-      // Your lab is teal (matches its diagram node); the public datasets are red (match theirs)
-      const tint = k === 'lab' ? 'em-ds-lab' : 'em-ds-pub';
+      // Your own recordings — Your lab and CALDERA — are teal (match their nodes); public datasets are red
+      const tint = (k === 'lab' || k === 'caldera') ? 'em-ds-lab' : 'em-ds-pub';
       return `<li class="${tint} ${cls}" title="${esc(tip)}">${logo(k, 'em-source-logo')}<div>
         <div class="em-source-head">${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(name)}</a>` : `<strong>${esc(name)}</strong>`}
           ${tag ? `<em class="em-source-tag${k === 'lab' && cls ? ' is-soon' : ''}">${esc(tag)}</em>` : ''}</div>
         <span>${meta}</span><small>${esc(line)}</small></div></li>`;
     };
-    const order = ['lab', 'splunk', 'otrf', 'evtx', 'macos'];
+    const order = ['lab', 'caldera', 'splunk', 'otrf', 'evtx', 'macos'];
     $('em-sources').innerHTML = Object.entries(r.sources).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0])).map(([k, s]) =>
       k === 'lab' && !s.datasets
         // Nothing recorded yet: docs/guide/20-recording-a-lab.md
@@ -411,7 +419,7 @@
       </table>
       ${r.visible < r.recordings.length ? `<p class="ms-note">${r.recordings.length - r.visible} of ${plural(r.recordings.length, 'recording')} hold none of the chosen logs.</p>` : ''}
       <details class="em-recs"><summary>${plural(r.recordings.length, 'recording')}</summary><ul>${r.recordings.map(d => `<li${d.visible ? '' : ' class="is-gap"'}>
-        ${logo(d.source)} <a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title)}</a>
+        ${logo(d.source)} <a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title)}</a>${calderaBadge(d)}
         <span>${esc(d.techniques.join(', '))} · ${esc((d.platforms || []).map(p => PLATFORM[p] || p).join(', '))} · ${plural(d.events, 'event')}</span></li>`).join('')}</ul></details>`;
   }
 

@@ -252,6 +252,24 @@ def plan(abilities: List[Dict], agents: List[Dict], techniques: List[str], group
     return {"steps": steps, "gaps": gaps, "agents": paws, "warnings": warnings}
 
 
+def agent_nodes(agents: List[Dict]) -> List[Dict]:
+    """A trimmed agent list for the topology diagram: one node per host with its paw, platform and
+    group. CALDERA keeps every agent that ever enrolled, so a VM re-enrolled under a fresh paw (an
+    `up` before the lab fixed its paws, say) leaves stale records on the same host; keep only the
+    most recently seen agent per host, so the diagram shows live VMs and not their ghosts. The key
+    is never here — these come from CALDERA's /agents."""
+    by_host: Dict[str, Dict] = {}
+    for a in agents or []:
+        host = (a.get("host") or a.get("paw") or "?").lower()
+        prev = by_host.get(host)
+        if prev is None or (a.get("last_seen") or "") > (prev.get("last_seen") or ""):
+            by_host[host] = a
+    return [{"host": a.get("host") or a.get("paw") or "?", "paw": a.get("paw") or "",
+             "platform": a.get("platform") or "", "group": a.get("group") or "",
+             "last_seen": a.get("last_seen") or ""}
+            for a in by_host.values()]
+
+
 def _technique_platforms(abilities: List[Dict], want: str) -> set:
     """The OSes some ability could run this technique on — for the Detonate dialog's OS badges."""
     out = set()

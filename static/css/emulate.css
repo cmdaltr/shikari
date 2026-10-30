@@ -156,6 +156,15 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .em-guide > span:last-child { flex: 1; min-width: 0; line-height: 1.5; }
 .em-sources li.is-missing { border-left-color: var(--border-color); opacity: .85; }
 .em-source-logo.is-lab, .em-logo.is-lab { color: var(--text-secondary); }
+/* CALDERA-detonated recordings: the crosshair in teal, matching the lab's node and section accent */
+.em-source-logo.is-caldera, .em-logo.is-caldera { color: #0d9488; }
+[data-theme="dark"] .em-source-logo.is-caldera, [data-theme="dark"] .em-logo.is-caldera { color: #2dd4bf; }
+/* Badge on a Your-lab recording detonated via CALDERA (the lab run itself keeps the lab logo) */
+.em-caldera-tag { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding: 1px 6px 1px 4px;
+  border: 1px solid rgba(13, 148, 136, .4); border-radius: 999px; color: #0d9488; font-size: .74em; font-weight: 600;
+  vertical-align: 1px; white-space: nowrap; }
+.em-caldera-tag svg { width: 11px; height: 11px; }
+[data-theme="dark"] .em-caldera-tag { color: #2dd4bf; border-color: rgba(45, 212, 191, .4); background: rgba(45, 212, 191, .08); }
 .em-rows tr.em-detail > td { white-space: normal; }  /* mitresaw.css keeps table cells on one line */
 .em-guide-box { border: 1px solid rgba(37, 99, 235, .3); border-left: 4px solid #2563eb; border-radius: 8px; padding: 10px 14px; margin: 6px 0 12px; background: rgba(37, 99, 235, .08); }
 [data-theme="dark"] .em-guide-box { background: rgba(96, 165, 250, .12); border-color: rgba(96, 165, 250, .35); border-left-color: #60a5fa; }
@@ -313,7 +322,8 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-iso-result.is-bad { color: var(--accent); font-weight: 600; }
 
 /* Sources card: separate "Your lab" from the datasets above it */
-.em-lab-block { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border-color); }
+/* Lab is its own card now, so no inner separator needed */
+.em-lab-block > .lab-head:first-child { margin-top: 0; }
 .em-sources-card > .ui-subtitle { margin-top: 18px; }
 .em-sources-card > .ui-subtitle:first-of-type { margin-top: 4px; }
 
@@ -381,6 +391,16 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-actions.is-caldera .ui-pill.is-provisioned { border-color: #16a34a !important; color: #16a34a !important; }
 .lab-actions.is-caldera .ui-pill.is-provisioned:hover:not(:disabled) { background: #16a34a !important; color: #fff !important; border-color: #16a34a !important; }
 .lab-caldera-bar .ms-log, #prov-log { margin-top: 10px; max-height: 180px; }
+
+/* CALDERA agent topology diagram (horizontal: server on top, agents in a row) */
+.lab-netmap { margin: 14px 0; overflow-x: auto; }
+.netmap-svg { max-width: 100%; height: auto; display: block; }
+.netmap-note { margin: 8px 0 0; }
+.netmap-edge { fill: none; stroke: var(--border-color); stroke-width: 1.5; }
+.netmap-node rect { fill: var(--bg-primary, #f7fafc); stroke: var(--border-color); stroke-width: 1; }
+.netmap-node.is-server rect { fill: rgba(13, 148, 136, .08); stroke: var(--lab-teal); stroke-width: 1.5; }
+.netmap-t { font: 600 12px/1 Inter, system-ui, sans-serif; fill: var(--text-primary); }
+.netmap-s { font: 400 10.5px/1 Inter, system-ui, sans-serif; fill: var(--text-secondary); }
 .lab-caldera-ops { margin-top: 10px; }
 .lab-caldera-check { margin-top: 14px; }
 .lab-caldera-check h4 { margin: 14px 0 6px; font-size: .92em; }
