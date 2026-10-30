@@ -393,14 +393,31 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-caldera-bar .ms-log, #prov-log { margin-top: 10px; max-height: 180px; }
 
 /* CALDERA agent topology diagram (horizontal: server on top, agents in a row) */
-.lab-netmap { margin: 14px 0; overflow-x: auto; }
-.netmap-svg { max-width: 100%; height: auto; display: block; }
-.netmap-note { margin: 8px 0 0; }
+.lab-netmap { position: relative; margin: 14px 0; overflow-x: auto; text-align: center; }
+.netmap-svg { max-width: 100%; height: auto; display: inline-block; }
+.netmap-note { margin: 8px 0 0; text-align: center; }
 .netmap-edge { fill: none; stroke: var(--border-color); stroke-width: 1.5; }
 .netmap-node rect { fill: var(--bg-primary, #f7fafc); stroke: var(--border-color); stroke-width: 1; }
 .netmap-node.is-server rect { fill: rgba(13, 148, 136, .08); stroke: var(--lab-teal); stroke-width: 1.5; }
+.netmap-node.is-agent { cursor: pointer; }
+.netmap-node.is-agent:hover rect { stroke: var(--lab-teal); stroke-width: 1.5; }
 .netmap-t { font: 600 12px/1 Inter, system-ui, sans-serif; fill: var(--text-primary); }
 .netmap-s { font: 400 10.5px/1 Inter, system-ui, sans-serif; fill: var(--text-secondary); }
+/* Per-agent action menu, anchored under the clicked node */
+.netmap-menu { position: absolute; z-index: 20; min-width: 150px; text-align: left; padding: 5px;
+  background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .18); display: flex; flex-direction: column; gap: 2px; }
+.netmap-menu-head { padding: 4px 8px 6px; font-weight: 600; border-bottom: 1px solid var(--border-color); margin-bottom: 3px; }
+.netmap-menu-head small { font-weight: 400; color: var(--text-secondary); }
+.netmap-menu-item { text-align: left; padding: 6px 8px; border: 0; border-radius: 5px; background: none;
+  color: var(--text-primary); font: inherit; cursor: pointer; }
+.netmap-menu-item:hover { background: rgba(13, 148, 136, .12); }
+.netmap-menu-item.is-danger { color: var(--accent); }
+.netmap-menu-item.is-danger:hover { background: rgba(239, 68, 68, .12); }
+.netmap-menu-note { padding: 5px 8px 3px; font-size: .8em; color: var(--text-secondary); }
+/* Separate the three button groups (operations | provisioning | detonate) with a divider */
+.lab-caldera-acts .lab-act-grp:not([hidden]) ~ .lab-act-grp:not([hidden]) {
+  border-left: 1px solid var(--border-color); padding-left: 8px; margin-left: 2px; }
 .lab-caldera-ops { margin-top: 10px; }
 .lab-caldera-check { margin-top: 14px; }
 .lab-caldera-check h4 { margin: 14px 0 6px; font-size: .92em; }

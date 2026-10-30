@@ -403,6 +403,25 @@ def caldera_status(archer_session: Optional[str] = Cookie(None)):
         return {"configured": True, "error": e.message, "detail": e.detail, "groups": [], **base}
 
 
+@router.post("/caldera/agent/forget")
+async def caldera_agent_forget(request: Request, archer_session: Optional[str] = Cookie(None)):
+    """Forget an agent from CALDERA — clears a dead or stale record from the topology. A sandcat
+    still running on the host re-registers on its next beacon, so this never kills a live agent."""
+    user, denied = _lab(archer_session)
+    if denied:
+        return denied
+    data = await request.json()
+    paw = str(data.get("paw", "")).strip()
+    if not paw:
+        return JSONResponse({"error": "No agent given"}, status_code=400)
+    try:
+        _, client = _caldera(user)
+        client.delete_agent(paw)
+        return {"ok": True}
+    except LabError as e:
+        return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
+
+
 @router.post("/caldera/operate")
 async def caldera_operate(request: Request, archer_session: Optional[str] = Cookie(None)):
     """

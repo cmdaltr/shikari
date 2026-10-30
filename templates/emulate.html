@@ -191,15 +191,17 @@
         <div class="lab-caldera-bar">
           <div class="lab-caldera-status" id="caldera-status"></div>
           <div class="lab-caldera-acts">
-            <div class="lab-actions is-caldera" id="caldera-actions" hidden>
-              <button type="button" class="ui-pill" id="caldera-plan">Plan an operation</button>
-              <button type="button" class="ui-pill is-detonate" id="caldera-detonate" title="Runs a live operation — a real implant detonates and beacons over C2">Detonate</button>
-              <button type="button" class="ui-pill" id="caldera-collect">Collect an existing operation</button>
+            <div class="lab-actions is-caldera lab-act-grp" id="caldera-actions" hidden>
+              <button type="button" class="ui-pill" id="caldera-plan" title="Plan an operation (reads only — creates nothing)">Plan</button>
+              <button type="button" class="ui-pill" id="caldera-collect" title="Collect an existing operation by its id">Collect</button>
             </div>
-            <div class="lab-actions is-caldera" id="caldera-prov" hidden>
+            <div class="lab-actions is-caldera lab-act-grp" id="caldera-prov" hidden>
               <button type="button" class="ui-pill" id="caldera-provision">Provision</button>
               <button type="button" class="ui-pill lab-danger" id="caldera-deprovision" hidden>De-provision</button>
               <button type="button" class="ui-pill" id="caldera-steps" hidden>Deploy</button>
+            </div>
+            <div class="lab-actions is-caldera lab-act-grp" id="caldera-detonate-grp" hidden>
+              <button type="button" class="ui-pill is-detonate" id="caldera-detonate" title="Runs a live operation — a real implant detonates and beacons over C2">⚠ Detonate</button>
             </div>
           </div>
         </div>

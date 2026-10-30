@@ -30,9 +30,11 @@
   // agent a node in the row below (OS icon, paw, environment and group), joined by a curved edge.
   const OS_IMG = { windows: '/static/images/os/windows.svg', linux: '/static/images/os/tux.svg',
     macos: '/static/images/os/macos.png', darwin: '/static/images/os/macos.png' };
-  // A 16×16 OS mark where the status dot used to be, or nothing when the OS is unknown.
-  const osMark = (platform, x, y) => OS_IMG[platform]
-    ? `<image href="${OS_IMG[platform]}" x="${x}" y="${y}" width="16" height="16"/>` : '';
+  // The virtualisation each environment uses. OrbStack and "this host" have no logo of their own,
+  // so they stay as text; everything else gets its tool's icon.
+  const ENV_IMG = { Docker: '/static/images/os/docker.png', Tart: '/static/images/os/tart.png', UTM: '/static/images/os/utm.svg' };
+  const img = (src, x, y, s) => src ? `<image href="${src}" x="${x}" y="${y}" width="${s}" height="${s}"/>` : '';
+  const osMark = (platform, x, y) => img(OS_IMG[platform], x, y, 16);  // where the status dot used to be
   function netmap(url, agents, hostOs, hostName, hostEnv) {
     const rows = agents.slice().sort((a, b) => (a.group || '').localeCompare(b.group || ''));
     const NW = 150, NH = 46, GAPX = 18, PAD = 12, TOP = 12, VGAP = 44;
@@ -43,36 +45,80 @@
     const VW = Math.max(rowW, SW) + PAD * 2;
     const serverX = (VW - SW) / 2, serverY = TOP, agentY = TOP + SH + VGAP, h = agentY + NH + TOP;
     const agentX = i => PAD + i * (NW + GAPX);
-    let svg = `<svg viewBox="0 0 ${VW} ${h}" width="${VW}" height="${h}" class="netmap-svg" role="img" aria-label="CALDERA agent topology">`;
+    // Rendered at 2× the coordinate space: the viewBox stays natural, the width/height double it.
+    let svg = `<svg viewBox="0 0 ${VW} ${h}" width="${VW * 2}" height="${h * 2}" class="netmap-svg" role="img" aria-label="CALDERA agent topology">`;
     const sx = serverX + SW / 2, my = (serverY + SH + agentY) / 2;
     rows.forEach((a, i) => {
       const ax = agentX(i) + NW / 2;
       svg += `<path d="M${sx} ${serverY + SH} C ${sx} ${my}, ${ax} ${my}, ${ax} ${agentY}" class="netmap-edge"/>`;
     });
     const cy = serverY + SH / 2;
-    const serverLine = esc(urlHost) + (hostEnv ? ' · ' + esc(hostEnv) : '');
+    // The server's environment gets its icon on the hostname line; the URL sits below.
+    const envIc = (env, x, y) => ENV_IMG[env] ? img(ENV_IMG[env], x, y, 12) : '';
     svg += `<g class="netmap-node is-server"><rect x="${serverX}" y="${serverY}" width="${SW}" height="${SH}" rx="9"/>` +
       osMark(hostOs, serverX + 9, cy - 8) +
       (name
         ? `<text x="${serverX + 31}" y="${cy - 10}" class="netmap-t">CALDERA server</text>` +
           `<text x="${serverX + 31}" y="${cy + 5}" class="netmap-s">${name}</text>` +
-          `<text x="${serverX + 31}" y="${cy + 19}" class="netmap-s">${serverLine}</text>`
+          envIc(hostEnv, serverX + 31, cy + 10) +
+          `<text x="${serverX + (ENV_IMG[hostEnv] ? 47 : 31)}" y="${cy + 19}" class="netmap-s">${esc(urlHost)}${hostEnv && !ENV_IMG[hostEnv] ? ' · ' + esc(hostEnv) : ''}</text>`
         : `<text x="${serverX + 31}" y="${cy - 3}" class="netmap-t">CALDERA server</text>` +
-          `<text x="${serverX + 31}" y="${cy + 13}" class="netmap-s">${serverLine}</text>`) +
+          envIc(hostEnv, serverX + 31, cy + 4) +
+          `<text x="${serverX + (ENV_IMG[hostEnv] ? 47 : 31)}" y="${cy + 13}" class="netmap-s">${esc(urlHost)}${hostEnv && !ENV_IMG[hostEnv] ? ' · ' + esc(hostEnv) : ''}</text>`) +
       '</g>';
     rows.forEach((a, i) => {
-      const x = agentX(i), my2 = agentY + NH / 2;
+      const x = agentX(i), my2 = agentY + NH / 2, envImg = ENV_IMG[a.env];
       // Labelled by paw, not host: the server runs on this Mac too, so an agent host of e.g.
       // macbook.local would otherwise read as the server. The paw is the agent's stable identity.
-      const sub = [a.env, a.group || '(no group)'].filter(Boolean).map(esc).join(' · ');
-      svg += `<g class="netmap-node"><rect x="${x}" y="${agentY}" width="${NW}" height="${NH}" rx="9"/>` +
+      // Subtext: the environment's icon (or its name when it has none) then the CALDERA group.
+      const sub = (envImg ? '' : (a.env ? esc(a.env) + ' · ' : '')) + esc(a.group || '(no group)');
+      const data = ` data-paw="${esc(a.paw || a.host)}" data-engine="${esc(a.engine || '')}" data-machine="${esc(a.machine || '')}" data-env="${esc(a.env || '')}"`;
+      svg += `<g class="netmap-node is-agent"${data}><rect x="${x}" y="${agentY}" width="${NW}" height="${NH}" rx="9"/>` +
         osMark(a.platform, x + 9, my2 - 8) +
+        envIc(a.env, x + 31, my2 + 3) +
         `<text x="${x + 31}" y="${my2 - 3}" class="netmap-t">${esc(a.paw || a.host)}</text>` +
-        `<text x="${x + 31}" y="${my2 + 13}" class="netmap-s">${sub}</text></g>`;
+        `<text x="${x + (envImg ? 47 : 31)}" y="${my2 + 13}" class="netmap-s">${sub}</text></g>`;
     });
     return svg + '</svg>' +
-      '<p class="lab-hint netmap-note">Operations detonate the implant on the <strong>agents</strong> — disposable lab machines — never on this host. ' +
+      '<p class="lab-hint netmap-note">Click an agent to act on it. Operations detonate the implant on the <strong>agents</strong> — disposable lab machines — never on this host. ' +
       'For a lab Provisioned here, the agents are OrbStack Linux VMs running on this Mac, which also hosts the CALDERA server.</p>';
+  }
+
+  // Click an agent node → a small menu of what can be done to it. Machine controls appear only when
+  // the agent maps to a machine Archer manages (Docker/Tart/UTM); every agent can be forgotten.
+  function closeNodeMenu() { document.querySelector('.netmap-menu')?.remove(); }
+
+  function nodeMenu(node, anchor) {
+    closeNodeMenu();
+    const { paw, engine, machine, env } = node;
+    const act = (label, cls, fn) => `<button type="button" class="netmap-menu-item${cls ? ' ' + cls : ''}" data-fn="${fn}">${esc(label)}</button>`;
+    let items = '';
+    if (engine && machine) {
+      items += act('Start', '', 'start') + act('Stop', '', 'stop') + act('Delete machine', 'is-danger', 'delete');
+    }
+    items += act('Forget agent', 'is-danger', 'forget');
+    const box = document.createElement('div');
+    box.className = 'netmap-menu';
+    box.innerHTML = `<div class="netmap-menu-head">${esc(paw)}${env ? ` <small>${esc(env)}</small>` : ''}</div>${items}` +
+      (engine && machine ? '' : '<div class="netmap-menu-note">Not an Archer-managed machine — rebuild it with its lab tool.</div>');
+    const nm = el('caldera-netmap'); nm.appendChild(box);
+    const nr = nm.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
+    box.style.left = Math.min(ar.left - nr.left, nm.clientWidth - box.offsetWidth - 4) + 'px';
+    box.style.top = (ar.bottom - nr.top + 4) + 'px';
+    box.addEventListener('click', e => {
+      const b = e.target.closest('[data-fn]'); if (!b) return;
+      const fn = b.dataset.fn;
+      closeNodeMenu();
+      if (fn === 'forget') {
+        if (!confirm(`Forget agent ${paw}? A running sandcat re-registers on its next beacon; this clears a dead or stale record.`)) return;
+        post('/api/lab/caldera/agent/forget', { paw }).then(r => { if (!r.ok) alert(r.error || 'Could not forget the agent'); status(); });
+      } else if (fn === 'delete') {
+        if (!confirm(`Delete the machine ${machine} (${engine})? This destroys the VM/container — not just the agent.`)) return;
+        post('/api/lab/machine', { engine, name: machine, action: 'delete' }).then(r => { if (!r.ok) alert(r.error || 'Could not delete'); status(); });
+      } else {
+        post('/api/lab/machine', { engine, name: machine, action: fn }).then(r => { if (!r.ok) alert(r.error || `Could not ${fn}`); status(); });
+      }
+    });
   }
 
   function status() {
@@ -99,6 +145,7 @@
       const ready = r.configured && !r.error;
       const canP = !!r.can_provision, isP = !!r.provisioned;
       el('caldera-actions').hidden = !ready;         // plan / collect once connected
+      el('caldera-detonate-grp').hidden = !ready;    // the live-operation button, on its own
       // Provisioning controls: Provision (red) → Re-provision (green) once a lab is up, plus De-provision.
       const pv = el('caldera-provision');
       pv.hidden = !canP;
@@ -409,6 +456,14 @@
   el('caldera-provision').addEventListener('click', provisionDialog);
   el('caldera-deprovision').addEventListener('click', deprovision);
   el('caldera-ops').addEventListener('click', e => { const b = e.target.closest('[data-check]'); if (b) check(b.dataset.check); });
+  // Interactive topology: click an agent node for its action menu; a click elsewhere dismisses it.
+  el('caldera-netmap').addEventListener('click', e => {
+    const g = e.target.closest('.netmap-node.is-agent');
+    if (!g) return;
+    e.stopPropagation();
+    nodeMenu({ paw: g.dataset.paw, engine: g.dataset.engine, machine: g.dataset.machine, env: g.dataset.env }, g);
+  });
+  document.addEventListener('click', e => { if (!e.target.closest('.netmap-menu, .netmap-node.is-agent')) closeNodeMenu(); });
   status();
   if (window.onRoleChange) window.onRoleChange(() => status());
 })();

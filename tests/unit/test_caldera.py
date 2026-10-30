@@ -169,9 +169,11 @@ def test_agent_nodes_trims_and_falls_back_to_paw():
     ])
     assert nodes == [
         {"host": "win-vm", "paw": "w1", "platform": "windows", "group": "winlab",
-         "env": "UTM", "last_seen": "2026-10-30T01:00:00Z"},        # winlab -> UTM by group convention
+         "env": "UTM", "engine": "", "machine": "",                 # winlab -> UTM by group convention
+         "last_seen": "2026-10-30T01:00:00Z"},
         {"host": "l1", "paw": "l1", "platform": "linux", "group": "",
-         "env": "", "last_seen": "2026-10-30T01:00:00Z"},           # no machine, no known group -> blank
+         "env": "", "engine": "", "machine": "",                    # no machine, no known group -> blank
+         "last_seen": "2026-10-30T01:00:00Z"},
     ]
 
 
@@ -185,8 +187,11 @@ def test_agent_nodes_resolves_environment():
          "last_seen": "2026-10-30T01:00:00Z"},                      # the host itself
     ]
     machines = [{"name": "archer-win11", "engine": "utm"}]
-    env = {n["paw"]: n["env"] for n in caldera.agent_nodes(agents, machines, host_name="studio.local")}
-    assert env == {"cal1": "OrbStack", "archer-win11": "UTM", "mac": "this host"}
+    nodes = {n["paw"]: n for n in caldera.agent_nodes(agents, machines, host_name="studio.local")}
+    assert {p: n["env"] for p, n in nodes.items()} == {"cal1": "OrbStack", "archer-win11": "UTM", "mac": "this host"}
+    # Only the Archer-managed match carries the engine + machine name the node menu acts on.
+    assert (nodes["archer-win11"]["engine"], nodes["archer-win11"]["machine"]) == ("utm", "archer-win11")
+    assert (nodes["cal1"]["engine"], nodes["cal1"]["machine"]) == ("", "")
 
 
 def test_agent_nodes_dedupes_stale_records_per_host():

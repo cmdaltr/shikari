@@ -139,6 +139,11 @@ class Client:
     def agents(self) -> List[Dict]:
         return self._get("/agents") or []
 
+    def delete_agent(self, paw: str) -> None:
+        """Forget an agent — remove its registration from CALDERA. The sandcat on the host, if it is
+        still running, simply re-registers on its next beacon; this clears dead or stale records."""
+        self._delete(f"/agents/{paw}")
+
     def abilities(self) -> List[Dict]:
         return self._get("/abilities") or []
 
@@ -259,26 +264,30 @@ _ENGINE_LABEL = {"docker": "Docker", "tart": "Tart", "utm": "UTM"}
 _GROUP_ENV = {"disposable": "OrbStack", "winlab": "UTM"}
 
 
-def _agent_env(a: Dict, by_name: Dict[str, str], host_name: str) -> str:
-    """The environment a node runs in: an Archer-managed machine's engine when its name matches,
-    'this host' when the agent is this machine itself, else the lab script's group convention."""
+def _agent_env(a: Dict, by_name: Dict[str, Dict], host_name: str) -> Dict:
+    """Where a node runs, as {env, engine, machine}: an Archer-managed machine's engine when its
+    name matches (so the diagram can drive it), 'this host' when the agent is this machine itself,
+    else the lab script's group convention. engine/machine are set only for a managed match."""
     paw, host = (a.get("paw") or "").lower(), (a.get("host") or "").lower()
     if host_name and host == host_name.lower():
-        return "this host"  # a sandcat on the machine itself, not in a VM
+        return {"env": "this host", "engine": "", "machine": ""}  # a sandcat on the machine, not a VM
     for key in (paw, host):
-        if key and key in by_name:
-            return _ENGINE_LABEL.get(by_name[key], by_name[key])
-    return _GROUP_ENV.get((a.get("group") or "").lower(), "")
+        m = by_name.get(key)
+        if m:
+            eng = m.get("engine") or ""
+            return {"env": _ENGINE_LABEL.get(eng, eng), "engine": eng, "machine": m.get("name") or ""}
+    return {"env": _GROUP_ENV.get((a.get("group") or "").lower(), ""), "engine": "", "machine": ""}
 
 
 def agent_nodes(agents: List[Dict], machines: Optional[List[Dict]] = None,
                 host_name: str = "") -> List[Dict]:
     """A trimmed agent list for the topology diagram: one node per host with its paw, platform,
-    group and the environment it runs in. CALDERA keeps every agent that ever enrolled, so a VM
-    re-enrolled under a fresh paw (an `up` before the lab fixed its paws, say) leaves stale records
-    on the same host; keep only the most recently seen agent per host, so the diagram shows live VMs
-    and not their ghosts. The key is never here — these come from CALDERA's /agents."""
-    by_name = {m["name"].lower(): m.get("engine") or "" for m in (machines or []) if m.get("name")}
+    group, the environment it runs in and — when it maps to an Archer-managed machine — that
+    machine's engine and name, so the node can be acted on. CALDERA keeps every agent that ever
+    enrolled, so a VM re-enrolled under a fresh paw (an `up` before the lab fixed its paws, say)
+    leaves stale records on the same host; keep only the most recently seen agent per host, so the
+    diagram shows live VMs and not their ghosts. The key is never here — these come from /agents."""
+    by_name = {m["name"].lower(): m for m in (machines or []) if m.get("name")}
     by_host: Dict[str, Dict] = {}
     for a in agents or []:
         host = (a.get("host") or a.get("paw") or "?").lower()
@@ -287,7 +296,7 @@ def agent_nodes(agents: List[Dict], machines: Optional[List[Dict]] = None,
             by_host[host] = a
     return [{"host": a.get("host") or a.get("paw") or "?", "paw": a.get("paw") or "",
              "platform": a.get("platform") or "", "group": a.get("group") or "",
-             "env": _agent_env(a, by_name, host_name), "last_seen": a.get("last_seen") or ""}
+             **_agent_env(a, by_name, host_name), "last_seen": a.get("last_seen") or ""}
             for a in by_host.values()]
 
 
