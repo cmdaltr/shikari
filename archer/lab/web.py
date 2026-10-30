@@ -382,20 +382,23 @@ def caldera_status(archer_session: Optional[str] = Cookie(None)):
     provisioned = can_provision and caldera_provision.lab_up()
     # host_os/host_name describe this machine — the host the diagram shows the CALDERA server
     # running on (for a lab Provisioned here that's literally this box; the server node wears its
-    # OS dot and hostname).
+    # OS icon and hostname). A Provisioned server runs in local Docker, so name that environment;
+    # for a server you point Archer at yourself we don't know, so leave it blank.
     import platform as _plat
     host_os = {"Darwin": "darwin", "Linux": "linux", "Windows": "windows"}.get(_plat.system(), "")
     host_name = _plat.node() or ""
-    base = {"can_provision": can_provision, "provisioned": provisioned,
-            "host_os": host_os, "host_name": host_name}
+    base = {"can_provision": can_provision, "provisioned": provisioned, "host_os": host_os,
+            "host_name": host_name, "host_env": "Docker" if provisioned else ""}
     if not caldera.configured(overrides):
         return {"configured": False, "groups": [],
                 "detail": "Set your CALDERA server and key in Profile → API Keys → Emulation Tools", **base}
     try:
         _, client = _caldera(user)
         ags = client.agents()
+        # Match agents to Archer-managed machines so each node shows the environment it runs in.
+        mach = machines.listing(user_id=user.id, is_admin=_is_admin(user))
         return {"configured": True, "url": client.url, "groups": caldera.groups(ags),
-                "agents": caldera.agent_nodes(ags), **base}
+                "agents": caldera.agent_nodes(ags, mach, host_name), **base}
     except LabError as e:
         return {"configured": True, "error": e.message, "detail": e.detail, "groups": [], **base}
 

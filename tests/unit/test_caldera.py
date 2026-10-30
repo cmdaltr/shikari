@@ -169,10 +169,24 @@ def test_agent_nodes_trims_and_falls_back_to_paw():
     ])
     assert nodes == [
         {"host": "win-vm", "paw": "w1", "platform": "windows", "group": "winlab",
-         "last_seen": "2026-10-30T01:00:00Z"},
+         "env": "UTM", "last_seen": "2026-10-30T01:00:00Z"},        # winlab -> UTM by group convention
         {"host": "l1", "paw": "l1", "platform": "linux", "group": "",
-         "last_seen": "2026-10-30T01:00:00Z"},
+         "env": "", "last_seen": "2026-10-30T01:00:00Z"},           # no machine, no known group -> blank
     ]
+
+
+def test_agent_nodes_resolves_environment():
+    agents = [
+        {"paw": "cal1", "host": "cal1", "platform": "linux", "group": "disposable",
+         "last_seen": "2026-10-30T01:00:00Z"},                      # lab-script group -> OrbStack
+        {"paw": "archer-win11", "host": "DESKTOP-X", "platform": "windows", "group": "winlab",
+         "last_seen": "2026-10-30T01:00:00Z"},                      # matched to an Archer UTM machine
+        {"paw": "mac", "host": "studio.local", "platform": "darwin", "group": "disposable",
+         "last_seen": "2026-10-30T01:00:00Z"},                      # the host itself
+    ]
+    machines = [{"name": "archer-win11", "engine": "utm"}]
+    env = {n["paw"]: n["env"] for n in caldera.agent_nodes(agents, machines, host_name="studio.local")}
+    assert env == {"cal1": "OrbStack", "archer-win11": "UTM", "mac": "this host"}
 
 
 def test_agent_nodes_dedupes_stale_records_per_host():

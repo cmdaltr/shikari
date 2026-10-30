@@ -252,12 +252,33 @@ def plan(abilities: List[Dict], agents: List[Dict], techniques: List[str], group
     return {"steps": steps, "gaps": gaps, "agents": paws, "warnings": warnings}
 
 
-def agent_nodes(agents: List[Dict]) -> List[Dict]:
-    """A trimmed agent list for the topology diagram: one node per host with its paw, platform and
-    group. CALDERA keeps every agent that ever enrolled, so a VM re-enrolled under a fresh paw (an
-    `up` before the lab fixed its paws, say) leaves stale records on the same host; keep only the
-    most recently seen agent per host, so the diagram shows live VMs and not their ghosts. The key
-    is never here — these come from CALDERA's /agents."""
+# Archer's own machine engines, and the environments the lab script (scripts/telemetry/caldera-lab.sh)
+# builds each CALDERA group in — so an agent the machine registry doesn't know (a lab-script VM, say)
+# is still placed by the group it enrolled under.
+_ENGINE_LABEL = {"docker": "Docker", "tart": "Tart", "utm": "UTM"}
+_GROUP_ENV = {"disposable": "OrbStack", "winlab": "UTM"}
+
+
+def _agent_env(a: Dict, by_name: Dict[str, str], host_name: str) -> str:
+    """The environment a node runs in: an Archer-managed machine's engine when its name matches,
+    'this host' when the agent is this machine itself, else the lab script's group convention."""
+    paw, host = (a.get("paw") or "").lower(), (a.get("host") or "").lower()
+    if host_name and host == host_name.lower():
+        return "this host"  # a sandcat on the machine itself, not in a VM
+    for key in (paw, host):
+        if key and key in by_name:
+            return _ENGINE_LABEL.get(by_name[key], by_name[key])
+    return _GROUP_ENV.get((a.get("group") or "").lower(), "")
+
+
+def agent_nodes(agents: List[Dict], machines: Optional[List[Dict]] = None,
+                host_name: str = "") -> List[Dict]:
+    """A trimmed agent list for the topology diagram: one node per host with its paw, platform,
+    group and the environment it runs in. CALDERA keeps every agent that ever enrolled, so a VM
+    re-enrolled under a fresh paw (an `up` before the lab fixed its paws, say) leaves stale records
+    on the same host; keep only the most recently seen agent per host, so the diagram shows live VMs
+    and not their ghosts. The key is never here — these come from CALDERA's /agents."""
+    by_name = {m["name"].lower(): m.get("engine") or "" for m in (machines or []) if m.get("name")}
     by_host: Dict[str, Dict] = {}
     for a in agents or []:
         host = (a.get("host") or a.get("paw") or "?").lower()
@@ -266,7 +287,7 @@ def agent_nodes(agents: List[Dict]) -> List[Dict]:
             by_host[host] = a
     return [{"host": a.get("host") or a.get("paw") or "?", "paw": a.get("paw") or "",
              "platform": a.get("platform") or "", "group": a.get("group") or "",
-             "last_seen": a.get("last_seen") or ""}
+             "env": _agent_env(a, by_name, host_name), "last_seen": a.get("last_seen") or ""}
             for a in by_host.values()]
 
 
