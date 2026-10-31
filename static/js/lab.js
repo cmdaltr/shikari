@@ -43,6 +43,12 @@
   }
 
   const ENGINE_NAME = { docker: 'Docker', tart: 'Tart', vmware: 'VMware', parallels: 'Parallels' };
+  // Shared engine descriptions, used by the Create buttons and the Info modal so they can't drift.
+  const engineKind = t => (t.kind === 'container' ? 'container' : 'VM');
+  const engineWhy = t => (t.kind === 'container'
+    ? 'Light and fast to reset; shares the host kernel, so no Sysmon for Linux.'
+    : 'A full VM with its own kernel — heavier, but records exactly like a real host (Sysmon for Linux too).');
+  let templateInfo = {};  // card name -> { records, engines:[{label, why}] }, filled when cards render
 
   // One card per OS; the way to run it (Docker, Tart…) is a Create button with that engine's logo
   function templateCards(tpls) {
@@ -52,9 +58,11 @@
     return [...byGroup].map(([, group]) => {
       const g0 = group[0];
       const row = canLab ? `<div class="lab-create-row">${group.map(createButton).join('')}</div>` : '';
-      return `<div class="lab-template"><div class="lab-template-top"><span class="lab-template-name">${osIcon(g0.os, g0.os_name)}<strong>${esc(g0.os_name)}</strong></span></div>
-        <p class="lab-template-about">${esc(g0.os_about)}</p>
-        <p class="lab-template-records"><span>Records:</span> ${esc(g0.os_records)}</p>${row}</div>`;
+      templateInfo[g0.os_name] = { records: g0.os_records,
+        engines: group.map(t => ({ label: `${ENGINE_NAME[t.engine] || t.engine} ${engineKind(t)}`, why: engineWhy(t) })) };
+      return `<div class="lab-template"><div class="lab-template-top"><span class="lab-template-name">${osIcon(g0.os, g0.os_name)}<strong>${esc(g0.os_name)}</strong></span>
+        <button type="button" class="ui-pill lab-template-info" data-name="${esc(g0.os_name)}">${actIcon('info')}Info</button></div>
+        <p class="lab-template-about">${esc(g0.os_about)}</p>${row}</div>`;
     }).join('');
   }
 
@@ -77,13 +85,18 @@
       const install = !utm.installed && utm.install ? `<p class="lab-template-records"><code class="lab-install">${esc(utm.install)}</code></p>` : '';
       body = `<p class="lab-template-about">${esc(note)}</p>${install}`;
     }
-    return `<div class="lab-template lab-template-utm"><div class="lab-template-top"><span class="lab-template-name">${engineIcon('utm')}<strong>Windows &amp; others, via UTM</strong></span></div>${body}</div>`;
+    templateInfo['Windows 11'] = {
+      records: 'Security event log (process creation incl. command line), PowerShell Script Block Logging, Windows audit policy',
+      engines: [{ label: 'UTM (QEMU)', why: 'Windows 11 on ARM, built once in the UTM app, then managed here — the only engine that runs Windows.' }] };
+    return `<div class="lab-template lab-template-utm"><div class="lab-template-top"><span class="lab-template-name">${engineIcon('utm')}<strong>Windows &amp; others, via UTM</strong></span>
+      <button type="button" class="ui-pill lab-template-info" data-name="Windows 11">${actIcon('info')}Info</button></div>${body}</div>`;
   }
 
   function createButton(t) {
-    const label = ENGINE_NAME[t.engine] || t.engine;
-    const title = t.ready ? `Create with ${label}` : t.reason;
-    return `<button type="button" class="ui-pill lab-create" data-t="${esc(t.id)}" title="${esc(title)}"${t.ready ? '' : ' disabled'}>${engineIcon(t.engine)}<span>Create</span></button>`;
+    const engine = ENGINE_NAME[t.engine] || t.engine, kind = engineKind(t);
+    // Say what each engine gives you, so the Tart-vs-Docker choice is self-explanatory on hover.
+    const title = t.ready ? `${engine} ${kind} — ${engineWhy(t)}` : t.reason;
+    return `<button type="button" class="ui-pill lab-create" data-t="${esc(t.id)}" title="${esc(title)}"${t.ready ? '' : ' disabled'}>${engineIcon(t.engine)}<span>${esc(engine)} ${esc(kind)}</span></button>`;
   }
 
   // Tux for Linux generally; the Ubuntu mark only when the build is actually Ubuntu
@@ -117,13 +130,12 @@
     enrol: '<circle cx="8" cy="8" r="5"/><circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/>',
     logs: '<path d="M4 5h8M4 8h8M4 11h5"/>',
     delete: '<path d="M4 5h8M6.5 5V3.9h3V5M5.5 5l.4 8h4.2l.4-8"/>',
+    info: '<circle cx="8" cy="8" r="5.5"/><path d="M8 7.3v3.4"/><circle cx="8" cy="5.2" r=".7" fill="currentColor" stroke="none"/>',
   };
   const actIcon = a => (ACT_ICON[a] ? `<svg class="lab-act-ic" viewBox="0 0 16 16" aria-hidden="true">${ACT_ICON[a]}</svg>` : '');
 
   function machineRow(m) {
     const dot = `<span class="lab-dot is-${m.state}" title="${esc(m.state)}"></span>`;
-    const text = [m.engine, m.records && ('records ' + m.records)].filter(Boolean).map(esc).join(' · ');
-    const meta = engineIcon(m.engine) + `<span>${text}</span>`;
     const steps = (m.provisioned || []).length ? `<span class="lab-prov">installed: ${m.provisioned.map(esc).join(', ')}</span>` : '';
     const on = m.state === 'running';
     // Icon-only quick controls in the card's top-right: Start (green) / Stop (red) toggle, and Delete (red).
@@ -154,7 +166,7 @@
       : (m.os ? '<span class="lab-agent-badge" title="Not a CALDERA agent — use Enrol in CALDERA">not enrolled</span>' : '');
     return `<li class="lab-machine" data-engine="${esc(m.engine)}" data-name="${esc(m.name)}" data-os="${esc(m.os)}">
       <div class="lab-machine-head">${dot}${osIcon(m.os, m.name)}<strong>${esc(m.name)}</strong>${enrol}${quick}</div>
-      <div class="lab-machine-meta">${meta}${m.detail ? ' · ' + esc(m.detail) : ''}</div>${steps}${actions}</li>`;
+      ${steps}${actions}</li>`;
   }
 
   let timer = null;
@@ -183,6 +195,7 @@
       naming = data.naming || {};
       // Windows (the UTM card) leads, then macOS, then Linux/Ubuntu last
       const tpls = (data.templates || []).slice().sort((a, b) => (a.os === 'macos' ? 0 : 1) - (b.os === 'macos' ? 0 : 1));
+      templateInfo = {};  // rebuilt by utmCard + templateCards below (keeps the Info modal in sync)
       el('lab-templates').innerHTML = utmCard(data.host) + templateCards(tpls);
       el('lab-templates-empty').hidden = tpls.length > 0;
       // Exclude Rivendell's own VMs, and order by OS: Windows, then macOS, then Linux.
@@ -225,6 +238,16 @@
 
   // Create
   root.addEventListener('click', e => {
+    const info = e.target.closest('.lab-template-info');
+    if (info) {
+      const inf = templateInfo[info.dataset.name] || {};
+      const engines = (inf.engines || []).length
+        ? `<h4 class="lab-info-h">Engines</h4><ul class="lab-info-engines">${inf.engines.map(en => `<li><strong>${esc(en.label)}</strong> — ${esc(en.why)}</li>`).join('')}</ul>`
+        : '';
+      openModal(`${info.dataset.name} — info`,
+        `<p class="lab-info-records"><strong>Records:</strong> ${esc(inf.records || '')}</p>${engines}`);
+      return;
+    }
     const c = e.target.closest('.lab-create');
     if (!c) return;
     const id = c.dataset.t;

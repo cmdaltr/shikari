@@ -21,20 +21,20 @@ from archer.lab import hosts
 # tag: the name-convention OS+version suffix (archer.lab.caldera.suggested_name).
 TEMPLATES = [
     {
-        "id": "ubuntu-container", "engine": "docker", "kind": "container", "os": "linux",
-        "distro": "ubuntu", "tag": "ubu24",
-        "name": "Ubuntu 24.04 container", "image": {"arm64": "ubuntu:24.04", "amd64": "ubuntu:24.04"},
-        "records": "auditd, syslog, journald",
-        "about": "A throwaway Linux container. Fast to create and reset; no kernel of its own, "
-                 "so auditd records through the host — enough for process and file telemetry.",
-    },
-    {
         "id": "ubuntu-vm", "engine": "tart", "kind": "vm", "os": "linux",
         "distro": "ubuntu", "tag": "ubu24",
         "name": "Ubuntu 24.04 VM", "image": {"arm64": "ghcr.io/cirruslabs/ubuntu:latest"},
         "records": "auditd, syslog, journald, Sysmon for Linux",
         "about": "A full Linux VM with its own kernel, so auditd and Sysmon for Linux record "
                  "exactly as on a real host. Heavier than the container.",
+    },
+    {
+        "id": "ubuntu-container", "engine": "docker", "kind": "container", "os": "linux",
+        "distro": "ubuntu", "tag": "ubu24",
+        "name": "Ubuntu 24.04 container", "image": {"arm64": "ubuntu:24.04", "amd64": "ubuntu:24.04"},
+        "records": "auditd, syslog, journald",
+        "about": "A throwaway Linux container. Fast to create and reset; no kernel of its own, "
+                 "so auditd records through the host — enough for process and file telemetry.",
     },
     {
         "id": "rocky-container", "engine": "docker", "kind": "container", "os": "linux",

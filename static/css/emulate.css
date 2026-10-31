@@ -210,9 +210,9 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-machine-head { display: flex; align-items: center; gap: 8px; }
 /* Icon-only Start/Stop/Delete pinned to the card's top-right: green play, red stop, red trash. */
 .lab-quick { margin-left: auto; display: inline-flex; gap: 6px; }
-.lab-q { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0;
-  border: 1px solid var(--border-color); border-radius: 7px; background: var(--bg-primary); cursor: pointer; }
-.lab-q .lab-act-ic { width: 13px; height: 13px; }
+.lab-q { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0;
+  border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); cursor: pointer; }
+.lab-q .lab-act-ic { width: 24px; height: 24px; }  /* larger glyph, same 36px square */
 .lab-q.is-start { color: #16a34a; border-color: #16a34a; }
 .lab-q.is-stop, .lab-q.is-del { color: var(--accent); border-color: var(--accent); }
 .lab-q.is-stop .lab-act-ic rect { fill: currentColor; }   /* solid red square, matching the solid green play */
@@ -228,6 +228,11 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .lab-actions .ui-pill { display: inline-flex; align-items: center; gap: 5px; }
 .lab-act-ic { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.5; flex: 0 0 auto; }
+.lab-template-info { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; }
+.lab-info-records { margin: 0; line-height: 1.5; }
+.lab-info-h { margin: 14px 0 6px; font-size: .95em; }
+.lab-info-engines { margin: 0; padding-left: 18px; line-height: 1.5; }
+.lab-info-engines li { margin-bottom: 5px; }
 .lab-danger { color: var(--accent); border-color: var(--accent); }
 .lab-empty { color: var(--text-secondary); font-size: .9em; }
 .lab-guest { color: var(--text-secondary); font-size: .88em; margin-top: 12px; }
