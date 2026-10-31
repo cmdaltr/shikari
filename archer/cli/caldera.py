@@ -2,8 +2,9 @@
 archer-cli caldera — provision and enrol CALDERA agents from the command line (the CLI half of the
 #30 provisioning the web 'Add CALDERA agent' flow also exposes).
 
-  archer-cli caldera provision linux [name] [--engine tart|docker] [--group G]
+  archer-cli caldera provision linux [name] [--engine tart|docker] [--distro ubuntu|rocky] [--group G]
   archer-cli caldera provision macos [name]            # needs a cirruslabs base (Tart guest agent)
+                                                       # --distro rocky is Docker-only (Rocky 10)
   archer-cli caldera enrol <tart|docker|utm> <name>    # enrol a machine Archer already manages
   archer-cli caldera list                              # managed machines, and which are agents
 
@@ -39,19 +40,22 @@ def _server(arg: str) -> str:
     return url.rstrip("/")
 
 
-def _autoname(os_name: str) -> str:
-    """A free machine name in the lab convention (cal-Ubuntu2404, cal-macOSSeq, …)."""
+def _autoname(os_name: str, template: str = None) -> str:
+    """A free machine name in the lab convention (archer-cal-ubu24, archer-cal-rky10, …)."""
     from archer.lab.machines import all_host_names
 
-    return caldera.suggested_name(os_name, all_host_names(), for_caldera=True)
+    return caldera.suggested_name(os_name, all_host_names(), for_caldera=True, template_id=template)
 
 
 def _provision(args) -> int:
     if args.os == "linux":
-        template = "ubuntu-container" if args.engine == "docker" else "ubuntu-vm"
+        if args.distro == "rocky":
+            template = "rocky-container"  # Rocky is Docker-only (no cirruslabs Rocky Tart base)
+        else:
+            template = "ubuntu-container" if args.engine == "docker" else "ubuntu-vm"
     else:
         template = "macos-vm"
-    name = args.name or _autoname(args.os)
+    name = args.name or _autoname(args.os, template)
     group = args.group or caldera.GROUP_FOR[args.os]
     r = caldera.provision_for_caldera(template, name, group, _server(args.server))
     print(f"provisioned {r['name']} ({r['os']}/{r['engine']}) in group {group}")
@@ -93,9 +97,11 @@ def main():
     pr = sub.add_parser("provision", help="create a managed VM/container for an OS and enrol it")
     pr.add_argument("os", choices=["linux", "macos"],
                     help="linux or macos (Windows: build the UTM VM, then `caldera enrol utm <name>`)")
-    pr.add_argument("name", nargs="?", help="machine name (default: linux1, macos1, …)")
+    pr.add_argument("name", nargs="?", help="machine name (default: archer-cal-ubu24, archer-cal-mac15, …)")
     pr.add_argument("--engine", choices=["tart", "docker"], default="tart",
                     help="linux only: tart VM (full kernel, default) or docker container (light)")
+    pr.add_argument("--distro", choices=["ubuntu", "rocky"], default="ubuntu",
+                    help="linux only: ubuntu 24.04 (default), or rocky 10 (Docker-only)")
     pr.add_argument("--group", help="CALDERA group (default: per OS)")
     pr.add_argument("--server", help="CALDERA server URL (default: configured, else the host LAN IP)")
 

@@ -231,7 +231,24 @@ def test_enrol_agent_rejects_unknown_os_and_engine():
 
 def test_provision_defaults_group_and_template_map():
     assert caldera.GROUP_FOR == {"linux": "disposable", "macos": "maclab", "windows": "winlab"}
-    assert caldera.TEMPLATES_FOR["linux"] == ["ubuntu-vm", "ubuntu-container"]
+    assert caldera.TEMPLATES_FOR["linux"] == ["ubuntu-vm", "ubuntu-container", "rocky-container"]
+
+
+def test_suggested_name_follows_convention():
+    assert caldera.OS_TAG == {"linux": "ubu24", "macos": "mac15", "windows": "win11"}
+    # archer- always; cal- marker only for CALDERA; -N on a clash.
+    assert caldera.suggested_name("linux", []) == "archer-cal-ubu24"
+    assert caldera.suggested_name("macos", []) == "archer-cal-mac15"
+    assert caldera.suggested_name("windows", [], for_caldera=False) == "archer-win11"
+    assert caldera.suggested_name("linux", ["archer-cal-ubu24"]) == "archer-cal-ubu24-2"
+
+
+def test_suggested_name_tags_distro_from_template():
+    # The name tag follows the template, so Rocky reads rky10 rather than the Linux default ubu24.
+    assert caldera.tag_for("rocky-container", "linux") == "rky10"
+    assert caldera.tag_for("ubuntu-vm", "linux") == "ubu24"
+    assert caldera.tag_for(None, "windows") == "win11"
+    assert caldera.suggested_name("linux", [], template_id="rocky-container") == "archer-cal-rky10"
 
 
 def test_coverage_matches_techniques_to_groups_by_os():

@@ -158,9 +158,14 @@ def list_machines(archer_session: Optional[str] = Cookie(None)):
 
 def _caldera_naming() -> dict:
     """The lab naming/group convention, from the backend, so web and CLI can't drift apart."""
-    from archer.lab import caldera
+    from archer.lab import caldera, templates
 
-    return {"os_tag": caldera.OS_TAG, "group_for": caldera.GROUP_FOR}
+    # The Linux machines the "Add agent" modal offers, each with its template, engine, label and
+    # name tag — Ubuntu (VM or container) and Rocky (container only). macOS/Windows resolve by OS.
+    flavours = [{"template": t["id"], "engine": t["engine"], "label": t["name"], "tag": t["tag"]}
+                for t in templates.TEMPLATES if t.get("os") == "linux"]
+    return {"os_tag": caldera.OS_TAG, "group_for": caldera.GROUP_FOR,
+            "template_tag": templates.TEMPLATE_TAG, "linux_flavours": flavours}
 
 
 @router.get("/job")
@@ -468,6 +473,7 @@ async def caldera_provision_agent(request: Request, archer_session: Optional[str
     user, denied = _lab(archer_session)
     if denied:
         return denied
+    from archer.lab import templates
     data = await request.json()
     os_name = str(data.get("os", ""))
     engine = str(data.get("engine", "tart"))
@@ -476,11 +482,14 @@ async def caldera_provision_agent(request: Request, archer_session: Optional[str
         cald, client = _caldera(user)
     except LabError as e:
         return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
-    template = {"linux": "ubuntu-container" if engine == "docker" else "ubuntu-vm",
-                "macos": "macos-vm"}.get(os_name)
-    if not template or not name:
-        return JSONResponse({"error": "Pick an OS and a name (Windows: build the UTM VM, then Enrol it)"},
+    # The modal sends the chosen template (its distro and engine are the template's own); older
+    # callers may still send os+engine, so fall back to the Ubuntu map for those.
+    template = str(data.get("template", "")).strip() or \
+        {"linux": "ubuntu-container" if engine == "docker" else "ubuntu-vm", "macos": "macos-vm"}.get(os_name)
+    if template not in templates.BY_ID or not name:
+        return JSONResponse({"error": "Pick a machine and a name (Windows: build the UTM VM, then Enrol it)"},
                             status_code=400)
+    os_name = templates.BY_ID[template]["os"]  # trust the template's own OS for the group
     group, url = cald.GROUP_FOR.get(os_name, "disposable"), client.url
     return _background(f"Provision {name} for CALDERA",
                        lambda say: cald.provision_for_caldera(template, name, group, url, owner=user.id, say=say))

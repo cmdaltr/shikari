@@ -46,12 +46,13 @@
 
   // One card per OS; the way to run it (Docker, Tart…) is a Create button with that engine's logo
   function templateCards(tpls) {
-    const byOs = new Map();
-    tpls.forEach(t => { (byOs.get(t.os) || byOs.set(t.os, []).get(t.os)).push(t); });
-    return [...byOs].map(([os, group]) => {
+    // One card per distro (Linux) or OS — the backend's `group`, so Ubuntu and Rocky are separate.
+    const byGroup = new Map();
+    tpls.forEach(t => { const k = t.group || t.os; (byGroup.get(k) || byGroup.set(k, []).get(k)).push(t); });
+    return [...byGroup].map(([, group]) => {
       const g0 = group[0];
       const row = canLab ? `<div class="lab-create-row">${group.map(createButton).join('')}</div>` : '';
-      return `<div class="lab-template"><div class="lab-template-top"><span class="lab-template-name">${osIcon(os, g0.os_name)}<strong>${esc(g0.os_name)}</strong></span></div>
+      return `<div class="lab-template"><div class="lab-template-top"><span class="lab-template-name">${osIcon(g0.os, g0.os_name)}<strong>${esc(g0.os_name)}</strong></span></div>
         <p class="lab-template-about">${esc(g0.os_about)}</p>
         <p class="lab-template-records"><span>Records:</span> ${esc(g0.os_records)}</p>${row}</div>`;
     }).join('');
@@ -187,13 +188,14 @@
       .then(r => { if (r.error) alert(r.error + (r.detail ? '\n\n' + r.detail : '')); return r; });
   }
 
-  // A clash-free name in the lab convention: archer-<OSVer> (cal-<OSVer> is for CALDERA provisioning).
+  // A clash-free name in the lab convention: archer-<OSVer> (archer-cal-<OSVer> is for CALDERA).
   // The OS tags come from the backend (data.naming), shared with the CLI, with a fallback.
-  const OS_TAG_FALLBACK = { linux: 'Ubuntu2404', macos: 'macOSSeq', windows: 'Win11' };
+  const OS_TAG_FALLBACK = { linux: 'ubu24', macos: 'mac15', windows: 'win11' };
   function suggestName(id) {
     const OS_TAG = naming.os_tag || OS_TAG_FALLBACK;
-    const os = id.startsWith('macos') ? 'macos' : id.startsWith('ubuntu') ? 'linux' : id.startsWith('windows') ? 'windows' : '';
-    const base = `archer-${OS_TAG[os] || id.replace(/-(vm|container)$/, '')}`;
+    const TPL_TAG = naming.template_tag || {};  // per-template tag, so Rocky reads rky10 not ubu24
+    const os = id.startsWith('macos') ? 'macos' : id.startsWith('windows') ? 'windows' : 'linux';
+    const base = `archer-${TPL_TAG[id] || OS_TAG[os] || id.replace(/-(vm|container)$/, '')}`;
     if (!taken.has(base)) return base;
     for (let n = 2; ; n++) if (!taken.has(`${base}-${n}`)) return `${base}-${n}`;
   }

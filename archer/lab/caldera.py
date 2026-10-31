@@ -356,16 +356,31 @@ def plan_lines(plan: Dict, label: str) -> List[str]:
 _PLATFORM = {"windows": "windows", "macos": "darwin", "linux": "linux"}
 # A default group per OS, matching the lab script's convention so the topology colours agree.
 GROUP_FOR = {"linux": "disposable", "macos": "maclab", "windows": "winlab"}
-# The templates Archer can provision a CALDERA agent from, by OS. "Offer both" for Linux.
-TEMPLATES_FOR = {"linux": ["ubuntu-vm", "ubuntu-container"], "macos": ["macos-vm"]}
-# Short OS+version tag for a machine name, by OS (the lab naming convention).
-OS_TAG = {"linux": "Ubuntu2404", "macos": "macOSSeq", "windows": "Win11"}
+# The templates Archer can provision a CALDERA agent from, by OS. Linux offers Ubuntu (VM or
+# container) and Rocky (container only — cirruslabs ships no Rocky Tart base).
+TEMPLATES_FOR = {"linux": ["ubuntu-vm", "ubuntu-container", "rocky-container"], "macos": ["macos-vm"]}
+# Short OS+version tag for a machine name, by OS (the lab naming convention). The Linux tag tracks
+# the LTS actually provisioned (cirruslabs' base is 24.04 -> ubu24; bump to ubu26 when a 26.04 base
+# ships); mac15 is macOS 15 (Sequoia), win11 is Windows 11.
+OS_TAG = {"linux": "ubu24", "macos": "mac15", "windows": "win11"}
 
 
-def suggested_name(os_name: str, existing, for_caldera: bool = True) -> str:
-    """A machine name in the lab convention: cal-<OSVer> for a CALDERA machine, archer-<OSVer>
-    otherwise, with a -N suffix to dodge a clash (cal-Ubuntu2404, cal-Ubuntu2404-2, …)."""
-    base = f"{'cal' if for_caldera else 'archer'}-{OS_TAG.get(os_name, 'VM')}"
+def tag_for(template_id: Optional[str] = None, os_name: Optional[str] = None) -> str:
+    """The name-convention OS+version tag. A template carries its own (so Rocky reads rky10, not the
+    Linux default ubu24); otherwise fall back to the OS default (Windows, which has no template)."""
+    from archer.lab import templates
+
+    if template_id and template_id in templates.TEMPLATE_TAG:
+        return templates.TEMPLATE_TAG[template_id]
+    return OS_TAG.get(os_name or "", "vm")
+
+
+def suggested_name(os_name: str, existing, for_caldera: bool = True,
+                   template_id: Optional[str] = None) -> str:
+    """A machine name in the lab convention: always an archer- prefix, a cal- marker when the
+    machine is provisioned for CALDERA, then the OS+version tag (per template, so Ubuntu and Rocky
+    differ), with a -N suffix to dodge a clash (archer-cal-ubu24, archer-cal-rky10, archer-win11, …)."""
+    base = f"archer-{'cal-' if for_caldera else ''}{tag_for(template_id, os_name)}"
     taken = {str(n).lower() for n in (existing or [])}
     if base.lower() not in taken:
         return base

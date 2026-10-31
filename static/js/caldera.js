@@ -367,18 +367,27 @@
       const free = ms.filter(m => m.manageable && m.state === 'running' && m.os && !enrolled.has((m.name || '').toLowerCase()) && !/^rivendell-/i.test(m.name || ''));
       // Convention from the backend (single source shared with the CLI), with a safe fallback.
       const GROUP = (naming && naming.group_for) || { linux: 'disposable', macos: 'maclab', windows: 'winlab' };
-      const OS_TAG = (naming && naming.os_tag) || { linux: 'Ubuntu2404', macos: 'macOSSeq', windows: 'Win11' };
-      const nextName = os => {  // the lab convention: cal-<OSVer>, -N on a clash
-        const taken = new Set(ms.map(m => (m.name || '').toLowerCase())), base = 'cal-' + (OS_TAG[os] || 'VM');
+      const OS_TAG = (naming && naming.os_tag) || { linux: 'ubu24', macos: 'mac15', windows: 'win11' };
+      // The Linux machines on offer (Ubuntu VM/container, Rocky container), from the backend.
+      const FLAVOURS = (naming && naming.linux_flavours) || [
+        { template: 'ubuntu-vm', engine: 'tart', label: 'Ubuntu 24.04 VM', tag: 'ubu24' },
+        { template: 'ubuntu-container', engine: 'docker', label: 'Ubuntu 24.04 container', tag: 'ubu24' },
+        { template: 'rocky-container', engine: 'docker', label: 'Rocky Linux 10 container', tag: 'rky10' }];
+      const nextName = tag => {  // the lab convention: archer-cal-<tag>, -N on a clash
+        const taken = new Set(ms.map(m => (m.name || '').toLowerCase())), base = 'archer-cal-' + (tag || 'vm');
         if (!taken.has(base.toLowerCase())) return base;
         let i = 2; while (taken.has((base + '-' + i).toLowerCase())) i++; return base + '-' + i;
       };
+      // The template + tag for the current selection (a Linux flavour, or the macOS VM).
+      const pick = () => el('aa-os').value === 'macos'
+        ? { template: 'macos-vm', tag: OS_TAG.macos }
+        : (FLAVOURS.find(f => f.template === el('aa-flavour').value) || FLAVOURS[0]);
       open('Add a CALDERA agent', `
         <div class="add-agent">
           <h4>Provision a new disposable machine</h4>
           <div class="lab-field-row">
             <label class="lab-field">OS<select id="aa-os"><option value="linux">Linux</option><option value="macos">macOS</option></select></label>
-            <label class="lab-field" id="aa-engine-wrap">Engine<select id="aa-engine"><option value="tart">Tart VM (full kernel)</option><option value="docker">Docker container (light)</option></select></label>
+            <label class="lab-field" id="aa-engine-wrap">Flavour<select id="aa-flavour">${FLAVOURS.map(f => `<option value="${esc(f.template)}">${esc(f.label)}</option>`).join('')}</select></label>
           </div>
           <div class="lab-field-row">
             <label class="lab-field">Name<input type="text" id="aa-name" autocomplete="off"></label>
@@ -397,16 +406,19 @@
       const sync = () => {
         const os = el('aa-os').value;
         el('aa-engine-wrap').style.display = os === 'linux' ? '' : 'none';
-        el('aa-name').value = nextName(os);
+        el('aa-name').value = nextName(pick().tag);
         el('aa-group').value = GROUP[os];
-        el('aa-note').textContent = os === 'macos' ? 'macOS needs a cirruslabs base image (it ships the Tart guest agent).' : '';
+        el('aa-note').textContent = os === 'macos' ? 'macOS needs a cirruslabs base image (it ships the Tart guest agent).'
+          : (pick().template === 'rocky-container' ? 'Rocky is Docker-only — cirruslabs ships no Rocky Tart base.' : '');
       };
-      el('aa-os').addEventListener('change', sync); sync();
+      el('aa-os').addEventListener('change', sync);
+      el('aa-flavour').addEventListener('change', sync);
+      sync();
       el('aa-provision').addEventListener('click', () => {
-        const os = el('aa-os').value, name = el('aa-name').value.trim();
+        const name = el('aa-name').value.trim();
         if (!name) return;
         close();
-        post('/api/lab/caldera/provision-agent', { os, engine: os === 'linux' ? el('aa-engine').value : 'tart', name, group: el('aa-group').value.trim() })
+        post('/api/lab/caldera/provision-agent', { template: pick().template, name, group: el('aa-group').value.trim() })
           .then(r => { if (r && !r.started && r.error) alert(r.error + (r.detail ? '\n\n' + r.detail : '')); poll(); });
       });
       if (free.length) el('aa-enrol').addEventListener('click', () => {
