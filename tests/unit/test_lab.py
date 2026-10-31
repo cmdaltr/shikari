@@ -24,14 +24,14 @@ def test_safe_name_rejects_anything_that_could_reach_a_shell():
 
 
 def test_arch_and_templates_follow_the_host(monkeypatch):
-    # An Apple Silicon Mac with both engines: Linux containers, Linux and macOS VMs, no Windows
+    # An Apple Silicon Mac with both engines: Linux containers (Ubuntu, Rocky), Linux and macOS VMs, no Windows
     monkeypatch.setattr(hosts.platform, "machine", lambda: "arm64")
     monkeypatch.setattr(hosts.platform, "system", lambda: "Darwin")
     caps = {"os": "macos", "arch": "arm64", "ready": ["docker", "tart"],
             "engines": [{"key": "docker", "name": "Docker", "supported": True, "installed": True, "running": True},
                         {"key": "tart", "name": "Tart", "supported": True, "installed": True, "running": True}]}
     ids = {t["id"]: t for t in templates.offered(caps)}
-    assert set(ids) == {"ubuntu-container", "ubuntu-vm", "macos-vm"}  # no Windows: no engine can run it
+    assert set(ids) == {"ubuntu-container", "ubuntu-vm", "rocky-container", "macos-vm"}  # no Windows: no engine can run it
     assert ids["macos-vm"]["image"].startswith("ghcr.io/cirruslabs/macos")
     assert all(t["ready"] for t in ids.values())
 
@@ -41,8 +41,8 @@ def test_only_docker_templates_on_an_x64_host():
            "engines": [{"key": "docker", "name": "Docker", "supported": True, "installed": True, "running": True},
                        {"key": "tart", "name": "Tart", "supported": False, "installed": False, "running": False}]}
     ids = {t["id"] for t in templates.offered(x64)}
-    # tart isn't supported off Apple Silicon, so only the docker container is offered; no VMs
-    assert ids == {"ubuntu-container"}
+    # tart isn't supported off Apple Silicon, so only the docker containers are offered; no VMs
+    assert ids == {"ubuntu-container", "rocky-container"}
 
 
 def test_a_missing_engine_is_reported_with_its_install_command(monkeypatch):

@@ -1,6 +1,10 @@
-# STIX / TAXII & MISP
+# Indicator Management
 
-Threat intelligence arrives as STIX bundles, TAXII collections and MISP events as often as it does blog posts. **Intel → STIX/TAXII & MISP** takes those as a hunt input and exports a finished run back out as STIX or a MISP event. No AI is involved.
+**Intel → Indicator Management** is one page for indicators, in two collapsible sections: searching reputable reporting for an indicator, and importing or exporting threat intelligence as STIX, TAXII or MISP. No AI is involved.
+
+## Search indicators
+
+Enter an IP, domain, URL, file hash, email or CVE and Archer searches the reputable vendor, CERT/government, news and aggregator sources' reporting from the last 7 days for it — and its common defanged forms (`hxxp`, `[.]`, `(dot)`, `[@]`). The tier chips (Vendor TI, CERT/Gov, News, Aggregator) filter which sources it searches. Each hit shows the source, a tier badge, the date and a highlighted snippet, and links to the original; results are cached for the 7-day window, and recent searches sit as chips to re-run. The deep link `/ioc?q=<indicator>` runs a search directly — the Investigation agent and the `ioc_search` console/MCP tool use the same engine.
 
 ## Import
 

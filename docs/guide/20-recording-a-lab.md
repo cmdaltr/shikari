@@ -44,7 +44,7 @@ export ARCHER_MDE_CLIENT_SECRET="<client secret value>"
 
 ## 3. Windows VM (UTM, Apple Silicon)
 
-UTM has no create-from-image, so unlike the Linux and macOS machines this one is built by hand once and then managed from Lab. Install UTM first (`brew install --cask utm`), then get a Windows 11 ARM64 image one of the two ways below. Either way, name the VM `archer-win11` — space-free, so Archer can address it — give it 4 GB of RAM, and once Windows is up take a snapshot called `clean`.
+UTM has no create-from-image, so unlike the Linux and macOS machines this one is built by hand once and then managed from Lab. Install UTM first (`brew install --cask utm`), then get a Windows 11 ARM64 image one of the two ways below. Either way, name the VM `achr-win11` — space-free, so Archer can address it — give it 4 GB of RAM, and once Windows is up take a snapshot called `clean`.
 
 **From Microsoft's ISO (preferred).** Microsoft publish an official multi-edition Windows 11 ARM64 ISO (~5 GB) at [microsoft.com/software-download/windows11arm64](https://microsoft.com/software-download/windows11arm64). Create a VM in UTM from it and run the normal install. There's no ARM64 *evaluation* SKU, so it installs unactivated — a watermark, no functional limit, fine for a disposable lab VM. At OOBE use a local account; no Microsoft account is needed. The source is Microsoft, so nothing here is untrusted.
 
