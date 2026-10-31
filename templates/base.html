@@ -14,11 +14,11 @@
         document.documentElement.setAttribute('data-theme', t);
       } catch (e) {}
     </script>
-    <title>{% block title %}Archer{% endblock %}</title>
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='favicon.ico') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', path='favicon-32.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon.png') }}">
-    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon-precomposed.png') }}">
+    <title>{% block title %}{{ brand.name }}{% endblock %}</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path=brand.favicon) }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', path=brand.icon_32) }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path=brand.apple_icon) }}">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path=brand.apple_icon) }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">

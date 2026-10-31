@@ -83,6 +83,10 @@ from archer.visualization.frameworks import FRAMEWORKS as FLOW_FRAMEWORKS
 
 
 templates = Jinja2Templates(directory=str(paths.TEMPLATES))
+# The active brand/edition (name, wordmark, favicon, accent) — chosen from ARCHER_EDITION
+# at launch and read by every template as `brand`, so the product name is never hard-coded.
+from archer import branding
+templates.env.globals["brand"] = branding.active_brand()
 # Attack flow tabs (partials/attack_flow.html): the Cyber Kill Chain and Targeted Attack Lifecycle mappings
 templates.env.globals["flow_frameworks"] = FLOW_FRAMEWORKS
 
