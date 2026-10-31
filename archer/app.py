@@ -8577,8 +8577,8 @@ def _save_stix_extraction(result: dict, source_label: str) -> dict:
 
 @app.get("/intel/stix", response_class=HTMLResponse)
 def stix_page():
-    """Merged into Indicator Management — open its Import/export tab."""
-    return RedirectResponse("/ioc?tab=stix")
+    """Merged into Indicator Management — jump to its Import/export section."""
+    return RedirectResponse("/ioc#im-stix")
 
 
 @app.post("/api/intel/stix/import")
@@ -9527,9 +9527,9 @@ def incidents_refresh(request: Request, archer_session: Optional[str] = Cookie(N
 
 @app.get("/ioc", response_class=HTMLResponse)
 def ioc_search_page(request: Request, archer_session: Optional[str] = Cookie(None)):
-    """Indicator Management: search reputable reporting for an indicator (?tab=search, the default),
-    or import/export threat intel as STIX, TAXII or MISP (?tab=stix). Merged from the old IOC Search
-    and STIX/TAXII pages; /ioc?q= deep links still open the search tab and run."""
+    """Indicator Management: two collapsible sections — search reputable reporting for an indicator,
+    and import/export threat intel as STIX, TAXII or MISP. Merged from the old IOC Search and
+    STIX/TAXII pages; /ioc?q= deep links still run a search, /ioc#im-stix opens on the STIX section."""
     from archer.config import DATA_DIR
 
     auth = require_auth(request, archer_session)

@@ -7,11 +7,16 @@
 <style>
   /* Page tabs: Search indicators | Import / export. An underline bar, distinct from the boxed
      source tabs inside Import. */
-  .im-tabbar { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 22px; border-bottom: 1px solid var(--border-color); }
-  .im-tab { padding: 10px 18px; border: none; border-bottom: 2px solid transparent; background: none;
-    color: var(--text-secondary); cursor: pointer; font: inherit; font-weight: 600; font-size: 1rem; }
-  .im-tab.is-active { color: var(--text-primary); border-bottom-color: var(--accent); }
-  #im-pane-search { max-width: 920px; }
+  /* Two collapsible sections (Archer's house style), IOC search above STIX/TAXII. */
+  .im-sect { border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-primary); margin: 0 0 18px; }
+  .im-sect > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 15px 18px; }
+  .im-sect > summary::-webkit-details-marker { display: none; }
+  .im-sect > summary::before { content: ''; width: 8px; height: 8px; border-right: 2px solid var(--text-secondary);
+    border-bottom: 2px solid var(--text-secondary); transform: rotate(-45deg); transition: transform .15s; flex: 0 0 auto; }
+  .im-sect[open] > summary::before { transform: rotate(45deg); }
+  .im-sect > summary h2 { margin: 0; font-size: 1.15rem; font-weight: 600; }
+  .im-sect-body { padding: 0 18px 18px; }
+  #im-search .im-sect-body { max-width: 920px; }
 
   /* IOC search */
   .ioc-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 4px 0 10px; }
@@ -89,13 +94,10 @@
     <p>Search reputable reporting for an indicator, or import and export threat intelligence as STIX, TAXII or MISP. No AI involved.</p>
   </div>
 
-  <div class="im-tabbar" role="tablist">
-    <button type="button" class="im-tab is-active" data-pane="search" role="tab">Search indicators</button>
-    <button type="button" class="im-tab" data-pane="stix" role="tab">Import / export (STIX · TAXII · MISP)</button>
-  </div>
-
   <!-- ===== Search indicators ===== -->
-  <section class="im-pane" id="im-pane-search">
+  <details class="im-sect" id="im-search" open>
+    <summary><h2>Search indicators</h2></summary>
+    <div class="im-sect-body">
     <p class="ioc-hint">Search {{ sources.total }} reputable cyber-intelligence and reporting sources from the last 7 days for an indicator — IP, domain, URL, hash, email or CVE. Defanged forms are matched.</p>
     <form class="ioc-form" id="ioc-form">
       <input class="ioc-input" id="ioc-input" type="text" autocomplete="off" spellcheck="false"
@@ -116,10 +118,13 @@
 
     <div class="ioc-meta" id="ioc-meta" hidden></div>
     <ul class="ioc-list" id="ioc-results"></ul>
-  </section>
+    </div>
+  </details>
 
-  <!-- ===== Import / export ===== -->
-  <section class="im-pane" id="im-pane-stix" hidden>
+  <!-- ===== Import / export (STIX · TAXII · MISP) ===== -->
+  <details class="im-sect" id="im-stix" open>
+    <summary><h2>Import / export — STIX · TAXII · MISP</h2></summary>
+    <div class="im-sect-body">
     <!-- Import -->
     <section class="ui-card ms-card">
       <h2>Import intelligence</h2>
@@ -203,22 +208,9 @@
       <p class="ms-state sx-import-state" id="sx-export-state" aria-live="polite"></p>
       {% if not runs %}<p class="ms-note">No runs yet. Hunt a group, CVE or report first.</p>{% endif %}
     </section>
-  </section>
+    </div>
+  </details>
 </div>
-
-<script>
-// ---- Page tabs: Search indicators | Import / export ----
-(function () {
-  const tabs = document.querySelectorAll('.im-tab');
-  function show(name) {
-    tabs.forEach(t => t.classList.toggle('is-active', t.dataset.pane === name));
-    document.querySelectorAll('.im-pane').forEach(p => p.hidden = p.id !== 'im-pane-' + name);
-    try { history.replaceState(null, '', name === 'stix' ? '/ioc?tab=stix' : '/ioc'); } catch (e) {}
-  }
-  tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.pane)));
-  if (new URLSearchParams(location.search).get('tab') === 'stix') show('stix');
-})();
-</script>
 
 <script>
 // ---- Search indicators ----
