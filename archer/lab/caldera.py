@@ -377,10 +377,10 @@ def tag_for(template_id: Optional[str] = None, os_name: Optional[str] = None) ->
 
 def suggested_name(os_name: str, existing, for_caldera: bool = True,
                    template_id: Optional[str] = None) -> str:
-    """A machine name in the lab convention: always an archer- prefix, a cal- marker when the
+    """A machine name in the lab convention: always an achr- prefix, a cal- marker when the
     machine is provisioned for CALDERA, then the OS+version tag (per template, so Ubuntu and Rocky
-    differ), with a -N suffix to dodge a clash (archer-cal-ubu24, archer-cal-rky10, archer-win11, …)."""
-    base = f"archer-{'cal-' if for_caldera else ''}{tag_for(template_id, os_name)}"
+    differ), with a -N suffix to dodge a clash (achr-cal-ubu24, achr-cal-rky10, achr-win11, …)."""
+    base = f"achr-{'cal-' if for_caldera else ''}{tag_for(template_id, os_name)}"
     taken = {str(n).lower() for n in (existing or [])}
     if base.lower() not in taken:
         return base

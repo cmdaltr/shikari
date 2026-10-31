@@ -41,7 +41,7 @@ def _server(arg: str) -> str:
 
 
 def _autoname(os_name: str, template: str = None) -> str:
-    """A free machine name in the lab convention (archer-cal-ubu24, archer-cal-rky10, …)."""
+    """A free machine name in the lab convention (achr-cal-ubu24, achr-cal-rky10, …)."""
     from archer.lab.machines import all_host_names
 
     return caldera.suggested_name(os_name, all_host_names(), for_caldera=True, template_id=template)
@@ -97,7 +97,7 @@ def main():
     pr = sub.add_parser("provision", help="create a managed VM/container for an OS and enrol it")
     pr.add_argument("os", choices=["linux", "macos"],
                     help="linux or macos (Windows: build the UTM VM, then `caldera enrol utm <name>`)")
-    pr.add_argument("name", nargs="?", help="machine name (default: archer-cal-ubu24, archer-cal-mac15, …)")
+    pr.add_argument("name", nargs="?", help="machine name (default: achr-cal-ubu24, achr-cal-mac15, …)")
     pr.add_argument("--engine", choices=["tart", "docker"], default="tart",
                     help="linux only: tart VM (full kernel, default) or docker container (light)")
     pr.add_argument("--distro", choices=["ubuntu", "rocky"], default="ubuntu",

@@ -34,7 +34,11 @@
   // so they stay as text; everything else gets its tool's icon.
   const ENV_IMG = { Docker: '/static/images/os/docker.png', Tart: '/static/images/os/tart.png', UTM: '/static/images/os/utm.svg' };
   const img = (src, x, y, s) => src ? `<image href="${src}" x="${x}" y="${y}" width="${s}" height="${s}"/>` : '';
-  const osMark = (platform, x, y) => img(OS_IMG[platform], x, y, 16);  // where the status dot used to be
+  // Linux carries the distro's own logo, read from the agent/host name (rky10/Rocky, ubu24/Ubuntu).
+  const osSrc = (platform, name = '') => platform === 'linux'
+    ? '/static/images/os/' + (/rocky|rky/i.test(name) ? 'rocky.svg' : /ubuntu|ubu/i.test(name) ? 'ubuntu.png' : 'tux.svg')
+    : OS_IMG[platform];
+  const osMark = (platform, x, y, name) => img(osSrc(platform, name), x, y, 16);  // where the status dot used to be
   function netmap(url, agents, hostOs, hostName, hostEnv) {
     const rows = agents.slice().sort((a, b) => (a.group || '').localeCompare(b.group || ''));
     const NW = 150, NH = 46, GAPX = 18, PAD = 12, TOP = 12, VGAP = 44;
@@ -85,7 +89,7 @@
         : `Managed by Archer (${esc(a.env)})`;
       svg += `<g class="netmap-node is-agent${onHost ? ' is-host' : ''}${external ? ' is-external' : ''}"${data}><rect x="${x}" y="${agentY}" width="${NW}" height="${NH}" rx="9"/>` +
         `<title>${title}</title>` +
-        osMark(a.platform, x + 9, my2 - 8) +
+        osMark(a.platform, x + 9, my2 - 8, a.paw || a.host || a.machine) +
         envIc(a.env, x + 31, my2 + 3) +
         `<text x="${x + 31}" y="${my2 - 3}" class="netmap-t">${esc(a.paw || a.host)}</text>` +
         `<text x="${x + (!onHost && envImg ? 47 : 31)}" y="${my2 + 13}" class="netmap-s">${sub}</text></g>`;
@@ -373,8 +377,8 @@
         { template: 'ubuntu-vm', engine: 'tart', label: 'Ubuntu 24.04 VM', tag: 'ubu24' },
         { template: 'ubuntu-container', engine: 'docker', label: 'Ubuntu 24.04 container', tag: 'ubu24' },
         { template: 'rocky-container', engine: 'docker', label: 'Rocky Linux 10 container', tag: 'rky10' }];
-      const nextName = tag => {  // the lab convention: archer-cal-<tag>, -N on a clash
-        const taken = new Set(ms.map(m => (m.name || '').toLowerCase())), base = 'archer-cal-' + (tag || 'vm');
+      const nextName = tag => {  // the lab convention: achr-cal-<tag>, -N on a clash
+        const taken = new Set(ms.map(m => (m.name || '').toLowerCase())), base = 'achr-cal-' + (tag || 'vm');
         if (!taken.has(base.toLowerCase())) return base;
         let i = 2; while (taken.has((base + '-' + i).toLowerCase())) i++; return base + '-' + i;
       };

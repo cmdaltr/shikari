@@ -53,7 +53,7 @@ You don't have to leave Archer to add an agent. **+ Add agent** on the CALDERA c
 
 The machine pulls the architecture-correct agent itself and runs it detached (systemd on Linux, launchd on macOS, a hidden process on Windows), so nothing streams over the hypervisor's guest agent — the amd64 default would fail on an arm64 Tart VM, so the right `architecture` is requested. macOS needs a base image with the Tart guest agent (the cirruslabs images ship it).
 
-Names follow a convention so the lab stays legible: an `archer-` prefix always, a `cal-` marker when the machine is provisioned for CALDERA, then an OS+version tag — `archer-cal-ubu24`, `archer-cal-rky10`, `archer-cal-mac15`, `archer-win11`, with a `-N` suffix on a clash. The tag is the distro+version actually provisioned (`ubu24` tracks cirruslabs' 24.04 base — it becomes `ubu26` once a 26.04 base ships; `rky10` is Rocky Linux 10; `mac15` is Sequoia; `win11` is Windows 11). Linux offers Ubuntu (Tart VM or Docker container) and Rocky (Docker container only — cirruslabs ships no Rocky Tart base). **Your machines** sorts Windows, then macOS, then Linux, hides Rivendell's own VMs (`rivendell-*`), and marks each as a CALDERA **agent** or **not enrolled**.
+Names follow a convention so the lab stays legible: an `achr-` prefix always, a `cal-` marker when the machine is provisioned for CALDERA, then an OS+version tag — `achr-cal-ubu24`, `achr-cal-rky10`, `achr-cal-mac15`, `achr-win11`, with a `-N` suffix on a clash. The tag is the distro+version actually provisioned (`ubu24` tracks cirruslabs' 24.04 base — it becomes `ubu26` once a 26.04 base ships; `rky10` is Rocky Linux 10; `mac15` is Sequoia; `win11` is Windows 11). Linux offers Ubuntu (Tart VM or Docker container) and Rocky (Docker container only — cirruslabs ships no Rocky Tart base). **Your machines** sorts Windows, then macOS, then Linux, hides Rivendell's own VMs (`rivendell-*`), and marks each as a CALDERA **agent** or **not enrolled**.
 
 The same from the command line:
 
@@ -62,7 +62,7 @@ archer-cli caldera provision linux              # a Tart Ubuntu VM, enrolled
 archer-cli caldera provision linux --engine docker
 archer-cli caldera provision linux --distro rocky   # a Rocky 10 Docker container, enrolled
 archer-cli caldera provision macos              # needs a cirruslabs base
-archer-cli caldera enrol tart archer-cal-ubu24  # enrol a machine Archer manages
+archer-cli caldera enrol tart achr-cal-ubu24    # enrol a machine Archer manages
 archer-cli caldera list                         # managed machines, and which are agents
 ```
 

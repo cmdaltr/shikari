@@ -90,7 +90,8 @@
   const OS_ICON = { windows: 'windows.svg', macos: 'macos.png', linux: 'tux.svg' };
   function osIcon(os, name = '') {
     let f = OS_ICON[os];
-    if (os === 'linux' && /ubuntu/i.test(name)) f = 'ubuntu.png';
+    // Linux carries the distro's own logo, read from the name/label (rky10/Rocky, ubu24/Ubuntu).
+    if (os === 'linux') f = /rocky|rky/i.test(name) ? 'rocky.svg' : /ubuntu|ubu/i.test(name) ? 'ubuntu.png' : 'tux.svg';
     if (!f) return '';
     return `<img class="lab-os-icon is-${esc(os)}" src="/static/images/os/${f}" alt="${esc(os)}" width="18" height="18">`;
   }
@@ -122,7 +123,7 @@
         ${setOs}
         ${m.os ? '<button type="button" class="ui-pill lab-act" data-a="provision">Set up</button>' : ''}
         ${m.os ? '<button type="button" class="ui-pill lab-act" data-a="record">Record</button>' : ''}
-        ${m.os && on ? '<button type="button" class="ui-pill lab-act" data-a="enrol" title="Run a CALDERA sandcat agent on this machine">Enrol in CALDERA</button>' : ''}
+        ${m.os && on && !m.enrolled ? '<button type="button" class="ui-pill lab-act" data-a="enrol" title="Run a CALDERA sandcat agent on this machine">Enrol in CALDERA</button>' : ''}
         <button type="button" class="ui-pill" data-a="logs">Logs</button>
         <button type="button" class="ui-pill lab-danger" data-a="delete">Delete</button>
       </div>`;
@@ -188,14 +189,14 @@
       .then(r => { if (r.error) alert(r.error + (r.detail ? '\n\n' + r.detail : '')); return r; });
   }
 
-  // A clash-free name in the lab convention: archer-<OSVer> (archer-cal-<OSVer> is for CALDERA).
+  // A clash-free name in the lab convention: achr-<OSVer> (achr-cal-<OSVer> is for CALDERA).
   // The OS tags come from the backend (data.naming), shared with the CLI, with a fallback.
   const OS_TAG_FALLBACK = { linux: 'ubu24', macos: 'mac15', windows: 'win11' };
   function suggestName(id) {
     const OS_TAG = naming.os_tag || OS_TAG_FALLBACK;
     const TPL_TAG = naming.template_tag || {};  // per-template tag, so Rocky reads rky10 not ubu24
     const os = id.startsWith('macos') ? 'macos' : id.startsWith('windows') ? 'windows' : 'linux';
-    const base = `archer-${TPL_TAG[id] || OS_TAG[os] || id.replace(/-(vm|container)$/, '')}`;
+    const base = `achr-${TPL_TAG[id] || OS_TAG[os] || id.replace(/-(vm|container)$/, '')}`;
     if (!taken.has(base)) return base;
     for (let n = 2; ; n++) if (!taken.has(`${base}-${n}`)) return `${base}-${n}`;
   }
@@ -263,7 +264,7 @@
     }
   });
 
-  // A clash-free clone name from the source: archer-win11 -> archer-win11-2
+  // A clash-free clone name from the source: achr-win11 -> achr-win11-2
   function suggestCloneName(src) {
     const stem = src.replace(/-\d+$/, '');
     for (let n = 2; ; n++) {
@@ -333,7 +334,7 @@
           <input type="text" id="lab-iso-path" placeholder="~/Downloads/Win11_arm64.iso" autocomplete="off"></label>
         <div class="lab-iso-check"><button type="button" class="ui-pill" id="lab-iso-go">Verify ISO</button>
           <span id="lab-iso-result" class="lab-iso-result"></span></div></li>
-      <li>In UTM: <strong>New Virtual Machine → Virtualize → Windows</strong>, pick that ISO, 4 GB RAM, name it without spaces (e.g. <code>archer-win11</code>), and install the <strong>UTM guest tools</strong> so Archer can run commands in it.</li>
+      <li>In UTM: <strong>New Virtual Machine → Virtualize → Windows</strong>, pick that ISO, 4 GB RAM, name it without spaces (e.g. <code>achr-win11</code>), and install the <strong>UTM guest tools</strong> so Archer can run commands in it.</li>
       <li>It appears under Your machines. <strong>Set OS → Windows</strong>, then <strong>Set up</strong> and <strong>Record</strong>. For more Windows VMs after this, use <strong>Clone</strong> — no reinstall.</li>
     </ol>
     <div class="lab-modal-actions"><button type="button" class="btn-primary" id="lab-iso-close">Done</button></div>`);
