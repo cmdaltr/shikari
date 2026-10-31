@@ -190,9 +190,12 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-engine-runs { font-size: .82em; color: var(--text-secondary); margin-top: 2px; }
 .lab-install { display: block; font-size: .78em; padding: 4px 6px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; white-space: nowrap; overflow: auto; max-width: 48%; }
 
-.lab-cols { display: grid; gap: 20px; grid-template-columns: 1fr 1fr; margin-top: 24px; }
+.lab-cols { display: grid; gap: 20px; grid-template-columns: 1fr 1fr; margin-top: 24px; align-items: stretch; }
 @media (max-width: 860px) { .lab-cols { grid-template-columns: 1fr; } }
-.lab-templates { display: grid; gap: 10px; }
+/* Both columns take the row's full height (the taller one); each column's cards/rows then share that
+   height evenly — the left splits into its card count, the right into its machine count. */
+.lab-col { display: flex; flex-direction: column; }
+.lab-templates { display: grid; gap: 10px; flex: 1; grid-auto-rows: 1fr; }
 .lab-template { border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; background: var(--bg-primary); }
 .lab-template-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .lab-template-about { font-size: .86em; color: var(--text-secondary); margin: 6px 0; line-height: 1.5; }
@@ -202,9 +205,20 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-badge.is-ready { color: #0d9488; background: rgba(13, 148, 136, .12); }
 .lab-badge.is-off { color: var(--text-secondary); background: var(--bg-secondary); font-weight: 600; }
 
-.lab-machines { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.lab-machines { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; flex: 1; grid-auto-rows: 1fr; }
 .lab-machine { border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; background: var(--bg-primary); }
 .lab-machine-head { display: flex; align-items: center; gap: 8px; }
+/* Icon-only Start/Stop/Delete pinned to the card's top-right: green play, red stop, red trash. */
+.lab-quick { margin-left: auto; display: inline-flex; gap: 6px; }
+.lab-q { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0;
+  border: 1px solid var(--border-color); border-radius: 7px; background: var(--bg-primary); cursor: pointer; }
+.lab-q .lab-act-ic { width: 13px; height: 13px; }
+.lab-q.is-start { color: #16a34a; border-color: #16a34a; }
+.lab-q.is-stop, .lab-q.is-del { color: var(--accent); border-color: var(--accent); }
+.lab-q.is-stop .lab-act-ic rect { fill: currentColor; }   /* solid red square, matching the solid green play */
+.lab-q:hover:not(:disabled) { color: #fff; }
+.lab-q.is-start:hover { background: #16a34a; }
+.lab-q.is-stop:hover, .lab-q.is-del:hover { background: var(--accent); }
 .lab-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-secondary); flex: none; }
 .lab-dot.is-running { background: #0d9488; }
 .lab-dot.is-stopped { background: #9ca3af; }
@@ -212,6 +226,8 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .lab-machine-meta { font-size: .82em; color: var(--text-secondary); margin: 4px 0; }
 .lab-prov { font-size: .78em; color: #0d9488; }
 .lab-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.lab-actions .ui-pill { display: inline-flex; align-items: center; gap: 5px; }
+.lab-act-ic { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.5; flex: 0 0 auto; }
 .lab-danger { color: var(--accent); border-color: var(--accent); }
 .lab-empty { color: var(--text-secondary); font-size: .9em; }
 .lab-guest { color: var(--text-secondary); font-size: .88em; margin-top: 12px; }

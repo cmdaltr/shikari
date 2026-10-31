@@ -104,28 +104,47 @@
     return `<img class="lab-engine-icon is-${esc(key)}" src="/static/images/os/${f}" alt="${esc(key)}" width="18" height="18">`;
   }
 
+  // A small leading glyph for each machine action, so the dense action row scans at a glance.
+  const ACT_ICON = {
+    start: '<path d="M5 4l7 4-7 4z" fill="currentColor" stroke="none"/>',
+    stop: '<rect x="4.5" y="4.5" width="7" height="7" rx="1"/>',
+    snapshot: '<rect x="2.5" y="5" width="11" height="8" rx="1.5"/><circle cx="8" cy="9" r="2.1"/><path d="M6 5l1-1.4h2L10 5"/>',
+    revert: '<path d="M4.5 8a3.8 3.8 0 1 0 1.1-2.7"/><path d="M3.5 4.5V8H7"/>',
+    clone: '<rect x="5.5" y="5.5" width="7" height="7" rx="1.2"/><path d="M3.5 10.5V4a.5.5 0 0 1 .5-.5h6"/>',
+    adopt: '<path d="M8.5 3H4v4.5L9 12l4-4z"/><circle cx="6" cy="5.5" r=".8" fill="currentColor" stroke="none"/>',
+    provision: '<path d="M8 3v5.5M5.5 7L8 9.5 10.5 7"/><path d="M4 12h8"/>',
+    record: '<circle cx="8" cy="8" r="3.4" fill="currentColor" stroke="none"/>',
+    enrol: '<circle cx="8" cy="8" r="5"/><circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/>',
+    logs: '<path d="M4 5h8M4 8h8M4 11h5"/>',
+    delete: '<path d="M4 5h8M6.5 5V3.9h3V5M5.5 5l.4 8h4.2l.4-8"/>',
+  };
+  const actIcon = a => (ACT_ICON[a] ? `<svg class="lab-act-ic" viewBox="0 0 16 16" aria-hidden="true">${ACT_ICON[a]}</svg>` : '');
+
   function machineRow(m) {
     const dot = `<span class="lab-dot is-${m.state}" title="${esc(m.state)}"></span>`;
     const text = [m.engine, m.records && ('records ' + m.records)].filter(Boolean).map(esc).join(' · ');
     const meta = engineIcon(m.engine) + `<span>${text}</span>`;
-    const steps = (m.provisioned || []).length ? `<span class="lab-prov">set up: ${m.provisioned.map(esc).join(', ')}</span>` : '';
+    const steps = (m.provisioned || []).length ? `<span class="lab-prov">installed: ${m.provisioned.map(esc).join(', ')}</span>` : '';
+    const on = m.state === 'running';
+    // Icon-only quick controls in the card's top-right: Start (green) / Stop (red) toggle, and Delete (red).
+    const qbtn = (a, title, cls) => `<button type="button" class="lab-q ${cls}" data-a="${a}" title="${title}" aria-label="${title}">${actIcon(a)}</button>`;
+    const quick = m.manageable
+      ? `<span class="lab-quick">${qbtn(on ? 'stop' : 'start', on ? 'Stop' : 'Start', on ? 'is-stop' : 'is-start')}${qbtn('delete', 'Delete', 'is-del')}</span>`
+      : '';
     let actions = '';
     if (m.manageable) {
-      const on = m.state === 'running';
       // A UTM VM Archer didn't create needs its OS set before it can be set up or recorded on
       const needsOs = m.engine === 'utm' && !m.os;
-      const setOs = needsOs ? '<button type="button" class="ui-pill lab-act" data-a="adopt">Set OS</button>' : '';
+      const act = (a, label, cls = 'lab-act') => `<button type="button" class="ui-pill ${cls}" data-a="${a}">${actIcon(a)}${label}</button>`;
       actions = `<div class="lab-actions">
-        <button type="button" class="ui-pill lab-act" data-a="${on ? 'stop' : 'start'}">${on ? 'Stop' : 'Start'}</button>
-        <button type="button" class="ui-pill lab-act" data-a="snapshot">Snapshot</button>
-        <button type="button" class="ui-pill lab-act" data-a="revert">Revert</button>
-        ${m.engine === 'utm' ? '<button type="button" class="ui-pill lab-act" data-a="clone">Clone</button>' : ''}
-        ${setOs}
-        ${m.os ? '<button type="button" class="ui-pill lab-act" data-a="provision">Set up</button>' : ''}
-        ${m.os ? '<button type="button" class="ui-pill lab-act" data-a="record">Record</button>' : ''}
-        ${m.os && on && !m.enrolled ? '<button type="button" class="ui-pill lab-act" data-a="enrol" title="Run a CALDERA sandcat agent on this machine">Enrol in CALDERA</button>' : ''}
-        <button type="button" class="ui-pill" data-a="logs">Logs</button>
-        <button type="button" class="ui-pill lab-danger" data-a="delete">Delete</button>
+        ${act('snapshot', 'Snapshot')}
+        ${act('revert', 'Revert')}
+        ${m.engine === 'utm' ? act('clone', 'Clone') : ''}
+        ${needsOs ? act('adopt', 'Set OS') : ''}
+        ${m.os ? act('provision', 'Install tooling') : ''}
+        ${m.os ? act('record', 'Record') : ''}
+        ${m.os && on && !m.enrolled ? act('enrol', 'Enrol in CALDERA') : ''}
+        ${act('logs', 'Logs')}
       </div>`;
     }
     // Whether this machine is a live CALDERA agent — the same enrolled/not-enrolled cue the diagram
@@ -134,7 +153,7 @@
       ? '<span class="lab-agent-badge is-on" title="Enrolled as a CALDERA agent"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="5.5"/><path d="M8 4.5V8l2.5 1.5"/></svg>agent</span>'
       : (m.os ? '<span class="lab-agent-badge" title="Not a CALDERA agent — use Enrol in CALDERA">not enrolled</span>' : '');
     return `<li class="lab-machine" data-engine="${esc(m.engine)}" data-name="${esc(m.name)}" data-os="${esc(m.os)}">
-      <div class="lab-machine-head">${dot}${osIcon(m.os, m.name)}<strong>${esc(m.name)}</strong>${enrol}</div>
+      <div class="lab-machine-head">${dot}${osIcon(m.os, m.name)}<strong>${esc(m.name)}</strong>${enrol}${quick}</div>
       <div class="lab-machine-meta">${meta}${m.detail ? ' · ' + esc(m.detail) : ''}</div>${steps}${actions}</li>`;
   }
 
@@ -168,9 +187,12 @@
       el('lab-templates-empty').hidden = tpls.length > 0;
       // Exclude Rivendell's own VMs, and order by OS: Windows, then macOS, then Linux.
       const osRank = { windows: 0, macos: 1, linux: 2 };
+      const distroRank = n => /rocky|rky/i.test(n) ? 1 : 0;  // within Linux: Ubuntu (and others) above Rocky
       const ms = (data.machines || [])
         .filter(m => !/^rivendell-/i.test(m.name || ''))
-        .sort((a, b) => (osRank[a.os] ?? 3) - (osRank[b.os] ?? 3) || (a.name || '').localeCompare(b.name || ''));
+        .sort((a, b) => (osRank[a.os] ?? 3) - (osRank[b.os] ?? 3)
+          || (a.os === 'linux' ? distroRank(a.name) - distroRank(b.name) : 0)
+          || (a.name || '').localeCompare(b.name || ''));
       lastMachines = ms;
       el('lab-machines').innerHTML = ms.map(machineRow).join('');
       el('lab-machines-empty').hidden = ms.length > 0;
@@ -335,7 +357,7 @@
         <div class="lab-iso-check"><button type="button" class="ui-pill" id="lab-iso-go">Verify ISO</button>
           <span id="lab-iso-result" class="lab-iso-result"></span></div></li>
       <li>In UTM: <strong>New Virtual Machine → Virtualize → Windows</strong>, pick that ISO, 4 GB RAM, name it without spaces (e.g. <code>achr-win11</code>), and install the <strong>UTM guest tools</strong> so Archer can run commands in it.</li>
-      <li>It appears under Your machines. <strong>Set OS → Windows</strong>, then <strong>Set up</strong> and <strong>Record</strong>. For more Windows VMs after this, use <strong>Clone</strong> — no reinstall.</li>
+      <li>It appears under Your machines. <strong>Set OS → Windows</strong>, then <strong>Install tooling</strong> and <strong>Record</strong>. For more Windows VMs after this, use <strong>Clone</strong> — no reinstall.</li>
     </ol>
     <div class="lab-modal-actions"><button type="button" class="btn-primary" id="lab-iso-close">Done</button></div>`);
     el('lab-iso-close').addEventListener('click', closeModal);
@@ -396,9 +418,9 @@
 
   function provisionDialog(engine, name, os) {
     api(`/api/lab/provision-steps?os=${encodeURIComponent(os)}`).then(({ steps }) => {
-      if (!steps || !steps.length) { openModal('Set up', '<p>No provisioning for this OS.</p>'); return; }
+      if (!steps || !steps.length) { openModal('Install tooling', '<p>No tooling to install for this OS.</p>'); return; }
       const rows = steps.map(s => `<button type="button" class="ui-pill lab-step" data-step="${esc(s.step)}">${esc(s.label)}</button>`).join('');
-      openModal(`Set up ${name}`, `<p class="lab-hint">Each step changes the machine. Snapshot it first.</p>
+      openModal(`Install tooling on ${name}`, `<p class="lab-hint">Each step changes the machine. Snapshot it first.</p>
         <div class="lab-steps">${rows}</div>`);
       modalBody.querySelectorAll('.lab-step').forEach(b => b.addEventListener('click', () => {
         closeModal();
