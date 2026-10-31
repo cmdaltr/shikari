@@ -2131,14 +2131,17 @@ AI recognizes this as:
             </div>
 
             <div class="workflow-step">
-                <h4>STIX / TAXII &amp; MISP</h4>
-                <p>Intelligence arrives as STIX bundles, TAXII collections and MISP events as often as blog posts, so Archer takes
-                those as a hunt input too — by file upload, pasted JSON, a polled TAXII collection, or a pull from a MISP instance
-                (<code>/events/restSearch</code> with an API key, used for that request only). Attack-patterns become techniques,
-                indicator patterns and observables become IOCs, and an intrusion-set names the group — the same review-then-generate
-                path as a report. A finished run exports the other way, as a STIX 2.1 bundle (detections carried as
-                <code>x-archer-detection</code> objects) or a MISP event (techniques as ATT&amp;CK galaxy clusters, IOCs as
-                attributes). Both round-trip. No AI.</p>
+                <h4>Indicator Management</h4>
+                <p>One page for indicators, in two tabs. <strong>Search indicators</strong> looks up an IP, domain, URL, hash,
+                email or CVE — and its common defanged forms — across the reputable vendor, CERT/government, news and aggregator
+                sources from the last 7 days, filterable by tier and cached for the window. No AI.</p>
+                <p><strong>Import / export</strong> takes intelligence in the other direction: STIX bundles, TAXII collections and
+                MISP events arrive as often as blog posts, so Archer takes those as a hunt input too — by file upload, pasted JSON,
+                a polled TAXII collection, or a pull from a MISP instance (<code>/events/restSearch</code> with an API key, used for
+                that request only). Attack-patterns become techniques, indicator patterns and observables become IOCs, and an
+                intrusion-set names the group — the same review-then-generate path as a report. A finished run exports the other
+                way, as a STIX 2.1 bundle (detections carried as <code>x-archer-detection</code> objects) or a MISP event
+                (techniques as ATT&amp;CK galaxy clusters, IOCs as attributes). Both round-trip. No AI.</p>
             </div>
 
             <div class="workflow-step">

@@ -8576,19 +8576,9 @@ def _save_stix_extraction(result: dict, source_label: str) -> dict:
 
 
 @app.get("/intel/stix", response_class=HTMLResponse)
-def stix_page(request: Request, archer_session: Optional[str] = Cookie(None)):
-    """Import STIX/TAXII/MISP intel as a hunt input, or export a run as a STIX bundle."""
-    from archer.config import DATA_DIR
-
-    auth = require_auth(request, archer_session)
-    if isinstance(auth, RedirectResponse):
-        return auth
-    user, db = auth
-    db.close()
-    runs_dir = os.path.join(DATA_DIR, "runs")
-    runs = sorted((n[:-5] for n in os.listdir(runs_dir) if n.endswith(".json")), key=str.lower) \
-        if os.path.isdir(runs_dir) else []
-    return templates.TemplateResponse("stix.html", {"request": request, "user": user, "runs": runs})
+def stix_page():
+    """Merged into Indicator Management — open its Import/export tab."""
+    return RedirectResponse("/ioc?tab=stix")
 
 
 @app.post("/api/intel/stix/import")
@@ -9537,15 +9527,23 @@ def incidents_refresh(request: Request, archer_session: Optional[str] = Cookie(N
 
 @app.get("/ioc", response_class=HTMLResponse)
 def ioc_search_page(request: Request, archer_session: Optional[str] = Cookie(None)):
-    """IOC Search: find reputable reporting from the last 7 days that mentions an indicator."""
+    """Indicator Management: search reputable reporting for an indicator (?tab=search, the default),
+    or import/export threat intel as STIX, TAXII or MISP (?tab=stix). Merged from the old IOC Search
+    and STIX/TAXII pages; /ioc?q= deep links still open the search tab and run."""
+    from archer.config import DATA_DIR
+
     auth = require_auth(request, archer_session)
     if isinstance(auth, RedirectResponse):
         return auth
     user, db = auth
     db.close()
     from archer.intelligence import ioc_search
-    return templates.TemplateResponse("ioc_search.html",
-                                      {"request": request, "user": user, "sources": ioc_search.status()})
+    runs_dir = os.path.join(DATA_DIR, "runs")
+    runs = sorted((n[:-5] for n in os.listdir(runs_dir) if n.endswith(".json")), key=str.lower) \
+        if os.path.isdir(runs_dir) else []
+    return templates.TemplateResponse("indicator_management.html",
+                                      {"request": request, "user": user,
+                                       "sources": ioc_search.status(), "runs": runs})
 
 
 @app.get("/api/ioc/search")
