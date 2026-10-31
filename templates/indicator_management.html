@@ -16,7 +16,8 @@
   .im-sect[open] > summary::before { transform: rotate(45deg); }
   .im-sect > summary h2 { margin: 0; font-size: 1.15rem; font-weight: 600; }
   .im-sect-body { padding: 0 18px 18px; }
-  #im-search .im-sect-body { max-width: 920px; }
+  /* The search input fills the row; the tier chips and the Search button ride at the far right. */
+  #ioc-go { margin-left: auto; }
 
   /* IOC search */
   .ioc-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 4px 0 10px; }
