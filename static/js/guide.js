@@ -28,6 +28,9 @@
   };
 
   let guideData = null, tipsData = null;
+  // Cache-bust the guide pictures with the asset version (guide.js's own ?v=), so a
+  // regenerated screenshot is never served from a stale browser cache.
+  const V = (() => { try { const s = document.querySelector('script[src*="/js/guide.js"]'); const m = s && s.src.match(/[?&]v=([^&]+)/); return m ? ('?v=' + m[1]) : ''; } catch (e) { return ''; } })();
   const load = (url) => fetch(url, { cache: 'no-cache' }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
   const guide = () => guideData ? Promise.resolve(guideData) : load('/static/guide/guide.json').then(d => (guideData = d));
   const tips = () => tipsData ? Promise.resolve(tipsData) : load('/static/guide/tips.json').then(d => (tipsData = d));
@@ -74,7 +77,7 @@
 
   const thumb = (page) => el('button', { type: 'button', class: 'gd-start-thumb', title: `Open the guide at ${page.title}`,
     onclick: () => showGuideViewer(page.id) },
-    el('img', { src: page.image, alt: '', loading: 'lazy' }),
+    el('img', { src: page.image + V, alt: '', loading: 'lazy' }),
     el('span', {}, `${page.menu} → ${page.title}`));
 
   function tipCard(list, pages) {
@@ -245,7 +248,7 @@
               el('p', {}, pg.summary)),
             pg.open !== false ? el('a', { class: 'gd-open', href: pg.href || pg.path }, 'Open this page') : null,
           );
-          const img = el('img', { src: pg.image, alt: `${pg.title}, as it appears in Shikari`, width: pg.width, height: pg.height, draggable: 'false' });
+          const img = el('img', { src: pg.image + V, alt: `${pg.title}, as it appears in Shikari`, width: pg.width, height: pg.height, draggable: 'false' });
           const marks = pg.sections.map((x, k) => el('button', {
             type: 'button', class: 'gd-mark', 'aria-label': `${k + 1}. ${x.title}`,
             style: `left:${x.box[0] / pg.width * 100}%;top:${x.box[1] / pg.height * 100}%;width:${x.box[2] / pg.width * 100}%;height:${x.box[3] / pg.height * 100}%`,
