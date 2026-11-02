@@ -1,6 +1,6 @@
 # Detection Fidelity Enhancement System - Implementation Summary
 
-> **Status (2026-10-17):** a 2024 plan, not all of it built. `archer-cli offline generate` has none of the flags shown here (`--use-rag`, `--no-rag`, `--min-fidelity`, `--validate`, `--parallel`, `--workers`); its options are `--correlate`, `--llm`/`--no-llm` and `--hypothesis`.
+> **Status (2026-10-17):** a 2024 plan, not all of it built. `shikari-cli offline generate` has none of the flags shown here (`--use-rag`, `--no-rag`, `--min-fidelity`, `--validate`, `--parallel`, `--workers`); its options are `--correlate`, `--llm`/`--no-llm` and `--hypothesis`.
 
 **Status:** 🚧 Core Implementation Complete - Ready for Testing
 **Date:** 2024-11-28
@@ -24,19 +24,19 @@ A complete **RAG (Retrieval-Augmented Generation)** system that improves detecti
 - Splunk Security Content importer
 - Elastic Detection Rules importer
 - Unified import script
-- Location: `archer/importers/`
+- Location: `shikari/importers/`
 
 ✅ **RAG Retrieval System**
 - Vector embeddings using sentence-transformers
 - FAISS-based similarity search
 - Fast retrieval of relevant examples
-- Location: `archer/ai/rag/`
+- Location: `shikari/ai/rag/`
 
 ✅ **Query Enhancement Engine**
 - LLM integration (OpenAI, Anthropic, Ollama)
 - Few-shot learning with examples
 - Fallback to heuristics
-- Location: `archer/ai/rag/enhancer.py`
+- Location: `shikari/ai/rag/enhancer.py`
 
 ✅ **Helper Scripts**
 - `setup_knowledge_base.py` - Initialize KB structure
@@ -56,7 +56,7 @@ A complete **RAG (Retrieval-Augmented Generation)** system that improves detecti
 ## File Structure
 
 ```
-archer/
+shikari/
 ├── docs/rag/                           # RAG documentation (this file + guides)
 │   ├── RAG_USER_GUIDE.md
 │   ├── FIDELITY_IMPLEMENTATION_GUIDE.md
@@ -81,7 +81,7 @@ archer/
 │   │   └── validation_results/
 │   └── ml_training/                     # ML training data
 │
-├── archer/
+├── shikari/
 │   ├── rag/                             # RAG system
 │   │   ├── knowledge_base.py            # Main KB interface
 │   │   ├── retrieval.py                 # Vector search
@@ -130,7 +130,7 @@ Result: FAISS index created at `data/external/detections/embeddings/vector_store
 ### 3. Query Enhancement Flow
 
 ```python
-from archer.ai.rag import DetectionKnowledgeBase
+from shikari.ai.rag import DetectionKnowledgeBase
 
 # Initialize KB
 kb = DetectionKnowledgeBase()
@@ -157,7 +157,7 @@ enhanced = kb.enhance_query_with_examples(
 ### Installation
 
 ```bash
-cd /path/to/archer
+cd /path/to/shikari
 
 # Install dependencies
 pip install -r requirements_rag.txt
@@ -192,7 +192,7 @@ python scripts/config/search_similar_detections.py --technique T1003.001 --platf
 
 # Test with OpenAI enhancement (requires OPENAI_API_KEY)
 export OPENAI_API_KEY="your-key-here"
-python -c "from archer.ai.rag import DetectionKnowledgeBase; kb = DetectionKnowledgeBase(); print(kb.get_statistics())"
+python -c "from shikari.ai.rag import DetectionKnowledgeBase; kb = DetectionKnowledgeBase(); print(kb.get_statistics())"
 ```
 
 ---
@@ -203,11 +203,11 @@ python -c "from archer.ai.rag import DetectionKnowledgeBase; kb = DetectionKnowl
 
 The RAG system can be integrated into your existing detection generation:
 
-#### 1. In `archer/build/detections.py`
+#### 1. In `shikari/build/detections.py`
 
 ```python
 # Add at the top
-from archer.ai.rag import DetectionKnowledgeBase
+from shikari.ai.rag import DetectionKnowledgeBase
 
 # In compile_query function
 def compile_query(procedure, use_rag=True):
@@ -239,7 +239,7 @@ def compile_query(procedure, use_rag=True):
     # ... rest of existing code ...
 ```
 
-#### 2. In `archer-cli offline` (archer/cli/offline.py)
+#### 2. In `shikari-cli offline` (shikari/cli/offline.py)
 
 ```python
 # Add argument to generate command
@@ -258,7 +258,7 @@ generate_parser.add_argument(
 )
 ```
 
-#### 3. In Web Interface (`archer/app.py`)
+#### 3. In Web Interface (`shikari/app.py`)
 
 ```python
 @app.post("/api/generate-detection")
@@ -321,11 +321,11 @@ index=windows EventCode=10 TargetImage="*\\lsass.exe"
 
 These were documented but not yet coded:
 
-1. **Field Validation System** (`archer/validation/field_validator.py`)
+1. **Field Validation System** (`shikari/validation/field_validator.py`)
    - Validates fields exist in target platform
    - Suggests alternatives for missing fields
 
-2. **Query Validation Module** (`archer/validation/`)
+2. **Query Validation Module** (`shikari/validation/`)
    - Syntax validation
    - Logic validation
    - Test data validation
@@ -386,7 +386,7 @@ The core RAG system is **fully functional** without these components:
 ### Short-term (This Week)
 
 5. **Integrate with Detection Generation**
-   - Add RAG enhancement to `archer/build/detections.py`
+   - Add RAG enhancement to `shikari/build/detections.py`
    - Test with a few threat groups
    - Compare baseline vs enhanced queries
 
@@ -402,7 +402,7 @@ The core RAG system is **fully functional** without these components:
 
 7. **Generate Enhanced Detections**
    ```bash
-   archer-cli offline generate APT29 --use-rag
+   shikari-cli offline generate APT29 --use-rag
    ```
 
 ### Medium-term (Next 2 Weeks)

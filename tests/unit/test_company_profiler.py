@@ -18,13 +18,13 @@ import os
 import sys
 from unittest.mock import MagicMock, patch
 
-# Add archer to path
+# Add shikari to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 
 def test_profiler_initialization():
     """Test that CompanyProfiler initializes successfully."""
-    from archer.intelligence.company_profiler import CompanyProfiler
+    from shikari.intelligence.company_profiler import CompanyProfiler
 
     profiler = CompanyProfiler()
     assert profiler is not None
@@ -34,7 +34,7 @@ def test_profiler_initialization():
 
 def test_profiler_initialization_with_openai():
     """Test profiler initialization with OpenAI option."""
-    from archer.intelligence.company_profiler import CompanyProfiler
+    from shikari.intelligence.company_profiler import CompanyProfiler
 
     with patch.dict("os.environ", {"OPENAI_API_KEY": ""}, clear=False):
         profiler = CompanyProfiler(use_openai=True)
@@ -45,16 +45,16 @@ def test_profiler_initialization_with_openai():
 
 def test_gather_domain_info():
     """Test basic domain info gathering."""
-    from archer.intelligence.company_profiler import CompanyProfiler
+    from shikari.intelligence.company_profiler import CompanyProfiler
 
     profiler = CompanyProfiler()
     profiler.write_progress = None
     profiler.progress_group = None
 
-    with patch("archer.intelligence.company_profiler.socket.getaddrinfo") as mock_getaddr, \
-         patch("archer.intelligence.company_profiler.dns.resolver.resolve") as mock_dns, \
-         patch("archer.intelligence.company_identity.lookup_wikidata", return_value=None), \
-         patch("archer.intelligence.company_identity.homepage_signals",
+    with patch("shikari.intelligence.company_profiler.socket.getaddrinfo") as mock_getaddr, \
+         patch("shikari.intelligence.company_profiler.dns.resolver.resolve") as mock_dns, \
+         patch("shikari.intelligence.company_identity.lookup_wikidata", return_value=None), \
+         patch("shikari.intelligence.company_identity.homepage_signals",
                return_value={"name": None, "country": None, "country_basis": None, "text": ""}):
         mock_getaddr.return_value = [
             (2, 1, 6, '', ('93.184.216.34', 0))
@@ -71,16 +71,16 @@ def test_gather_domain_info():
 
 def test_gather_domain_info_extracts_company_name():
     """Test that company name is extracted from domain."""
-    from archer.intelligence.company_profiler import CompanyProfiler
+    from shikari.intelligence.company_profiler import CompanyProfiler
 
     profiler = CompanyProfiler()
     profiler.write_progress = None
     profiler.progress_group = None
 
-    with patch("archer.intelligence.company_profiler.socket.getaddrinfo") as mock_getaddr, \
-         patch("archer.intelligence.company_profiler.dns.resolver.resolve") as mock_dns, \
-         patch("archer.intelligence.company_identity.lookup_wikidata", return_value=None), \
-         patch("archer.intelligence.company_identity.homepage_signals",
+    with patch("shikari.intelligence.company_profiler.socket.getaddrinfo") as mock_getaddr, \
+         patch("shikari.intelligence.company_profiler.dns.resolver.resolve") as mock_dns, \
+         patch("shikari.intelligence.company_identity.lookup_wikidata", return_value=None), \
+         patch("shikari.intelligence.company_identity.homepage_signals",
                return_value={"name": None, "country": None, "country_basis": None, "text": ""}):
         mock_getaddr.return_value = []
         mock_dns.side_effect = Exception("DNS error")
@@ -93,7 +93,7 @@ def test_gather_domain_info_extracts_company_name():
 
 def test_check_certificate_transparency():
     """Test certificate transparency check."""
-    from archer.intelligence.company_profiler import CompanyProfiler
+    from shikari.intelligence.company_profiler import CompanyProfiler
 
     profiler = CompanyProfiler()
 
@@ -104,7 +104,7 @@ def test_check_certificate_transparency():
          "issuer_name": "Let's Encrypt", "not_before": "2024-01-01", "not_after": "2024-12-31"}
     ]
 
-    with patch("archer.intelligence.company_profiler.requests.get") as mock_get:
+    with patch("shikari.intelligence.company_profiler.requests.get") as mock_get:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = mock_ct_response
@@ -120,7 +120,7 @@ def test_check_certificate_transparency():
 
 def test_check_google_dorks_returns_patterns():
     """Test that Google dork patterns are returned."""
-    from archer.intelligence.company_profiler import CompanyProfiler
+    from shikari.intelligence.company_profiler import CompanyProfiler
 
     profiler = CompanyProfiler()
 
@@ -134,7 +134,7 @@ def test_check_google_dorks_returns_patterns():
 
 def test_analyze_industry_detection():
     """Test industry sector detection from domain."""
-    from archer.intelligence.company_profiler import CompanyProfiler
+    from shikari.intelligence.company_profiler import CompanyProfiler
 
     profiler = CompanyProfiler()
     profiler.write_progress = None
@@ -151,11 +151,11 @@ def test_analyze_industry_detection():
 
 def test_map_sector_to_threats_finance():
     """Test threat mapping for finance sector."""
-    from archer.intelligence.company_profiler import CompanyProfiler
+    from shikari.intelligence.company_profiler import CompanyProfiler
 
     profiler = CompanyProfiler()
 
-    with patch("archer.mitre.get_stix_data") as mock_stix:
+    with patch("shikari.mitre.get_stix_data") as mock_stix:
         # Simulate MITRE data not available
         mock_stix.side_effect = Exception("MITRE data unavailable")
 
@@ -170,7 +170,7 @@ def test_map_sector_to_threats_finance():
 
 def test_map_country_to_threats():
     """Test country to threat actor mapping."""
-    from archer.intelligence.company_profiler import CompanyProfiler
+    from shikari.intelligence.company_profiler import CompanyProfiler
 
     profiler = CompanyProfiler()
 
@@ -184,7 +184,7 @@ def test_map_country_to_threats():
 
 def test_assess_geopolitical_risks():
     """Test geopolitical risk assessment."""
-    from archer.intelligence.company_profiler import CompanyProfiler
+    from shikari.intelligence.company_profiler import CompanyProfiler
 
     profiler = CompanyProfiler()
 
@@ -197,7 +197,7 @@ def test_assess_geopolitical_risks():
 
 def test_analyze_tech_stack_from_headers():
     """Test tech stack detection from HTTP headers."""
-    from archer.intelligence.company_profiler import CompanyProfiler
+    from shikari.intelligence.company_profiler import CompanyProfiler
 
     profiler = CompanyProfiler()
     profiler.write_progress = None
@@ -211,7 +211,7 @@ def test_analyze_tech_stack_from_headers():
     mock_response.text = "<html>Powered by WordPress</html>"
 
     # The fetch goes through the SSRF-checked helper (domain is user input)
-    with patch("archer.parsers.blog_analyzer._fetch_public_url", return_value=mock_response) as mock_fetch:
+    with patch("shikari.parsers.blog_analyzer._fetch_public_url", return_value=mock_response) as mock_fetch:
         result = profiler._analyze_tech_stack("example.com", osint)
 
         mock_fetch.assert_called_once_with("https://example.com")
@@ -223,7 +223,7 @@ def test_analyze_tech_stack_from_headers():
 
 def test_generate_threat_recommendations():
     """Test threat recommendation generation."""
-    from archer.intelligence.company_profiler import CompanyProfiler
+    from shikari.intelligence.company_profiler import CompanyProfiler
 
     profiler = CompanyProfiler()
     profiler.write_progress = None
@@ -259,7 +259,7 @@ def test_generate_threat_recommendations():
 
 def test_risk_score_calculation():
     """Test that risk score is calculated correctly."""
-    from archer.intelligence.company_profiler import CompanyProfiler
+    from shikari.intelligence.company_profiler import CompanyProfiler
 
     profiler = CompanyProfiler()
     profiler.write_progress = None
@@ -284,7 +284,7 @@ def test_risk_score_calculation():
 
 def test_profile_domain_full_workflow():
     """Test complete profile_domain workflow with mocks."""
-    from archer.intelligence.company_profiler import CompanyProfiler
+    from shikari.intelligence.company_profiler import CompanyProfiler
 
     profiler = CompanyProfiler()
 

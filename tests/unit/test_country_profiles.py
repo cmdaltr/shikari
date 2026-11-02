@@ -1,7 +1,7 @@
 """Attribution and targeting read from ATT&CK group descriptions (wording taken from ATT&CK)."""
 
-from archer.intelligence import country_profiles as cp
-from archer.intelligence.cyber_powers import countries, flag
+from shikari.intelligence import country_profiles as cp
+from shikari.intelligence.cyber_powers import countries, flag
 
 
 def test_a_named_government_body_is_high_confidence():

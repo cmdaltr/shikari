@@ -5,8 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from archer.database.models import UserRole, at_least, effective_role, role_rank
-from archer.lab import machines
+from shikari.database.models import UserRole, at_least, effective_role, role_rank
+from shikari.lab import machines
 
 
 def _user(role, temp_role=None, temp_expires=None):
@@ -68,7 +68,7 @@ def test_operator_may_claim_an_unclaimed_utm_vm():
 
 
 def test_listing_filters_to_what_the_user_may_manage(monkeypatch, tmp_path):
-    monkeypatch.setattr("archer.lab.registry._PATH", str(tmp_path / "m.json"))
+    monkeypatch.setattr("shikari.lab.registry._PATH", str(tmp_path / "m.json"))
     monkeypatch.setattr(machines.ENGINES["docker"].__class__, "list", lambda self: [
         {"engine": "docker", "name": "mine", "uuid": "", "kind": "container", "image": "",
          "os": "", "state": "running", "detail": ""},
@@ -76,7 +76,7 @@ def test_listing_filters_to_what_the_user_may_manage(monkeypatch, tmp_path):
          "os": "", "state": "running", "detail": ""}])
     monkeypatch.setattr(machines.ENGINES["tart"].__class__, "list", lambda self: [])
     monkeypatch.setattr(machines.ENGINES["utm"].__class__, "list", lambda self: [])
-    import archer.lab.registry as reg
+    import shikari.lab.registry as reg
     reg.record("docker", "mine", "ubuntu-container", "linux", "ubuntu:24.04", owner=1)
     reg.record("docker", "theirs", "ubuntu-container", "linux", "ubuntu:24.04", owner=2)
 
@@ -87,9 +87,9 @@ def test_listing_filters_to_what_the_user_may_manage(monkeypatch, tmp_path):
 
 
 def test_clone_and_create_record_the_owner(monkeypatch, tmp_path):
-    monkeypatch.setattr("archer.lab.registry._PATH", str(tmp_path / "m.json"))
+    monkeypatch.setattr("shikari.lab.registry._PATH", str(tmp_path / "m.json"))
     monkeypatch.setattr(machines.ENGINES["utm"].__class__, "clone", lambda self, name, new: None)
-    import archer.lab.registry as reg
+    import shikari.lab.registry as reg
     reg.record("utm", "src", "utm-vm", "windows", "", owner=7)
     machines.clone("utm", "src", "src-2", owner=7)
     assert reg.get("utm", "src-2")["owner"] == 7

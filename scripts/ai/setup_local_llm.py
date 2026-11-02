@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Archer Local LLM Setup Script
+Shikari Local LLM Setup Script
 ==============================================================================
 This script automatically configures a local LLM (Ollama) based on available
 system resources. It will:
 1. Detect or prompt for available RAM
 2. Install Ollama (if needed)
 3. Select and download the best model for your system
-4. Configure Archer to use the local LLM
+4. Configure Shikari to use the local LLM
 5. Start Ollama server
 
 Usage:
@@ -258,9 +258,9 @@ def list_ollama_models() -> list:
 # Configuration
 # ==============================================================================
 
-def configure_archer(model_name: str):
-    """Configure Archer .env file."""
-    print_header("Configuring Archer")
+def configure_shikari(model_name: str):
+    """Configure Shikari .env file."""
+    print_header("Configuring Shikari")
 
     env_file = Path('.env')
     env_example = Path('.env.example')
@@ -297,7 +297,7 @@ def configure_archer(model_name: str):
 
     # Write back
     env_file.write_text('\n'.join(lines))
-    print_success("Archer configured to use local LLM")
+    print_success("Shikari configured to use local LLM")
 
 def configure_docker_compose(model_name: str):
     """Update docker-compose.yml with LLM configuration."""
@@ -308,7 +308,7 @@ def configure_docker_compose(model_name: str):
         return
 
     print_info("Note: You may need to manually update docker-compose.yml")
-    print_info("Add these environment variables to the archer service:")
+    print_info("Add these environment variables to the shikari service:")
     print(f"      - LLM_PROVIDER=ollama")
     print(f"      - LLM_MODEL={model_name}")
     print(f"      - OLLAMA_BASE_URL=http://host.docker.internal:11434")
@@ -360,7 +360,7 @@ def verify_setup(model_name: str) -> bool:
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Set up local LLM (Ollama) for Archer',
+        description='Set up local LLM (Ollama) for Shikari',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -379,8 +379,8 @@ Examples:
                        help='Skip confirmation prompts')
     args = parser.parse_args()
 
-    print_header("Archer Local LLM Setup")
-    print("This script will set up a local LLM (Ollama) for Archer based on your system resources.")
+    print_header("Shikari Local LLM Setup")
+    print("This script will set up a local LLM (Ollama) for Shikari based on your system resources.")
     print()
 
     # Detect or get RAM
@@ -452,8 +452,8 @@ Examples:
     else:
         download_model(model_name)
 
-    # Configure Archer
-    configure_archer(model_name)
+    # Configure Shikari
+    configure_shikari(model_name)
     configure_docker_compose(model_name)
 
     # Verify setup
@@ -464,17 +464,17 @@ Examples:
     print()
     print(f"  ✓ Ollama server is running on http://localhost:11434")
     print(f"  ✓ Model '{model_name}' is ready")
-    print(f"  ✓ Archer is configured to use local LLM")
+    print(f"  ✓ Shikari is configured to use local LLM")
     print()
     print_info("Next steps:")
     print()
-    print("  1. Start Archer web application:")
+    print("  1. Start Shikari web application:")
     print("     - Docker:       docker-compose up --build")
-    print("     - Local Python: uvicorn archer.app:app --reload")
+    print("     - Local Python: uvicorn shikari.app:app --reload")
     print()
-    print("  2. Access Archer at http://localhost:8000")
-    print("     - Login: admin@archer.app")
-    print("     - Password: £missary_0f_the_G0rg0nite$")
+    print("  2. Access Shikari at http://localhost:8000")
+    print("     - Login: admin@shikari.app")
+    print("     - Password: BigGameHunter")
     print()
     print("  3. Start using AI-powered detection generation!")
     print()

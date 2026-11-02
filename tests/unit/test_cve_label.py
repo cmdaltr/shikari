@@ -1,6 +1,6 @@
 """A CVE's exploit name, from what researchers call it, and the label its run's files start with."""
 
-from archer.intelligence.cve_label import exploit_name, label
+from shikari.intelligence.cve_label import exploit_name, label
 
 PHP = {"description": "PHP uses longjmp() for out-of-memory errors ... remote code execution.", "vendor": "php",
        "product": "php", "cpes": ["cpe:2.3:a:php:php:*:*:*:*:*:*:*:*"],

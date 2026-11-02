@@ -13,7 +13,7 @@
 | Both | Any of the above (the default), leaving out posts aimed only at products you don't run |
 | All | Every technical post of the week |
 | Refresh now | Collect again (only new posts are fetched, so it's usually quick) |
-| Analyse in Archer | Open the post on Home → [Analyse](03-analyse.md) |
+| Analyse in Shikari | Open the post on Home → [Analyse](03-analyse.md) |
 
 Set your industries in Environment → Threat Feed industries.
 
@@ -38,7 +38,7 @@ The **Search all research** card (collapsed by default; click its title) finds a
 
 | Where it searches | What it matches |
 |---|---|
-| Archer's sources | Every post the sources' feeds have carried since Archer started collecting, back to 2016 for some sources: title, summary, and the analysed description |
+| Shikari's sources | Every post the sources' feeds have carried since Shikari started collecting, back to 2016 for some sources: title, summary, and the analysed description |
 | MITRE ATT&CK | Groups, software and campaigns whose name, aliases or description mention it. Name and alias matches come first |
 | Web news (optional) | Google News and Bing News: English only, de-duplicated, and only stories that read as security news |
 
@@ -48,11 +48,11 @@ Every word of the search must appear, as a whole word or the start of one. Resul
 
 ## Watchlists
 
-The **Watchlists** card saves a search, for example `Scattered Spider`, `RedSun`, a CVE or a vendor. Each collection then flags posts that match it. The search is the same as Search all research's: Archer's sources, plus web news if you tick **Include web news**, which sends the keyword to Google and Bing at every collection. No AI is involved.
+The **Watchlists** card saves a search, for example `Scattered Spider`, `RedSun`, a CVE or a vendor. Each collection then flags posts that match it. The search is the same as Search all research's: Shikari's sources, plus web news if you tick **Include web news**, which sends the keyword to Google and Bing at every collection. No AI is involved.
 
 When you save a watchlist, everything it matches already counts as seen, so only posts that arrive afterwards are new. The number of new matches shows on the card, and on **Intel** and **Feed** in the menu bar. **Mark seen** clears a watchlist's new matches. A **Watch** button under each Search all research result saves that search.
 
-While any watchlist exists, Archer collects every six hours by itself, so new matches don't wait for someone to open the Feed. **Email me** sends one email per collection listing the new matches. It needs email configured (`EMAIL_ENABLED=true` and the `SMTP_*` settings in `.env`); without that, the box is greyed out.
+While any watchlist exists, Shikari collects every six hours by itself, so new matches don't wait for someone to open the Feed. **Email me** sends one email per collection listing the new matches. It needs email configured (`EMAIL_ENABLED=true` and the `SMTP_*` settings in `.env`); without that, the box is greyed out.
 
 Watchlists are per user, in `data/feed/watchlists/` (not in git).
 
@@ -62,10 +62,10 @@ The **Sources** section at the foot of the page lists each source and the result
 
 Built in: Microsoft Threat Intelligence, Google Threat Intelligence (Mandiant), Unit 42, Cisco Talos, CrowdStrike, SentinelLABS, Kaspersky Securelist, ESET WeLiveSecurity, Proofpoint, The DFIR Report, Red Canary, Huntress, Elastic Security Labs, CISA, NCSC (UK), Recorded Future, Trend Micro Research, Rapid7, FortiGuard Labs, Symantec Threat Hunter, Volexity, Zscaler ThreatLabz, Sekoia, Group-IB, Bitdefender Labs and JPCERT/CC.
 
-An administrator can add any RSS or Atom feed (name and URL) and remove ones they added. Archer checks the feed reads before adding it, and only accepts public addresses. Added sources are this installation's own (`data/feed/sources.json`, not in git).
+An administrator can add any RSS or Atom feed (name and URL) and remove ones they added. Shikari checks the feed reads before adding it, and only accepts public addresses. Added sources are this installation's own (`data/feed/sources.json`, not in git).
 
 ## Limits
 
-- Collection happens on start-up, on **Refresh now**, and when the page is opened six hours or more after the last collection. While any watchlist exists, Archer also collects every six hours by itself.
+- Collection happens on start-up, on **Refresh now**, and when the page is opened six hours or more after the last collection. While any watchlist exists, Shikari also collects every six hours by itself.
 - Tags are pattern matches, not reading comprehension. A post that discusses a group without naming it, or attributes in unusual wording, can go untagged.
 - The research archive only holds what the feeds carried. Some feeds carry ten posts, some hundreds, so older coverage varies by source.

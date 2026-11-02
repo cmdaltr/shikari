@@ -6,7 +6,7 @@ The MDE/KQL and Splunk/SPL paths predate these; here we cover the two added for
 
 import pytest
 
-from archer.build import bespoke
+from shikari.build import bespoke
 
 
 def _patch(monkeypatch, exclusions):
@@ -22,10 +22,10 @@ def _patch(monkeypatch, exclusions):
     monkeypatch.setattr(bespoke, "get_config", lambda: {})
 
 
-# A realistic two-event YARA-L rule, shaped like archer/contract/exemplars.
+# A realistic two-event YARA-L rule, shaped like shikari/contract/exemplars.
 YARAL_RULE = """rule example_two_stage {
   meta:
-    author = "Archer"
+    author = "Shikari"
   events:
     $setup.metadata.event_type = "PROCESS_LAUNCH"
     $setup.target.process.command_line != ""

@@ -1,5 +1,5 @@
 """
-Playwright Configuration for Archer UI Tests
+Playwright Configuration for Shikari UI Tests
 """
 
 from playwright.sync_api import sync_playwright

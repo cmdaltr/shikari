@@ -1,6 +1,6 @@
-# AI Model Configuration Guide for Archer
+# AI Model Configuration Guide for Shikari
 
-This guide explains how to configure AI models in Archer for detection generation, correlation analysis, and threat report generation.
+This guide explains how to configure AI models in Shikari for detection generation, correlation analysis, and threat report generation.
 
 ## Table of Contents
 
@@ -22,7 +22,7 @@ This guide explains how to configure AI models in Archer for detection generatio
 
 ## Overview
 
-Archer supports multiple AI model backends for different use cases:
+Shikari supports multiple AI model backends for different use cases:
 
 - **Cloud APIs**: OpenAI GPT, Anthropic Claude, Google Gemini
 - **Local Models**: Ollama (recommended), llama.cpp, Transformers
@@ -56,7 +56,7 @@ Archer supports multiple AI model backends for different use cases:
    GOOGLE_API_KEY=AIza-your-google-key-here
    ```
 
-3. **Start Archer**:
+3. **Start Shikari**:
 
    **For Web Application**:
    ```bash
@@ -64,15 +64,15 @@ Archer supports multiple AI model backends for different use cases:
    docker-compose up --build
 
    # OR using local Python
-   uvicorn archer.app:app --reload
+   uvicorn shikari.app:app --reload
 
    # Access at http://localhost:8000
-   # Login: admin@archer.app / £missary_0f_the_G0rg0nite$
+   # Login: admin@shikari.app / BigGameHunter
    ```
 
    **For CLI**:
    ```bash
-   python -m archer.cli
+   python -m shikari.cli
    ```
 
 ### Option 2: Local Ollama (Privacy-Focused)
@@ -96,13 +96,13 @@ Archer supports multiple AI model backends for different use cases:
    ollama pull llama3.1:8b-instruct-q4_K_M
    ```
 
-4. **Configure Archer** (edit `.env`):
+4. **Configure Shikari** (edit `.env`):
    ```bash
    LLM_PROVIDER=ollama
    LLM_MODEL=llama3.1:70b-instruct-q4_K_M
    ```
 
-5. **Start Archer**:
+5. **Start Shikari**:
 
    **For Web Application**:
    ```bash
@@ -110,21 +110,21 @@ Archer supports multiple AI model backends for different use cases:
    docker-compose up --build
 
    # OR using local Python
-   uvicorn archer.app:app --reload
+   uvicorn shikari.app:app --reload
 
    # Access at http://localhost:8000
    ```
 
    **For CLI**:
    ```bash
-   python -m archer.cli
+   python -m shikari.cli
    ```
 
 ---
 
 ## Web Application Setup
 
-The Archer web application is built with **FastAPI** and uses **Uvicorn** as the ASGI server. It automatically loads AI model configuration from environment variables.
+The Shikari web application is built with **FastAPI** and uses **Uvicorn** as the ASGI server. It automatically loads AI model configuration from environment variables.
 
 ### Starting the Web App
 
@@ -134,7 +134,7 @@ The Archer web application is built with **FastAPI** and uses **Uvicorn** as the
 docker-compose up --build
 
 # Access at http://localhost:8000
-# Default login: admin@archer.app / £missary_0f_the_G0rg0nite$
+# Default login: admin@shikari.app / BigGameHunter
 ```
 
 **Option 2: Local Python**
@@ -149,7 +149,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # Start the web server
-uvicorn archer.app:app --reload
+uvicorn shikari.app:app --reload
 
 # Access at http://localhost:8000
 ```
@@ -175,7 +175,7 @@ CORRELATION_MIN_RELEVANCE=0.75
 CORRELATION_MAX_LIMIT=250
 
 # Database (optional)
-DATABASE_PATH=data/archer.db
+DATABASE_PATH=data/shikari.db
 ```
 
 **Example .env for Local Ollama**:
@@ -198,10 +198,10 @@ CORRELATION_MAX_LIMIT=250
 version: "3.8"
 
 services:
-  archer:
+  shikari:
     build:
       context: .
-      dockerfile: archer/Dockerfile
+      dockerfile: shikari/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -210,7 +210,7 @@ services:
       - LLM_MODEL=llama3.1:70b-instruct-q4_K_M
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
     volumes:
-      - ./archer:/app/archer
+      - ./shikari:/app/shikari
       - ./templates:/app/templates
       - ./static:/app/static
       - ./data:/app/data
@@ -240,10 +240,10 @@ services:
     #           count: 1
     #           capabilities: [gpu]
 
-  archer:
+  shikari:
     build:
       context: .
-      dockerfile: archer/Dockerfile
+      dockerfile: shikari/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -256,7 +256,7 @@ services:
     depends_on:
       - ollama
     volumes:
-      - ./archer:/app/archer
+      - ./shikari:/app/shikari
       - ./templates:/app/templates
       - ./static:/app/static
       - ./data:/app/data
@@ -269,16 +269,16 @@ volumes:
 **Pull models into Ollama container**:
 ```bash
 # After starting docker-compose up
-docker exec -it archer-ollama-1 ollama pull llama3.1:70b-instruct-q4_K_M
-docker exec -it archer-ollama-1 ollama pull llama3.1:8b-instruct-q4_K_M
+docker exec -it shikari-ollama-1 ollama pull llama3.1:70b-instruct-q4_K_M
+docker exec -it shikari-ollama-1 ollama pull llama3.1:8b-instruct-q4_K_M
 ```
 
 ### How the Web App Loads Configuration
 
-The web application (`archer/app.py`) loads configuration through `archer/config.py`:
+The web application (`shikari/app.py`) loads configuration through `shikari/config.py`:
 
 ```python
-# From archer/config.py
+# From shikari/config.py
 import os
 
 # LLM Provider Configuration
@@ -300,8 +300,8 @@ Once the web app is running:
 
 1. **Access the application**: Navigate to `http://localhost:8000`
 2. **Login**: Use default credentials (change immediately!)
-   - Email: `admin@archer.app`
-   - Password: `£missary_0f_the_G0rg0nite$`
+   - Email: `admin@shikari.app`
+   - Password: `BigGameHunter`
 3. **Test AI generation**:
    - Navigate to **Generate** page
    - Select a threat group or technique
@@ -313,7 +313,7 @@ Once the web app is running:
 **Docker**:
 ```bash
 # View logs
-docker-compose logs -f archer
+docker-compose logs -f shikari
 
 # View Ollama logs (if using Docker)
 docker-compose logs -f ollama
@@ -461,7 +461,7 @@ ollama pull mistral:7b-instruct-q4_K_M
 ollama pull llama3.1:8b-instruct-q4_K_M
 ```
 
-#### Configure Archer for Ollama
+#### Configure Shikari for Ollama
 
 **Method 1: Using .env file** (for local Python):
 ```bash
@@ -479,10 +479,10 @@ LLM_MODEL=llama3.1:70b-instruct-q4_K_M
 version: "3.8"
 
 services:
-  archer:
+  shikari:
     build:
       context: .
-      dockerfile: archer/Dockerfile
+      dockerfile: shikari/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -491,7 +491,7 @@ services:
       - LLM_MODEL=llama3.1:70b-instruct-q4_K_M
       - OLLAMA_BASE_URL=http://host.docker.internal:11434  # For Ollama on host
     volumes:
-      - ./archer:/app/archer
+      - ./shikari:/app/shikari
       - ./templates:/app/templates
       - ./static:/app/static
       - ./data:/app/data
@@ -513,10 +513,10 @@ services:
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
 
-  archer:
+  shikari:
     build:
       context: .
-      dockerfile: archer/Dockerfile
+      dockerfile: shikari/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -527,7 +527,7 @@ services:
     depends_on:
       - ollama
     volumes:
-      - ./archer:/app/archer
+      - ./shikari:/app/shikari
       - ./templates:/app/templates
       - ./static:/app/static
       - ./data:/app/data
@@ -547,17 +547,17 @@ curl http://localhost:11434/api/tags
 ollama run llama3.1:70b-instruct-q4_K_M "Generate a KQL query to detect PowerShell downloads"
 ```
 
-#### Start Archer Web Application
+#### Start Shikari Web Application
 
 ```bash
 # Using Docker
 docker-compose up --build
 
 # OR using local Python (ensure .env is configured)
-uvicorn archer.app:app --reload
+uvicorn shikari.app:app --reload
 
 # Access the web app at http://localhost:8000
-# Default login: admin@archer.app / £missary_0f_the_G0rg0nite$
+# Default login: admin@shikari.app / BigGameHunter
 ```
 
 ---
@@ -587,7 +587,7 @@ python -m vllm.entrypoints.openai.api_server \
     --port 8000
 ```
 
-**Configure Archer** (edit `archer/ai/training/config.py`):
+**Configure Shikari** (edit `shikari/ai/training/config.py`):
 ```python
 MODEL_CONFIG = {
     "backends": {
@@ -615,7 +615,7 @@ pip install llama-cpp-python
 wget https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGUF/resolve/main/llama-2-7b-chat.Q4_K_M.gguf
 ```
 
-**Configure Archer** (edit `archer/ai/training/config.py`):
+**Configure Shikari** (edit `shikari/ai/training/config.py`):
 ```python
 MODEL_CONFIG = {
     "backends": {
@@ -642,7 +642,7 @@ MODEL_CONFIG = {
 pip install transformers accelerate bitsandbytes peft
 ```
 
-**Configure Archer** (edit `archer/ai/training/config.py`):
+**Configure Shikari** (edit `shikari/ai/training/config.py`):
 ```python
 MODEL_CONFIG = {
     "backends": {
@@ -674,7 +674,7 @@ MODEL_CONFIG = {
 
 ### Default Models by Provider
 
-Configured in `archer/ai/llm/providers.py`:
+Configured in `shikari/ai/llm/providers.py`:
 
 - **Anthropic**: `claude-sonnet-4-5-20250929`
 - **OpenAI**: `gpt-4o`
@@ -683,7 +683,7 @@ Configured in `archer/ai/llm/providers.py`:
 
 ### Task-Specific Model Recommendations
 
-From `archer/ai/training/config.py`:
+From `shikari/ai/training/config.py`:
 
 **Detection Generation**:
 - Primary: `llama3.1:70b-instruct-q4_K_M`
@@ -761,7 +761,7 @@ LLM_MODEL=gpt-4o
 
 ### Configuration File
 
-Edit `archer/ai/training/config.py`:
+Edit `shikari/ai/training/config.py`:
 
 ```python
 MODEL_CONFIG = {
@@ -822,8 +822,8 @@ TRAINING_CONFIG = {
 
 **Basic LoRA Training**:
 ```bash
-python -m archer.ai.training.pipelines.training \
-    --data archer/ai/training/datasets/hunting_queries/ \
+python -m shikari.ai.training.pipelines.training \
+    --data shikari/ai/training/datasets/hunting_queries/ \
     --model llama3.1:70b \
     --epochs 5 \
     --lora \
@@ -834,8 +834,8 @@ python -m archer.ai.training.pipelines.training \
 
 **Memory-Efficient (4-bit)**:
 ```bash
-python -m archer.ai.training.pipelines.training \
-    --data archer/ai/training/datasets/ \
+python -m shikari.ai.training.pipelines.training \
+    --data shikari/ai/training/datasets/ \
     --model llama3.1:70b \
     --epochs 3 \
     --lora \
@@ -940,7 +940,7 @@ LLM_MODEL=llama3.1:8b-instruct-q4_K_M
 **Issue**: CUDA out of memory
 ```bash
 # Solution: Enable 4-bit quantization
-python -m archer.ai.training.pipelines.training \
+python -m shikari.ai.training.pipelines.training \
     --quantization 4bit \
     --batch-size 1 \
     --gradient-accumulation-steps 16
@@ -997,7 +997,7 @@ GOOGLE_API_KEY=AIza-your-key-here
 Then override for critical tasks in code:
 ```python
 # Use Claude for high-value detections
-from archer.ai.llm.providers import LLMFactory
+from shikari.ai.llm.providers import LLMFactory
 
 claude = LLMFactory.create_provider("anthropic")
 response = claude.generate(prompt, max_tokens=2000)

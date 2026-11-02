@@ -11,8 +11,8 @@ import re
 import pytest
 import yaml
 
-from archer.build.indicator_hygiene import clean_indicator
-from archer.build.secops import SecOpsGenerator
+from shikari.build.indicator_hygiene import clean_indicator
+from shikari.build.secops import SecOpsGenerator
 
 PROSE = [
     ").(Citation: SSH Authorized Keys) Users may edit the system's SSH config file to modify the directive",
@@ -128,7 +128,7 @@ def test_a_single_event_search_is_plain_udm():
 
 
 def test_wrapped_description_still_writes_valid_yaml(tmp_path, monkeypatch):
-    from archer.build import yaml as yaml_writer
+    from shikari.build import yaml as yaml_writer
 
     monkeypatch.chdir(yaml_writer.os.path.dirname(yaml_writer.__file__) + "/../..")
     out = tmp_path / "SystemdService_UDM.yaml"
@@ -141,14 +141,14 @@ def test_wrapped_description_still_writes_valid_yaml(tmp_path, monkeypatch):
     data = yaml.safe_load(out.read_text())
     assert data["technique_id"] == "T1543.002"
     assert "system/teleport.service" in data["description"]
-    assert data["query"].startswith("// archer_t1000:")
+    assert data["query"].startswith("// shikari_t1000:")
 
 
 def test_search_names_are_lowercase_snake_case():
-    from archer.build.udm import build_join
+    from shikari.build.udm import build_join
 
     r = _rule({"cmd": ["procdump -ma lsass.exe"]}, tid="T1003.001", tactics=["Credential Access"])
-    assert r["query"].startswith("// archer_t1003_001:") and r["rule_name"] == "archer_t1003_001"
+    assert r["query"].startswith("// shikari_t1003_001:") and r["rule_name"] == "shikari_t1003_001"
     other = _rule({"cmd": ["psexec.exe"]}, tid="T1570", tactics=["Lateral Movement"])
     corr = build_join(r["query"], other["query"])
-    assert re.match(r"// archer_corr_t1003_001_then_t1570:", corr)
+    assert re.match(r"// shikari_corr_t1003_001_then_t1570:", corr)

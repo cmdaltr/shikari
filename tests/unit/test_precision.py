@@ -1,8 +1,8 @@
 """Precision checks (#15): queries that parse but can't fire for the right reason."""
 
-from archer.build.indicator_hygiene import clean_indicator
-from archer.validation.precision import check, prune_kql
-from archer.validation.static_check import check_query
+from shikari.build.indicator_hygiene import clean_indicator
+from shikari.validation.precision import check, prune_kql
+from shikari.validation.static_check import check_query
 
 
 def kql(where):
@@ -102,6 +102,6 @@ def test_an_or_at_a_line_end_still_splits_the_conditions():
     q = ('DeviceNetworkEvents\n| where Timestamp > ago(1d)\n| where (RemoteUrl has_any("BeingDebugged")) or\n'
          '(Protocol has_any("CIFS", "SSH"))\n| summarize count() by DeviceName')
     assert "PREC-CONTEXT" in codes(q)
-    from archer.validation.precision import prune_kql
+    from shikari.validation.precision import prune_kql
     pruned = prune_kql(q)[0]
     assert "Protocol" not in pruned and 'RemoteUrl has_any("BeingDebugged")' in pruned

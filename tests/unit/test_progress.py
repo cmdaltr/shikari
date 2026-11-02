@@ -18,9 +18,9 @@ class TestWriteProgress:
 
     def test_write_progress_creates_file(self, temp_dir):
         """Test that write_progress creates a new progress file."""
-        from archer.build.progress import write_progress
+        from shikari.build.progress import write_progress
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             write_progress("TestGroup", {"status": "started"})
 
             # Verify file was created
@@ -34,9 +34,9 @@ class TestWriteProgress:
 
     def test_write_progress_updates_existing(self, temp_dir):
         """Test that write_progress updates existing progress file."""
-        from archer.build.progress import write_progress
+        from shikari.build.progress import write_progress
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             # Write initial progress
             write_progress("TestGroup", {"status": "started", "count": 0})
 
@@ -52,9 +52,9 @@ class TestWriteProgress:
 
     def test_write_progress_merges_data(self, temp_dir):
         """Test that write_progress merges new data with existing."""
-        from archer.build.progress import write_progress
+        from shikari.build.progress import write_progress
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             # Write initial data
             write_progress("TestGroup", {"status": "started", "total": 10})
 
@@ -71,9 +71,9 @@ class TestWriteProgress:
 
     def test_write_progress_sanitizes_group_name(self, temp_dir):
         """Test that dangerous characters in group name are sanitized."""
-        from archer.build.progress import write_progress
+        from shikari.build.progress import write_progress
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             # Try to use path traversal in group name
             write_progress("../../../etc/passwd", {"status": "test"})
 
@@ -86,12 +86,12 @@ class TestWriteProgress:
 
     def test_write_progress_creates_directory(self, temp_dir):
         """Test that write_progress creates progress directory if missing."""
-        from archer.build.progress import write_progress
+        from shikari.build.progress import write_progress
 
         new_dir = temp_dir / "new_progress_dir"
         assert not new_dir.exists()
 
-        with patch("archer.build.progress.PROGRESS_DIR", new_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", new_dir):
             write_progress("TestGroup", {"status": "started"})
 
             assert new_dir.exists()
@@ -99,9 +99,9 @@ class TestWriteProgress:
 
     def test_write_progress_handles_special_characters(self, temp_dir):
         """Test handling of special characters in progress data."""
-        from archer.build.progress import write_progress
+        from shikari.build.progress import write_progress
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             special_data = {
                 "status": "processing",
                 "message": "Téchniqué: T1059.001 \"PowerShell\"",
@@ -122,7 +122,7 @@ class TestReadProgress:
 
     def test_read_progress_existing_file(self, temp_dir):
         """Test reading an existing progress file."""
-        from archer.build.progress import read_progress
+        from shikari.build.progress import read_progress
 
         # Create a progress file manually
         progress_file = temp_dir / "TestGroup.json"
@@ -130,7 +130,7 @@ class TestReadProgress:
         with open(progress_file, "w") as f:
             json.dump(progress_data, f)
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             result = read_progress("TestGroup")
 
             assert result["status"] == "complete"
@@ -138,9 +138,9 @@ class TestReadProgress:
 
     def test_read_progress_nonexistent_file(self, temp_dir):
         """Test reading a non-existent progress file."""
-        from archer.build.progress import read_progress
+        from shikari.build.progress import read_progress
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             result = read_progress("NonExistentGroup")
 
             # Should return empty dict or None depending on implementation
@@ -148,14 +148,14 @@ class TestReadProgress:
 
     def test_read_progress_invalid_json(self, temp_dir):
         """Test reading a corrupted progress file."""
-        from archer.build.progress import read_progress
+        from shikari.build.progress import read_progress
 
         # Create an invalid JSON file
         progress_file = temp_dir / "CorruptedGroup.json"
         with open(progress_file, "w") as f:
             f.write("{ invalid json }")
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             result = read_progress("CorruptedGroup")
 
             # Should handle gracefully
@@ -167,9 +167,9 @@ class TestProgressStates:
 
     def test_progress_state_started(self, temp_dir):
         """Test initial 'started' state."""
-        from archer.build.progress import write_progress, read_progress
+        from shikari.build.progress import write_progress, read_progress
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             write_progress("TestGroup", {
                 "status": "started",
                 "stage": "init",
@@ -180,9 +180,9 @@ class TestProgressStates:
 
     def test_progress_state_processing(self, temp_dir):
         """Test 'processing' state with counts."""
-        from archer.build.progress import write_progress, read_progress
+        from shikari.build.progress import write_progress, read_progress
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             write_progress("TestGroup", {
                 "status": "processing",
                 "stage": "yaml",
@@ -197,9 +197,9 @@ class TestProgressStates:
 
     def test_progress_state_complete(self, temp_dir):
         """Test 'complete' state."""
-        from archer.build.progress import write_progress, read_progress
+        from shikari.build.progress import write_progress, read_progress
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             write_progress("TestGroup", {
                 "status": "complete",
                 "created_yaml": 10,
@@ -213,9 +213,9 @@ class TestProgressStates:
 
     def test_progress_state_failed(self, temp_dir):
         """Test 'failed' state with error message."""
-        from archer.build.progress import write_progress, read_progress
+        from shikari.build.progress import write_progress, read_progress
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             write_progress("TestGroup", {
                 "status": "failed",
                 "error": "Connection timeout to MITRE ATT&CK",
@@ -231,9 +231,9 @@ class TestProgressConcurrency:
 
     def test_concurrent_writes_no_data_loss(self, temp_dir):
         """Test that concurrent writes don't lose data."""
-        from archer.build.progress import write_progress, read_progress
+        from shikari.build.progress import write_progress, read_progress
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             results = []
 
             def write_count(count):
@@ -266,9 +266,9 @@ class TestProgressEdgeCases:
 
     def test_empty_progress_data(self, temp_dir):
         """Test writing empty progress data."""
-        from archer.build.progress import write_progress, read_progress
+        from shikari.build.progress import write_progress, read_progress
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             write_progress("EmptyGroup", {})
 
             result = read_progress("EmptyGroup")
@@ -276,9 +276,9 @@ class TestProgressEdgeCases:
 
     def test_large_progress_data(self, temp_dir):
         """Test writing large progress data."""
-        from archer.build.progress import write_progress, read_progress
+        from shikari.build.progress import write_progress, read_progress
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             large_data = {
                 "status": "processing",
                 "techniques": [f"T{1000+i}.00{j}" for i in range(100) for j in range(5)],
@@ -293,9 +293,9 @@ class TestProgressEdgeCases:
 
     def test_group_name_with_spaces(self, temp_dir):
         """Test group name with spaces."""
-        from archer.build.progress import write_progress, read_progress
+        from shikari.build.progress import write_progress, read_progress
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             write_progress("Lazarus Group", {"status": "started"})
 
             # Should handle spaces in filename
@@ -305,9 +305,9 @@ class TestProgressEdgeCases:
 
     def test_group_name_unicode(self, temp_dir):
         """Test group name with unicode characters."""
-        from archer.build.progress import write_progress, read_progress
+        from shikari.build.progress import write_progress, read_progress
 
-        with patch("archer.build.progress.PROGRESS_DIR", temp_dir):
+        with patch("shikari.build.progress.PROGRESS_DIR", temp_dir):
             # Some implementations might sanitize unicode
             try:
                 write_progress("APT日本", {"status": "started"})

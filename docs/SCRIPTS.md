@@ -1,4 +1,4 @@
-# Archer Scripts Reference
+# Shikari Scripts Reference
 
 Complete guide to utility scripts organized by functionality.
 
@@ -43,7 +43,7 @@ For detailed documentation on each category, see:
 |--------|---------|-------|
 | **docker_entrypoint.py** | Docker container initialization | Automatic (Dockerfile) |
 | **start_clean.py** | Fresh start with database reset | `python scripts/deployment/start_clean.py` |
-| **kill-archer.py** | Stop all Archer processes | `python scripts/deployment/kill-archer.py` |
+| **kill-shikari.py** | Stop all Shikari processes | `python scripts/deployment/kill-shikari.py` |
 
 **Documentation**: [scripts/deployment/DEPLOY.md](../scripts/deployment/DEPLOY.md)
 
@@ -142,7 +142,7 @@ python scripts/ai/train_ai.py osint --all
 - Recommends optimal model (llama3.1:70b for 64GB+, llama3.1:8b for 16GB+, etc.)
 - Installs Ollama if needed (Linux/macOS)
 - Downloads selected model
-- Configures Archer `.env` file
+- Configures Shikari `.env` file
 - Verifies setup works
 
 **Examples**:
@@ -240,8 +240,8 @@ python scripts/admin/reset_password.py user@company.com
 
 **Creates default admin**:
 ```
-Email: admin@archer.app
-Password: £missary_0f_the_G0rg0nite$
+Email: admin@shikari.app
+Password: BigGameHunter
 ```
 
 ---
@@ -319,9 +319,9 @@ Password: £missary_0f_the_G0rg0nite$
 - Runs MITRESaw (git submodule at `MITRESaw/`) with flags `-d -E -R`
 - MITRESaw extracts all three attribution paths from MITRE ATT&CK STIX data
 - Generates a styled XLSX evidence report with atomic indicators and reference material
-- Thin wrapper — delegates to `archer.mitre.procedures.run_mitresaw()`
+- Thin wrapper — delegates to `shikari.mitre.procedures.run_mitresaw()`
 
-Also runnable as: `python -m archer.mitre.procedures [--output]`
+Also runnable as: `python -m shikari.mitre.procedures [--output]`
 
 **Output**: `data/mitre_procedures.csv` (12 columns) + `data/mitre_procedures.xlsx`
 
@@ -334,10 +334,10 @@ Also runnable as: `python -m archer.mitre.procedures [--output]`
 ---
 
 #### import_yaml_to_library.py
-**Purpose**: Import YAML detection files to Archer's library.
+**Purpose**: Import YAML detection files to Shikari's library.
 
 **Supported formats**:
-- Archer custom YAML
+- Shikari custom YAML
 - Splunk savedsearches
 - Elastic detection rules
 

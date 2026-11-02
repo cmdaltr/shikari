@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from archer.export import detections_git, siem_push
+from shikari.export import detections_git, siem_push
 
 
 def _write(gdir, name, tid, siem_connector, query="x"):

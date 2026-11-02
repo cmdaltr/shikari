@@ -7,15 +7,15 @@ docs/flow/ directory.
 
 Usage:
     python update.py              # Update all diagrams
-    python update.py archer       # Update only main archer flow diagram
+    python update.py shikari       # Update only main shikari flow diagram
 
 Requirements:
     - Graphviz must be installed (brew install graphviz, or apt-get install graphviz)
-    - DOT files must exist: archer_flow.dot
+    - DOT files must exist: shikari_flow.dot
 
 Output:
-    - PNG files: archer_flow.png
-    - PDF files: archer_flow.pdf
+    - PNG files: shikari_flow.png
+    - PDF files: shikari_flow.pdf
 """
 
 import argparse
@@ -32,7 +32,7 @@ class DiagramUpdater:
         """Initialize with the flow directory."""
         self.directory = directory
         self.diagrams = {
-            'archer': 'archer_flow',
+            'shikari': 'shikari_flow',
         }
 
     def check_graphviz(self) -> bool:
@@ -168,10 +168,10 @@ def main():
         epilog="""
 Examples:
   python update.py              # Update all diagrams
-  python update.py archer       # Update only main archer flow
+  python update.py shikari       # Update only main shikari flow
 
 Available Diagrams:
-  archer  - Main Archer flow (archer_flow.dot)
+  shikari  - Main Shikari flow (shikari_flow.dot)
 
 Requirements:
   Graphviz must be installed: https://graphviz.org/download/
@@ -186,7 +186,7 @@ Notes:
     parser.add_argument(
         'diagram',
         nargs='?',
-        choices=['archer'],
+        choices=['shikari'],
         help='Specific diagram to update (optional, default: all)'
     )
 

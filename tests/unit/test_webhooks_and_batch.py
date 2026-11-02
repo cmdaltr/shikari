@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from archer import runs_api, webhooks
+from shikari import runs_api, webhooks
 
 
 @pytest.fixture
@@ -29,11 +29,11 @@ def test_a_delivery_is_signed_so_the_receiver_can_check_it(home, monkeypatch):
         return Response(204)
 
     monkeypatch.setattr(webhooks.requests, "post", post)
-    hook = webhooks.add("https://hooks.example/archer", ["run.completed"], secret="s3cret")
+    hook = webhooks.add("https://hooks.example/shikari", ["run.completed"], secret="s3cret")
     result = webhooks.deliver(hook, "run.completed", {"run": "APT29"})
     assert result["ok"] and result["tries"] == 1
     expected = "sha256=" + hmac.new(b"s3cret", sent["body"], hashlib.sha256).hexdigest()
-    assert sent["headers"]["X-Archer-Signature"] == expected
+    assert sent["headers"]["X-Shikari-Signature"] == expected
     assert json.loads(sent["body"])["data"] == {"run": "APT29"}
     assert webhooks._load()[0]["deliveries"][0]["ok"]
 
@@ -71,7 +71,7 @@ def test_bad_webhooks_are_refused():
 
 
 def test_a_finished_run_fires_its_webhook(tmp_path, monkeypatch):
-    from archer.build import progress
+    from shikari.build import progress
 
     monkeypatch.setattr(progress, "PROGRESS_DIR", str(tmp_path))
     monkeypatch.setattr(progress, "_finish_run", lambda *a: None)

@@ -29,7 +29,7 @@ class AtomicRedTeam:
             atomic_path: Path to atomic-red-team directory.
                         Defaults to ATOMIC_REDTEAM_PATH env var or /opt/atomic-red-team
         """
-        from archer.config import EmulationConfig
+        from shikari.config import EmulationConfig
 
         self.atomic_path = atomic_path or EmulationConfig.atomic_path
         self.output_dir = Path(EmulationConfig.output_dir)
@@ -340,8 +340,8 @@ class AtomicRedTeam:
         Returns:
             Dictionary containing all execution results
         """
-        from archer.mitre import get_stix_data, obtain_all_techniques
-        from archer.mitre.retrieve import retrieve_procedures
+        from shikari.mitre import get_stix_data, obtain_all_techniques
+        from shikari.mitre.retrieve import retrieve_procedures
 
         print(f"Fetching techniques for threat group: {threat_group}")
 

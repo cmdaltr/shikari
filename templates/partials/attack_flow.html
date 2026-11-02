@@ -1,5 +1,5 @@
 {# Attack flow by ATT&CK tactic, Cyber Kill Chain or Targeted Attack Lifecycle phase. Context: attack_flow
-   (archer.visualization.flow_view.build_flow_view); flow_frameworks is a global (archer.visualization.frameworks) #}
+   (shikari.visualization.flow_view.build_flow_view); flow_frameworks is a global (shikari.visualization.frameworks) #}
 {% set vendor_names = {'googlesecops': 'Google SecOps', 'mde': 'Defender XDR', 'splunk': 'Splunk', 'elastic': 'Elastic'} %}
 
 {% set af_empty = not (attack_flow and attack_flow.lanes) %}
@@ -78,13 +78,13 @@
   <p class="af-about" data-framework="attack">
     Techniques by <a href="https://attack.mitre.org/tactics/enterprise/" target="_blank" rel="noopener">ATT&amp;CK tactic</a>.
     ATT&amp;CK isn't a sequence: tactics are the group's goals, not steps, so a group can reach them in any order and
-    return to one again. The columns follow ATT&amp;CK's usual order; the correlation links show the order Archer saw.
+    return to one again. The columns follow ATT&amp;CK's usual order; the correlation links show the order Shikari saw.
   </p>
   {% for fw in flow_frameworks %}
   <p class="af-about" data-framework="{{ fw.key }}" hidden>
     The same techniques by <a href="{{ fw.url }}" target="_blank" rel="noopener">{{ fw.name }}</a> phase ({{ fw.source }}),
     from the tactic each sits under in the ATT&amp;CK tab, or the technique itself where that says more (phishing is Delivery).
-    Archer's mapping, not an official crosswalk; rearrange and link techniques in the ATT&amp;CK tab.
+    Shikari's mapping, not an official crosswalk; rearrange and link techniques in the ATT&amp;CK tab.
     {% if fw.key == 'tal' %}↻ marks the maintain-presence loop the intruder repeats while moving through the estate.{% endif %}
   </p>
   {% endfor %}

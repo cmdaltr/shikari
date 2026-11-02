@@ -8,7 +8,7 @@ Run:     pytest tests/ui/ -v --headed  (to see the browser)
 import pytest
 import os
 
-BASE_URL = os.getenv("ARCHER_BASE_URL", "http://127.0.0.1:8000")
+BASE_URL = os.getenv("SHIKARI_BASE_URL", "http://127.0.0.1:8000")
 SCREENSHOT_DIR = os.path.join(os.path.dirname(__file__), "..", "screenshots")
 
 
@@ -46,8 +46,8 @@ def authenticated_page(page, base_url):
     password_field = page.locator('input[name="password"], input[type="password"]').first
 
     if email_field.is_visible():
-        email_field.fill(os.getenv("ARCHER_TEST_EMAIL", "admin@archer.app"))
-        password_field.fill(os.getenv("ARCHER_TEST_PASSWORD", "£missary_0f_the_G0rg0nite$"))
+        email_field.fill(os.getenv("SHIKARI_TEST_EMAIL", "admin@shikari.app"))
+        password_field.fill(os.getenv("SHIKARI_TEST_PASSWORD", "BigGameHunter"))
         page.locator('button[type="submit"], input[type="submit"]').first.click()
         page.wait_for_load_state("networkidle")
 

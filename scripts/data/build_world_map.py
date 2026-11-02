@@ -2,7 +2,7 @@
 """
 Build static/images/world_equal_earth.svg: every country (Natural Earth 1:110m, via the
 world-atlas package) on the Equal Earth projection, one <path> per country carrying its
-name, for pages to colour with CSS. Run once; the SVG is committed, so Archer needs no map
+name, for pages to colour with CSS. Run once; the SVG is committed, so Shikari needs no map
 library or network at runtime (air-gapped installs included).
 
 Usage:

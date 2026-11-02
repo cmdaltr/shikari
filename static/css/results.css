@@ -55,8 +55,8 @@
   color: white;
 }
 
-/* How Archer Works Button */
-.how-archer-link {
+/* How Shikari Works Button */
+.how-shikari-link {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -71,7 +71,7 @@
   transition: all 0.2s;
 }
 
-.how-archer-link:hover {
+.how-shikari-link:hover {
   background: #C53030;
   color: white;
 }
@@ -990,28 +990,43 @@
   margin-left: calc(-50vw + 50%);
   margin-right: calc(-50vw + 50%);
   margin-bottom: 0 !important;
-  padding: 30px 0 30px 0;
+  padding: 12px 28px;
   background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
   border-top: 3px solid var(--accent);
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
   width: 100vw;
   box-sizing: border-box;
 }
 
 .page-footer .footer-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
+  margin: 0;
+  padding: 0;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
   gap: 20px;
+  flex: 1 1 0;
 }
 
+/* Centre: a small dictionary nod to the name */
+.page-footer .footer-end { flex: 1 1 0; }
+.page-footer .footer-gloss {
+  flex: 0 0 auto;
+  text-align: center;
+  color: #8B9AA3;
+  font-size: 0.82em;
+  white-space: nowrap;
+}
+.page-footer .footer-gloss .fg-word { font-weight: 600; color: #a8b5bd; letter-spacing: 0.3px; }
+.page-footer .footer-gloss .fg-ipa { font-style: italic; opacity: 0.85; margin: 0 7px; }
+.page-footer .footer-gloss .fg-def::before { content: "\00B7\00A0"; opacity: 0.55; }
+
+
 .page-footer .github-link {
-  flex: 1;
-  min-width: 200px;
+  flex: 0 0 auto;
+  min-width: 0;
   text-align: left;
 }
 
@@ -1049,13 +1064,13 @@
 }
 
 .page-footer .spacer {
-  flex: 1;
-  min-width: 200px;
+  display: none;
 }
 
 .page-footer .timestamp {
-  text-align: center;
-  margin-top: 20px;
+  text-align: right;
+  margin: 0;
+  flex: 1 1 0;
   color: #8B9AA3;
   font-size: 0.9em;
 }
@@ -1145,3 +1160,8 @@
 .corr-inherited ul { margin: 6px 0 0; padding-left: 18px; }
 .corr-inherited li { margin: 4px 0; overflow-wrap: anywhere; }
 .corr-inherited-tid { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .85em; padding: 0 5px; border-radius: 4px; background: rgba(100, 116, 139, .14); }
+
+/* Footer order (swap @cmdaltr and the gloss): gloss left, @cmdaltr centre, trademark right */
+.page-footer .footer-gloss { order: 1; flex: 1 1 0; text-align: left; }
+.page-footer .footer-content { order: 2; flex: 0 0 auto; }
+.page-footer .timestamp { order: 3; }

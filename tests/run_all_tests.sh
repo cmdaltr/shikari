@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# Archer Comprehensive Test Runner
+# Shikari Comprehensive Test Runner
 # =============================================================================
 #
 # Runs all test categories and generates documented output.
@@ -14,14 +14,14 @@
 #   ./tests/run_all_tests.sh --report           # Generate HTML report
 #
 # Prerequisites:
-#   - Archer must be running: uvicorn archer.app:app --host 0.0.0.0 --port 8000
+#   - Shikari must be running: uvicorn shikari.app:app --host 0.0.0.0 --port 8000
 #   - pip install pytest requests pytest-playwright pytest-html
 #   - playwright install chromium
 #
 # Environment variables:
-#   ARCHER_BASE_URL    Base URL (default: http://127.0.0.1:8000)
-#   ARCHER_TEST_EMAIL  Login email
-#   ARCHER_TEST_PASSWORD  Login password
+#   SHIKARI_BASE_URL    Base URL (default: http://127.0.0.1:8000)
+#   SHIKARI_TEST_EMAIL  Login email
+#   SHIKARI_TEST_PASSWORD  Login password
 # =============================================================================
 
 set -e
@@ -63,19 +63,19 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 echo -e "${BLUE}================================================================${NC}"
-echo -e "${BLUE}  Archer Comprehensive Test Suite${NC}"
+echo -e "${BLUE}  Shikari Comprehensive Test Suite${NC}"
 echo -e "${BLUE}  $(date)${NC}"
 echo -e "${BLUE}================================================================${NC}"
 echo ""
 
-# Check Archer is running
-ARCHER_URL="${ARCHER_BASE_URL:-http://127.0.0.1:8000}"
-echo -n "Checking Archer at $ARCHER_URL... "
-if curl -s -o /dev/null -w "%{http_code}" "$ARCHER_URL/health" | grep -q "200"; then
+# Check Shikari is running
+SHIKARI_URL="${SHIKARI_BASE_URL:-http://127.0.0.1:8000}"
+echo -n "Checking Shikari at $SHIKARI_URL... "
+if curl -s -o /dev/null -w "%{http_code}" "$SHIKARI_URL/health" | grep -q "200"; then
     echo -e "${GREEN}OK${NC}"
 else
     echo -e "${RED}FAILED${NC}"
-    echo "Archer is not running. Start with: uvicorn archer.app:app --host 0.0.0.0 --port 8000"
+    echo "Shikari is not running. Start with: uvicorn shikari.app:app --host 0.0.0.0 --port 8000"
     exit 1
 fi
 echo ""
@@ -107,20 +107,20 @@ if ! $API_ONLY && ! $UI_ONLY && ! $UNIT_ONLY; then
 fi
 
 # =========================================================================
-# 3. API Tests (requires running Archer)
+# 3. API Tests (requires running Shikari)
 # =========================================================================
 if ! $UI_ONLY && ! $UNIT_ONLY; then
     echo -e "${YELLOW}━━━ API Tests ━━━${NC}"
-    pytest "$SCRIPT_DIR/api/" -v --tb=short --archer-url="$ARCHER_URL" 2>&1 | tee "$LOG_DIR/api_${TIMESTAMP}.log" || OVERALL_EXIT=1
+    pytest "$SCRIPT_DIR/api/" -v --tb=short --shikari-url="$SHIKARI_URL" 2>&1 | tee "$LOG_DIR/api_${TIMESTAMP}.log" || OVERALL_EXIT=1
     echo ""
 fi
 
 # =========================================================================
-# 4. Input Method Tests (requires running Archer)
+# 4. Input Method Tests (requires running Shikari)
 # =========================================================================
 if ! $UI_ONLY && ! $UNIT_ONLY; then
     echo -e "${YELLOW}━━━ Input Method Tests ━━━${NC}"
-    pytest "$SCRIPT_DIR/inputs/" -v --tb=short --archer-url="$ARCHER_URL" 2>&1 | tee "$LOG_DIR/inputs_${TIMESTAMP}.log" || OVERALL_EXIT=1
+    pytest "$SCRIPT_DIR/inputs/" -v --tb=short --shikari-url="$SHIKARI_URL" 2>&1 | tee "$LOG_DIR/inputs_${TIMESTAMP}.log" || OVERALL_EXIT=1
     echo ""
 fi
 
@@ -129,12 +129,12 @@ fi
 # =========================================================================
 if ! $API_ONLY && ! $UI_ONLY && ! $UNIT_ONLY; then
     echo -e "${YELLOW}━━━ Security Tests ━━━${NC}"
-    pytest "$SCRIPT_DIR/security/" -v --tb=short --archer-url="$ARCHER_URL" 2>&1 | tee "$LOG_DIR/security_${TIMESTAMP}.log" || OVERALL_EXIT=1
+    pytest "$SCRIPT_DIR/security/" -v --tb=short --shikari-url="$SHIKARI_URL" 2>&1 | tee "$LOG_DIR/security_${TIMESTAMP}.log" || OVERALL_EXIT=1
     echo ""
 fi
 
 # =========================================================================
-# 6. UI Tests (Playwright, requires running Archer)
+# 6. UI Tests (Playwright, requires running Shikari)
 # =========================================================================
 if ! $API_ONLY && ! $UNIT_ONLY; then
     echo -e "${YELLOW}━━━ UI Tests (Playwright) ━━━${NC}"
@@ -147,7 +147,7 @@ fi
 # =========================================================================
 if [ -n "$FEATURE_TESTS" ]; then
     echo -e "${YELLOW}━━━ Feature Tests (End-to-End Generation) ━━━${NC}"
-    pytest "$SCRIPT_DIR/features/" -v --tb=short --run-feature-tests --archer-url="$ARCHER_URL" 2>&1 | tee "$LOG_DIR/features_${TIMESTAMP}.log" || OVERALL_EXIT=1
+    pytest "$SCRIPT_DIR/features/" -v --tb=short --run-feature-tests --shikari-url="$SHIKARI_URL" 2>&1 | tee "$LOG_DIR/features_${TIMESTAMP}.log" || OVERALL_EXIT=1
     echo ""
 fi
 

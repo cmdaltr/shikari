@@ -13,15 +13,15 @@ from pathlib import Path
 # Add project root to path (parent of scripts directory)
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from archer.database.db import init_db, get_db_session
-from archer.database.models import User
-from archer.auth.password import hash_password, validate_password
+from shikari.database.db import init_db, get_db_session
+from shikari.database.models import User
+from shikari.auth.password import hash_password, validate_password
 
 
 def reset_password():
     """Reset admin password."""
     print("=" * 60)
-    print("Archer - Reset Admin Password")
+    print("Shikari - Reset Admin Password")
     print("=" * 60)
     print()
 

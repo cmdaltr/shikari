@@ -1,15 +1,15 @@
 #!/bin/sh
-# Install or upgrade the Archer desktop app on macOS or Linux from a GitHub release (desktop/README.md).
+# Install or upgrade the Shikari desktop app on macOS or Linux from a GitHub release (desktop/README.md).
 #
 #   sh install.sh                    the latest release
 #   sh install.sh --version v2.1.0   a given release
-#   sh install.sh --file Archer.dmg  an installer already downloaded (no checksum: you chose the file)
+#   sh install.sh --file Shikari.dmg  an installer already downloaded (no checksum: you chose the file)
 #
 # The repository is private: set GH_TOKEN (or GITHUB_TOKEN) to a token that can read it, or be
 # logged in to the gh CLI. The installer is checked against the release's SHA256SUMS before use.
 set -eu
 
-REPO="${ARCHER_REPO:-cmdaltr/archer}"
+REPO="${SHIKARI_REPO:-cmdaltr/shikari}"
 version=latest
 file=
 
@@ -29,7 +29,7 @@ case "$(uname -s)-$(uname -m)" in
     Darwin-x86_64) suffix=-macos-x86_64.dmg ;;
     Linux-x86_64) suffix=_amd64.deb ;;
     Linux-aarch64) suffix=_arm64.deb ;;
-    *) die "no Archer build for $(uname -s) $(uname -m)" ;;
+    *) die "no Shikari build for $(uname -s) $(uname -m)" ;;
 esac
 
 tmp=$(mktemp -d)
@@ -89,11 +89,11 @@ case "$suffix" in
         # /Applications needs an admin account; anyone else gets their own Applications folder
         dest=/Applications
         [ -w "$dest" ] || { dest="$HOME/Applications"; mkdir -p "$dest"; }
-        pgrep -xq Archer && echo "Archer is running: quit it to use the new version"
-        rm -rf "$dest/Archer.app"
-        ditto "$mnt/Archer.app" "$dest/Archer.app"
+        pgrep -xq Shikari && echo "Shikari is running: quit it to use the new version"
+        rm -rf "$dest/Shikari.app"
+        ditto "$mnt/Shikari.app" "$dest/Shikari.app"
         hdiutil detach -quiet "$mnt"
-        echo "Installed $dest/Archer.app"
+        echo "Installed $dest/Shikari.app"
         ;;
     *.deb)
         case "$file" in /*) ;; *) file="$PWD/$file" ;; esac
@@ -101,6 +101,6 @@ case "$suffix" in
         sudo=""
         [ "$(id -u)" -eq 0 ] || sudo=sudo
         $sudo apt-get install -y "$file"
-        echo "Installed: run archer, or open Archer from the applications menu"
+        echo "Installed: run shikari, or open Shikari from the applications menu"
         ;;
 esac

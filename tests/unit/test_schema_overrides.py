@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from archer.build import schema_overrides as so
+from shikari.build import schema_overrides as so
 
 
 def test_aliases_resolve():
@@ -71,8 +71,8 @@ def test_save_override_rejects_non_object(tmp_path):
 
 def test_secops_elastic_builders_still_load_base():
     # With no override committed, the builders read the shipped base schema unchanged.
-    from archer.build.secops import SecOpsGenerator
-    from archer.build.elastic import ElasticQueryGenerator
+    from shikari.build.secops import SecOpsGenerator
+    from shikari.build.elastic import ElasticQueryGenerator
 
     assert SecOpsGenerator().schema          # non-empty UDM map
     assert ElasticQueryGenerator().schema    # non-empty ECS map

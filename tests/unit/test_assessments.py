@@ -2,8 +2,8 @@
 
 import json
 
-from archer.assessments.export import results_to_csv, results_to_navigator
-from archer.assessments.library import build_test_cases, _signature
+from shikari.assessments.export import results_to_csv, results_to_navigator
+from shikari.assessments.library import build_test_cases, _signature
 
 
 def _csv(tmp_path):

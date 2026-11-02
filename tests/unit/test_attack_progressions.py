@@ -1,5 +1,5 @@
 """Correlation progression pairs cover ATT&CK v18's Stealth and Defense Impairment as they do Defense Evasion."""
-from archer.ai.genai.engine import _ATTACK_PROGRESSIONS
+from shikari.ai.genai.engine import _ATTACK_PROGRESSIONS
 
 
 def test_v18_tactics_pair_like_defense_evasion():

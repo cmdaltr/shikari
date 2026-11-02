@@ -8,7 +8,7 @@ import os
 import sys
 import pytest
 
-# Add archer to path
+# Add shikari to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 
@@ -17,14 +17,14 @@ class TestSecOpsGenerator:
 
     def test_generator_initialization(self):
         """Test that SecOpsGenerator initializes successfully."""
-        from archer.build.secops import SecOpsGenerator
+        from shikari.build.secops import SecOpsGenerator
 
         generator = SecOpsGenerator()
         assert generator is not None
 
     def test_generator_has_schema(self):
         """Test that generator loads UDM schema."""
-        from archer.build.secops import SecOpsGenerator
+        from shikari.build.secops import SecOpsGenerator
 
         generator = SecOpsGenerator()
         # Schema may or may not be loaded depending on file existence
@@ -32,7 +32,7 @@ class TestSecOpsGenerator:
 
     def test_generate_query_basic(self):
         """Test generating a basic YARA-L rule."""
-        from archer.build.secops import SecOpsGenerator
+        from shikari.build.secops import SecOpsGenerator
 
         generator = SecOpsGenerator()
 
@@ -52,7 +52,7 @@ class TestSecOpsGenerator:
 
     def test_generate_query_with_indicators(self):
         """Test generating YARA-L rule with IOC indicators."""
-        from archer.build.secops import SecOpsGenerator
+        from shikari.build.secops import SecOpsGenerator
 
         generator = SecOpsGenerator()
 
@@ -76,7 +76,7 @@ class TestSecOpsGenerator:
 
     def test_generate_yaral_execution_technique(self):
         """Test generating YARA-L rule for execution technique."""
-        from archer.build.secops import SecOpsGenerator
+        from shikari.build.secops import SecOpsGenerator
 
         generator = SecOpsGenerator()
 
@@ -94,7 +94,7 @@ class TestSecOpsGenerator:
 
     def test_generate_yaral_initial_access_technique(self):
         """Test generating YARA-L rule for initial access technique."""
-        from archer.build.secops import SecOpsGenerator
+        from shikari.build.secops import SecOpsGenerator
 
         generator = SecOpsGenerator()
 
@@ -116,7 +116,7 @@ def test_secops_generator():
     print("Testing Google SecOps YARA-L Generator...")
     print("=" * 60)
 
-    from archer.build.secops import SecOpsGenerator
+    from shikari.build.secops import SecOpsGenerator
 
     # Create generator
     try:

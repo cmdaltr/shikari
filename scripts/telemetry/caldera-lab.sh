@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# caldera-lab.sh — stand up / tear down a disposable CALDERA 5.2 lab for Archer (#30).
+# caldera-lab.sh — stand up / tear down a disposable CALDERA 5.2 lab for Shikari (#30).
 #
 #   caldera-lab.sh up               build+run the server, create the agent machines, enrol them
 #   caldera-lab.sh status           print URL, red key, group, agent count
 #   caldera-lab.sh agents           list every agent (paw, host, trusted, last seen)
-#   caldera-lab.sh config           print the caldera: block for Archer's bespoke/config.yaml
+#   caldera-lab.sh config           print the caldera: block for Shikari's bespoke/config.yaml
 #   caldera-lab.sh down             delete the agent machines  (STOP_SERVER=1 also stops the server)
 #   caldera-lab.sh win <vm>         install + run the agent on an existing UTM Windows VM (group WIN_GROUP)
 #   caldera-lab.sh mac <vm>         create (if needed) a Tart macOS VM and enrol the agent (group MAC_GROUP)
@@ -12,7 +12,7 @@
 #
 # Tunables (env): COUNT=2 GROUP=disposable DISTRO=ubuntu PREFIX=cal TAG=5.2.0
 #                 WIN_GROUP=winlab  MAC_GROUP=maclab  MAC_IMAGE=ghcr.io/cirruslabs/macos-sequoia-base:latest
-#                 REPO=<archer-caldera checkout>  CANON=<checkout with data/groups>
+#                 REPO=<shikari-caldera checkout>  CANON=<checkout with data/groups>
 #
 # Assumptions: macOS host, Docker (OrbStack) for the server, OrbStack Linux machines for the
 # agents (reached over `ssh <name>@orb`). Everything is idempotent — re-run `up` any time.
@@ -89,7 +89,7 @@ cmd_status() {
   echo "  Key    : $k"
   echo "  Group  : $GROUP"
   echo "  Agents : ${n:-0} total (includes any aged-out duplicates)"
-  echo "  Config : $0 config   # the block for Archer's bespoke/config.yaml"
+  echo "  Config : $0 config   # the block for Shikari's bespoke/config.yaml"
   echo "============================================"
 }
 
@@ -187,13 +187,13 @@ cmd_capture_test() {   # $1 = the UTM Windows VM running an agent in WIN_GROUP
     echo "   or run with:      PY=/path/to/python $0 capture-test $vm"; exit 1; }
   [ -d "$CANON/data/groups" ] || { echo "!! no detections at $CANON/data/groups — set CANON to a checkout with them"; exit 1; }
 
-  local home="$WORK/archer-home"
+  local home="$WORK/shikari-home"
   mkdir -p "$home/bespoke" "$home/data/telemetry"
   "$0" config > "$home/bespoke/config.yaml"
   echo ">> running the full Windows flow on the Mac (operate → collect → capture → check)…"
-  ( cd "$REPO" && ARCHER_HOME="$home" "$PY" - "$vm" "$CANON/data/groups" "$WIN_GROUP" <<'PY'
+  ( cd "$REPO" && SHIKARI_HOME="$home" "$PY" - "$vm" "$CANON/data/groups" "$WIN_GROUP" <<'PY'
 import sys
-from archer.lab import caldera as c
+from shikari.lab import caldera as c
 vm, gen, group = sys.argv[1], sys.argv[2], sys.argv[3]
 log = lambda m: print("  ", m)
 client = c.Client.from_settings()
@@ -205,7 +205,7 @@ m = c.collect(client, run["operation_id"], say=log, rebuild=False)
 print(">> collected", len(m["steps"]), "step(s) on", sorted({s["host"] for s in m["steps"]}))
 m = c.capture("utm", vm, "windows", m, say=log)
 print(">> captured flag:", m.get("captured"))
-from archer.telemetry.lab import runs
+from shikari.telemetry.lab import runs
 print(">> lab runs now:", [r[0] for r in runs()])
 res = c.check_operation(m, gen)
 print(">> check evidence:", res["evidence"], "| summary:", res["summary"])

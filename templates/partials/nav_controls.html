@@ -37,21 +37,21 @@
   ('Detections', 'detections', [
     ('/library', 'Library', true, 'library', 'Detections and correlations you have saved'),
     ('/detections/code', 'Detections as code', true, 'code', 'Export detections to git and diff two runs'),
-    ('/coverage', 'Coverage', false, 'coverage', 'Reference queries and the ATT&CK matrix'),
+    ('/coverage', 'Coverage', true, 'coverage', 'Reference queries and the ATT&CK matrix'),
     ('/flows', 'Flows', true, 'flows', "What you can and can't detect, per attack flow"),
     ('/anatomy', 'Anatomy', true, 'anatomy', 'How an attack runs and what you can detect'),
   ]),
   ('Intel', 'intel', [
     ('/feed', 'Feed', true, 'feed', 'The last 7 days of threat research'),
     ('/ioc', 'Indicator Management', true, 'ioc', 'Find an IOC and configure STIX/TAXII or MISP'),
-    ('/cyber-powers', 'Cyber Powers', false, 'map', 'National cyber capability on a world map'),
     ('/catalogue', 'Catalogue', true, 'catalogue', 'Profiled organisations and their exposure'),
+    ('/cyber-powers', 'Cyber Powers', false, 'map', 'National cyber capability on a world map'),
     ('/mitresaw', 'MITRESaw', false, 'mitresaw', "ATT&CK procedures and their indicators"),
   ]),
   ('Build', 'build', [
-    ('/emulate', 'Emulate', false, 'emulate', 'Validate which logs record which technique'),
+    ('/emulate', 'Emulate', true, 'emulate', 'Validate which logs record which technique'),
     ('/assessments', 'Assessments', true, 'campaign', 'Test cases and red/blue outcomes, VECTR-style'),
-    ('/manual', 'Manual', false, 'manual', 'Write detections one technique at a time'),
+    ('/manual', 'Manual', true, 'manual', 'Write detections one technique at a time'),
     ('/regex', 'Regex', false, 'regex', 'Test a regex and check it for each SIEM'),
     ('/agents', 'Agents', true, 'agents', 'Models that repair queries and triage reports'),
   ]),
@@ -59,7 +59,7 @@
 {% macro svg(name) %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ ICON[name] | safe }}</svg>{% endmacro %}
 {% macro is_here(href) %}{{ 'y' if path == href or (href != '/' and path.startswith(href ~ '/')) else '' }}{% endmacro %}
 <nav class="global-nav-controls" aria-label="{{ brand.name }}"{% if user %} data-watch="1"{% endif %}>
-    {% if path != '/' %}<a href="/" class="nav-brand" title="Home"><img src="{{ url_for('static', path=brand.banner) }}" alt="{{ brand.name }}" width="110" height="46"></a>{% endif %}
+    {% if path not in ['/', '/login', '/register', '/forgot-password'] %}<a href="/" class="nav-brand" title="Home"><img class="brand-light" src="{{ url_for('static', path=brand.banner) }}" alt="{{ brand.name }}"><img class="brand-dark" src="{{ url_for('static', path=brand.banner_dark) }}" alt="{{ brand.name }}"></a>{% endif %}
     <div class="nav-tabs">
         <a href="/" class="nav-tab{% if is_here('/') %} is-active{% endif %}"{% if is_here('/') %} aria-current="page"{% endif %} title="Home">{{ svg('home') }}<span>Home</span></a>
         {% for label, icon, items in menus %}
@@ -102,7 +102,7 @@
         <div class="nav-menu nav-menu-right">
             <button type="button" class="nav-icon-btn has-label nav-menu-btn{% if is_here('/how-it-works') %} is-active{% endif %}" aria-haspopup="true" aria-expanded="false" title="Help">{{ svg('help') }}<span class="nav-label">Help</span></button>
             <div class="nav-menu-list" role="menu" aria-label="Help">
-                <a href="/how-it-works" class="nav-menu-item{% if is_here('/how-it-works') %} is-active{% endif %}" role="menuitem">{{ svg('help') }}<span><strong>How it works</strong><small>What Archer does with your input, step by step</small></span></a>
+                <a href="/how-it-works" class="nav-menu-item{% if is_here('/how-it-works') %} is-active{% endif %}" role="menuitem">{{ svg('help') }}<span><strong>How it works</strong><small>What Shikari does with your input, step by step</small></span></a>
                 <a href="/how-it-works" class="nav-menu-item" role="menuitem" data-guide>{{ svg('guide') }}<span><strong>Guide</strong><small>Every page, each part highlighted and explained</small></span></a>
                 <a href="/how-it-works" class="nav-menu-item" role="menuitem" data-tips>{{ svg('tip') }}<span><strong>Tips and tricks</strong><small>Features and enrichments that are easy to miss</small></span></a>
             </div>
@@ -137,11 +137,11 @@
 <link rel="stylesheet" href="/static/css/guide.css?v={{ request.app.state.asset_version }}">
 <script src="/static/js/guide.js?v={{ request.app.state.asset_version }}" defer></script>
 <script>
-// Threat Feed watchlists: new matches as a badge on Intel and Feed (archer.intelligence.watchlists)
+// Threat Feed watchlists: new matches as a badge on Intel and Feed (shikari.intelligence.watchlists)
 (function () {
   const nav = document.querySelector('.global-nav-controls[data-watch]');
-  if (!nav || window.__archerWatchBadge) return;
-  window.__archerWatchBadge = true;
+  if (!nav || window.__shikariWatchBadge) return;
+  window.__shikariWatchBadge = true;
   const show = () => fetch('/api/feed/watchlists/count').then(r => r.ok ? r.json() : { new: 0 }).then(r => {
     nav.querySelectorAll('.nav-watch-badge').forEach(b => b.remove());
     if (!r.new) return;
@@ -157,14 +157,14 @@
     });
   }).catch(() => {});
   show();
-  window.addEventListener('archer:watch-changed', show);
+  window.addEventListener('shikari:watch-changed', show);
 })();
 
 // Nav menus: click (or Enter/Space/ArrowDown) opens, a click elsewhere or Escape closes,
 // arrows move through the items. Hover opens them too (common.css).
 (function () {
-  if (window.__archerNavMenus) return;
-  window.__archerNavMenus = true;
+  if (window.__shikariNavMenus) return;
+  window.__shikariNavMenus = true;
   const menus = () => document.querySelectorAll('.global-nav-controls .nav-menu');
   const close = (except) => menus().forEach(m => {
     if (m === except) return;

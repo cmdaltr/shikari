@@ -2,9 +2,9 @@
 
 import json
 
-from archer.parsers.stix_import import parse_stix_bundle
-from archer.parsers.misp_import import parse_misp_event
-from archer.parsers.stix_export import run_to_stix
+from shikari.parsers.stix_import import parse_stix_bundle
+from shikari.parsers.misp_import import parse_misp_event
+from shikari.parsers.stix_export import run_to_stix
 
 
 STIX_BUNDLE = {"type": "bundle", "objects": [
@@ -70,9 +70,9 @@ def test_stix_export_has_expected_objects():
              "query": "DeviceProcessEvents | where x", "indicators": {"cmd": ["mimikatz"], "ip": ["10.0.0.5"]}}]
     bundle = json.loads(run_to_stix("APT29", dets, "Cozy Bear"))
     types = [o["type"] for o in bundle["objects"]]
-    assert "x-archer-detection" in types and "attack-pattern" in types
+    assert "x-shikari-detection" in types and "attack-pattern" in types
     assert "intrusion-set" in types and "indicator" in types and "relationship" in types
-    det = next(o for o in bundle["objects"] if o["type"] == "x-archer-detection")
+    det = next(o for o in bundle["objects"] if o["type"] == "x-shikari-detection")
     assert det["siem"] == "mde" and det["technique_id"] == "T1003.001"
 
 

@@ -368,7 +368,7 @@ function nothingGenerated(name, p) {
   const cve = /^CVE-\d{4}-\d+$/i.test(name);
   box.querySelector('h2').textContent = `Nothing generated for ${name.replace(/_/g, ' ')}`;
   box.querySelector('.pg-nothing-why').textContent = cve
-    ? 'Archer found no ATT&CK techniques with indicators for this CVE, so there was nothing to build a query from. '
+    ? 'Shikari found no ATT&CK techniques with indicators for this CVE, so there was nothing to build a query from. '
       + 'If there is a report on it (a vendor advisory or threat brief with IOCs and TTPs), analyse that instead.'
     : (p.error || 'None of the selected techniques produced a query.');
   box.hidden = false;

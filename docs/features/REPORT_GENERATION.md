@@ -2,7 +2,7 @@
 
 ## Summary
 
-Successfully implemented **Priority 3: Report Generation (Word/PDF)** from the implementation guide. Archer can now export detection libraries as professional Word documents and PDF reports, complete with formatting, tables, and query syntax highlighting.
+Successfully implemented **Priority 3: Report Generation (Word/PDF)** from the implementation guide. Shikari can now export detection libraries as professional Word documents and PDF reports, complete with formatting, tables, and query syntax highlighting.
 
 ## Implementation Date
 2025-11-12
@@ -10,7 +10,7 @@ Successfully implemented **Priority 3: Report Generation (Word/PDF)** from the i
 ## What Was Implemented
 
 ### 1. Report Generation Module ✓
-**Files**: `archer/reports/generator.py`, `archer/reports/__init__.py`
+**Files**: `shikari/reports/generator.py`, `shikari/reports/__init__.py`
 
 Created comprehensive report generation system with three output formats:
 
@@ -91,7 +91,7 @@ Added export options to Library page:
 5. Report generated and downloaded
 
 ### 6. API Integration ✓
-**File**: `archer/app.py` (lines 6724-6810)
+**File**: `shikari/app.py` (lines 6724-6810)
 
 Updated `/api/library/export` endpoint:
 - Added `docx` format support
@@ -142,7 +142,7 @@ StreamingResponse → Download
 
 **Word Report**:
 ```python
-from archer.reports.generator import WordReportGenerator
+from shikari.reports.generator import WordReportGenerator
 
 detections = [
     {
@@ -169,7 +169,7 @@ with open("report.docx", "wb") as f:
 
 **PDF Report**:
 ```python
-from archer.reports.generator import PDFReportGenerator
+from shikari.reports.generator import PDFReportGenerator
 
 generator = PDFReportGenerator()
 pdf_bytes = generator.generate(
@@ -183,7 +183,7 @@ with open("report.pdf", "wb") as f:
 
 **HTML Report**:
 ```python
-from archer.reports.generator import HTMLReportGenerator
+from shikari.reports.generator import HTMLReportGenerator
 
 generator = HTMLReportGenerator()
 html_bytes = generator.generate(
@@ -240,15 +240,15 @@ with open("report.html", "wb") as f:
 ## Files Created/Modified
 
 ### New Files
-1. `archer/reports/__init__.py` - Package initialization
-2. `archer/reports/generator.py` - Report generators (600+ lines)
+1. `shikari/reports/__init__.py` - Package initialization
+2. `shikari/reports/generator.py` - Report generators (600+ lines)
 3. `tests/unit/test_report_generation.py` - Test suite
 4. `REPORT_GENERATION_COMPLETE.md` - This document
 
 ### Modified Files
 1. `templates/library.html` - Added Word/PDF checkboxes (lines 1312-1326)
 2. `templates/library.html` - Updated downloadExports() function (lines 1778-1797)
-3. `archer/app.py` - Added Word/PDF export logic (lines 6724-6810)
+3. `shikari/app.py` - Added Word/PDF export logic (lines 6724-6810)
 4. `requirements.txt` - Added python-docx and reportlab dependencies
 
 ### Test Output

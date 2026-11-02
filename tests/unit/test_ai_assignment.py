@@ -7,9 +7,9 @@ from cryptography.fernet import Fernet
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from archer.ai import assignment
-from archer.auth.encryption import encrypt_api_key
-from archer.database.models import APIKey, Base, User
+from shikari.ai import assignment
+from shikari.auth.encryption import encrypt_api_key
+from shikari.database.models import APIKey, Base, User
 
 KEY = Fernet.generate_key()
 
@@ -22,7 +22,7 @@ def db():
     for uid in (1, 2):
         session.add(User(id=uid, email=f"u{uid}@x", full_name="u", password_hash="x"))
     session.commit()
-    with patch("archer.auth.encryption.get_encryption_key", return_value=KEY):
+    with patch("shikari.auth.encryption.get_encryption_key", return_value=KEY):
         yield session
     session.close()
 
@@ -112,22 +112,22 @@ def test_probe_only_accepts_a_base_url():
 @pytest.mark.unit
 def test_detection_generation_goes_through_the_factory():
     # Every cloud provider (not just Anthropic/OpenAI) works for detection generation
-    from archer.build import llm_queries
+    from shikari.build import llm_queries
 
     llm = MagicMock()
     llm.generate.return_value = MagicMock(content='{"queries": []}')
     config = assignment.detection_llm_config({"provider": "deepseek", "api_key": "k", "model": "", "label": "DeepSeek"})
-    with patch("archer.ai.assignment.create_llm", return_value=llm) as create:
+    with patch("shikari.ai.assignment.create_llm", return_value=llm) as create:
         assert llm_queries.call_llm("prompt", config) == '{"queries": []}'
     assert create.call_args.args[0]["provider"] == "deepseek"
 
 
 @pytest.mark.unit
 def test_run_stops_calling_the_llm_at_the_cap(capsys):
-    from archer.build import detections
+    from shikari.build import detections
 
     config = {"max_calls": 2, "label": "X"}
-    with patch("archer.build.llm_queries.generate_llm_queries", return_value=[]) as gen:
+    with patch("shikari.build.llm_queries.generate_llm_queries", return_value=[]) as gen:
         for _ in range(4):
             detections._run_bespoke_generation({"technique_id": "T1"}, [], "llm", config)
     assert gen.call_count == 2
@@ -136,10 +136,10 @@ def test_run_stops_calling_the_llm_at_the_cap(capsys):
 
 @pytest.mark.unit
 def test_intel_only_techniques_spend_no_llm_call():
-    from archer.build import detections
+    from shikari.build import detections
 
     config = {"max_calls": 5, "label": "X"}
-    with patch("archer.build.llm_queries.generate_llm_queries", return_value=[]) as gen:
+    with patch("shikari.build.llm_queries.generate_llm_queries", return_value=[]) as gen:
         # Phishing for Information: email and web logs see it, so it's worth a call
         detections._run_bespoke_generation({"technique_id": "T1598", "tactic": "Reconnaissance"}, [], "llm", config)
         # Acquire Infrastructure: adversary-side, intel only
@@ -154,7 +154,7 @@ def test_anthropic_drops_parameters_a_model_refuses():
     import anthropic
     import httpx
 
-    from archer.ai.llm.providers import _create_message
+    from shikari.ai.llm.providers import _create_message
 
     def refuse(message):
         response = httpx.Response(400, request=httpx.Request("POST", "https://api.anthropic.com/v1/messages"))

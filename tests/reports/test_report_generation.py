@@ -6,7 +6,7 @@ Test script for report generation
 import os
 import sys
 
-# Add archer to path (navigate up two levels from tests/reports/)
+# Add shikari to path (navigate up two levels from tests/reports/)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 
@@ -57,7 +57,7 @@ def test_report_generation():
     # Test 1: Word Document Generation
     print("\n1. Testing Word Document Generation...")
     try:
-        from archer.reports.generator import WordReportGenerator
+        from shikari.reports.generator import WordReportGenerator
 
         generator = WordReportGenerator()
         print("   ✓ Word generator initialized")
@@ -88,7 +88,7 @@ def test_report_generation():
     # Test 2: PDF Generation
     print("\n2. Testing PDF Generation...")
     try:
-        from archer.reports.generator import PDFReportGenerator
+        from shikari.reports.generator import PDFReportGenerator
 
         generator = PDFReportGenerator()
         print("   ✓ PDF generator initialized")
@@ -119,7 +119,7 @@ def test_report_generation():
     # Test 3: HTML Generation
     print("\n3. Testing HTML Generation...")
     try:
-        from archer.reports.generator import HTMLReportGenerator
+        from shikari.reports.generator import HTMLReportGenerator
 
         generator = HTMLReportGenerator()
         print("   ✓ HTML generator initialized")

@@ -1,4 +1,4 @@
-# Archer API Integration Guide
+# Shikari API Integration Guide
 
 **Version**: 2.1
 **Last Updated**: 2025-03-04
@@ -8,7 +8,7 @@
 
 ## Overview
 
-The Archer API provides programmatic access to automated threat detection generation, MITRE ATT&CK intelligence processing, and security detection management.
+The Shikari API provides programmatic access to automated threat detection generation, MITRE ATT&CK intelligence processing, and security detection management.
 
 ### What You Can Build
 
@@ -32,7 +32,7 @@ The Archer API provides programmatic access to automated threat detection genera
 
 ### Prerequisites
 
-- Archer instance running (default: `http://localhost:8000`)
+- Shikari instance running (default: `http://localhost:8000`)
 - User account created
 - Python 3.11 required (torch==2.2.2 in requirements.txt caps compatibility at 3.11) or Node.js 14+ (for examples)
 
@@ -62,7 +62,7 @@ generate_response = session.post(
 print(f"Started generation: {generate_response.json()['redirect']}")
 ```
 
-That's it! Archer is now generating detections for APT29.
+That's it! Shikari is now generating detections for APT29.
 
 ---
 
@@ -70,7 +70,7 @@ That's it! Archer is now generating detections for APT29.
 
 ### Session-Based Authentication
 
-Archer uses session-based authentication with secure HTTP-only cookies.
+Shikari uses session-based authentication with secure HTTP-only cookies.
 
 #### Login Flow
 
@@ -104,7 +104,7 @@ For form submissions, CSRF tokens are required:
 
 ```python
 # Get CSRF token from cookie
-csrf_token = session.cookies.get('archer_csrf_session')
+csrf_token = session.cookies.get('shikari_csrf_session')
 
 # Include in form submissions
 response = session.post(
@@ -117,7 +117,7 @@ response = session.post(
 
 ✅ **Use HTTPS in production**
 ```python
-BASE_URL = 'https://archer.yourcompany.com'  # Production
+BASE_URL = 'https://shikari.yourcompany.com'  # Production
 # BASE_URL = 'http://localhost:8000'  # Development only
 ```
 
@@ -128,14 +128,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-email = os.getenv('ARCHER_EMAIL')
-password = os.getenv('ARCHER_PASSWORD')
+email = os.getenv('SHIKARI_EMAIL')
+password = os.getenv('SHIKARI_PASSWORD')
 ```
 
 ✅ **Enable MFA for production accounts**
 ```bash
-curl -X POST "https://archer.example.com/api/mfa/setup" \
-  -H "Cookie: archer_session=$SESSION"
+curl -X POST "https://shikari.example.com/api/mfa/setup" \
+  -H "Cookie: shikari_session=$SESSION"
 ```
 
 ✅ **Handle session expiration**
@@ -459,7 +459,7 @@ session.post(
 
 Validate detection queries against containerized SIEMs with sample events.
 
-> **Requirement:** Docker must be running on the Archer server.
+> **Requirement:** Docker must be running on the Shikari server.
 
 ```python
 import requests
@@ -565,7 +565,7 @@ session.post(f'http://localhost:8000/api/validation/stop/{session_id}')
 
 **Use Case**: Get a grounded, prioritised detection plan for a threat group, grounded in real MITRE ATT&CK technique data and your existing detection coverage.
 
-Unlike the general `/api/ask` endpoint (which uses only the group name as context), `/api/threat-briefing` reads Archer's ATT&CK database and checks your detection library before calling the LLM — so prioritisation is based on actual facts.
+Unlike the general `/api/ask` endpoint (which uses only the group name as context), `/api/threat-briefing` reads Shikari's ATT&CK database and checks your detection library before calling the LLM — so prioritisation is based on actual facts.
 
 #### Endpoint
 
@@ -683,29 +683,29 @@ briefing.top_techniques.forEach(t => {
 - The briefing reads from `data/mitre_procedures.csv` (all three ATT&CK attribution paths: direct, via software, via campaign)
 - Coverage check scans your detection library (`data/groups/`) for YAML files matching each technique ID
 - The LLM prompt is capped at 80 gap techniques to stay within token limits — groups with 150+ techniques will show the 80 highest-priority gaps
-- Requires an LLM provider (Anthropic, OpenAI, or local Ollama) — same as Ask Archer
+- Requires an LLM provider (Anthropic, OpenAI, or local Ollama) — same as Ask Shikari
 
 ### Workflow 9: Batch Hunts
 
 Hunt several groups and CVEs with one call. The server runs them one after another, as you, so your SIEM platforms, technology stack and AI settings apply to each; one that fails doesn't stop the rest. Up to 50 per batch.
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/batch -H "Authorization: Bearer $ARCHER_TOKEN" \
+curl -X POST http://127.0.0.1:8000/api/batch -H "Authorization: Bearer $SHIKARI_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"groups": ["APT29", "Scattered Spider"], "cves": ["CVE-2024-3400"], "correlate": true}'
 # {"id": "118ad0ce5170", "items": 3, "status_url": "/api/batch/118ad0ce5170"}
 
-curl http://127.0.0.1:8000/api/batch/118ad0ce5170 -H "Authorization: Bearer $ARCHER_TOKEN"
+curl http://127.0.0.1:8000/api/batch/118ad0ce5170 -H "Authorization: Bearer $SHIKARI_TOKEN"
 ```
 
-Each item reports its run name (the results page is `/results/<run>`), `status` and `created_yaml`; the batch's `status` ends as `complete`, `partial` or `failed`. From Python: `ArcherClient().batch(groups=[...], cves=[...])` and `batch_status(id)`. `GET /api/batch` lists your batches.
+Each item reports its run name (the results page is `/results/<run>`), `status` and `created_yaml`; the batch's `status` ends as `complete`, `partial` or `failed`. From Python: `ShikariClient().batch(groups=[...], cves=[...])` and `batch_status(id)`. `GET /api/batch` lists your batches.
 
 ### Workflow 10: Streamed Progress
 
 `GET /api/progress/<run>/stream` sends a run's progress as Server-Sent Events: a `progress` event each time it changes, a comment line every 15 seconds while it's quiet, and a `done` event when the run finishes. It replaces polling `/progress_status`.
 
 ```bash
-curl -N http://127.0.0.1:8000/api/progress/APT29/stream -H "Authorization: Bearer $ARCHER_TOKEN"
+curl -N http://127.0.0.1:8000/api/progress/APT29/stream -H "Authorization: Bearer $SHIKARI_TOKEN"
 ```
 
 ```javascript
@@ -716,7 +716,7 @@ events.addEventListener("done", () => events.close());
 
 ### Workflow 11: Webhooks
 
-An admin registers URLs that Archer POSTs to when something happens:
+An admin registers URLs that Shikari POSTs to when something happens:
 
 | Event | Sent when | `data` |
 |---|---|---|
@@ -727,19 +727,19 @@ An admin registers URLs that Archer POSTs to when something happens:
 ```bash
 curl -X POST http://127.0.0.1:8000/api/webhooks -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://hooks.example.com/archer", "events": ["run.completed", "run.failed"]}'
+  -d '{"url": "https://hooks.example.com/shikari", "events": ["run.completed", "run.failed"]}'
 # returns the webhook with its secret: the only time the secret is shown
 ```
 
-The body is `{"event", "sent_at", "data"}` with an `X-Archer-Event` header and `X-Archer-Signature: sha256=<hex>`, an HMAC-SHA256 of the raw body under the webhook's secret. Check it before trusting a delivery:
+The body is `{"event", "sent_at", "data"}` with an `X-Shikari-Event` header and `X-Shikari-Signature: sha256=<hex>`, an HMAC-SHA256 of the raw body under the webhook's secret. Check it before trusting a delivery:
 
 ```python
 import hashlib, hmac
 expected = "sha256=" + hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
-assert hmac.compare_digest(expected, request.headers["X-Archer-Signature"])
+assert hmac.compare_digest(expected, request.headers["X-Shikari-Signature"])
 ```
 
-Deliveries are tried three times with backoff (a 4xx other than 429 isn't retried), and the last 20 per webhook show in `GET /api/webhooks`. `POST /api/webhooks/<id>/test` sends a test event and returns the result; `PATCH` changes `url`, `events`, `enabled` or `description`; `DELETE` removes it. Set `ARCHER_PUBLIC_URL` (e.g. `https://archer.example.com`) to make `results_url` absolute. Webhooks and their secrets are stored in `data/webhooks.json`, never in git.
+Deliveries are tried three times with backoff (a 4xx other than 429 isn't retried), and the last 20 per webhook show in `GET /api/webhooks`. `POST /api/webhooks/<id>/test` sends a test event and returns the result; `PATCH` changes `url`, `events`, `enabled` or `description`; `DELETE` removes it. Set `SHIKARI_PUBLIC_URL` (e.g. `https://shikari.example.com`) to make `results_url` absolute. Webhooks and their secrets are stored in `data/webhooks.json`, never in git.
 
 ---
 
@@ -753,15 +753,15 @@ import time
 import json
 from pathlib import Path
 
-class ArcherClient:
-    """Simple Archer API client"""
+class ShikariClient:
+    """Simple Shikari API client"""
 
     def __init__(self, base_url='http://localhost:8000'):
         self.base_url = base_url
         self.session = requests.Session()
 
     def login(self, email, password):
-        """Authenticate with Archer"""
+        """Authenticate with Shikari"""
         response = self.session.post(
             f'{self.base_url}/login',
             data={'email': email, 'password': password}
@@ -808,7 +808,7 @@ class ArcherClient:
 
 
 # Usage
-client = ArcherClient()
+client = ShikariClient()
 client.login('user@example.com', 'password')
 
 # Generate detections
@@ -828,7 +828,7 @@ client.download_results(group_name, f'{group_name}.zip')
 const axios = require('axios');
 const fs = require('fs');
 
-class ArcherClient {
+class ShikariClient {
     constructor(baseURL = 'http://localhost:8000') {
         this.client = axios.create({
             baseURL,
@@ -883,7 +883,7 @@ class ArcherClient {
 
 // Usage
 (async () => {
-    const client = new ArcherClient();
+    const client = new ShikariClient();
     await client.login('user@example.com', 'password');
 
     // Generate detections
@@ -1158,7 +1158,7 @@ def upload_report(file_path):
 
 ### Background Jobs & Polling
 
-Archer processes long-running tasks asynchronously:
+Shikari processes long-running tasks asynchronously:
 - Detection generation
 - File upload processing
 - Blog analysis
@@ -1225,7 +1225,7 @@ if response.status_code != 200:
     print("Invalid credentials")
 
 # 2. Check session cookie
-if 'archer_session' not in session.cookies:
+if 'shikari_session' not in session.cookies:
     print("No session cookie. Re-authenticate.")
 
 # 3. Handle session expiration
@@ -1318,7 +1318,7 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
 - `mde` - Microsoft Defender KQL queries
 - `elastic` - Elastic EQL queries
 
-### Q: Can I use Archer API without authentication?
+### Q: Can I use Shikari API without authentication?
 
 **A**: No, all API endpoints (except `/docs` and `/openapi.json`) require authentication.
 
@@ -1330,7 +1330,7 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
 
 ### Q: How do I report API bugs or request features?
 
-**A**: Open an issue on GitHub: https://github.com/cmdaltr/archer/issues
+**A**: Open an issue on GitHub: https://github.com/cmdaltr/shikari/issues
 
 ---
 
@@ -1354,14 +1354,14 @@ The auto-generated documentation provides:
 ## Additional Resources
 
 ### Official Documentation
-- [Archer GitHub Repository](https://github.com/cmdaltr/archer)
+- [Shikari GitHub Repository](https://github.com/cmdaltr/shikari)
 - [Scripts Documentation](../SCRIPTS.md)
 - [Feature Documentation](../features/)
 - [Architecture Documentation](../architecture/)
 
 ### Community
-- [GitHub Issues](https://github.com/cmdaltr/archer/issues)
-- [GitHub Discussions](https://github.com/cmdaltr/archer/discussions)
+- [GitHub Issues](https://github.com/cmdaltr/shikari/issues)
+- [GitHub Discussions](https://github.com/cmdaltr/shikari/discussions)
 
 ### Related Resources
 - [MITRE ATT&CK Framework](https://attack.mitre.org/)
@@ -1372,10 +1372,10 @@ The auto-generated documentation provides:
 ## Support
 
 For API support and questions:
-- **GitHub Issues**: [Report a bug](https://github.com/cmdaltr/archer/issues)
-- **GitHub Discussions**: [Ask a question](https://github.com/cmdaltr/archer/discussions)
+- **GitHub Issues**: [Report a bug](https://github.com/cmdaltr/shikari/issues)
+- **GitHub Discussions**: [Ask a question](https://github.com/cmdaltr/shikari/discussions)
 - **Email**: [GitHub @cmdaltr](https://github.com/cmdaltr)
 
 ---
 
-**© 2024 Archer Detection Generator** | Built with ❤️ by @cmdaltr
+**© 2024 Shikari Detection Generator** | Built with ❤️ by @cmdaltr

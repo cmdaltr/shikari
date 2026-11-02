@@ -1,6 +1,6 @@
 """
-Only the groups an ATT&CK release changes are collected again (archer.mitre.attack_delta),
-and the runner merges them into the procedures CSV (archer.mitre.procedures).
+Only the groups an ATT&CK release changes are collected again (shikari.mitre.attack_delta),
+and the runner merges them into the procedures CSV (shikari.mitre.procedures).
 """
 import copy
 import csv
@@ -10,8 +10,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from archer.mitre import attack_delta as d
-from archer.mitre import procedures as p
+from shikari.mitre import attack_delta as d
+from shikari.mitre import procedures as p
 
 
 def _obj(type_, stix_id, ext=None, **kw):
@@ -131,7 +131,7 @@ def saw(tmp_path, monkeypatch):
     bundle = tmp_path / "bundle.json"
     bundle.write_text(json.dumps({"objects": _bundle()}))
     monkeypatch.setattr(p, "_MITRESAW_DIR", mitresaw)
-    monkeypatch.setattr(p, "_ARCHER_BUNDLE", bundle)
+    monkeypatch.setattr(p, "_SHIKARI_BUNDLE", bundle)
     monkeypatch.setattr(p, "_mitresaw_python", lambda: "python")
     monkeypatch.setattr(p, "_LOCK", tmp_path / ".mitresaw.lock")
     calls = []
@@ -164,7 +164,7 @@ def test_first_build_is_full_then_only_changed_groups(saw):
     assert [_groups(c) for c in saw.calls] == [["G0001", "G0002", "G0003"]] and p.LAST_PLAN is None
     assert json.loads(p._meta_path(saw.out).read_text())["mode"] == "full"
     assert _read(saw.out) == [("G0001", "new"), ("G0002", "new"), ("G0003", "new")]
-    # Descriptions aren't stored (Archer reads them from ATT&CK)
+    # Descriptions aren't stored (Shikari reads them from ATT&CK)
     assert saw.out.read_text().splitlines()[0] == "group_sw_id,group_sw_name,technique_id,procedure_example"
 
     # Nothing changed: no MITRESaw run at all

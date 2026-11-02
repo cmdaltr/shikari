@@ -1,20 +1,20 @@
-# Archer User Guide
+# Shikari User Guide
 
-Archer turns threat intelligence into detection queries. Give it a threat group, a CVE, a list of ATT&CK techniques, a threat report or a company's domain, and it works out which **MITRE ATT&CK** techniques apply, pulls the indicators ATT&CK and public detection rules document for them, and writes queries for your SIEMs. It also groups those queries into correlations, draws the attack flow, and tells you what you can't yet detect.
+Shikari turns threat intelligence into detection queries. Give it a threat group, a CVE, a list of ATT&CK techniques, a threat report or a company's domain, and it works out which **MITRE ATT&CK** techniques apply, pulls the indicators ATT&CK and public detection rules document for them, and writes queries for your SIEMs. It also groups those queries into correlations, draws the attack flow, and tells you what you can't yet detect.
 
 AI is optional. Everything in this guide works without it unless the page says otherwise.
 
-Each page below covers one part of Archer in the same order: what it's for, how to use it, every option, where its data comes from, and its limits.
+Each page below covers one part of Shikari in the same order: what it's for, how to use it, every option, where its data comes from, and its limits.
 
 ## Where everything is
 
 The menu bar has three menus (Detections, Intel, Build), then Profile and Help. The Home page has four tabs.
 
-Help → **Guide** shows a picture of every page with each part highlighted in turn: what it's for, who uses it and when it helps most. Help → **Tips and tricks** shows one tip at a time, at random, never repeating any of the last ten. Both are offered when Archer starts (the first page of each browser session, or each launch of the desktop app), and each has a tick box to stop it appearing then. Those choices and the tip history are kept in that browser only.
+Help → **Guide** shows a picture of every page with each part highlighted in turn: what it's for, who uses it and when it helps most. Help → **Tips and tricks** shows one tip at a time, at random, never repeating any of the last ten. Both are offered when Shikari starts (the first page of each browser session, or each launch of the desktop app), and each has a tick box to stop it appearing then. Those choices and the tip history are kept in that browser only.
 
-| Part of Archer | Where | What it's for | Guide |
+| Part of Shikari | Where | What it's for | Guide |
 |---|---|---|---|
-| Running Archer | Terminal | Start, stop and update Archer; sign in | [Running Archer](01-running-archer.md) |
+| Running Shikari | Terminal | Start, stop and update Shikari; sign in | [Running Shikari](01-running-shikari.md) |
 | Hunt | Home → Hunt | Detections for a threat group, a CVE or ATT&CK techniques | [Hunt](02-hunt.md) |
 | Analyse | Home → Analyse | Detections from a report: a URL or an uploaded file | [Analyse](03-analyse.md) |
 | Profile (company) | Home → Profile | The threat groups likely to target a company, then their detections | [Company profile](04-company-profile.md) |
@@ -37,11 +37,11 @@ Help → **Guide** shows a picture of every page with each part highlighted in t
 | Recording a lab | Your own test VMs | **Coming soon**: Atomic Red Team runs, with Defender for Endpoint's rows, into Emulate | [Recording a lab](20-recording-a-lab.md) |
 | CALDERA operations | Build → Emulate → Lab | Chained operations on CALDERA agents (fact chaining, implant behaviour), optionally capturing each step's endpoint logs over the agent's own C2, with detections and correlations checked against what ran | [CALDERA operations](25-caldera.md) |
 | Regex | Build → Regex | Test a regex and check it for the SIEM it will run in | [Regex](14-regex.md) |
-| Agents and Ask Archer | Build → Agents; the chat button | AI that repairs queries, answers questions, triages reports | [Agents and Ask Archer](15-agents-and-ask-archer.md) |
+| Agents and Ask Shikari | Build → Agents; the chat button | AI that repairs queries, answers questions, triages reports | [Agents and Ask Shikari](15-agents-and-ask-shikari.md) |
 | Profile (settings) | Profile | Your account, SIEMs, industries, country, API keys, MFA, users | [Profile and settings](16-profile-and-settings.md) |
 | SIEM data sources | Profile → Config | Which tables / UDM event types the estate ingests; flags and excludes detections that can't fire | [SIEM data sources](24-siem-data-sources.md) |
 | Console, API and MCP | Terminal | Everything above without the browser | [Console, API and MCP](17-console-api-mcp.md) |
-| Data and updates | — | What Archer downloads, when, and where it keeps it | [Data and updates](18-data-and-updates.md) |
+| Data and updates | — | What Shikari downloads, when, and where it keeps it | [Data and updates](18-data-and-updates.md) |
 | Terms | — | ATT&CK, IOC, correlation, OSINT and the rest | [Glossary](glossary.md) |
 
 ## Which SIEMs
@@ -51,7 +51,7 @@ Help → **Guide** shows a picture of every page with each part highlighted in t
 | Google SecOps | YARA-L 2.0 | Generated |
 | Microsoft Defender XDR | KQL (advanced hunting) | Generated |
 | Splunk | SPL | Generated (CEF-aligned indexes by default; your own in `bespoke/mappings`) |
-| Elastic | ES\|QL | Generated (ECS fields; `archer.build.elastic`) |
+| Elastic | ES\|QL | Generated (ECS fields; `shikari.build.elastic`) |
 
 To generate for fewer SIEMs, tick the ones you want under Environment → SIEM platforms. Adding a SIEM is covered in [SIEM onboarding](../SIEM_ONBOARDING.md).
 
@@ -65,9 +65,9 @@ Nothing uses AI unless you choose it. These are the places you can:
 | Report extraction (Analyse) | Regex extraction of TTPs and IOCs | A model reads the report too |
 | Company profile | Wikidata, the homepage, OSINT sources | Deeper analysis by a model |
 | Threat briefing (Results) | Prioritised techniques and gaps | An optional written summary |
-| Ask Archer, Agents | Not available | Required |
+| Ask Shikari, Agents | Not available | Required |
 
-Archer asks before a hunt whether to use AI, and remembers your answer if you tick **Remember this choice**. Choose providers and models under Profile → API Keys.
+Shikari asks before a hunt whether to use AI, and remembers your answer if you tick **Remember this choice**. Choose providers and models under Profile → API Keys.
 
 ## Other documentation
 

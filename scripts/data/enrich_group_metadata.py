@@ -27,7 +27,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from archer.mitre.group_metadata import build_group_metadata_cache, load_group_metadata
+from shikari.mitre.group_metadata import build_group_metadata_cache, load_group_metadata
 
 STIX_CACHE   = PROJECT_ROOT / "data" / "cache" / "enterprise-attack.json"
 OUTPUT_PATH  = PROJECT_ROOT / "data" / "cache" / "group_metadata.json"
@@ -49,7 +49,7 @@ def main() -> None:
 
     if not STIX_CACHE.exists():
         print(f"STIX bundle cache not found at {STIX_CACHE}")
-        print("Run Archer once first so it downloads the STIX bundle, then re-run this script.")
+        print("Run Shikari once first so it downloads the STIX bundle, then re-run this script.")
         sys.exit(1)
 
     print(f"Loading STIX bundle from {STIX_CACHE}…")

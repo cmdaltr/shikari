@@ -18,7 +18,7 @@ DISALLOWED_EXTENSIONS = [".exe", ".dll", ".bat", ".sh", ".py", ".js", ".php", ".
 class TestFileUploadValidation:
     """Tests for file upload input validation."""
 
-    def test_txt_file_accepted(self, client, ensure_archer_running):
+    def test_txt_file_accepted(self, client, ensure_shikari_running):
         """Test that .txt files are accepted."""
         content = b"""
         Threat Intelligence Report
@@ -43,7 +43,7 @@ class TestFileUploadValidation:
 
         assert response.status_code in [200, 401]  # 401 if auth required
 
-    def test_json_file_accepted(self, client, ensure_archer_running):
+    def test_json_file_accepted(self, client, ensure_shikari_running):
         """Test that .json files are accepted."""
         content = b'''
         {
@@ -66,7 +66,7 @@ class TestFileUploadValidation:
 
         assert response.status_code in [200, 401]
 
-    def test_csv_file_accepted(self, client, ensure_archer_running):
+    def test_csv_file_accepted(self, client, ensure_shikari_running):
         """Test that .csv files are accepted."""
         content = b"""indicator_type,indicator_value,description
 domain,evil.com,Malicious C2
@@ -84,7 +84,7 @@ technique,T1059.001,PowerShell"""
 
         assert response.status_code in [200, 401]
 
-    def test_yara_file_accepted(self, client, ensure_archer_running):
+    def test_yara_file_accepted(self, client, ensure_shikari_running):
         """Test that .yar/.yara files are accepted."""
         content = b"""
 rule Example_Malware {
@@ -112,7 +112,7 @@ rule Example_Malware {
         assert response.status_code in [200, 401]
 
     @pytest.mark.parametrize("ext", DISALLOWED_EXTENSIONS)
-    def test_executable_files_rejected(self, client, ensure_archer_running, ext):
+    def test_executable_files_rejected(self, client, ensure_shikari_running, ext):
         """Test that executable file types are rejected."""
         files = {"file": (f"malicious{ext}", io.BytesIO(b"MZ"), "application/octet-stream")}
         response = client.post(
@@ -125,7 +125,7 @@ rule Example_Malware {
         # Should be rejected with 400 or similar
         assert response.status_code in [400, 401, 415, 422]
 
-    def test_empty_file_handled(self, client, ensure_archer_running):
+    def test_empty_file_handled(self, client, ensure_shikari_running):
         """Test that empty files are handled gracefully."""
         files = {"file": ("empty.txt", io.BytesIO(b""), "text/plain")}
         response = client.post(
@@ -138,7 +138,7 @@ rule Example_Malware {
         # Should handle gracefully (may reject or accept with no results)
         assert response.status_code in [200, 400, 401, 422]
 
-    def test_no_file_provided(self, client, ensure_archer_running):
+    def test_no_file_provided(self, client, ensure_shikari_running):
         """Test that missing file is handled."""
         response = client.post(
             "/upload",
@@ -153,7 +153,7 @@ rule Example_Malware {
 class TestFileUploadContent:
     """Tests for file content processing."""
 
-    def test_file_with_techniques_extracted(self, client, ensure_archer_running):
+    def test_file_with_techniques_extracted(self, client, ensure_shikari_running):
         """Test that ATT&CK techniques are extracted from files."""
         content = b"""
         Security Report
@@ -181,7 +181,7 @@ class TestFileUploadContent:
             except:
                 pass  # HTML response is valid
 
-    def test_file_with_iocs_extracted(self, client, ensure_archer_running):
+    def test_file_with_iocs_extracted(self, client, ensure_shikari_running):
         """Test that IOCs are extracted from files."""
         content = b"""
         IOC Report
@@ -220,7 +220,7 @@ class TestFileUploadContent:
 class TestFileUploadGeneration:
     """Tests for file-based detection generation."""
 
-    def test_upload_with_auto_generate(self, client, ensure_archer_running):
+    def test_upload_with_auto_generate(self, client, ensure_shikari_running):
         """Test file upload with auto-generate enabled."""
         content = b"""
         Threat Report - APT Activity
@@ -240,7 +240,7 @@ class TestFileUploadGeneration:
 
         assert response.status_code in [200, 401]
 
-    def test_upload_generate_endpoint(self, client, ensure_archer_running):
+    def test_upload_generate_endpoint(self, client, ensure_shikari_running):
         """Test the upload/generate endpoint."""
         response = client.post(
             "/upload/generate",
@@ -259,7 +259,7 @@ class TestFileUploadGeneration:
 class TestFileUploadSecurity:
     """Security tests for file upload."""
 
-    def test_path_traversal_prevented(self, client, ensure_archer_running):
+    def test_path_traversal_prevented(self, client, ensure_shikari_running):
         """Test that path traversal in filename is prevented."""
         content = b"Test content"
         files = {"file": ("../../../etc/passwd", io.BytesIO(content), "text/plain")}
@@ -273,7 +273,7 @@ class TestFileUploadSecurity:
         # Should sanitize filename or reject
         assert response.status_code in [200, 400, 401]
 
-    def test_null_byte_in_filename_prevented(self, client, ensure_archer_running):
+    def test_null_byte_in_filename_prevented(self, client, ensure_shikari_running):
         """Test that null bytes in filename are handled."""
         content = b"Test content"
         files = {"file": ("test.txt\x00.exe", io.BytesIO(content), "text/plain")}
@@ -286,7 +286,7 @@ class TestFileUploadSecurity:
 
         assert response.status_code in [200, 400, 401]
 
-    def test_file_size_limit(self, client, ensure_archer_running):
+    def test_file_size_limit(self, client, ensure_shikari_running):
         """Test that file size limits are enforced."""
         # Create a large file (> 50MB limit mentioned in code)
         large_content = b"x" * (51 * 1024 * 1024)  # 51MB
@@ -301,7 +301,7 @@ class TestFileUploadSecurity:
         # Should be rejected with 413 or 400
         assert response.status_code in [400, 401, 413]
 
-    def test_double_extension_handled(self, client, ensure_archer_running):
+    def test_double_extension_handled(self, client, ensure_shikari_running):
         """Test that double extensions are handled."""
         content = b"Test content"
         files = {"file": ("report.txt.exe", io.BytesIO(content), "text/plain")}
@@ -319,7 +319,7 @@ class TestFileUploadSecurity:
 class TestFileUploadEdgeCases:
     """Edge case tests for file upload."""
 
-    def test_unicode_filename(self, client, ensure_archer_running):
+    def test_unicode_filename(self, client, ensure_shikari_running):
         """Test file with unicode characters in filename."""
         content = b"Test content"
         files = {"file": ("報告書.txt", io.BytesIO(content), "text/plain")}
@@ -332,7 +332,7 @@ class TestFileUploadEdgeCases:
 
         assert response.status_code in [200, 400, 401]
 
-    def test_very_long_filename(self, client, ensure_archer_running):
+    def test_very_long_filename(self, client, ensure_shikari_running):
         """Test file with very long filename."""
         content = b"Test content"
         long_name = "a" * 300 + ".txt"
@@ -347,7 +347,7 @@ class TestFileUploadEdgeCases:
         # Should truncate or handle gracefully
         assert response.status_code in [200, 400, 401]
 
-    def test_special_characters_in_filename(self, client, ensure_archer_running):
+    def test_special_characters_in_filename(self, client, ensure_shikari_running):
         """Test file with special characters in filename."""
         content = b"Test content"
         files = {"file": ("report@#$%^&().txt", io.BytesIO(content), "text/plain")}
@@ -360,7 +360,7 @@ class TestFileUploadEdgeCases:
 
         assert response.status_code in [200, 400, 401]
 
-    def test_markdown_file(self, client, ensure_archer_running):
+    def test_markdown_file(self, client, ensure_shikari_running):
         """Test markdown file processing."""
         content = b"""
 # Threat Report

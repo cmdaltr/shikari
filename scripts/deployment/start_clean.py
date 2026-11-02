@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Archer Clean Start Script (Cross-Platform)
+Shikari Clean Start Script (Cross-Platform)
 
 This script:
 1. Kills all running Python/uvicorn processes
 2. Clears Python cache (__pycache__ and .pyc files)
-3. Starts a fresh Archer server on port 8000
+3. Starts a fresh Shikari server on port 8000
 
 Works on Windows, macOS, and Linux.
 """
@@ -22,13 +22,13 @@ import signal
 def print_header():
     """Print script header."""
     print("=" * 40)
-    print("   ARCHER CLEAN START SCRIPT")
+    print("   SHIKARI CLEAN START SCRIPT")
     print("=" * 40)
     print()
     print("This script will:")
     print("  1. Kill all running Python/uvicorn processes")
     print("  2. Clear Python cache (__pycache__ and .pyc files)")
-    print("  3. Start a fresh Archer server on port 8000")
+    print("  3. Start a fresh Shikari server on port 8000")
     print()
     print("WARNING: This will stop ALL Python processes!")
     print()
@@ -46,7 +46,7 @@ def confirm():
 
 def kill_processes():
     """Kill all Python/uvicorn processes (cross-platform)."""
-    print("\n=== ARCHER CLEAN START ===")
+    print("\n=== SHIKARI CLEAN START ===")
     print("Killing all existing servers...")
 
     if sys.platform == "win32":
@@ -112,7 +112,7 @@ def clear_cache():
 
 
 def start_server():
-    """Start Archer server."""
+    """Start Shikari server."""
     print("Starting fresh server on port 8000...")
 
     root = Path(__file__).parent.parent
@@ -132,7 +132,7 @@ def start_server():
         subprocess.run(
             [
                 python_cmd, "-m", "uvicorn",
-                "archer.app:app",
+                "shikari.app:app",
                 "--host", "127.0.0.1",
                 "--port", "8000",
                 "--reload"

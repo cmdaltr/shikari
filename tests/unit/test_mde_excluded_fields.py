@@ -2,7 +2,7 @@
 
 import pytest
 
-from archer.validation.mde_field_validator import format_mde_query, strip_excluded_fields
+from shikari.validation.mde_field_validator import format_mde_query, strip_excluded_fields
 
 BASE = "DeviceEvents\n| where Timestamp > ago(1d)\n| where "
 

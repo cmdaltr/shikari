@@ -80,7 +80,7 @@ class TestTechniqueHuntWorkflow:
     def test_full_hunt_workflow(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
         wait_for_completion,
         check_generated_files,
     ):
@@ -136,7 +136,7 @@ class TestTechniqueHuntWorkflow:
     def test_hunt_kill_chain_scenario(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
         wait_for_completion,
         check_generated_files,
     ):
@@ -177,7 +177,7 @@ class TestTechniqueHuntWorkflow:
     def test_hunt_with_merge_by_tactic(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
         wait_for_completion,
     ):
         """
@@ -207,7 +207,7 @@ class TestTechniqueHuntWorkflow:
     def test_hunt_with_merge_by_parent(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
         wait_for_completion,
     ):
         """
@@ -237,7 +237,7 @@ class TestTechniqueHuntWorkflow:
     def test_hunt_with_ai_generators(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
         wait_for_completion,
     ):
         """
@@ -270,7 +270,7 @@ class TestTechniqueResolution:
     def test_technique_names_api(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
     ):
         """Test resolving technique IDs to names."""
         technique_ids = [
@@ -296,7 +296,7 @@ class TestTechniqueResolution:
     def test_technique_names_for_subtechniques(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
     ):
         """Test resolving sub-technique IDs."""
         technique_ids = [
@@ -323,7 +323,7 @@ class TestHuntProgress:
     def test_hunt_progress_tracking(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
     ):
         """Test that progress is tracked during hunting."""
         technique = TEST_TECHNIQUES["powershell"]
@@ -357,7 +357,7 @@ class TestHuntResults:
     def test_hunt_results_page(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
     ):
         """Test that results page loads for a hunt."""
         technique = TEST_TECHNIQUES["powershell"]
@@ -377,7 +377,7 @@ class TestHuntEdgeCases:
     def test_single_technique_hunt(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
     ):
         """Test hunting a single technique."""
         response = client.post(
@@ -391,7 +391,7 @@ class TestHuntEdgeCases:
     def test_many_techniques_hunt(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
     ):
         """Test hunting many techniques at once."""
         # Use 10 techniques
@@ -409,7 +409,7 @@ class TestHuntEdgeCases:
     def test_parent_and_subtechnique_together(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
     ):
         """Test including both parent and sub-technique."""
         # T1059 is parent, T1059.001 is sub-technique
@@ -428,7 +428,7 @@ class TestHuntEdgeCases:
     def test_duplicate_techniques_handled(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
     ):
         """Test that duplicate techniques are handled."""
         technique = TEST_TECHNIQUES["powershell"]
@@ -446,7 +446,7 @@ class TestHuntEdgeCases:
     def test_technique_with_whitespace(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
     ):
         """Test techniques with whitespace."""
         techniques = "  T1059.001 , T1003.001  ,  T1021.001  "
@@ -463,7 +463,7 @@ class TestHuntEdgeCases:
     def test_technique_case_insensitivity(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
     ):
         """Test that technique IDs are case-insensitive."""
         # Lowercase

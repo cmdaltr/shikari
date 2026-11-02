@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from archer.build import detections, orchestrator
-from archer.build.detections import MappingsError, load_indicator_mappings
+from shikari.build import detections, orchestrator
+from shikari.build.detections import MappingsError, load_indicator_mappings
 
 
 def _point_mappings_at(tmp_path):

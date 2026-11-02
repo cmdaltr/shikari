@@ -1,6 +1,6 @@
 # Local LLM Setup Scripts
 
-Automated scripts to configure Archer with a local LLM (Ollama) based on your system resources.
+Automated scripts to configure Shikari with a local LLM (Ollama) based on your system resources.
 
 ## Quick Start
 
@@ -23,7 +23,7 @@ python scripts/ai/setup_local_llm.py --yes
 2. **Recommend Best Model**: Selects optimal model based on resources
 3. **Install Ollama**: Installs Ollama if not already present (Linux/macOS)
 4. **Download Model**: Pulls the selected model from Ollama registry
-5. **Configure Archer**: Updates `.env` file with local LLM settings
+5. **Configure Shikari**: Updates `.env` file with local LLM settings
 6. **Verify Setup**: Tests the installation and model functionality
 
 ## Model Recommendations by RAM
@@ -44,10 +44,10 @@ python scripts/ai/setup_local_llm.py --yes
 $ python scripts/ai/setup_local_llm.py
 
 ═══════════════════════════════════════════════════════════════
-  Archer Local LLM Setup
+  Shikari Local LLM Setup
 ═══════════════════════════════════════════════════════════════
 
-This script will set up a local LLM (Ollama) for Archer based on your system resources.
+This script will set up a local LLM (Ollama) for Shikari based on your system resources.
 
 ℹ Detected RAM: 32GB
 Is this correct? (y/n, or enter custom value in GB): y
@@ -100,7 +100,7 @@ OLLAMA_BASE_URL=http://localhost:11434
 
 ## After Setup
 
-Once the script completes, you can start Archer:
+Once the script completes, you can start Shikari:
 
 ### Using Docker
 
@@ -113,7 +113,7 @@ Access at: `http://localhost:8000`
 ### Using Local Python
 
 ```bash
-uvicorn archer.app:app --reload
+uvicorn shikari.app:app --reload
 ```
 
 Access at: `http://localhost:8000`
@@ -121,8 +121,8 @@ Access at: `http://localhost:8000`
 ### Default Login
 
 ```
-Email: admin@archer.app
-Password: £missary_0f_the_G0rg0nite$
+Email: admin@shikari.app
+Password: BigGameHunter
 ```
 
 ## Troubleshooting
@@ -199,7 +199,7 @@ ollama pull llama3.1:8b-instruct-q4_K_M
 ollama pull mistral:7b-instruct-q4_K_M
 ```
 
-### 4. Configure Archer
+### 4. Configure Shikari
 
 Create or edit `.env`:
 
@@ -209,14 +209,14 @@ LLM_MODEL=llama3.1:70b-instruct-q4_K_M
 OLLAMA_BASE_URL=http://localhost:11434
 ```
 
-### 5. Start Archer
+### 5. Start Shikari
 
 ```bash
 # Docker
 docker-compose up --build
 
 # OR Local Python
-uvicorn archer.app:app --reload
+uvicorn shikari.app:app --reload
 ```
 
 ## Advanced Options
@@ -237,7 +237,7 @@ You can override the recommended model:
 
 ### Docker Deployment with Local Ollama
 
-If Archer runs in Docker but Ollama is on the host:
+If Shikari runs in Docker but Ollama is on the host:
 
 ```yaml
 # docker-compose.yml
@@ -266,11 +266,11 @@ curl http://localhost:11434/api/tags
 ollama run llama3.1:70b-instruct-q4_K_M "Generate a KQL query to detect PowerShell"
 ```
 
-### Check Archer Logs
+### Check Shikari Logs
 
 ```bash
 # Docker
-docker-compose logs -f archer
+docker-compose logs -f shikari
 
 # Local Python
 # Logs appear in terminal where uvicorn is running
@@ -319,8 +319,8 @@ rm -rf ~/.ollama
 
 - [Ollama Documentation](https://ollama.com/docs)
 - [Ollama Model Library](https://ollama.com/library)
-- [Archer AI Configuration Guide](../../docs/ai/MODEL_CONFIGURATION.md)
-- [Archer Training Data Guide](../../docs/ai/TRAIN_AI.md)
+- [Shikari AI Configuration Guide](../../docs/ai/MODEL_CONFIGURATION.md)
+- [Shikari Training Data Guide](../../docs/ai/TRAIN_AI.md)
 
 ## Support
 
@@ -328,7 +328,7 @@ If you encounter issues:
 
 1. Check [Troubleshooting](#troubleshooting) section above
 2. Verify Ollama is running: `curl http://localhost:11434/api/tags`
-3. Check Archer logs for errors
+3. Check Shikari logs for errors
 4. Open an issue on GitHub with:
    - Your OS and RAM
    - Model you're trying to use

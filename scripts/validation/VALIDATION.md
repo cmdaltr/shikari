@@ -34,7 +34,7 @@ Enter Splunk index name for Sysmon logs: sysmon
 ```
 
 **When to run**:
-- Initial Archer setup
+- Initial Shikari setup
 - After changing SIEM platforms
 - When index names change in your environment
 

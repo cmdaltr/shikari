@@ -2,8 +2,8 @@
 
 import re
 
-from archer.build.runtime_detection import mde_runtime_query, runtimes, secops_runtime_rule, write_runtime_detections
-from archer.validation.static_check import check_query
+from shikari.build.runtime_detection import mde_runtime_query, runtimes, secops_runtime_rule, write_runtime_detections
+from shikari.validation.static_check import check_query
 
 PHP2SHELL = {"description": "PHP uses longjmp() for out-of-memory (OOM) errors ... and lead to remote code execution (RCE).",
              "cwe": ["CWE-416"], "cpes": ["cpe:2.3:a:php:php:*:*:*:*:*:*:*:*"]}
@@ -33,7 +33,7 @@ def test_both_queries_pass_the_checks_and_a_bare_shell_does_not_count():
 
 
 def test_one_file_per_siem_named_for_the_cve(tmp_path, monkeypatch):
-    import archer.build.yaml as y
+    import shikari.build.yaml as y
 
     written = {}
     monkeypatch.setattr(y, "write_yaml", lambda path, title, tid, desc, *a, **k: written.setdefault(path, (title, tid)))
@@ -44,7 +44,7 @@ def test_one_file_per_siem_named_for_the_cve(tmp_path, monkeypatch):
 
 
 def test_a_cve_run_names_them_by_its_label_and_rates_them_high(tmp_path, monkeypatch):
-    import archer.build.yaml as y
+    import shikari.build.yaml as y
 
     written = {}
     monkeypatch.setattr(y, "write_yaml", lambda path, title, *a, **k: written.setdefault(path, (title, k["severity"])))

@@ -25,8 +25,8 @@ Runtime Detection Validation tests your detection queries against sample events 
 
 ### Key Features
 
-- **Query time** - `query_time_ms` times the query on its own, apart from ingesting the sample events (`execution_time_ms` covers both). Sample events say little about cost at production volumes: the static run cost on each detection (`archer/validation/cost.py`) and hit counts ([#16](https://github.com/cmdaltr/archer/issues/16)) cover that
-- **CI gate** - `python -m archer.validation.ci` (see [Detections as code](../guide/22-detections-as-code.md#check-detections-in-ci))
+- **Query time** - `query_time_ms` times the query on its own, apart from ingesting the sample events (`execution_time_ms` covers both). Sample events say little about cost at production volumes: the static run cost on each detection (`shikari/validation/cost.py`) and hit counts ([#16](https://github.com/cmdaltr/shikari/issues/16)) cover that
+- **CI gate** - `python -m shikari.validation.ci` (see [Detections as code](../guide/22-detections-as-code.md#check-detections-in-ci))
 
 - **Docker-based SIEM Testing** - Spin up ephemeral SIEM containers for validation
 - **Multi-Vendor Support** - Splunk, Elastic, Google SecOps, and MDE
@@ -119,7 +119,7 @@ SIEM containers require:
 ### Components
 
 ```
-archer/validation/
+shikari/validation/
 ├── __init__.py              # Module exports and Docker check
 ├── api.py                   # FastAPI router (/api/validation/*)
 ├── orchestrator.py          # Workflow coordinator
@@ -128,7 +128,7 @@ archer/validation/
 ├── detection_tester.py      # Query execution and result analysis
 └── detection_refiner.py     # AI-assisted query improvement
 
-archer/siem/
+shikari/siem/
 ├── secops/                        # Google SecOps simulator
 │   ├── Dockerfile                 # Container definition
 │   ├── simulator.py               # Flask API
@@ -173,7 +173,7 @@ docker-compose.yml                 # Main compose file (all services with profil
 
 ### Accessing the Feature
 
-1. Navigate to the Archer web UI (`http://localhost:8000`)
+1. Navigate to the Shikari web UI (`http://localhost:8000`)
 2. Click the **Validate** tab (with the play ▶ icon)
 3. The validation panel appears with:
    - A **Detection Query** textarea to paste your query
@@ -300,25 +300,25 @@ Returns status of docker-compose profile containers. Use this to see which SIEMs
   "siems": {
     "splunk": {
       "available": false,
-      "container_name": "archer-splunk",
+      "container_name": "shikari-splunk",
       "status": "stopped",
       "start_command": "docker-compose --profile splunk up -d"
     },
     "elastic": {
       "available": false,
-      "container_name": "archer-elastic",
+      "container_name": "shikari-elastic",
       "status": "stopped",
       "start_command": "docker-compose --profile elastic up -d"
     },
     "secops": {
       "available": true,
-      "container_name": "archer-secops",
+      "container_name": "shikari-secops",
       "api_port": 8081,
       "status": "running"
     },
     "mde": {
       "available": true,
-      "container_name": "archer-mde",
+      "container_name": "shikari-mde",
       "api_port": 8082,
       "status": "running"
     }
@@ -513,7 +513,7 @@ curl -X POST http://localhost:8000/api/validation/cleanup-siem/all
 ```json
 {
   "success": true,
-  "message": "Stopped container archer-splunk",
+  "message": "Stopped container shikari-splunk",
   "was_running": true
 }
 
@@ -655,7 +655,7 @@ Each suggestion includes a confidence score (0.0-1.0):
 **Solutions:**
 - Check available disk space
 - Ensure ports aren't in use: `lsof -i :8000,9200,8081,8082`
-- Check Docker logs: `docker logs archer-splunk`
+- Check Docker logs: `docker logs shikari-splunk`
 - Try restarting Docker
 
 ### No Events Generated
@@ -693,9 +693,9 @@ Each suggestion includes a confidence score (0.0-1.0):
 ## Related Documentation
 
 - [Pre-Generation Validation](DETECTION_VALIDATION.md) - Cross-platform validation during generation
-- [Docker Guide](DOCKER.md) - General Docker usage with Archer
+- [Docker Guide](DOCKER.md) - General Docker usage with Shikari
 - [API Integration Guide](../features/API_INTEGRATION_GUIDE.md) - Complete API reference
 
 ---
 
-**Need Help?** Check the [documentation index](../DOCS_INDEX.md) or open an [issue](https://github.com/cmdaltr/archer/issues).
+**Need Help?** Check the [documentation index](../DOCS_INDEX.md) or open an [issue](https://github.com/cmdaltr/shikari/issues).

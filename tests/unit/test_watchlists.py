@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from archer.intelligence import watchlists as wl
+from shikari.intelligence import watchlists as wl
 
 
 def post(n, title="Scattered Spider returns"):

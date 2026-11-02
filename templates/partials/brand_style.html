@@ -1,0 +1,9 @@
+{# Binds the UI accent tokens to the active edition's brand colour. Included last in every
+   page's <head> so it overrides the default red --accent in dark-mode.css / base.html. #}
+<style>
+  :root[data-theme="light"],
+  :root[data-theme="dark"] {
+    --accent: {{ brand.accent }};
+    --accent-hover: {{ brand.accent_hover }};
+  }
+</style>

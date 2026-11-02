@@ -1,12 +1,12 @@
 <#
 .SYNOPSIS
 Saves this machine's logs for given time windows, in the lab recorder's layout, for steps something
-else ran here: a CALDERA operation's links (archer/lab/caldera.py, #30).
+else ran here: a CALDERA operation's links (shikari/lab/caldera.py, #30).
 
 .DESCRIPTION
 The same log sources as record-atomics.ps1, read back after the fact, so it runs nothing but
 the log readers. PowerShell 7, elevated. Each window is a step; its logs land in <Out>/<Run>/<folder>
-beside a manifest.json that archer/telemetry/lab.py reads like any other lab run.
+beside a manifest.json that shikari/telemetry/lab.py reads like any other lab run.
 
   Windows  events.xml      Security, System, PowerShell, Sysmon (if installed), Task Scheduler, WMI, Defender, BITS
   Linux    audit.log       auditd, by each record's epoch
@@ -24,13 +24,13 @@ sudo pwsh ./capture-window.ps1 -Windows windows.json -Run caldera-op1 -Tool CALD
 param(
     [Parameter(Mandatory)][string]$Windows,
     [Parameter(Mandatory)][string]$Run,
-    [string]$Out = (Join-Path $PWD 'archer-lab'),
+    [string]$Out = (Join-Path $PWD 'shikari-lab'),
     [string]$Tool = 'CALDERA'
 )
 $ErrorActionPreference = 'Stop'
 
 # $IsWindows/$IsMacOS/$IsLinux are PowerShell 7 automatic variables; Windows PowerShell 5.1 — which
-# Lab invokes as `powershell` (archer.lab.record._pwsh) — leaves them undefined, so without this the
+# Lab invokes as `powershell` (shikari.lab.record._pwsh) — leaves them undefined, so without this the
 # platform would misdetect as linux and nothing would be captured. 5.1 only runs on Windows.
 if ($null -eq $IsWindows) { $IsWindows = $true; $IsLinux = $false; $IsMacOS = $false }
 

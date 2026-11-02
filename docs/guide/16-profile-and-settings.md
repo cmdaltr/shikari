@@ -1,6 +1,6 @@
 # Profile and settings
 
-**Profile** (top right) holds your account and the settings Archer works to. It has seven tabs; **Config** and **Users** are for administrators only.
+**Profile** (top right) holds your account and the settings Shikari works to. It has seven tabs; **Config** and **Users** are for administrators only.
 
 ## Profile
 
@@ -16,7 +16,7 @@
 | Change Password | At least 16 characters, with letters, numbers and special characters |
 | Two-Factor Authentication | Scan the QR code with an authenticator app (or type the key), enter a code to turn it on |
 | Backup Codes | One-time codes for when you lose your authenticator. Shown once: download or copy them |
-| API Tokens | For the console, the MCP server and your own scripts: set `ARCHER_TOKEN` instead of a password. Works with MFA. A token acts as you, so revoke it here if it leaks |
+| API Tokens | For the console, the MCP server and your own scripts: set `SHIKARI_TOKEN` instead of a password. Works with MFA. A token acts as you, so revoke it here if it leaks |
 
 ## Timeline
 
@@ -27,9 +27,9 @@ Your past runs (all, groups or CVEs), with links to their results and downloads.
 | Section | What goes here |
 |---|---|
 | AI Models | A cloud provider's API key, or a local model's server URL (Ollama, LM Studio, llama.cpp) |
-| AI Assignment | Which provider and model answer Ask Archer, and which generate detections |
+| AI Assignment | Which provider and model answer Ask Shikari, and which generate detections |
 | Max LLM calls per detection run | A cap on AI calls in one run (one call per procedure, each a large prompt). Past it, the standard pipeline carries on alone |
-| Hunt prompt | Whether Archer asks about AI on every hunt; **Ask again** resets a remembered answer |
+| Hunt prompt | Whether Shikari asks about AI on every hunt; **Ask again** resets a remembered answer |
 | OSINT Sources | Shodan, SecurityTrails, HIBP and GitHub keys for [Company profile](04-company-profile.md). All optional — most sources are keyless. These can also be added or toggled on/off from the home Profile tab |
 | SIEM Platforms | API keys for Google SecOps, Splunk, Defender XDR and Elastic |
 | Emulation Tools | Coming soon |
@@ -71,10 +71,10 @@ A technique stays as long as one of its procedures applies, so leaving out one p
 
 Technique, CVE and report hunts, and the Manual page, generate everything you asked for. When something is outside your stack, the Results page says so: a CVE whose NVD products you don't run, or a technique whose platforms or products you don't have.
 
-The products are grouped into categories (shown as a 4×4×4 grid) in `archer/mappings/tech_stack.json`, each with its ATT&CK platforms, the names reports use for it, and its NVD CPE vendor and product. Add products, or override one by its id, in `bespoke/mappings/tech_stack.json` with the same shape.
+The products are grouped into categories (shown as a 4×4×4 grid) in `shikari/mappings/tech_stack.json`, each with its ATT&CK platforms, the names reports use for it, and its NVD CPE vendor and product. Add products, or override one by its id, in `bespoke/mappings/tech_stack.json` with the same shape.
 
 ## Users (administrators)
 
 Create, edit and remove accounts: name, email, role (Standard or Administrator) and state (an inactive account can't sign in). **Reset Password** sets a new password for the user. Users who forget their own can use **Forgot password** on the sign-in page, which emails a reset link when SMTP is configured.
 
-A **Sample data** toggle seeds (or removes) a clearly-labelled `[SAMPLE]` scenario across every surface, so you can see where data appears. It sits alongside real work and removes exactly what it added. The same thing runs from the CLI with `archer-cli test populate` / `depopulate`.
+A **Sample data** toggle seeds (or removes) a clearly-labelled `[SAMPLE]` scenario across every surface, so you can see where data appears. It sits alongside real work and removes exactly what it added. The same thing runs from the CLI with `shikari-cli test populate` / `depopulate`.

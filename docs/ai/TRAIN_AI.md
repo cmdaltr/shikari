@@ -1,4 +1,4 @@
-# Archer Training Data Collection Scripts
+# Shikari Training Data Collection Scripts
 
 > **Status (2026-10-16):** some of what this document names was never built: none of its scripts, but the dataset files it shows are examples of output, not files in the repository. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
 
@@ -164,7 +164,7 @@ python scripts/ai/train_ai.py custom --interactive --output custom_output/
 - `--import`: Import from single JSON/YAML file
 - `--import-dir`: Batch import from directory
 - `--validate`: Validate existing training data format
-- `--output`: Output directory (default: archer/ai/training/datasets/hunting_queries/)
+- `--output`: Output directory (default: shikari/ai/training/datasets/hunting_queries/)
 
 **Input Format** (JSON/YAML):
 ```json
@@ -190,7 +190,7 @@ python scripts/ai/train_ai.py custom --interactive --output custom_output/
 
 **Template**: See [CUSTOM_QUERY_TEMPLATE.json](../examples/CUSTOM_QUERY_TEMPLATE.json) for a complete template with all available fields
 
-**Output**: Training examples in JSONL format at `archer/ai/training/datasets/hunting_queries/`
+**Output**: Training examples in JSONL format at `shikari/ai/training/datasets/hunting_queries/`
 
 ## Quick Examples
 
@@ -209,7 +209,7 @@ python scripts/ai/train_ai.py cve --year 2024 --min-cvss 9.0 --limit 100
 
 ```bash
 # Convert all PDFs in threat_reports directory
-python scripts/ai/train_ai.py reports --dir archer/ai/training/datasets/threat_reports/
+python scripts/ai/train_ai.py reports --dir shikari/ai/training/datasets/threat_reports/
 ```
 
 ### Extract OSINT Data
@@ -245,8 +245,8 @@ python scripts/ai/train_ai.py osint --all
 python scripts/ai/train_ai.py custom --import-dir custom_queries/
 
 # 5. Train model with collected data (including your custom queries)
-python -m archer.ai.training.pipelines.training \
-    --data archer/ai/training/datasets/ \
+python -m shikari.ai.training.pipelines.training \
+    --data shikari/ai/training/datasets/ \
     --model llama3.1:70b \
     --epochs 5
 ```
@@ -259,8 +259,8 @@ python -m archer.ai.training.pipelines.training \
 python scripts/ai/train_ai.py custom --import-dir custom_queries/
 
 # 2. Train only on custom data
-python -m archer.ai.training.pipelines.training \
-    --data archer/ai/training/datasets/hunting_queries/ \
+python -m shikari.ai.training.pipelines.training \
+    --data shikari/ai/training/datasets/hunting_queries/ \
     --model llama3.1:70b \
     --epochs 5 \
     --task detection_generation
@@ -307,11 +307,11 @@ EOF
 python scripts/ai/train_ai.py custom --import /tmp/my_custom_queries.json
 
 # Step 3: Validate the imported data
-python scripts/ai/train_ai.py custom --validate archer/ai/training/datasets/hunting_queries/
+python scripts/ai/train_ai.py custom --validate shikari/ai/training/datasets/hunting_queries/
 
 # Step 4: Train the model with LoRA
-python -m archer.ai.training.pipelines.training \
-    --data archer/ai/training/datasets/hunting_queries/ \
+python -m shikari.ai.training.pipelines.training \
+    --data shikari/ai/training/datasets/hunting_queries/ \
     --model llama3.1:70b \
     --epochs 5 \
     --lora \
@@ -321,15 +321,15 @@ python -m archer.ai.training.pipelines.training \
     --task detection_generation
 
 # Step 5: Test the trained model
-python -m archer.ai.training.pipelines.llm_inference \
-    --model-path archer/ai/training/models/llama3.1-70b-lora/ \
+python -m shikari.ai.training.pipelines.llm_inference \
+    --model-path shikari/ai/training/models/llama3.1-70b-lora/ \
     --technique T1558.003 \
     --platform MDE
 
 # Step 6: Evaluate model performance
-python -m archer.ai.training.pipelines.evaluate \
-    --model-path archer/ai/training/models/llama3.1-70b-lora/ \
-    --test-data archer/ai/training/datasets/test_set.jsonl
+python -m shikari.ai.training.pipelines.evaluate \
+    --model-path shikari/ai/training/models/llama3.1-70b-lora/ \
+    --test-data shikari/ai/training/datasets/test_set.jsonl
 ```
 
 ## Directory Structure
@@ -337,7 +337,7 @@ python -m archer.ai.training.pipelines.evaluate \
 After running all commands, your data structure will look like:
 
 ```
-archer/ai/training/datasets/
+shikari/ai/training/datasets/
 ├── cve_data/
 │   ├── cache/              # Raw CVE data
 │   ├── enriched/           # Enriched with blog posts
@@ -366,7 +366,7 @@ archer/ai/training/datasets/
 ### CVE Enrichment
 
 **Issue**: No blog posts found
-- **Solution**: Add blog posts manually to `archer/ai/training/datasets/blog_posts/`
+- **Solution**: Add blog posts manually to `shikari/ai/training/datasets/blog_posts/`
 
 **Issue**: NVD rate limit
 - **Solution**: Add delays between requests or use cached data
@@ -574,10 +574,10 @@ If you prefer to manually create JSONL files without using the `custom` command:
 
 ```bash
 # Create directory structure
-mkdir -p archer/ai/training/datasets/hunting_queries/platform_specific
+mkdir -p shikari/ai/training/datasets/hunting_queries/platform_specific
 
 # Create JSONL file (each line is one complete JSON object)
-cat > archer/ai/training/datasets/hunting_queries/mde_custom.jsonl << 'EOF'
+cat > shikari/ai/training/datasets/hunting_queries/mde_custom.jsonl << 'EOF'
 {"task":"detection_generation","input":{"technique_id":"T1059.001","technique_name":"PowerShell","platforms":["Windows"]},"output":{"detections":[{"name":"Encoded PowerShell Command","platform":"MDE","query":"DeviceProcessEvents\n| where FileName =~ \"powershell.exe\"\n| where ProcessCommandLine has_any (\"-enc\", \"-encodedcommand\")\n| where ProcessCommandLine !contains \"Microsoft.Graph\"","false_positive_rate":"low","severity":"high"}]}}
 {"task":"detection_generation","input":{"technique_id":"T1003.001","technique_name":"LSASS Memory","platforms":["Windows"]},"output":{"detections":[{"name":"LSASS Memory Dump","platform":"MDE","query":"DeviceEvents\n| where ActionType == \"OpenProcess\"\n| where AdditionalFields.TargetProcessName =~ \"lsass.exe\"","false_positive_rate":"low","severity":"critical"}]}}
 EOF
@@ -588,8 +588,8 @@ EOF
 ### Basic Training (LoRA Fine-Tuning)
 
 ```bash
-python -m archer.ai.training.pipelines.training \
-    --data archer/ai/training/datasets/hunting_queries/ \
+python -m shikari.ai.training.pipelines.training \
+    --data shikari/ai/training/datasets/hunting_queries/ \
     --model llama3.1:70b \
     --epochs 5 \
     --lora \
@@ -603,8 +603,8 @@ python -m archer.ai.training.pipelines.training \
 ### Memory-Efficient Training (4-bit Quantization)
 
 ```bash
-python -m archer.ai.training.pipelines.training \
-    --data archer/ai/training/datasets/hunting_queries/ \
+python -m shikari.ai.training.pipelines.training \
+    --data shikari/ai/training/datasets/hunting_queries/ \
     --model llama3.1:70b \
     --epochs 3 \
     --lora \
@@ -618,8 +618,8 @@ python -m archer.ai.training.pipelines.training \
 
 ```bash
 # Train on both detection generation and correlation
-python -m archer.ai.training.pipelines.training \
-    --data archer/ai/training/datasets/ \
+python -m shikari.ai.training.pipelines.training \
+    --data shikari/ai/training/datasets/ \
     --model llama3.1:70b \
     --epochs 5 \
     --lora \
@@ -630,8 +630,8 @@ python -m archer.ai.training.pipelines.training \
 
 ```bash
 # Train only on MDE queries
-python -m archer.ai.training.pipelines.training \
-    --data archer/ai/training/datasets/hunting_queries/platform_specific/mde_queries.jsonl \
+python -m shikari.ai.training.pipelines.training \
+    --data shikari/ai/training/datasets/hunting_queries/platform_specific/mde_queries.jsonl \
     --model llama3.1:70b \
     --epochs 5 \
     --task detection_generation \
@@ -644,8 +644,8 @@ If you want to use your custom queries without full model training:
 
 ```bash
 # Add queries to database for few-shot learning
-python -m archer.ai.training.pipelines.ingest_examples \
-    --data archer/ai/training/datasets/hunting_queries/ \
+python -m shikari.ai.training.pipelines.ingest_examples \
+    --data shikari/ai/training/datasets/hunting_queries/ \
     --rating high \
     --source custom
 ```
@@ -656,16 +656,16 @@ This adds your queries to the database where they'll be automatically used as ex
 
 ```bash
 # Validate training data format
-python scripts/ai/train_ai.py custom --validate archer/ai/training/datasets/hunting_queries/
+python scripts/ai/train_ai.py custom --validate shikari/ai/training/datasets/hunting_queries/
 
 # Test trained model
-python -m archer.ai.training.pipelines.evaluate \
-    --model-path archer/ai/training/models/llama3.1-70b-lora/ \
-    --test-data archer/ai/training/datasets/test_set.jsonl
+python -m shikari.ai.training.pipelines.evaluate \
+    --model-path shikari/ai/training/models/llama3.1-70b-lora/ \
+    --test-data shikari/ai/training/datasets/test_set.jsonl
 
 # Generate sample detections with trained model
-python -m archer.ai.training.pipelines.llm_inference \
-    --model-path archer/ai/training/models/llama3.1-70b-lora/ \
+python -m shikari.ai.training.pipelines.llm_inference \
+    --model-path shikari/ai/training/models/llama3.1-70b-lora/ \
     --technique T1059.001 \
     --platform MDE
 ```
@@ -675,5 +675,5 @@ python -m archer.ai.training.pipelines.llm_inference \
 - [AI Model Configuration Guide](MODEL_CONFIGURATION.md) - **Start here to configure AI models**
 - [CVE Enrichment Workflow](../features/CVE_ENRICHMENT.md)
 - [LLM Detection Generation Guide](LLM_DETECTION_GENERATION.md)
-- [CVE Data README](../../archer/ai/training/datasets/cve_data/README.md)
+- [CVE Data README](../../shikari/ai/training/datasets/cve_data/README.md)
 - [AI Training Architecture](AI_TRAINING.md)

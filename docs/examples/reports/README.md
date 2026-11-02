@@ -157,7 +157,7 @@ All examples use synthetic data:
 To generate reports with your own data:
 
 ```python
-from archer.reports.generator import WordReportGenerator
+from shikari.reports.generator import WordReportGenerator
 
 # Your data
 detections = [

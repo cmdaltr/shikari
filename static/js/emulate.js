@@ -1,4 +1,4 @@
-// Build → Emulate (templates/emulate.html): recorded attack telemetry (archer.telemetry.web)
+// Build → Emulate (templates/emulate.html): recorded attack telemetry (shikari.telemetry.web)
 (function () {
   const $ = id => document.getElementById(id);
   const page = document.querySelector('.em-page');
@@ -121,7 +121,7 @@
       ? card('guide', r.guide.name, r.guide.url, `${r.guide.techniques.toLocaleString()} techniques · ${esc(r.guide.licence)}`,
           `${r.guide.note}. Shown with Defender XDR as the SIEM. Built ${r.guide.built}`, 'is-guide')
       : card('guide', 'Microsoft GUIDE', 'https://www.kaggle.com/datasets/Microsoft/microsoft-security-incident-prediction', 'Not loaded',
-          'Download it from Kaggle, then python -m archer.telemetry --guide <zip>', 'is-guide is-missing'));
+          'Download it from Kaggle, then python -m shikari.telemetry --guide <zip>', 'is-guide is-missing'));
     if (hadGuide !== data.guide) render();
     const btn = $('em-build');
     btn.hidden = page.dataset.canOperate !== 'true';  // Update needs the Operational analyst role

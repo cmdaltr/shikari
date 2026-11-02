@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
-import archer.app as web
+import shikari.app as web
 
 
 def test_the_form_starts_a_technique_hunt(monkeypatch):
@@ -13,7 +13,7 @@ def test_the_form_starts_a_technique_hunt(monkeypatch):
         SimpleNamespace(id=1, tech_stack=None), SimpleNamespace(close=lambda: None)))
     monkeypatch.setattr(web, "start_progress", lambda name, data: progress.append((name, data)))
     monkeypatch.setattr(web, "threading", SimpleNamespace(Thread=lambda target, daemon=None, **kw: SimpleNamespace(
-        start=lambda: started.append(target))))  # archer.app's only: nothing runs, nothing lands in data/
+        start=lambda: started.append(target))))  # shikari.app's only: nothing runs, nothing lands in data/
     client = TestClient(web.app)  # no startup
 
     r = client.post("/hunt/technique", data={"technique_ids": "t1003, T1021.001", "osint_enhancement": "true",

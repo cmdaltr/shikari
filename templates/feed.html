@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Archer - Threat Feed{% endblock %}
+{% block title %}Shikari - Threat Feed{% endblock %}
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
@@ -28,7 +28,7 @@
   <section class="fd-research" aria-labelledby="fd-research-title" data-collapsed-default>
     <h2 id="fd-research-title">Search all research</h2>
     <p class="fd-research-note">Any time, not just this week: a campaign, tool or actor name ("GhostAction", "RedSun", "Salt Typhoon").
-      Searches every post Archer's sources have published that it has collected, ATT&amp;CK's groups, software and campaigns,
+      Searches every post Shikari's sources have published that it has collected, ATT&amp;CK's groups, software and campaigns,
       and optionally the web's security news.</p>
     <form class="fd-research-form" id="fd-research-form" role="search">
       <input type="search" id="fd-research-q" placeholder="Keyword, e.g. GhostAction" minlength="3" maxlength="100" required aria-label="Research keyword">
@@ -38,11 +38,11 @@
     <div class="fd-research-results" id="fd-research-results" aria-live="polite"></div>
   </section>
 
-  <!-- Saved searches that flag new posts (archer.intelligence.watchlists) -->
+  <!-- Saved searches that flag new posts (shikari.intelligence.watchlists) -->
   <section class="fd-research fd-watch" id="fd-watch" aria-labelledby="fd-watch-title">
     <h2 id="fd-watch-title">Watchlists <span class="fd-watch-badge" id="fd-watch-total" hidden></span></h2>
     <p class="fd-research-note">Save a search, and each collection (every six hours while you have a watchlist, or <strong>Refresh now</strong>) flags posts that match it.
-      What matches when you save it counts as seen, so only later posts are new. Matching is Search all research's: Archer's sources,
+      What matches when you save it counts as seen, so only later posts are new. Matching is Search all research's: Shikari's sources,
       and the web's security news if you tick it (the keyword then goes to Google and Bing at every collection).</p>
     <form class="fd-research-form" id="fd-watch-form">
       <input type="search" id="fd-watch-q" placeholder="Watch for, e.g. Scattered Spider, CVE-2025-53770" minlength="3" maxlength="100" required aria-label="Watch for">
@@ -69,7 +69,7 @@
   <ol class="fd-wall" id="fd-wall"></ol>
 
   <details class="fd-sources"><summary>Sources <span class="fd-sources-count" id="fd-sources-count"></span></summary>
-    <p class="fd-sources-note">Each one's result at the last collection. Built-in sources come with Archer; ones added here are this installation's own (data/feed/sources.json).</p>
+    <p class="fd-sources-note">Each one's result at the last collection. Built-in sources come with Shikari; ones added here are this installation's own (data/feed/sources.json).</p>
     <ul class="fd-source-list" id="fd-sources"></ul>
     <form class="fd-add-source" id="fd-add-source" hidden>
       <input type="text" id="fd-source-name" placeholder="Name, e.g. Sophos X-Ops" maxlength="80" required aria-label="Source name">

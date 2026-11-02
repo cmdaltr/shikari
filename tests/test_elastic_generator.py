@@ -1,6 +1,6 @@
-"""Elastic ES|QL detection generator (archer.build.elastic)."""
+"""Elastic ES|QL detection generator (shikari.build.elastic)."""
 
-from archer.build.elastic import ElasticQueryGenerator
+from shikari.build.elastic import ElasticQueryGenerator
 
 
 def gen():

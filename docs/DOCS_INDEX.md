@@ -1,4 +1,4 @@
-# Archer Documentation Index
+# Shikari Documentation Index
 
 Single-page index of all project documentation.
 
@@ -6,12 +6,12 @@ Single-page index of all project documentation.
 
 ## User Guide (start here)
 
-Plain-language guide to every part of Archer, one page each: what it's for, how to use it, every option, where its data comes from, and its limits.
+Plain-language guide to every part of Shikari, one page each: what it's for, how to use it, every option, where its data comes from, and its limits.
 
 | Page | Covers |
 |------|--------|
-| [Overview](guide/README.md) | What Archer does, where everything is, which SIEMs, what uses AI |
-| [Running Archer](guide/01-running-archer.md) | `archer-cli start/stop/status`, signing in, what happens at start-up |
+| [Overview](guide/README.md) | What Shikari does, where everything is, which SIEMs, what uses AI |
+| [Running Shikari](guide/01-running-shikari.md) | `shikari-cli start/stop/status`, signing in, what happens at start-up |
 | [Hunt](guide/02-hunt.md) | Threat group, CVE and technique hunts; every option |
 | [Analyse](guide/03-analyse.md) | Detections from a report URL or file |
 | [Company profile](guide/04-company-profile.md) | Who targets a company, then their detections |
@@ -25,9 +25,9 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 | [MITRESaw](guide/12-mitresaw.md) | Procedures, rebuilds, OSINT repositories, exclusions |
 | [Manual](guide/13-manual.md) | Detections from your own TTPs |
 | [Regex](guide/14-regex.md) | Regex tester and per-SIEM checks (RE2, PCRE, Lucene) |
-| [Agents and Ask Archer](guide/15-agents-and-ask-archer.md) | The AI features |
+| [Agents and Ask Shikari](guide/15-agents-and-ask-shikari.md) | The AI features |
 | [Profile and settings](guide/16-profile-and-settings.md) | Account, SIEMs, industries, keys, MFA, tokens, users |
-| [Console, API and MCP](guide/17-console-api-mcp.md) | `archer-cli console`, the Python client, REST, `archer-cli mcp` |
+| [Console, API and MCP](guide/17-console-api-mcp.md) | `shikari-cli console`, the Python client, REST, `shikari-cli mcp` |
 | [Data and updates](guide/18-data-and-updates.md) | What's downloaded, when, and where everything is kept |
 | [Emulate](guide/19-emulate.md) | Which logs record each technique (native, Sysmon, EDR; Windows, Linux, macOS, ESXi, cloud), detections checked against lab recordings, Defender XDR's own alerting |
 | [Recording a lab](guide/20-recording-a-lab.md) | **Coming soon**: Atomic Red Team on your own VMs, with Defender for Endpoint's rows, into Emulate |
@@ -40,20 +40,20 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 
 | Document | Description |
 |----------|-------------|
-| [README.md](../README.md) | Project overview, features, archer-cli console usage |
+| [README.md](../README.md) | Project overview, features, shikari-cli console usage |
 | [GETTING_STARTED.md](../GETTING_STARTED.md) | Installation, setup, first run |
-| [USAGE.md](USAGE.md) | Where each task is done, and `archer-cli offline` |
+| [USAGE.md](USAGE.md) | Where each task is done, and `shikari-cli offline` |
 | [desktop/README.md](../desktop/README.md) | Desktop installers: connecting to an organisation's server (MDM, Group Policy), running locally, building releases |
 | [scripts/video/README.md](../scripts/video/README.md) | Remaking the in-app guide's pictures and the narrated walkthrough video |
 | [Deployment comparison](architecture/deployment-comparison.svg) | Web, desktop client, desktop local and checkout: where users, detections and mappings live |
 
 ---
 
-## Interactive Console (archer-cli console)
+## Interactive Console (shikari-cli console)
 
 | Document | Description |
 |----------|-------------|
-| [README.md — archer-cli console](../README.md#-interactive-console-archer-cli-console) | Commands, modules, example session |
+| [README.md — shikari-cli console](../README.md#-interactive-console-shikari-cli-console) | Commands, modules, example session |
 
 ---
 
@@ -62,7 +62,7 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 | Document | Description |
 |----------|-------------|
 | [bespoke/README.md](../bespoke/README.md) | Bespoke directory structure, mapping files, reference queries |
-| [archer/mappings/defaults/README.md](../archer/mappings/defaults/README.md) | The default mappings a new install starts with; Splunk's CEF indexes, sourcetypes and custom-string convention |
+| [shikari/mappings/defaults/README.md](../shikari/mappings/defaults/README.md) | The default mappings a new install starts with; Splunk's CEF indexes, sourcetypes and custom-string convention |
 | [LLM_CONFIGURATION.md](features/LLM_CONFIGURATION.md) | LLM provider setup — Anthropic, OpenAI, ChatGPT Enterprise, Azure OpenAI, Copilot, local LLMs |
 | [bespoke/config.yaml.example](../bespoke/config.yaml.example) | Config file template with all LLM provider options |
 
@@ -81,7 +81,7 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 | [PARENT_TECHNIQUE_OPTION.md](features/PARENT_TECHNIQUE_OPTION.md) | Automatic sub-technique expansion |
 | [REPORT_GENERATION.md](features/REPORT_GENERATION.md) | Export detections as Word, PDF, HTML reports |
 | [RESPONSE_ACTIONS.md](features/RESPONSE_ACTIONS.md) | Automated response action recommendations |
-| [CALDERA_WINDOWS_CAPTURE.md](features/CALDERA_WINDOWS_CAPTURE.md) | CALDERA endpoint-log capture on a Windows host — how it integrates with Archer and where each capture's results land |
+| [CALDERA_WINDOWS_CAPTURE.md](features/CALDERA_WINDOWS_CAPTURE.md) | CALDERA endpoint-log capture on a Windows host — how it integrates with Shikari and where each capture's results land |
 | [SECURITY_FEATURES.md](features/SECURITY_FEATURES.md) | Authentication, encryption, MFA, audit logging |
 | [DOCKER.md](features/DOCKER.md) | Docker deployment guide |
 
@@ -97,7 +97,7 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 | [PERFORMANCE_ARCHITECTURE.md](architecture/PERFORMANCE_ARCHITECTURE.md) | Performance and optimisation |
 | [SCHEMA_NORMALIZATION.md](architecture/SCHEMA_NORMALIZATION.md) | Field normalisation and schema design |
 | [Architecture Diagrams](architecture/mermaid/) | 13 Mermaid diagrams — end-to-end flow, component map, decision map, data flow |
-| [deployment-comparison.svg](architecture/deployment-comparison.svg) | The four ways to run Archer, side by side |
+| [deployment-comparison.svg](architecture/deployment-comparison.svg) | The four ways to run Shikari, side by side |
 
 ---
 
@@ -153,8 +153,8 @@ Plain-language guide to every part of Archer, one page each: what it's for, how 
 | Document | Description |
 |----------|-------------|
 | [UNTESTED.md](other/UNTESTED.md) | Implemented but not validated features |
-| [Feature requests](https://github.com/cmdaltr/archer/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement) | Planned features: tracked only as GitHub issues labelled `enhancement` |
+| [Feature requests](https://github.com/cmdaltr/shikari/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement) | Planned features: tracked only as GitHub issues labelled `enhancement` |
 
 ## Output contract
 
-- [archer/contract/README.md](../archer/contract/README.md) — strict output contract v1.0: validator, legacy lint gate, LLM pipeline hook, exemplars and rationale (`archer/contract/docs/`).
+- [shikari/contract/README.md](../shikari/contract/README.md) — strict output contract v1.0: validator, legacy lint gate, LLM pipeline hook, exemplars and rationale (`shikari/contract/docs/`).

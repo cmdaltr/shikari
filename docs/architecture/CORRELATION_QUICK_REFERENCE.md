@@ -1,6 +1,6 @@
 # Correlation Engine Quick Reference
 
-> **Status (2026-10-16):** some of what this document names was never built: `scripts/test_correlation_params.py`; try thresholds with `archer-cli offline correlate <group> --min-queries … --max-queries …` instead. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
+> **Status (2026-10-16):** some of what this document names was never built: `scripts/test_correlation_params.py`; try thresholds with `shikari-cli offline correlate <group> --min-queries … --max-queries …` instead. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
 
 ## TL;DR
 
@@ -245,7 +245,7 @@ See [CORRELATION_ENGINE.md — Results Page](CORRELATION_ENGINE.md#results-page-
 
 ### Overview
 
-Archer provides **three primary parameters** to control correlation generation quality and quantity. These can be adjusted via the **Profile → Config** page in the UI or via CLI script.
+Shikari provides **three primary parameters** to control correlation generation quality and quantity. These can be adjusted via the **Profile → Config** page in the UI or via CLI script.
 
 **Current Defaults:**
 - **Threshold:** 40% (minimum relevance score)
@@ -488,8 +488,8 @@ CHAIN_MAX = 20           # chains per vendor
 
 | Component | File Path |
 |-----------|-----------|
-| **Correlation Engine** | `archer/ai/genai/engine.py` |
-| **Configuration** | `archer/config.py` |
+| **Correlation Engine** | `shikari/ai/genai/engine.py` |
+| **Configuration** | `shikari/config.py` |
 | **Detection Files** | `data/groups/*.yaml` |
 | **Correlation Output** | `data/correlate/{group_name}.json` (index) and `data/correlate/{group_name}/<A>_and_<B>[_and_<C>]_<UDM, KQL, SPL or ESQL>.yaml` (one per correlation; three names for a chain) |
 | **Full Documentation** | `docs/architecture/CORRELATION_ENGINE.md` |
@@ -500,7 +500,7 @@ CHAIN_MAX = 20           # chains per vendor
 
 ```bash
 # Generate correlations
-python -c "from archer.ai.genai.engine import generate_correlations; \
+python -c "from shikari.ai.genai.engine import generate_correlations; \
            generate_correlations('Group Name', 'data/groups')"
 
 # Check correlation output

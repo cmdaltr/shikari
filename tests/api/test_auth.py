@@ -14,8 +14,8 @@ class TestLogin:
 
     def test_login_with_valid_credentials(self, api, ensure_running):
         r = api.post("/login", data={
-            "email": "admin@archer.app",
-            "password": "£missary_0f_the_G0rg0nite$",
+            "email": "admin@shikari.app",
+            "password": "BigGameHunter",
         }, allow_redirects=False)
         assert r.status_code in [200, 302, 303, 401]
 

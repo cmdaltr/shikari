@@ -1,5 +1,5 @@
 %% 5. Data Flow — What Goes Where
-%% Traces data movement through the system: external sources (MITRE, NVD, GitHub, public repos, recorded attacks) → Archer processing (ingest, build, correlate, enrich) → local storage (YAMLs, JSON, caches) → outputs (results page, Excel, attack flow, JSON API).
+%% Traces data movement through the system: external sources (MITRE, NVD, GitHub, public repos, recorded attacks) → Shikari processing (ingest, build, correlate, enrich) → local storage (YAMLs, JSON, caches) → outputs (results page, Excel, attack flow, JSON API).
 %%
 
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
@@ -12,7 +12,7 @@ flowchart TD
         TEL_S["Recorded attacks<br/>+ GUIDE"]
     end
 
-    subgraph PROCESS ["Archer Processing"]
+    subgraph PROCESS ["Shikari Processing"]
         INGEST["Ingest & Normalise"]
         BUILD["Build Detections"]
         CORRELATE_P["Correlate & Score"]

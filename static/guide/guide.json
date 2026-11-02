@@ -25,7 +25,7 @@
     },
     {
      "title": "Threat group",
-     "what": "Type a group's ATT&CK name or any alias (APT29, Cozy Bear, Midnight Blizzard). Archer collects every technique the group uses, directly, through its campaigns and through its software, and builds a detection for each.",
+     "what": "Type a group's ATT&CK name or any alias (APT29, Cozy Bear, Midnight Blizzard). Shikari collects every technique the group uses, directly, through its campaigns and through its software, and builds a detection for each.",
      "who": "Detection engineers and threat hunters.",
      "when": "A group is named in a briefing, an incident or a sector advisory and you need coverage for its whole playbook, not one indicator.",
      "box": [
@@ -61,7 +61,7 @@
     },
     {
      "title": "Start from a hypothesis",
-     "what": "Describe what you think an adversary is doing in your own words; Archer maps it to ATT&CK and generates the detections and correlations for it.",
+     "what": "Describe what you think an adversary is doing in your own words; Shikari maps it to ATT&CK and generates the detections and correlations for it.",
      "who": "Threat hunters.",
      "when": "You have a hunch from an alert, an incident or the news, but not yet a group or technique ID.",
      "box": [
@@ -86,7 +86,7 @@
    "sections": [
     {
      "title": "A report's URL",
-     "what": "Paste a blog post or advisory. Archer extracts the ATT&CK techniques, the commands, and the indicators of compromise, defanged ones included, then shows them for review.",
+     "what": "Paste a blog post or advisory. Shikari extracts the ATT&CK techniques, the commands, and the indicators of compromise, defanged ones included, then shows them for review.",
      "who": "Threat intelligence analysts and detection engineers.",
      "when": "A vendor publishes an intrusion write-up relevant to you. Feed cards open here with the URL filled in.",
      "box": [
@@ -126,7 +126,7 @@
    "id": "home-profile",
    "menu": "Home",
    "title": "Profile a company",
-   "summary": "Start from a company instead of a threat. Archer works out its sector, geography and exposure, recommends the groups most likely to target it, and hunts the ones you choose.",
+   "summary": "Start from a company instead of a threat. Shikari works out its sector, geography and exposure, recommends the groups most likely to target it, and hunts the ones you choose.",
    "path": "/",
    "href": null,
    "image": "/static/guide/img/home-profile.jpg",
@@ -135,7 +135,7 @@
    "sections": [
     {
      "title": "The company's domain",
-     "what": "Enter a primary domain. Archer reads public sources (Wikidata, DNS, certificate transparency, Shodan InternetDB, HIBP breach metadata) to build the profile and an exposure map. Nothing is harvested.",
+     "what": "Enter a primary domain. Shikari reads public sources (Wikidata, DNS, certificate transparency, Shodan InternetDB, HIBP breach metadata) to build the profile and an exposure map. Nothing is harvested.",
      "who": "Threat intelligence analysts and security managers.",
      "when": "Onboarding a new client or business unit, or answering \"who is likely to come after us?\".",
      "box": [
@@ -575,7 +575,7 @@
     },
     {
      "title": "Watchlists",
-     "what": "Saved searches (a group, a CVE, a vendor). Archer collects every six hours and flags new matches on the Intel menu, and can email them.",
+     "what": "Saved searches (a group, a CVE, a vendor). Shikari collects every six hours and flags new matches on the Intel menu, and can email them.",
      "who": "Threat intelligence analysts.",
      "when": "Tracking a campaign or actor over weeks without checking by hand.",
      "box": [
@@ -587,7 +587,7 @@
     },
     {
      "title": "The wall",
-     "what": "One card per post with source, summary and tags. Analyse in Archer turns a post into detections.",
+     "what": "One card per post with source, summary and tags. Analyse in Shikari turns a post into detections.",
      "who": "Threat intelligence analysts and detection engineers.",
      "when": "A post matches your stack or industry. Analysing it takes a minute.",
      "box": [
@@ -726,7 +726,7 @@
    "id": "mitresaw",
    "menu": "Intel",
    "title": "MITRESaw",
-   "summary": "The ATT&CK procedure data behind Archer's briefings and detections, every group's techniques, how each reaches the group, and the indicators in the procedure text.",
+   "summary": "The ATT&CK procedure data behind Shikari's briefings and detections, every group's techniques, how each reaches the group, and the indicators in the procedure text.",
    "path": "/mitresaw",
    "href": null,
    "image": "/static/guide/img/mitresaw.jpg",
@@ -747,7 +747,7 @@
     },
     {
      "title": "OSINT repositories",
-     "what": "The public detection-rule repositories and LOL datasets Archer searches while generating, with each one's status.",
+     "what": "The public detection-rule repositories and LOL datasets Shikari searches while generating, with each one's status.",
      "who": "Administrators.",
      "when": "OSINT enrichment looks thin. Check every repository is ready.",
      "box": [
@@ -784,7 +784,7 @@
    "sections": [
     {
      "title": "Plan an emulation",
-     "what": "Pick a group, CVE or technique and Archer assembles a plan, the best recorded dataset per technique, the matching Atomic Red Team test and the log sources to collect. Export it as a run sheet or MACAT TOML.",
+     "what": "Pick a group, CVE or technique and Shikari assembles a plan, the best recorded dataset per technique, the matching Atomic Red Team test and the log sources to collect. Export it as a run sheet or MACAT TOML.",
      "who": "Purple and red teams.",
      "when": "Before an emulation exercise, to agree what will run and what should be seen.",
      "box": [
@@ -808,7 +808,7 @@
     },
     {
      "title": "Your lab",
-     "what": "Create and manage Docker, Tart and UTM machines from inside Archer, start, stop, snapshot, revert and set them up.",
+     "what": "Create and manage Docker, Tart and UTM machines from inside Shikari, start, stop, snapshot, revert and set them up.",
      "who": "Purple teams and administrators.",
      "when": "Recording your own telemetry rather than relying on public labs.",
      "box": [
@@ -971,7 +971,7 @@
    "id": "agents",
    "menu": "Build",
    "title": "Agents",
-   "summary": "A model working in a loop with Archer's tools, repairing queries, triaging reports, sweeping coverage gaps, auditing and tuning the Library. Every step is shown and kept.",
+   "summary": "A model working in a loop with Shikari's tools, repairing queries, triaging reports, sweeping coverage gaps, auditing and tuning the Library. Every step is shown and kept.",
    "path": "/agents",
    "href": null,
    "image": "/static/guide/img/agents.jpg",
@@ -980,7 +980,7 @@
    "sections": [
     {
      "title": "The agents",
-     "what": "Detection repair, Ask Archer with tools, Intel triage, Coverage sweep, Library audit and Detection tuning. Each says what it needs and what it does.",
+     "what": "Detection repair, Ask Shikari with tools, Intel triage, Coverage sweep, Library audit and Detection tuning. Each says what it needs and what it does.",
      "who": "Detection engineers.",
      "when": "Repetitive review work that follows clear rules.",
      "box": [
@@ -1042,7 +1042,7 @@
    "sections": [
     {
      "title": "Keys and assignments",
-     "what": "A cloud provider's key or a local model's URL, which model answers Ask Archer and which generates, a cap on AI calls per run, and keys for OSINT sources and SIEMs.",
+     "what": "A cloud provider's key or a local model's URL, which model answers Ask Shikari and which generates, a cap on AI calls per run, and keys for OSINT sources and SIEMs.",
      "who": "Administrators.",
      "when": "Turning on AI-assisted generation, or adding OSINT coverage for company profiles.",
      "box": [
@@ -1079,7 +1079,7 @@
     },
     {
      "title": "Webhooks",
-     "what": "URLs Archer posts to when a hunt finishes or fails, or a watchlist finds new posts, signed with a secret shown once. Send test checks the receiver.",
+     "what": "URLs Shikari posts to when a hunt finishes or fails, or a watchlist finds new posts, signed with a secret shown once. Send test checks the receiver.",
      "who": "Administrators and SOAR engineers.",
      "when": "A ticket, chat message or pipeline should follow a hunt without anyone watching it.",
      "box": [
@@ -1095,7 +1095,7 @@
    "id": "help",
    "menu": "Profile and Help",
    "title": "Help",
-   "summary": "What Archer does with each kind of input, what it's for, and the frequently asked questions. The guide and these tips are in the Help menu too.",
+   "summary": "What Shikari does with each kind of input, what it's for, and the frequently asked questions. The guide and these tips are in the Help menu too.",
    "path": "/how-it-works",
    "href": null,
    "image": "/static/guide/img/help.jpg",
@@ -1104,9 +1104,9 @@
    "sections": [
     {
      "title": "What it does",
-     "what": "The inputs Archer takes and what it makes of them.",
-     "who": "Anyone new to Archer.",
-     "when": "Explaining Archer to a colleague.",
+     "what": "The inputs Shikari takes and what it makes of them.",
+     "who": "Anyone new to Shikari.",
+     "when": "Explaining Shikari to a colleague.",
      "box": [
       125,
       397,
@@ -1116,8 +1116,8 @@
     },
     {
      "title": "Use it for",
-     "what": "The jobs Archer is built for, from hunting a named group to profiling an organisation.",
-     "who": "Anyone new to Archer.",
+     "what": "The jobs Shikari is built for, from hunting a named group to profiling an organisation.",
+     "who": "Anyone new to Shikari.",
      "when": "Deciding where to start.",
      "box": [
       125,

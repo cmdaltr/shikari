@@ -4,7 +4,7 @@
 
 ## Overview
 
-Archer's LLM-based detection generation infrastructure enables training and deploying local Large Language Models (LLMs) to automatically generate high-fidelity detection rules, correlations, and threat reports. This system replaces the traditional heuristic regex-based detection generation with AI-powered generation trained on curated security datasets.
+Shikari's LLM-based detection generation infrastructure enables training and deploying local Large Language Models (LLMs) to automatically generate high-fidelity detection rules, correlations, and threat reports. This system replaces the traditional heuristic regex-based detection generation with AI-powered generation trained on curated security datasets.
 
 ### Key Capabilities
 
@@ -18,7 +18,7 @@ Archer's LLM-based detection generation infrastructure enables training and depl
 
 ```
 ┌───────────────────────────────────────────────────────────────────┐
-│                   Archer LLM Detection Pipeline                   │
+│                   Shikari LLM Detection Pipeline                   │
 ├───────────────────────────────────────────────────────────────────┤
 │                                                                   │
 │   ┌──────────────┐      ┌──────────────┐      ┌───────────────┐   │
@@ -87,7 +87,7 @@ python -m vllm.entrypoints.openai.api_server \
 
 ### 3. Configure Backend
 
-Edit `archer/ai/training/config.py`:
+Edit `shikari/ai/training/config.py`:
 
 ```python
 MODEL_CONFIG = {
@@ -105,7 +105,7 @@ MODEL_CONFIG = {
 ### 4. Test Inference
 
 ```python
-from archer.ai.training.pipelines.llm_inference import LLMInference
+from shikari.ai.training.pipelines.llm_inference import LLMInference
 
 # Initialize inference client
 llm = LLMInference(backend="ollama")
@@ -124,7 +124,7 @@ print(detection)
 ## Directory Structure
 
 ```
-archer/ai/training/
+shikari/ai/training/
 ├── __init__.py                    # Module initialization
 ├── config.py                      # Configuration for backends and training
 │
@@ -273,8 +273,8 @@ The CVE enrichment pipeline combines technical CVE data with real-world blog pos
 python scripts/ai/train_ai.py cve --cves CVE-2024-1234 CVE-2024-5678
 
 # Output:
-# ✓ Enriched CVE-2024-1234 → archer/ai/training/datasets/cve_data/enriched/CVE-2024-1234.json
-# ✓ Generated training example → archer/ai/training/datasets/cve_data/training_examples/CVE-2024-1234_training.json
+# ✓ Enriched CVE-2024-1234 → shikari/ai/training/datasets/cve_data/enriched/CVE-2024-1234.json
+# ✓ Generated training example → shikari/ai/training/datasets/cve_data/training_examples/CVE-2024-1234_training.json
 ```
 
 #### Enrich by Year and Severity
@@ -396,7 +396,7 @@ The enriched CVE is converted to a training example:
 python scripts/ai/train_ai.py reports --pdf threat_report.pdf
 
 # Batch convert all PDFs in directory
-python scripts/ai/train_ai.py reports --dir archer/ai/training/datasets/threat_reports/
+python scripts/ai/train_ai.py reports --dir shikari/ai/training/datasets/threat_reports/
 
 # Specify custom output directory
 python scripts/ai/train_ai.py reports --dir reports/ --output custom_output/
@@ -427,7 +427,7 @@ python scripts/ai/train_ai.py osint --source elastic --repo https://github.com/c
 ### Basic Fine-Tuning
 
 ```python
-from archer.ai.training.pipelines.training import DetectionEngineeringTrainer
+from shikari.ai.training.pipelines.training import DetectionEngineeringTrainer
 
 # Initialize trainer
 trainer = DetectionEngineeringTrainer(
@@ -457,13 +457,13 @@ trainer.train(
 ### Advanced Configuration
 
 ```python
-from archer.ai.training.pipelines.training import DetectionEngineeringTrainer
+from shikari.ai.training.pipelines.training import DetectionEngineeringTrainer
 from pathlib import Path
 
 # Initialize with specific datasets
 trainer = DetectionEngineeringTrainer(
     base_model="meta-llama/Llama-3.1-70B-Instruct",
-    output_dir=Path("archer/ai/training/models/fine_tuned/llama3.1-detection-v1"),
+    output_dir=Path("shikari/ai/training/models/fine_tuned/llama3.1-detection-v1"),
     use_lora=True,
     use_4bit=True,
 )
@@ -472,8 +472,8 @@ trainer.load_model()
 
 # Specify exact training files
 train_files = [
-    Path("archer/ai/training/datasets/hunting_queries/internal_soc.jsonl"),
-    Path("archer/ai/training/datasets/osint_samples/elastic_rules.jsonl"),
+    Path("shikari/ai/training/datasets/hunting_queries/internal_soc.jsonl"),
+    Path("shikari/ai/training/datasets/osint_samples/elastic_rules.jsonl"),
 ]
 
 trainer.load_datasets(train_files=train_files)
@@ -492,7 +492,7 @@ trainer.train(
 ### Detection Generation
 
 ```python
-from archer.ai.training.pipelines.llm_inference import LLMInference
+from shikari.ai.training.pipelines.llm_inference import LLMInference
 
 # Initialize with Ollama backend
 llm = LLMInference(backend="ollama")
@@ -642,14 +642,14 @@ MODEL_CONFIG = {
 | Qwen2.5 72B Instruct (Q4) | 42GB | 1x A100 80GB | Excellent | Medium |
 | Mixtral 8x7B Instruct (Q4) | 26GB | 1x A100 40GB | Very Good | Fast |
 
-## Integration with Archer
+## Integration with Shikari
 
-The LLM pipeline integrates with Archer's existing workflow:
+The LLM pipeline integrates with Shikari's existing workflow:
 
 ```python
-# In archer/build/orchestrator.py
+# In shikari/build/orchestrator.py
 
-from archer.ai.training.pipelines.llm_inference import LLMInference
+from shikari.ai.training.pipelines.llm_inference import LLMInference
 
 class OrchestrationManager:
     def __init__(self, use_ai=False):
@@ -675,21 +675,21 @@ class OrchestrationManager:
 
 ```bash
 # Generate detections using AI
-python -m archer.cli generate \
+python -m shikari.cli generate \
     --technique T1003.001 \
     --use-ai \
     --backend ollama \
     --output detections/
 
 # Generate correlations
-python -m archer.cli correlate \
+python -m shikari.cli correlate \
     --group APT29 \
     --techniques T1003.001,T1021.002,T1078.003 \
     --use-ai \
     --output correlations/
 
 # Generate report
-python -m archer.cli report \
+python -m shikari.cli report \
     --group "Scattered Spider" \
     --detections detections/ \
     --use-ai \

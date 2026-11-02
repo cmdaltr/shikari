@@ -1,0 +1,29 @@
+shikari_output:
+  contract_version: "1.0"
+  kind: rejection
+  request_ref: REQ-2026-10-10-008
+  rejection:
+    reason_code: SOURCE_NOT_INGESTED
+    secondary_codes: []
+    detection_type_requested: scheduled_detection
+    siem_requested: yara_l
+    technique_ids_requested:
+      - T1059.007
+    blocking_criteria:
+      - R02.8
+      - R09.2
+    evidence:
+      - check: Declared source PROCESS_LAUNCH from Microsoft Defender for Endpoint is listed as ingested in environment profile ENVPROFILE-B-secops-observed-2026-10-09
+        observed: Profile lists DeviceEvents, DeviceFileEvents and DeviceRegistryEvents as streamed; DeviceProcessEvents and DeviceNetworkEvents are not exported. PROCESS_LAUNCH in SecOps comes from a small minority of hosts, all via DeviceEvents, against full process telemetry in Defender.
+        expected: PROCESS_LAUNCH present estate-wide for the target OS list (macos, linux, windows)
+      - check: An alternative ingested event type carries the required fields (target.process.file.full_path, target.process.command_line) for the behaviour
+        observed: FILE_CREATION and REGISTRY_* events do not carry the launched process image or command line; DeviceEvents-derived PROCESS_LAUNCH covers a small minority of hosts only
+        expected: An ingested event type with the process image and command line on every target host
+    remediation:
+      - Enable export of DeviceProcessEvents (and DeviceNetworkEvents for the sibling network rules) from the Defender streaming API to the SecOps feed, then re-submit under a profile that lists them; the rule logic in REQ-2026-10-10-001 is ready.
+      - Until then, request the same intent with siem kql for Defender XDR Advanced Hunting, where DeviceProcessEvents is native and the stage one to stage two sequence was positive-control tested on 2026-10-09.
+    nearest_viable_alternative:
+      detection_type: scheduled_detection
+      siem: kql
+      log_source: DeviceProcessEvents
+      summary: Execution_T1059.007_DeviceProcessEvents_NodeHookSetupThenBunPayload as a Defender XDR custom detection, 1h frequency, 2h lookback, paired on DeviceId within 30 minutes with the setup stage ordered before the bun stage.

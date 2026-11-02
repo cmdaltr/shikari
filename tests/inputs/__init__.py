@@ -1,5 +1,5 @@
 """
-Input Method Tests for Archer
+Input Method Tests for Shikari
 
 This package contains tests for all major input methods:
 - Threat Groups

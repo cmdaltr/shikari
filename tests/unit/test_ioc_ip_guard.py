@@ -1,6 +1,6 @@
 """A dotted quad is shaped like a four-part version; the IP IOC guard drops the false positives."""
 
-from archer.parsers.file_intelligence import FileIntelligenceParser
+from shikari.parsers.file_intelligence import FileIntelligenceParser
 
 
 def _ips(text: str):

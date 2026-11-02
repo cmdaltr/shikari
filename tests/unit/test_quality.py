@@ -1,5 +1,5 @@
 """Detection quality and false-positive risk, without AI (#33)."""
-from archer.validation import quality
+from shikari.validation import quality
 
 SPECIFIC = {
     "name": "OS Credential Dumping", "technique_id": "T1003.001", "severity": "High", "tactics": ["Credential Access"],

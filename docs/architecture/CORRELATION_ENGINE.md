@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Archer Correlation Engine automatically generates high-quality detection correlations by analyzing YAML detection files and identifying meaningful attack chain relationships. It uses a sophisticated multi-phase scoring and filtering system to produce actionable, JOIN-based correlation queries.
+The Shikari Correlation Engine automatically generates high-quality detection correlations by analyzing YAML detection files and identifying meaningful attack chain relationships. It uses a sophisticated multi-phase scoring and filtering system to produce actionable, JOIN-based correlation queries.
 
 ## Table of Contents
 
@@ -40,8 +40,8 @@ The Archer Correlation Engine automatically generates high-quality detection cor
 
 ### Key Files
 
-- **`archer/ai/genai/engine.py`** - Main correlation engine
-- **`archer/config.py`** - Configuration (GENERATE_DIR, CORRELATE_DIR)
+- **`shikari/ai/genai/engine.py`** - Main correlation engine
+- **`shikari/config.py`** - Configuration (GENERATE_DIR, CORRELATE_DIR)
 - **`data/correlate/`** - Output directory for correlation JSON files
 
 ---
@@ -55,7 +55,7 @@ The Archer Correlation Engine automatically generates high-quality detection cor
 **Logic:**
 ```python
 # The group's detections: tagged "<group> (Group)", or named for it (IOC sweeps, exploit rules)
-files = group_yaml_files(group_name, GENERATE_DIR)  # archer/build/group_files.py
+files = group_yaml_files(group_name, GENERATE_DIR)  # shikari/build/group_files.py
 
 # Group by vendor (MDE, Splunk, Elastic, etc.)
 by_vendor = group_files_by_vendor(files)
@@ -104,7 +104,7 @@ for vendor in vendors:
 
 When the JOIN is built (Phase 8), a part whose values are all bare built-in binaries
 (`wmic.exe`) or all Windows API names (`OpenThread`) is left out (PREC-BARE, PREC-API in
-`archer/validation/precision.py`): either matches anything on its own, or can never appear
+`shikari/validation/precision.py`): either matches anything on its own, or can never appear
 in a process command line. A side left with no part drops the correlation.
 
 **Result:**
@@ -391,7 +391,7 @@ dominates. A chain is instead all of its techniques on one host within the windo
 - Google SecOps and MDE only.
 
 **Queries:** no order is imposed, since ATT&CK tactics are goals, not steps.
-- **UDM** (`archer.build.udm.build_chain`): `$e1`, `$e2`, `$e3`, each bound to `$host`,
+- **UDM** (`shikari.build.udm.build_chain`): `$e1`, `$e2`, `$e3`, each bound to `$host`,
   `match: $host over 1h`.
 - **KQL**: each part in its own `let` on its table (`Device*` tables only, since the join is
   on `DeviceId`), each technique's parts unioned and
@@ -681,7 +681,7 @@ File:       AccessTokenManipulation_and_AdditionalLocalorDomainGroups_and_DCSync
       "chain": true,
       "a": "data/groups/CloudAccounts_UDM.yaml",
       "b": ["data/groups/ModifyRegistry_UDM.yaml", "data/groups/PowerShell_UDM.yaml"],
-      "combined_query": "// archer_chain_t1078_004_t1112_t1059_001: ...",
+      "combined_query": "// shikari_chain_t1078_004_t1112_t1059_001: ...",
       "relevance_score": 1.0,
       "file": "APT29/CloudAccounts_and_ModifyRegistry_and_PowerShell_UDM.yaml",
       "techniques_involved": ["Cloud Accounts", "Modify Registry", "PowerShell"]
@@ -694,7 +694,7 @@ File:       AccessTokenManipulation_and_AdditionalLocalorDomainGroups_and_DCSync
 ### Correlation Files
 
 Each correlation is also written as its own YAML, ready to paste into the SIEM
-(`archer/build/correlation_files.py`): `data/correlate/<group>/<A>_and_<B>_<language>.yaml`
+(`shikari/build/correlation_files.py`): `data/correlate/<group>/<A>_and_<B>_<language>.yaml`
 for a pair, `<A>_and_<B>_and_<C>_<language>.yaml` for a chain. The language is
 `UDM` (Google SecOps), `KQL` (Defender XDR), `SPL` (Splunk) or `ESQL` (Elastic). The file
 carries the same stamp as a detection: one edited by hand is kept on the next run and its
@@ -704,7 +704,7 @@ Detections are named the same way where a technique has one file per SIEM (`At_U
 `IOCSweepAPT29_KQL.yaml`); MDE detections are named for their table
 (`At_DeviceProcessEvents.yaml`) and Splunk detections for their index. Files named for the
 product before this (`_GoogleSecOps`, `_MicrosoftThreatProtection`, `_DefenderXDR`) are
-renamed by `python -m archer.build.migrate_names`, which also updates the names the
+renamed by `python -m shikari.build.migrate_names`, which also updates the names the
 correlation indexes and run records hold.
 
 ### UI Display
@@ -932,5 +932,5 @@ The `individual_queries` field is preserved when correlations are saved to the l
 ---
 
 **Last Updated:** March 4, 2025
-**Author:** Archer Development Team
+**Author:** Shikari Development Team
 **Location:** `docs/architecture/CORRELATION_ENGINE.md`

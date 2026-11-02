@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from archer.intelligence import cve_feed
+from shikari.intelligence import cve_feed
 
 Y = datetime.now(timezone.utc).year  # fixture IDs from this year: older ones aren't recent
 
@@ -114,7 +114,7 @@ def test_a_hunt_marked_during_a_refresh_survives_it(feed, monkeypatch):
 
 
 def test_kev_comes_first_then_the_stack(monkeypatch):
-    monkeypatch.setattr("archer.intelligence.tech_stack.cpe_products",
+    monkeypatch.setattr("shikari.intelligence.tech_stack.cpe_products",
                         lambda cpes: ["fortigate"] if any("fortinet" in c for c in cpes) else [])
     cves = {"CVE-A": {"published": _iso(1), "cpes": []},
             "CVE-B": {"published": _iso(2), "cpes": ["cpe:2.3:a:fortinet:fortios"]},
@@ -175,12 +175,12 @@ def test_the_api_passes_the_filters_and_caps_the_page(feed, monkeypatch):
 
     from fastapi.testclient import TestClient
 
-    import archer.app as web
+    import shikari.app as web
 
     cve_feed.refresh(research=False)
     user = SimpleNamespace(tech_stack='["fortigate"]')
     monkeypatch.setattr(web, "require_auth", lambda request, session: (user, SimpleNamespace(close=lambda: None)))
-    monkeypatch.setattr("archer.intelligence.tech_stack.as_stack", lambda ids: list(ids))
+    monkeypatch.setattr("shikari.intelligence.tech_stack.as_stack", lambda ids: list(ids))
     client = TestClient(web.app)  # no startup: no refresh thread
 
     body = client.get("/api/cves/recent", params={"kev": "true", "limit": 999}).json()

@@ -17,13 +17,13 @@ from datetime import date
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-# Where archer/build/platform_indicator_validator.py loads it from
+# Where shikari/build/platform_indicator_validator.py loads it from
 DEFAULT_OUTPUT = REPO_ROOT / "bespoke" / "mappings" / "techniquePlatformIndicators.json"
 
-# Repo root, so `import archer` works from any working directory
+# Repo root, so `import shikari` works from any working directory
 sys.path.insert(0, str(REPO_ROOT))
 
-from archer.mitre.enterprise import get_stix_data, obtain_all_techniques
+from shikari.mitre.enterprise import get_stix_data, obtain_all_techniques
 
 
 # Platform-specific valid indicators (generic patterns)

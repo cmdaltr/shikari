@@ -9,7 +9,7 @@ import sys
 import pytest
 from unittest.mock import patch, MagicMock
 
-# Add archer to path
+# Add shikari to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 
@@ -18,7 +18,7 @@ class TestSplunkClientInitialization:
 
     def test_client_requires_credentials(self):
         """Test that client requires credentials."""
-        from archer.query.splunk import SplunkClient
+        from shikari.query.splunk import SplunkClient
 
         # Clear environment variables
         with patch.dict(os.environ, {}, clear=True):
@@ -29,7 +29,7 @@ class TestSplunkClientInitialization:
 
     def test_client_accepts_env_vars(self):
         """Test that client accepts environment variables."""
-        from archer.query.splunk import SplunkClient
+        from shikari.query.splunk import SplunkClient
 
         env_vars = {
             "SPLUNK_HOST": "splunk.example.com",
@@ -47,7 +47,7 @@ class TestSplunkClientInitialization:
 
     def test_client_accepts_parameters(self):
         """Test that client accepts direct parameters."""
-        from archer.query.splunk import SplunkClient
+        from shikari.query.splunk import SplunkClient
 
         client = SplunkClient(
             host="splunk.local",
@@ -65,7 +65,7 @@ class TestSplunkQueryExecution:
 
     def test_execute_query_makes_request(self):
         """Test that execute_query makes HTTP request."""
-        from archer.query.splunk import SplunkClient
+        from shikari.query.splunk import SplunkClient
 
         client = SplunkClient(
             host="splunk.local",
@@ -74,14 +74,14 @@ class TestSplunkQueryExecution:
             password="pass",
         )
 
-        with patch("archer.query.splunk.requests.post") as mock_post:
+        with patch("shikari.query.splunk.requests.post") as mock_post:
             mock_response = MagicMock()
             mock_response.status_code = 201
             mock_response.json.return_value = {"sid": "job123"}
             mock_post.return_value = mock_response
 
             # Mock the job results endpoint too
-            with patch("archer.query.splunk.requests.get") as mock_get:
+            with patch("shikari.query.splunk.requests.get") as mock_get:
                 mock_results = MagicMock()
                 mock_results.status_code = 200
                 mock_results.json.return_value = {
@@ -100,7 +100,7 @@ class TestSplunkQueryExecution:
 
     def test_query_validation_syntax(self):
         """Test SPL query syntax validation."""
-        from archer.validation.query_syntax_validator import validate_query_syntax
+        from shikari.validation.query_syntax_validator import validate_query_syntax
 
         # Valid SPL query
         valid_query = 'index=main sourcetype=windows | stats count by host'
@@ -156,7 +156,7 @@ def test_splunk_client():
         print()
 
         # Test initialization logic
-        from archer.query.splunk import SplunkClient
+        from shikari.query.splunk import SplunkClient
 
         try:
             # This should fail without credentials
@@ -179,7 +179,7 @@ def test_splunk_client():
         return True
 
     # Full test with real credentials
-    from archer.query.splunk import SplunkClient
+    from shikari.query.splunk import SplunkClient
 
     try:
         client = SplunkClient()

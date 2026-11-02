@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from archer.intelligence import feed
+from shikari.intelligence import feed
 
 RSS = b"""<?xml version="1.0"?><rss version="2.0"><channel>
 <item><title>Lazarus  targets banks</title><link>https://example.com/a</link>
@@ -29,7 +29,7 @@ def _analysed(text, title="t", summary="", groups=(), profiles=None):
     post = {"title": title, "url": "https://e/x", "source": "S", "published": "2026-10-12T00:00:00+00:00",
             "summary": summary}
     result = {"success": True, "text": text, "techniques": feed._INDICATOR.findall(text) and ["T1059"] or [], "iocs": {}}
-    with patch("archer.parsers.blog_analyzer.analyze_blog_post", return_value=result):
+    with patch("shikari.parsers.blog_analyzer.analyze_blog_post", return_value=result):
         return feed.analyse_post(post, list(groups), profiles or {})
 
 

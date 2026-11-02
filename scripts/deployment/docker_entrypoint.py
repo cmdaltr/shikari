@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Docker entrypoint script for Archer.
+Docker entrypoint script for Shikari.
 
 This script checks if OSINT repositories need to be initialized before
-starting the Archer application. Works cross-platform (Linux, Windows, macOS).
+starting the Shikari application. Works cross-platform (Linux, Windows, macOS).
 """
 
 import os
@@ -15,7 +15,7 @@ from pathlib import Path
 def print_banner():
     """Print the startup banner."""
     print("=" * 50)
-    print("  Archer Docker Entrypoint")
+    print("  Shikari Docker Entrypoint")
     print("=" * 50)
 
 
@@ -68,7 +68,7 @@ def main():
         initialize_osint_repos()
 
     print()
-    print("🚀 Starting Archer application...")
+    print("🚀 Starting Shikari application...")
     print("=" * 50)
     print()
 

@@ -1,4 +1,4 @@
-"""Ordered Adversary List ranking (archer.intelligence.adversary_ranking).
+"""Ordered Adversary List ranking (shikari.intelligence.adversary_ranking).
 
 The group-metadata cache (data/cache/group_metadata.json) is committed, so the industry, geography
 and incidents dimensions are exercised for real. The procedures CSV and ATT&CK bundle are local-only
@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from archer.intelligence import adversary_ranking as ar
+from shikari.intelligence import adversary_ranking as ar
 
 
 # ── Pure signal helpers ─────────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ def test_malformed_incidents_file_is_ignored(tmp_path, monkeypatch):
     monkeypatch.setattr(ar, "_INCIDENTS_FILE", bad)
     monkeypatch.setattr(ar, "_incidents_cache", (0.0, {}))
     # No bespoke file content, and feeds are stubbed empty below via incident_sources
-    from archer.intelligence import incident_sources
+    from shikari.intelligence import incident_sources
     monkeypatch.setattr(incident_sources, "load_vcdb", lambda: {})
     monkeypatch.setattr(incident_sources, "load_ransomware", lambda: {})
     assert ar._load_incidents() == {}
@@ -111,7 +111,7 @@ def test_malformed_incidents_file_is_ignored(tmp_path, monkeypatch):
 
 def test_feeds_merge_into_incident_map(monkeypatch):
     # VCDB and ransomware.live caches are merged, unioning victims/sectors and keeping newest year
-    from archer.intelligence import incident_sources
+    from shikari.intelligence import incident_sources
     monkeypatch.setattr(incident_sources, "load_vcdb", lambda: {
         "groups": {"apt28": {"victims": ["acme corp"], "sectors": ["Government"], "last_seen": 2019}}})
     monkeypatch.setattr(incident_sources, "load_ransomware", lambda: {
@@ -126,7 +126,7 @@ def test_feeds_merge_into_incident_map(monkeypatch):
 
 
 def test_kev_strengthens_exposed_cve_signal(monkeypatch):
-    from archer.intelligence import incident_sources
+    from shikari.intelligence import incident_sources
     prof = {"exposed_services": {"vulns": ["CVE-2021-26855", "CVE-2099-0001"]}}
     monkeypatch.setattr(incident_sources, "load_kev", lambda: {})
     base = ar._exposure_techniques(prof)[ar.T_PUBLIC_APP]["weight"]

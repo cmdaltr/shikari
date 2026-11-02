@@ -4,9 +4,9 @@ import os
 
 import pytest
 
-from archer.mitre.retrieve import _merge_guidance
+from shikari.mitre.retrieve import _merge_guidance
 
-CACHE = os.path.join(os.path.dirname(__file__), "..", "..", "archer", "data", "cache", "enterprise-attack.json")
+CACHE = os.path.join(os.path.dirname(__file__), "..", "..", "shikari", "data", "cache", "enterprise-attack.json")
 
 
 def test_indicators_merge_without_duplicates_and_descriptions_stay():
@@ -20,12 +20,12 @@ def test_indicators_merge_without_duplicates_and_descriptions_stay():
 def bundle():
     if not os.path.exists(CACHE):
         pytest.skip("no cached ATT&CK bundle")
-    from archer.mitre.enterprise import get_stix_data
+    from shikari.mitre.enterprise import get_stix_data
     return get_stix_data("https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json")
 
 
 def test_gallmaker_gets_one_obfuscation_detection(bundle):
-    from archer.mitre.retrieve import retrieve_group, retrieve_procedures, retrieve_techniques
+    from shikari.mitre.retrieve import retrieve_group, retrieve_procedures, retrieve_techniques
 
     techs = retrieve_techniques(bundle, retrieve_group(bundle, "Gallmaker"))
     merged = retrieve_procedures(bundle, techs)
@@ -39,7 +39,7 @@ def test_gallmaker_gets_one_obfuscation_detection(bundle):
 
 
 def test_a_sub_technique_attributed_in_its_own_right_keeps_its_procedure(bundle):
-    from archer.mitre.retrieve import retrieve_group, retrieve_procedures, retrieve_techniques
+    from shikari.mitre.retrieve import retrieve_group, retrieve_procedures, retrieve_techniques
 
     techs = retrieve_techniques(bundle, retrieve_group(bundle, "FIN13"))
     ids = {p[0] for p in retrieve_procedures(bundle, techs)}

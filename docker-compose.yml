@@ -1,27 +1,27 @@
 version: "3.8"
 
 # ============================================================================
-# Archer Docker Compose
+# Shikari Docker Compose
 #
 # Usage:
-#   docker-compose up -d                                    # Just Archer
-#   docker-compose --profile secops up -d                   # Archer + Google SecOps
-#   docker-compose --profile mde up -d                      # Archer + MDE
-#   docker-compose --profile secops --profile mde up -d     # Archer + SecOps + MDE
-#   docker-compose --profile splunk --profile elastic up -d # Archer + Splunk + Elastic
-#   docker-compose --profile validation up -d               # Archer + ALL SIEMs
+#   docker-compose up -d                                    # Just Shikari
+#   docker-compose --profile secops up -d                   # Shikari + Google SecOps
+#   docker-compose --profile mde up -d                      # Shikari + MDE
+#   docker-compose --profile secops --profile mde up -d     # Shikari + SecOps + MDE
+#   docker-compose --profile splunk --profile elastic up -d # Shikari + Splunk + Elastic
+#   docker-compose --profile validation up -d               # Shikari + ALL SIEMs
 # ============================================================================
 
 services:
-  # Main Archer application
-  archer:
+  # Main Shikari application
+  shikari:
     build:
       context: .
-      dockerfile: archer/Dockerfile
+      dockerfile: shikari/Dockerfile
     ports:
       - "8000:8000"
     volumes:
-      - ./archer:/app/archer
+      - ./shikari:/app/shikari
       - ./templates:/app/templates
       - ./static:/app/static
       - ./data:/app/data
@@ -29,7 +29,7 @@ services:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
     networks:
-      - archer-network
+      - shikari-network
 
   # ============================================================================
   # Detection Validation SIEM Services (all optional)
@@ -39,9 +39,9 @@ services:
   # Splunk Enterprise for SPL query validation (~2GB RAM)
   splunk:
     image: splunk/splunk:latest
-    container_name: archer-splunk
+    container_name: shikari-splunk
     ports:
-      - "8001:8000"   # Web UI (offset to avoid conflict with Archer)
+      - "8001:8000"   # Web UI (offset to avoid conflict with Shikari)
       - "8089:8089"   # REST API
       - "8088:8088"   # HEC
     environment:
@@ -59,12 +59,12 @@ services:
       retries: 10
       start_period: 120s
     networks:
-      - archer-network
+      - shikari-network
 
   # Elasticsearch for Query DSL validation (~1GB RAM)
   elastic:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
-    container_name: archer-elastic
+    container_name: shikari-elastic
     ports:
       - "9200:9200"
       - "9300:9300"
@@ -83,15 +83,15 @@ services:
       retries: 10
       start_period: 60s
     networks:
-      - archer-network
+      - shikari-network
 
   # Google SecOps Simulator for YARA-L validation (~512MB RAM)
   secops-simulator:
     build:
-      context: ./archer/siem/secops
+      context: ./shikari/siem/secops
       dockerfile: Dockerfile
-    image: archer-secops-simulator:latest
-    container_name: archer-secops
+    image: shikari-secops-simulator:latest
+    container_name: shikari-secops
     ports:
       - "8081:8080"
     mem_limit: 512m
@@ -104,15 +104,15 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - archer-network
+      - shikari-network
 
   # MDE Simulator for KQL validation (~512MB RAM)
   mde-simulator:
     build:
-      context: ./archer/siem/mde
+      context: ./shikari/siem/mde
       dockerfile: Dockerfile
-    image: archer-mde-simulator:latest
-    container_name: archer-mde
+    image: shikari-mde-simulator:latest
+    container_name: shikari-mde
     ports:
       - "8082:8080"
     mem_limit: 512m
@@ -125,9 +125,9 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - archer-network
+      - shikari-network
 
 networks:
-  archer-network:
+  shikari-network:
     driver: bridge
-    name: archer-network
+    name: shikari-network

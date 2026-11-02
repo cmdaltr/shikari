@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The Archer machine</title>
+<title>The Shikari machine</title>
 <style>
   :root{--navy:#0D1B2A;--navy2:#081019;--teal:#00D4AA;--amber:#F59E0B;--red:#EF4444;
     --ink:#E6EEF2;--muted:#8aa0b0;--mono:'JetBrains Mono','SFMono-Regular',ui-monospace,'Courier New',monospace;}
@@ -59,8 +59,8 @@
 <div id="scene"></div>
 <div class="tm">Splunk&reg;, Microsoft&reg;, Google&reg;, Elastic&reg; &amp; Anthropic logos are trademarks of their respective owners.</div>
 <header>
-  <h1><span class="a">The Archer</span> machine</h1>
-  <span class="fig">Fig &middot; Archer realm</span>
+  <h1><span class="a">The Shikari</span> machine</h1>
+  <span class="fig">Fig &middot; Shikari realm</span>
   <span class="hint">drag to orbit &middot; scroll to zoom &middot; click a landmark &middot; watch one campaign ride through at a time</span>
 </header>
 <div id="info"><span class="x" id="infoX">&times;</span><div class="cat" id="iCat"></div><h2 id="iName"></h2><p class="port" id="iPort"></p><p id="iDesc"></p></div>
@@ -106,12 +106,12 @@ const ICONS={
   vectr:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
   emulate:'<path d="M12 2l3 6 6 1-4.5 4 1 6-5.5-3-5.5 3 1-6L3 9l6-1z"/>',
 };
-const SHORT={cli:'archer-cli',webui:'Web UI',report:'Report',api:'Keep',cat:'Catalogue',saw:'MITRESaw',
+const SHORT={cli:'shikari-cli',webui:'Web UI',report:'Report',api:'Keep',cat:'Catalogue',saw:'MITRESaw',
   lab:'Lab',gen:'Blacksmith',llm:'LLM',db:'Store',yaml:'Cache',corr:'Weaver',secops:'SecOps',mde:'Defender',
   splunk:'Splunk',elastic:'Elastic',vectr:'VECTR',emulate:'Adversary'};
 
 const NODES=[
- {id:'cli',name:'archer-cli',port:'command tent',kind:'tent',col:C.teal,pos:[-15,-4.5],desc:'The command tent. You run archer-cli hunt / run / start — the supervisor that sets a campaign in motion.'},
+ {id:'cli',name:'shikari-cli',port:'command tent',kind:'tent',col:C.teal,pos:[-15,-4.5],desc:'The command tent. You run shikari-cli hunt / run / start — the supervisor that sets a campaign in motion.'},
  {id:'webui',name:'Web UI',port:'muster yard',kind:'stables',col:C.teal,pos:[-15,-0.5],desc:'The muster-yard stables. The server-rendered web UI — Hunt, Coverage, Catalogue, Library — where a hunt is called.'},
  {id:'report',name:'Threat report',port:'longboat',kind:'boat',col:C.wood,pos:[-21,12],desc:'An uploaded report or URL arrives by longboat — techniques and IOCs pulled from the field.'},
  {id:'api',name:'FastAPI app',port:'the keep :8000',kind:'keep',col:C.stone,pos:[-9,0],desc:'The keep. Every request passes through the FastAPI app — the stronghold at the centre of the realm.'},
@@ -120,7 +120,7 @@ const NODES=[
  {id:'lab',name:'Telemetry · Lab',port:'grain silo',kind:'silo',col:C.amber,pos:[-9.5,-8],big:true,desc:'The great grain silo. Public corpora and your own ART recordings — telemetry that grounds detection fields.'},
  {id:'gen',name:'Query generator',port:'blacksmith',kind:'blacksmith',col:C.wood,pos:[-2,0],desc:"The blacksmith. Each technique is forged into a vendor-native query — LLM tier or no-LLM template tier."},
  {id:'llm',name:'LLM',port:'oracle temple (optional)',kind:'temple',col:C.amber,pos:[-3,-7],opt:true,desc:'The oracle temple. Optional — Ollama (local) or Anthropic. Compact prompt + evidence, with a degenerate-output guard. AI is opt-in.'},
- {id:'db',name:'SQLite store',port:'store silo',kind:'silo',col:C.stone,pos:[-5,4],desc:'The store silo — archer.db. Threat-library cases, assessments, saved detections.'},
+ {id:'db',name:'SQLite store',port:'store silo',kind:'silo',col:C.stone,pos:[-5,4],desc:'The store silo — shikari.db. Threat-library cases, assessments, saved detections.'},
  {id:'yaml',name:'Detection YAML',port:'weapons cache',kind:'cache',col:C.teal,pos:[3,5],desc:'The weapons cache — data/groups. Finished detections: name, technique, query, severity, connectors, indicators.'},
  {id:'corr',name:'Correlation engine',port:"weaver's loom",kind:'weaver',col:C.teal,pos:[4,-2],desc:'The weaver. Ties techniques into single-vendor sequences and cross-vendor playbooks on host/user entities.'},
  {id:'secops',name:'Google SecOps',port:'target · YARA-L/UDM',kind:'target',col:C.teal,pos:[11,-6],desc:'Primary target. Detections are loosed as YARA-L over UDM; availability keyed on metadata.event_type.'},

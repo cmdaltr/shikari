@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
-Runs Atomic Red Team tests on this machine and saves each test's logs for Archer's Emulate page
-(archer/telemetry/lab.py, #22).
+Runs Atomic Red Team tests on this machine and saves each test's logs for Shikari's Emulate page
+(shikari/telemetry/lab.py, #22).
 
 .DESCRIPTION
 Run it on a disposable test machine, never on one you care about: the tests change the system.
@@ -21,9 +21,9 @@ For each test it records, between the test's start and end:
            plists.ndjson   launch agents, launch daemons and login hooks added, changed or removed
 
 If the machine is onboarded to Defender for Endpoint, fetch Defender's own rows afterwards on
-Archer's machine: python -m archer.telemetry --mde-export data/telemetry/lab/<run>
+Shikari's machine: python -m shikari.telemetry --mde-export data/telemetry/lab/<run>
 
-Copy the run's folder to Archer's data/telemetry/lab/ and press Update on the Emulate page.
+Copy the run's folder to Shikari's data/telemetry/lab/ and press Update on the Emulate page.
 
 .EXAMPLE
 sudo pwsh ./record-atomics.ps1 -Techniques T1053.003,T1543.001,T1059.004
@@ -31,7 +31,7 @@ sudo pwsh ./record-atomics.ps1 -Techniques T1053.003,T1543.001,T1059.004
 param(
     [Parameter(Mandatory)][string[]]$Techniques,
     [string]$Run = "$([Environment]::MachineName.ToLower())-$(Get-Date -Format yyyyMMdd-HHmm)",
-    [string]$Out = (Join-Path $PWD 'archer-lab'),
+    [string]$Out = (Join-Path $PWD 'shikari-lab'),
     [int]$Settle = 20,
     [int]$Timeout = 120,
     [string]$AtomicsPath = $(if ($IsWindows) { 'C:\AtomicRedTeam\atomics' } else { "$HOME/AtomicRedTeam/atomics" }),

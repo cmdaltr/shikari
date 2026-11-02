@@ -1,4 +1,4 @@
-"""The agent loop (archer/agents/runtime.py) with a scripted model instead of Claude."""
+"""The agent loop (shikari/agents/runtime.py) with a scripted model instead of Claude."""
 
 import time
 from types import SimpleNamespace
@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from archer.agents.runtime import Agent, Tool, start
+from shikari.agents.runtime import Agent, Tool, start
 
 
 def _text(text):
@@ -34,7 +34,7 @@ def _run(agent, script, inputs=None, auto_approve=False, decide=None):
         calls.append([dict(m) if isinstance(m, dict) else m for m in kwargs["messages"]])
         return script.pop(0)
 
-    with patch("anthropic.Anthropic"), patch("archer.ai.llm.providers._create_message", side_effect=fake_create):
+    with patch("anthropic.Anthropic"), patch("shikari.ai.llm.providers._create_message", side_effect=fake_create):
         session = start(agent, inputs or {"q": "hello"}, user_id=1, llm={"api_key": "k", "model": "m"},
                         context=None, auto_approve=auto_approve)
         deadline = time.time() + 5

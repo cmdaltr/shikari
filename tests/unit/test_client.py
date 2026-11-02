@@ -1,19 +1,19 @@
-"""archer.client: the HTTP client the console, MCP server and agents share."""
+"""shikari.client: the HTTP client the console, MCP server and agents share."""
 
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from archer.client import ArcherClient, ArcherError
+from shikari.client import ShikariClient, ShikariError
 
 
 def _client(responses):
-    c = ArcherClient(url="http://archer.test", email="a@b", password="pw")
+    c = ShikariClient(url="http://shikari.test", email="a@b", password="pw")
     c._signed_in = True
     c.session = MagicMock()
 
     def request(method, url, **kwargs):
-        body = responses[(method, url.replace("http://archer.test", ""))]
+        body = responses[(method, url.replace("http://shikari.test", ""))]
         r = MagicMock(status_code=200)
         r.json.return_value = body(kwargs) if callable(body) else body
         return r
@@ -34,7 +34,7 @@ def test_a_hunt_returns_its_run_name():
 @pytest.mark.unit
 def test_an_unknown_group_is_an_error_not_a_run():
     c = _client({("POST", "/generate"): {"redirect_url": "/manual?group_name=Nobody"}})
-    with pytest.raises(ArcherError, match="Not a known ATT&CK group"):
+    with pytest.raises(ShikariError, match="Not a known ATT&CK group"):
         c.hunt_group("Nobody")
 
 
@@ -69,7 +69,7 @@ def test_wait_follows_a_run_to_completion():
     states = iter([{"status": "running", "phase": "detections"}, {"status": "complete", "phase": "complete"}])
     c = _client({("GET", "/progress_status"): lambda kw: {"ok": True, "progress": next(states)}})
     seen = []
-    with patch("archer.client.time.sleep"):
+    with patch("shikari.client.time.sleep"):
         assert c.wait("FIN7", on_update=seen.append)["status"] == "complete"
     assert [s["phase"] for s in seen] == ["detections", "complete"]
 
@@ -81,7 +81,7 @@ def test_server_errors_carry_the_route_message():
     r = MagicMock(status_code=404)
     r.json.return_value = {"detail": "Group 'X' not found"}
     c.session.request.return_value = r
-    with pytest.raises(ArcherError, match="Group 'X' not found"):
+    with pytest.raises(ShikariError, match="Group 'X' not found"):
         c.threat_briefing("X")
 
 
@@ -99,7 +99,7 @@ def test_default_on_boxes_sent_explicitly():
 
 
 def test_reads_retry_on_a_dropped_connection_and_runs_do_not():
-    from archer.client import ArcherClient
-    retry = ArcherClient(url="http://127.0.0.1:1", token="t").session.get_adapter("http://x").max_retries
+    from shikari.client import ShikariClient
+    retry = ShikariClient(url="http://127.0.0.1:1", token="t").session.get_adapter("http://x").max_retries
     assert retry.read == 2 and retry.connect == 3
     assert "GET" in retry.allowed_methods and "POST" not in retry.allowed_methods

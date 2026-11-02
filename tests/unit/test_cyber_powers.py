@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from archer.intelligence import cyber_powers, feed
+from shikari.intelligence import cyber_powers, feed
 
 SVG = (Path(__file__).resolve().parents[2] / "static" / "images" / "world_equal_earth.svg").read_text()
 

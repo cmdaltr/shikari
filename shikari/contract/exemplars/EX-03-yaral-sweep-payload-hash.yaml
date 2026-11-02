@@ -1,0 +1,259 @@
+shikari_output:
+  contract_version: "1.0"
+  kind: rule
+  request_ref: REQ-2026-10-10-003
+  rule:
+    rule_id: 8d13f6a0-0401-4463-b5c1-bd8d94c8bce3
+    name: initial_access_t1195_002_udm_file_shai_hulud_payload_hash_sweep
+    author: Shikari Detection Engineering
+    created: "2026-10-10"
+    modified: "2026-10-10"
+    version: "1.0.0"
+    status: draft
+    detection_type: ioc_sweep
+    siem: yara_l
+    target_os:
+      - windows
+      - linux
+      - macos
+    log_sources:
+      - id: LS1
+        siem_source: FILE_CREATION, FILE_MODIFICATION, FILE_MOVE, FILE_DELETION
+        product: Microsoft Defender for Endpoint
+        udm_log_type: WINDOWS_DEFENDER_ATP
+        ingestion:
+          status: confirmed
+          profile_ref: ENVPROFILE-B-secops-observed-2026-10-09
+        fields:
+          - path: metadata.event_type
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+          - path: target.file.sha256
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+            note: Populated on DeviceFileEvents-derived events for files MDE hashed; absent where MDE did not record the write (macOS script writes in the 2026-10-09 positive control).
+          - path: target.file.full_path
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+          - path: principal.process.file.full_path
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+          - path: principal.process.command_line
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+          - path: principal.asset_id
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+          - path: principal.hostname
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+          - path: principal.user.userid
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+          - path: metadata.event_timestamp.seconds
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+          - path: metadata.id
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+        coverage_gaps:
+          - macOS MDE did not record DeviceFileEvents for setup.mjs or math_init.js in the 2026-10-09 positive control; the sweep cannot see those writes on macOS. Windows and Linux file-event coverage is assumed, not tested.
+    attack:
+      attack_version: "19.2"
+      bundle_ref: null
+      tactics:
+        - initial_access
+      technique_ids:
+        - T1195.002
+      mapping_rationale: Presence of the known setup.mjs, math_init.js or Math_Symbol.js file hash on disk evidences delivery of the compromised npm package (software supply chain). The sweep observes the file, not its execution, so the delivery technique is the correct mapping; execution is covered by the sibling process rules. T1195 has sub-techniques and the sub-technique is stated.
+    lookback: 30d
+    schedule: null
+    confidence:
+      rating: High
+      rationale: Exact SHA256 match on three campaign-attributed payload files with provenance; a file-hash indicator is the most specific indicator type and has no benign collision.
+    severity:
+      rating: High
+      rationale: The payload is a credential harvester; its presence on a developer host means the compromised package was installed, and the host and its tokens must be treated as exposed until execution is ruled out.
+    false_positives:
+      - id: FP1
+        scenario: A security analyst or developer downloads the payload sample for analysis, or an AV engine quarantines or deletes it.
+        population: Security team hosts and malware-analysis sandboxes
+        distinguishing_fields:
+          - field: principal.process.file.full_path
+            benign_pattern: browser, curl, wget, an analysis tool, or the AV engine image (MsMpEng) as the writing or deleting process
+        handled_by: triage
+        suppression_id: null
+    tuning_notes:
+      baseline:
+        window_days: 30
+        before_tuning: 0
+        after_tuning: 0
+        alerts_per_day_after_aggregation: null
+        measured_on: "2026-10-09"
+        measurement_procedure: Run the rule as a retrohunt over the lookback and count distinct devices; revision 2 returned 0 results over the tenant on 2026-10-09 with file events ingested.
+      suppressions: []
+      dependencies:
+        - type: reference_list
+          name: shai_hulud_payload_sha256
+          declared_in: reference_lists
+          definition_ref: REF1, indicators IOC1-IOC3
+      first_parameter_to_adjust: The reference list contents. Add hashes as the campaign evolves; never add filename-only indicators to this list.
+      known_limitations:
+        - FILE_DELETION is included so that AV clean-up of the payload still surfaces the host; triage must read $event_types.
+        - UDM principal.process.parent_process.command_line is not asserted as populated for file events; the writer's own command line is projected instead.
+      split_from: []
+    references:
+      - id: REF1
+        title: Mini Shai-Hulud campaign payload hashes (setup.mjs, math_init.js, Math_Symbol.js), analyst notes 2026-10-09
+        locator: shikari fable fidelity workbook (populated).xlsx, Queries tab, Q050 Query Text and Notes; Q023 KnownMaliciousHashes
+        accessed: "2026-10-10"
+        used_for:
+          - IOC1
+          - IOC2
+          - IOC3
+    indicators:
+      - id: IOC1
+        type: sha256
+        value: 54dc7ea54a1317cca0e890a2770630cf7fa6c97813e0cb9d2caa93012b350668
+        reference_id: REF1
+        first_reported: "2026-10-09"
+      - id: IOC2
+        type: sha256
+        value: fd3ca4007b225fdf8de7af4345a19179d5efa8c4bb9205f88cda806e5684b1eb
+        reference_id: REF1
+        first_reported: "2026-10-09"
+      - id: IOC3
+        type: sha256
+        value: 9fc2570b7cef51c1b8df116d144d11ff4096357be7d2c4c6367cfc2509cf1bcc
+        reference_id: REF1
+        first_reported: "2026-10-09"
+    reference_lists:
+      - name: shai_hulud_payload_sha256
+        type: string
+        purpose: match
+        indicator_ids:
+          - IOC1
+          - IOC2
+          - IOC3
+    entity_output:
+      timestamp_first: $first_seen
+      timestamp_last: $last_seen
+      device: $hostnames
+      account: $accounts
+      process: $writer_processes, $writer_commands
+      parent_command_line: null
+      evidence_value: $matched_hashes, $file_paths
+      source_table: $event_types
+    correlation:
+      events:
+        - var: f
+          source_id: LS1
+          role: single
+      join_keys: []
+      ordering: null
+      window: 1h
+    regexes: []
+    complexity:
+      lines: 41
+      event_variables_or_joins: 1
+      union_branches: 0
+      nesting_depth: 0
+    validation:
+      fidelity_basis: logic_review
+      compile:
+        status: not_run
+      field_existence:
+        schema_ref: Google SecOps UDM field list, 2026-10
+        status: checked
+      field_population:
+        status: known_populated
+        evidence: FILE_CREATION from MDE observed on most devices in the tenant on 2026-10-09 (workbook Q050 Notes); target.file.sha256 is the standard hash field for DeviceFileEvents-derived events.
+      ingestion:
+        status: confirmed
+        profile_ref: ENVPROFILE-B-secops-observed-2026-10-09
+      join_portability:
+        status: not_applicable
+        notes: Single event variable; match on principal.asset_id only.
+      regex_checks:
+        status: not_run
+      positive_control:
+        status: failed_to_observe
+        procedure: Write setup.mjs with hash IOC1 to a repository path on a test host and confirm one result for that device with the hash in $matched_hashes. On macOS (2026-10-09) MDE recorded no file event for the write; repeat on a Windows or Linux host before relying on the sweep for those platforms.
+        evidence_ref: REF1
+        date: "2026-10-09"
+    query: |
+      rule initial_access_t1195_002_udm_file_shai_hulud_payload_hash_sweep {
+        meta:
+          author = "Shikari Detection Engineering"
+          description = "Known Mini Shai-Hulud payload SHA256 observed on any file create, modify, move or delete event. Retrospective IOC sweep; aggregated per device over 1 hour."
+          rule_id = "8d13f6a0-0401-4463-b5c1-bd8d94c8bce3"
+          version = "1.0.0"
+          status = "draft"
+          detection_type = "ioc_sweep"
+          attack_version = "19.2"
+          tactic = "initial_access"
+          technique_ids = "T1195.002"
+          severity = "HIGH"
+          priority = "HIGH"
+          confidence = "High"
+          reference = "REF1"
+
+        events:
+          (
+            $f.metadata.event_type = "FILE_CREATION"
+            or $f.metadata.event_type = "FILE_MODIFICATION"
+            or $f.metadata.event_type = "FILE_MOVE"
+            or $f.metadata.event_type = "FILE_DELETION"
+          )
+          $f.target.file.sha256 in %shai_hulud_payload_sha256
+          $f.principal.asset_id = $device
+          $device != ""
+
+        match:
+          $device over 1h
+
+        outcome:
+          $first_seen = min($f.metadata.event_timestamp.seconds)
+          $last_seen = max($f.metadata.event_timestamp.seconds)
+          $event_count = count_distinct($f.metadata.id)
+          $event_types = array_distinct($f.metadata.event_type)
+          $hostnames = array_distinct($f.principal.hostname)
+          $accounts = array_distinct($f.principal.user.userid)
+          $matched_hashes = array_distinct($f.target.file.sha256)
+          $file_paths = array_distinct($f.target.file.full_path)
+          $writer_processes = array_distinct($f.principal.process.file.full_path)
+          $writer_commands = array_distinct($f.principal.process.command_line)
+
+        condition:
+          $f
+      }

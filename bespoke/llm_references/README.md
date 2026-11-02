@@ -1,6 +1,6 @@
-# Reference Queries for Archer Detection Generation
+# Reference Queries for Shikari Detection Generation
 
-This directory contains production-tested detection queries that Archer uses as:
+This directory contains production-tested detection queries that Shikari uses as:
 1. **Templates** - Reference patterns for generating new queries with similar structure
 2. **Few-shot examples** - Examples provided to the LLM for learning query style and best practices
 
@@ -115,7 +115,7 @@ version: 1.0
 kind: Scheduled
 metadata:
     source:
-        kind: Archer
+        kind: Shikari
     author:
         name: [your_id]
     support:
@@ -200,18 +200,18 @@ let Exclusions = datatable(item:string) ["item1", "item2"];
 | summarize by Timestamp, DeviceName, ActionType, AccountName, [other fields]
 ```
 
-## How Archer Uses These Queries
+## How Shikari Uses These Queries
 
-1. **Template Matching**: When generating a detection for a specific technique/platform, Archer looks for existing reference queries with the same `technique_id` or similar `log_source`.
+1. **Template Matching**: When generating a detection for a specific technique/platform, Shikari looks for existing reference queries with the same `technique_id` or similar `log_source`.
 
-2. **Pattern Extraction**: The `query_patterns` section helps Archer understand common patterns like:
+2. **Pattern Extraction**: The `query_patterns` section helps Shikari understand common patterns like:
    - Field extraction methods
    - Identity enrichment approaches
    - Output formatting conventions
 
 3. **Few-shot Learning**: Reference queries are provided to the LLM as examples of well-structured, production-tested detections.
 
-4. **Indicator Mapping**: The `indicators` field helps Archer understand what IOCs are relevant to each technique.
+4. **Indicator Mapping**: The `indicators` field helps Shikari understand what IOCs are relevant to each technique.
 
 ## Testing Your Reference Queries
 

@@ -1,7 +1,7 @@
 
 
 def test_redacted_segment_becomes_a_wildcard():
-    from archer.build.ioc_sweep import clean_report_iocs, mde_sweep, secops_sweep
+    from shikari.build.ioc_sweep import clean_report_iocs, mde_sweep, secops_sweep
     clean = clean_report_iocs({"file": [r"c:\users\[redacted]\downloads\kk\undef.exe", r"C:\Users\<user>\AppData\x.dll"]})
     assert "file" not in clean
     assert clean["file_pattern"][0] == r"^c:[\\/]users[\\/][^\\/]+[\\/]downloads[\\/]kk[\\/]undef\.exe$"
@@ -10,7 +10,7 @@ def test_redacted_segment_becomes_a_wildcard():
 
 
 def test_system_files_are_swept_for_being_written():
-    from archer.build.ioc_sweep import clean_report_iocs, mde_sweep, secops_sweep
+    from shikari.build.ioc_sweep import clean_report_iocs, mde_sweep, secops_sweep
     clean = clean_report_iocs({"file": [r"c:\windows\system32\tieringengineservice.exe", "/usr/bin/.sshd",
                                         "comsvcs.dll", "undef.exe"]})
     assert clean == {"system_file": [r"c:\windows\system32\tieringengineservice.exe", "/usr/bin/.sshd"],
@@ -22,7 +22,7 @@ def test_system_files_are_swept_for_being_written():
 
 
 def test_known_good_values_are_left_out():
-    from archer.build.ioc_sweep import clean_report_iocs
+    from shikari.build.ioc_sweep import clean_report_iocs
     clean = clean_report_iocs({
         "domain": ["login.microsoftonline[.]com", "evil.s3.amazonaws[.]com", "s3.amazonaws[.]com",
                    "staybud.dpdns[.]org", "raw.githubusercontent[.]com"],
@@ -36,7 +36,7 @@ def test_known_good_values_are_left_out():
 
 def test_known_good_extends_from_bespoke(tmp_path, monkeypatch):
     import json
-    from archer.build import ioc_sweep
+    from shikari.build import ioc_sweep
     extra = tmp_path / "known_good.json"
     extra.write_text(json.dumps({"first_party_domains": {"values": ["corp-intranet.example"]}}))
     monkeypatch.setattr(ioc_sweep, "KNOWN_GOOD_FILES", ioc_sweep.KNOWN_GOOD_FILES[:1] + (str(extra),))
@@ -49,7 +49,7 @@ def test_known_good_extends_from_bespoke(tmp_path, monkeypatch):
 
 def test_ips_and_domains_expire_on_regenerate():
     from datetime import date
-    from archer.build.ioc_sweep import apply_expiry
+    from shikari.build.ioc_sweep import apply_expiry
     first = {"ip": ["1.2.3.4"], "domain": ["evil.example"], "sha256": ["ab" * 32]}
     assert apply_expiry("G", first, regenerate=False, today=date(2026, 1, 1)) == date(2026, 4, 1)
     later = {"ip": ["1.2.3.4", "5.6.7.8"], "domain": ["evil.example"], "sha256": ["ab" * 32]}

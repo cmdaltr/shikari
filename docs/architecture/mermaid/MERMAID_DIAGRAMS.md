@@ -1,6 +1,6 @@
-# Archer — Architecture & Process Diagrams
+# Shikari — Architecture & Process Diagrams
 
-> **Audience:** Anyone who needs to understand how Archer works — security engineers, managers, stakeholders.
+> **Audience:** Anyone who needs to understand how Shikari works — security engineers, managers, stakeholders.
 > **Minimal code.** These diagrams focus on *what happens* and *why*, not implementation details.
 
 ---
@@ -162,7 +162,7 @@ flowchart TD
         YAMLS["Detection YAMLs<br/>data/groups/"]
         CORR_F["Correlation JSON<br/>data/correlate/"]
         CACHE["Caches<br/>data/cache/"]
-        DB["Database<br/>archer.db"]
+        DB["Database<br/>shikari.db"]
     end
 
     subgraph OUTPUTS ["OUTPUTS"]
@@ -195,21 +195,21 @@ flowchart TD
 
 ---
 
-## 1. System Overview — What Is Archer?
+## 1. System Overview — What Is Shikari?
 
-Archer takes a **threat actor name** (or CVE, report, ATT&CK techniques or company) and automatically produces **detection queries** for your SIEMs (Google SecOps, Microsoft Defender XDR, Splunk and Elastic). It does this by looking up what that threat actor actually does (via MITRE ATT&CK), then building tailored searches for each technique.
+Shikari takes a **threat actor name** (or CVE, report, ATT&CK techniques or company) and automatically produces **detection queries** for your SIEMs (Google SecOps, Microsoft Defender XDR, Splunk and Elastic). It does this by looking up what that threat actor actually does (via MITRE ATT&CK), then building tailored searches for each technique.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
 graph TB
-    subgraph "What You Give Archer"
+    subgraph "What You Give Shikari"
         A["Threat Actor Name<br/><i>e.g. Scattered Spider</i>"]
         B["CVE Number<br/><i>e.g. CVE-2024-1234</i>"]
         C["Threat Blog / Report"]
         D["Specific ATT&CK Techniques<br/><i>e.g. T1059.004</i>"]
     end
 
-    subgraph "What Archer Does"
+    subgraph "What Shikari Does"
         E["Looks up real attack behaviours<br/>from MITRE ATT&CK"]
         F["Builds detection queries<br/>for each behaviour"]
         G["Links related detections<br/>into attack chains"]
@@ -267,8 +267,8 @@ This is the full journey from "I want detections for Scattered Spider" to finish
 flowchart TD
     subgraph "Entry Points"
         WEB(["Web UI"])
-        CLI(["archer-cli offline"])
-        ADF(["archer-cli console<br/><i>Interactive Shell</i>"])
+        CLI(["shikari-cli offline"])
+        ADF(["shikari-cli console<br/><i>Interactive Shell</i>"])
     end
 
     WEB --> START
@@ -367,8 +367,8 @@ graph TB
     subgraph IFACE ["Interfaces"]
         direction LR
         WEB["Web UI<br/>server-rendered"]
-        CON["archer-cli console"]
-        CLI["archer-cli"]
+        CON["shikari-cli console"]
+        CLI["shikari-cli"]
         MCP["MCP server"]
     end
 
@@ -420,7 +420,7 @@ graph TB
 
     subgraph STORE ["Storage"]
         direction LR
-        DB["archer.db<br/>Library, users, Feed"]
+        DB["shikari.db<br/>Library, users, Feed"]
         YAML["Detection YAMLs<br/>data/groups/"]
         CJSON["Correlations<br/>data/correlate/"]
         BESPOKE["bespoke/ mappings<br/>gitignored"]
@@ -462,7 +462,7 @@ graph TB
 
 ---
 
-## 4. Decision Map — Every Choice Archer Makes
+## 4. Decision Map — Every Choice Shikari Makes
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
@@ -572,7 +572,7 @@ flowchart TD
         TEL_S["Recorded attacks<br/>+ GUIDE"]
     end
 
-    subgraph PROCESS ["Archer Processing"]
+    subgraph PROCESS ["Shikari Processing"]
         INGEST["Ingest & Normalise"]
         BUILD["Build Detections"]
         CORRELATE_P["Correlate & Score"]
@@ -633,7 +633,7 @@ flowchart TD
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
 graph LR
-    ARCHER(("<b>Archer</b>"))
+    SHIKARI(("<b>Shikari</b>"))
 
     subgraph REQ ["Required"]
         STIX["MITRE ATT&CK<br/>STIX bundle"]
@@ -681,25 +681,25 @@ graph LR
         VECTR["VECTR import/export<br/>threat library, issue 24"]
     end
 
-    STIX --> ARCHER
-    CLOUD -.-> ARCHER
-    LOCAL -.-> ARCHER
-    NVD -.-> ARCHER
-    GHPOC -.-> ARCHER
-    RULES -.-> ARCHER
-    FEEDS -.-> ARCHER
-    LOL -.-> ARCHER
-    SPL & OTRF & EVTX & MAC -.-> ARCHER
-    GUIDE -.-> ARCHER
-    ARCHER -.->|"queries"| SECOPS
-    ARCHER -.->|"queries"| MDE
-    ARCHER -.-> DOCKER
-    ARCHER -.->|"REST"| CALDERA
-    VCDB & KEV & RL -.->|"cached feeds"| ARCHER
-    LAB -.-> ARCHER
-    ARCHER -.-> VECTR
+    STIX --> SHIKARI
+    CLOUD -.-> SHIKARI
+    LOCAL -.-> SHIKARI
+    NVD -.-> SHIKARI
+    GHPOC -.-> SHIKARI
+    RULES -.-> SHIKARI
+    FEEDS -.-> SHIKARI
+    LOL -.-> SHIKARI
+    SPL & OTRF & EVTX & MAC -.-> SHIKARI
+    GUIDE -.-> SHIKARI
+    SHIKARI -.->|"queries"| SECOPS
+    SHIKARI -.->|"queries"| MDE
+    SHIKARI -.-> DOCKER
+    SHIKARI -.->|"REST"| CALDERA
+    VCDB & KEV & RL -.->|"cached feeds"| SHIKARI
+    LAB -.-> SHIKARI
+    SHIKARI -.-> VECTR
 
-    style ARCHER fill:#f5a623,stroke:#c17d10,color:#fff
+    style SHIKARI fill:#f5a623,stroke:#c17d10,color:#fff
     style VCDB fill:#50e3c2,stroke:#2ca089,color:#333
     style KEV fill:#50e3c2,stroke:#2ca089,color:#333
     style RL fill:#50e3c2,stroke:#2ca089,color:#333
@@ -791,7 +791,7 @@ flowchart TD
 
     STATIC --> GATE{"Meets the<br/>thresholds?"}
 
-    GATE -- "In CI<br/><i>detections as code</i>" --> CI["CI gate passes or fails<br/>the build<br/><i>archer.validation.ci</i>"]
+    GATE -- "In CI<br/><i>detections as code</i>" --> CI["CI gate passes or fails<br/>the build<br/><i>shikari.validation.ci</i>"]
     GATE -- "Interactive" --> DOCKER_CHECK{"Is Docker<br/>available?"}
 
     DOCKER_CHECK -- "No" --> SKIP["Runtime test unavailable<br/><i>Docker required</i>"]
@@ -905,12 +905,12 @@ flowchart TD
 
 ## 11. CALDERA Workflow — Chained Emulation and Static Checks
 
-How a CALDERA operation validates detections and correlations. CALDERA is used for what Atomic Red Team runs can't give: fact chaining between steps and a real implant (sandcat) on the agents. Archer plans the operation first and changes nothing on CALDERA until it's confirmed, then runs it, collects each step's command, host, times and output, optionally captures the agent host's logs over each step's window — over the agent's own C2 (any OS, nothing installed on the host) or a lab machine Lab manages — and checks saved detections and correlations against that evidence statically, with no AI.
+How a CALDERA operation validates detections and correlations. CALDERA is used for what Atomic Red Team runs can't give: fact chaining between steps and a real implant (sandcat) on the agents. Shikari plans the operation first and changes nothing on CALDERA until it's confirmed, then runs it, collects each step's command, host, times and output, optionally captures the agent host's logs over each step's window — over the agent's own C2 (any OS, nothing installed on the host) or a lab machine Lab manages — and checks saved detections and correlations against that evidence statically, with no AI.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
 flowchart TD
-    PROVISION(["Add an agent — provision &amp; enrol<br/>web · desktop app · archer-cli caldera"]) --> AGENTS["Managed agent in a group<br/>Tart VM · Docker · UTM · OrbStack<br/><i>machine pulls arch-correct sandcat, runs it detached;<br/>topology shows enrolled vs not, managed vs external</i>"]
+    PROVISION(["Add an agent — provision &amp; enrol<br/>web · desktop app · shikari-cli caldera"]) --> AGENTS["Managed agent in a group<br/>Tart VM · Docker · UTM · OrbStack<br/><i>machine pulls arch-correct sandcat, runs it detached;<br/>topology shows enrolled vs not, managed vs external</i>"]
     AGENTS -.->|"the agents an operation runs on"| TARGET
 
     TARGET(["Techniques, a threat group<br/>or a CVE + an agent group"]) --> READ["Read CALDERA's abilities<br/>and the group's agents<br/><i>reads only</i>"]
@@ -952,7 +952,7 @@ flowchart TD
 
 ## 12. Adversary Ranking — Who Is Most Likely To Target You
 
-The Ordered Adversary List (`archer.intelligence.adversary_ranking`): the top-10 ATT&CK groups most likely to target a profiled organisation, from four offline, no-AI signals — industry, geography, exposed OSINT and public incidents. Each signal reads data Archer already holds or caches; the ranking combines them into a likelihood and band, shown on /exposure and /review. Setting an **Organisation** on your profile auto-profiles that company and stars it in the catalogue.
+The Ordered Adversary List (`shikari.intelligence.adversary_ranking`): the top-10 ATT&CK groups most likely to target a profiled organisation, from four offline, no-AI signals — industry, geography, exposed OSINT and public incidents. Each signal reads data Shikari already holds or caches; the ranking combines them into a likelihood and band, shown on /exposure and /review. Setting an **Organisation** on your profile auto-profiles that company and stars it in the catalogue.
 
 ```mermaid
 
@@ -1008,6 +1008,6 @@ graph LR
 
 ---
 
-## Quick Reference — Explaining Archer in One Paragraph
+## Quick Reference — Explaining Shikari in One Paragraph
 
-> **Archer** is a tool that turns threat intelligence into working detection queries. You give it the name of a threat actor (like "Scattered Spider"), and it looks up every attack technique that actor is known to use — drawing from the industry-standard MITRE ATT&CK database. For each technique, it extracts the specific indicators (commands, files, network addresses) and builds tailored search queries for your SIEMs (Google SecOps and Microsoft Defender XDR). It then links related detections into attack chains so you can spot multi-step intrusions, not just individual events. Optionally, it can test those detections in a sandboxed environment and cross-reference them against public detection rules. Emulate shows which logs record each technique, from attacks recorded in labs, and whether your detections' indicators appear in them. Everything exports to a spreadsheet, and attack flows to STIX. AI is opt-in throughout.
+> **Shikari** is a tool that turns threat intelligence into working detection queries. You give it the name of a threat actor (like "Scattered Spider"), and it looks up every attack technique that actor is known to use — drawing from the industry-standard MITRE ATT&CK database. For each technique, it extracts the specific indicators (commands, files, network addresses) and builds tailored search queries for your SIEMs (Google SecOps and Microsoft Defender XDR). It then links related detections into attack chains so you can spot multi-step intrusions, not just individual events. Optionally, it can test those detections in a sandboxed environment and cross-reference them against public detection rules. Emulate shows which logs record each technique, from attacks recorded in labs, and whether your detections' indicators appear in them. Everything exports to a spreadsheet, and attack flows to STIX. AI is opt-in throughout.

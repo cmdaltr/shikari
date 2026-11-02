@@ -1,7 +1,7 @@
-"""Unit tests for archer.contract (output contract v1.0).
+"""Unit tests for shikari.contract (output contract v1.0).
 
 The contract package is loaded by file path so these tests run without the web stack
-(archer/__init__ imports requests, stix2 and friends). Needs only PyYAML and jsonschema.
+(shikari/__init__ imports requests, stix2 and friends). Needs only PyYAML and jsonschema.
 """
 import importlib.util
 import sys
@@ -10,17 +10,17 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-PKG = ROOT / "archer" / "contract"
+PKG = ROOT / "shikari" / "contract"
 
 
 @pytest.fixture(scope="module")
 def contract():
-    if "archer.contract" in sys.modules:
-        return sys.modules["archer.contract"]
-    spec = importlib.util.spec_from_file_location("archer.contract", PKG / "__init__.py",
+    if "shikari.contract" in sys.modules:
+        return sys.modules["shikari.contract"]
+    spec = importlib.util.spec_from_file_location("shikari.contract", PKG / "__init__.py",
                                                   submodule_search_locations=[str(PKG)])
     mod = importlib.util.module_from_spec(spec)
-    sys.modules["archer.contract"] = mod
+    sys.modules["shikari.contract"] = mod
     spec.loader.exec_module(mod)
     return mod
 
@@ -84,7 +84,7 @@ def test_mutation_is_caught(contract, name, ex, old, new, gate):
 
 
 # ---------------------------------------------------------------------------
-# Query-level lint on legacy (pre-contract) queries: the Archer rows Q036-Q049
+# Query-level lint on legacy (pre-contract) queries: the Shikari rows Q036-Q049
 # ---------------------------------------------------------------------------
 
 Q044_KQL = """DeviceProcessEvents
@@ -95,7 +95,7 @@ Q044_KQL = """DeviceProcessEvents
 
 Q048_YARAL = """rule T1003_001 {
 meta:
-author = "Archer Detection Engineering"
+author = "Shikari Detection Engineering"
 description = "Detects LSASS Memory (T1003.001)"
 severity = "MEDIUM"
 
@@ -110,7 +110,7 @@ $e
 
 Q037_YARAL = """rule T1003_007 {
 meta:
-author = "Archer Detection Engineering"
+author = "Shikari Detection Engineering"
 severity = "MEDIUM"
 
 events:
@@ -169,7 +169,7 @@ def test_legacy_lint_spl_is_skipped(contract):
 def test_contract_exemplar_queries_are_clean_under_legacy_lint(contract):
     import yaml
     for p in EXEMPLARS:
-        doc = yaml.safe_load(p.read_text())["archer_output"]
+        doc = yaml.safe_load(p.read_text())["shikari_output"]
         if doc["kind"] != "rule":
             continue
         rep = contract.lint_query(doc["rule"]["query"], doc["rule"]["siem"])
@@ -178,7 +178,7 @@ def test_contract_exemplar_queries_are_clean_under_legacy_lint(contract):
 
 @pytest.mark.unit
 def test_gate_is_warn_only_by_default(contract, monkeypatch, capsys):
-    monkeypatch.delenv("ARCHER_CONTRACT_STRICT", raising=False)
+    monkeypatch.delenv("SHIKARI_CONTRACT_STRICT", raising=False)
     allowed, rep = contract.gate_query(Q044_KQL, label="q044")
     assert allowed and rep.fails
     assert "[contract WARN]" in capsys.readouterr().out
@@ -186,7 +186,7 @@ def test_gate_is_warn_only_by_default(contract, monkeypatch, capsys):
 
 @pytest.mark.unit
 def test_gate_blocks_in_strict_mode(contract, monkeypatch):
-    monkeypatch.setenv("ARCHER_CONTRACT_STRICT", "1")
+    monkeypatch.setenv("SHIKARI_CONTRACT_STRICT", "1")
     allowed, _ = contract.gate_query(Q044_KQL, label="q044")
     assert not allowed
 
@@ -213,7 +213,7 @@ def test_pipeline_rejection_and_failure(contract, tmp_path, monkeypatch):
 @pytest.mark.unit
 def test_prompt_block_contains_contract_and_exemplars(contract):
     block = contract.contract_prompt_block("yara_l", "hunt")
-    assert "archer_output" in block and "EX-01" in block and "PRE-OUTPUT CHECKLIST" in block
+    assert "shikari_output" in block and "EX-01" in block and "PRE-OUTPUT CHECKLIST" in block
     kql = contract.contract_prompt_block("kql", "ioc_sweep")
     assert "EX-06" in kql and "EX-07" in kql
 
@@ -283,7 +283,7 @@ def test_empty_and_unbalanced_brackets_are_caught(contract):
 
 BRANCHED_YARAL = r"""rule t1564_003 {
 meta:
-author = "Archer"
+author = "Shikari"
 
 events:
 ($e.metadata.event_type = "PROCESS_LAUNCH" and re.regex($e.target.process.command_line, `powershell\.exe\s+-WindowStyle\s+Hidden`) nocase) or (($e.metadata.event_type = "REGISTRY_CREATION" or $e.metadata.event_type = "REGISTRY_MODIFICATION") and re.regex($e.target.registry.registry_key, `HKEY_CURRENT_USER\\Console`) nocase)

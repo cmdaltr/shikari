@@ -1,6 +1,6 @@
 # Docker Deployment Guide
 
-This guide explains how to run Archer using Docker and Docker Compose.
+This guide explains how to run Shikari using Docker and Docker Compose.
 
 ## Quick Start
 
@@ -12,7 +12,7 @@ docker-compose up --build
 docker-compose up -d --build
 
 # View logs
-docker-compose logs -f archer
+docker-compose logs -f shikari
 
 # Stop containers
 docker-compose down
@@ -22,7 +22,7 @@ docker-compose down
 
 ### OSINT Repository Initialization
 
-On **first run**, Archer will clone 4 OSINT detection repositories (~425MB total):
+On **first run**, Shikari will clone 4 OSINT detection repositories (~425MB total):
 
 - Elastic Security (106MB)
 - Splunk Security Content (58MB)
@@ -44,7 +44,7 @@ On **first run**, Archer will clone 4 OSINT detection repositories (~425MB total
 
 ```bash
 # Watch the initialization process
-docker-compose logs -f archer
+docker-compose logs -f shikari
 
 # You'll see:
 🔍 OSINT repositories not found. Initializing...
@@ -57,7 +57,7 @@ This will take 15-20 minutes on first run.
 # ... etc ...
 
 ✅ OSINT repositories initialized successfully!
-🚀 Starting Archer application...
+🚀 Starting Shikari application...
 ```
 
 ## Subsequent Runs
@@ -69,7 +69,7 @@ docker-compose up
 
 # Output:
 ✅ OSINT repositories already present, skipping clone.
-🚀 Starting Archer application...
+🚀 Starting Shikari application...
 # App starts in seconds!
 ```
 
@@ -85,7 +85,7 @@ volumes:
 ### What's Persisted:
 
 - ✅ OSINT repositories (`data/repos/`)
-- ✅ User database (`data/archer.db`)
+- ✅ User database (`data/shikari.db`)
 - ✅ Draft detections (`data/drafts/`)
 - ✅ Generated YAML files (`data/build/`)
 - ✅ OSINT cache (`data/osint_cache/`)
@@ -96,7 +96,7 @@ volumes:
 
 ## Accessing the Application
 
-Once started, Archer is available at:
+Once started, Shikari is available at:
 
 - **Web UI:** http://localhost:8000
 - **API Docs:** http://localhost:8000/docs
@@ -106,7 +106,7 @@ Once started, Archer is available at:
 The web interface will show a loading screen while OSINT repos are initializing:
 
 ```
-Initializing Archer
+Initializing Shikari
 Cloning detection repositories (this may take 15-20 minutes on first run)...
 
 This may take 15-20 minutes on first run while detection
@@ -146,7 +146,7 @@ docker-compose up
 
 **Check logs:**
 ```bash
-docker-compose logs archer
+docker-compose logs shikari
 ```
 
 **Common issues:**
@@ -234,12 +234,12 @@ environment:
 1. **Use persistent volumes**
    ```yaml
    volumes:
-     - archer-data:/app/data  # Named volume instead of bind mount
+     - shikari-data:/app/data  # Named volume instead of bind mount
    ```
 
 2. **Remove --reload flag**
    ```dockerfile
-   CMD ["uvicorn", "archer.app:app", "--host", "0.0.0.0", "--port", "8000"]
+   CMD ["uvicorn", "shikari.app:app", "--host", "0.0.0.0", "--port", "8000"]
    ```
 
 3. **Add health check**
@@ -270,7 +270,7 @@ The Docker image works on:
 - ✅ macOS (Intel, Apple Silicon)
 - ✅ Windows (with WSL2)
 
-## Updating Archer
+## Updating Shikari
 
 ```bash
 # Pull latest code
@@ -285,9 +285,9 @@ docker-compose up --build
 ## Support
 
 For issues:
-- Check logs: `docker-compose logs -f archer`
+- Check logs: `docker-compose logs -f shikari`
 - Verify mounts: `docker-compose config`
-- Test locally: `python -m uvicorn archer.app:app`
+- Test locally: `python -m uvicorn shikari.app:app`
 
 ## Summary
 
@@ -296,11 +296,11 @@ For issues:
 | **First run** | 15-20 minutes (clones OSINT repos) |
 | **Subsequent runs** | Seconds (repos already present) |
 | **Disk space** | ~1GB total |
-| **Ports** | 8000 (Archer) |
+| **Ports** | 8000 (Shikari) |
 | **Data persistence** | `./data` volume |
 | **OSINT update** | Automatic (hourly check) |
 
-Archer is ready when you see: `🚀 Starting Archer application...`
+Shikari is ready when you see: `🚀 Starting Shikari application...`
 
 ---
 
@@ -323,7 +323,7 @@ The validation containers are integrated into the main `docker-compose.yml` file
 
 ### Usage
 
-**Default startup** (Archer only):
+**Default startup** (Shikari only):
 ```bash
 docker-compose up -d
 ```
@@ -348,7 +348,7 @@ docker-compose --profile validation up -d
 
 | Service | Profile | Ports | RAM |
 |---------|---------|-------|-----|
-| Archer | (always) | 8000 | - |
+| Shikari | (always) | 8000 | - |
 | Google SecOps | `secops` | 8081 | ~512MB |
 | MDE | `mde` | 8082 | ~512MB |
 | Splunk | `splunk` | 8001, 8088, 8089 | ~2GB |

@@ -8,7 +8,7 @@ flowchart TD
 
     STATIC --> GATE{"Meets the<br/>thresholds?"}
 
-    GATE -- "In CI<br/><i>detections as code</i>" --> CI["CI gate passes or fails<br/>the build<br/><i>archer.validation.ci</i>"]
+    GATE -- "In CI<br/><i>detections as code</i>" --> CI["CI gate passes or fails<br/>the build<br/><i>shikari.validation.ci</i>"]
     GATE -- "Interactive" --> DOCKER_CHECK{"Is Docker<br/>available?"}
 
     DOCKER_CHECK -- "No" --> SKIP["Runtime test unavailable<br/><i>Docker required</i>"]

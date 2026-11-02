@@ -1,20 +1,20 @@
 """
 An analyst can change a detection's ATT&CK technique and tactics, with a comment, and
-restore the ATT&CK default (archer.build.attack_mapping).
+restore the ATT&CK default (shikari.build.attack_mapping).
 """
 import os
 
 import pytest
 import yaml
 
-from archer.build import attack_mapping as mapping
-from archer.build import run_files
-from archer.build import yaml as writer
+from shikari.build import attack_mapping as mapping
+from shikari.build import run_files
+from shikari.build import yaml as writer
 
 KQL = "DeviceProcessEvents\n| where ProcessCommandLine has \"procdump\""
-YARAL = """rule archer_t1003_001 {
+YARAL = """rule shikari_t1003_001 {
 meta:
-author = "Archer Detection Engineering"
+author = "Shikari Detection Engineering"
 description = "Detects LSASS Memory (T1003.001)"
 mitre_attack_technique = "T1003.001"
 severity = "HIGH"
@@ -134,7 +134,7 @@ def test_secops_rule_meta_follows_the_mapping(env):
     assert 'mitre_attack_technique = "T1055"' in query
     assert '"Detects Process Injection (T1055)"' in query
     assert 'severity = "CRITICAL"' in query and "$risk_score = 90" in query
-    assert "rule archer_t1003_001 {" in query  # the rule's identity in SecOps stays
+    assert "rule shikari_t1003_001 {" in query  # the rule's identity in SecOps stays
     assert not writer.file_state(str(path))["edited"]
 
 
@@ -175,17 +175,17 @@ def test_rule_rename_is_opt_in_and_restore_puts_it_back(env):
     path = env / "d.yaml"
     _write(path, query=YARAL, connector="GoogleSecOps")
     _change(path)
-    assert "rule archer_t1003_001 {" in _doc(path)["query"]
+    assert "rule shikari_t1003_001 {" in _doc(path)["query"]
     mapping.change(str(path), "T1055", ["Stealth", "Impact"], "Rename it", "a@example.test",
                    index=INDEX, tactic_order=TACTICS, rename_rule=True)
     doc = _doc(path)
-    assert "rule archer_t1055 {" in doc["query"]
-    assert doc["attack_override"]["rule_name"] == "archer_t1055"
-    assert doc["attack_mapping_history"][-1]["rule_renamed"] == {"from": "archer_t1003_001", "to": "archer_t1055"}
+    assert "rule shikari_t1055 {" in doc["query"]
+    assert doc["attack_override"]["rule_name"] == "shikari_t1055"
+    assert doc["attack_mapping_history"][-1]["rule_renamed"] == {"from": "shikari_t1003_001", "to": "shikari_t1055"}
     assert not writer.file_state(str(path))["edited"]
     mapping.restore(str(path), "Back", "a@example.test")
     doc = _doc(path)
-    assert "rule archer_t1003_001 {" in doc["query"] and 'mitre_attack_technique = "T1003.001"' in doc["query"]
+    assert "rule shikari_t1003_001 {" in doc["query"] and 'mitre_attack_technique = "T1003.001"' in doc["query"]
 
 
 def test_regenerate_keeps_a_renamed_rule(env):
@@ -197,8 +197,8 @@ def test_regenerate_keeps_a_renamed_rule(env):
     rewrite = writer.detection_action(str(path), "APT1")
     _write(path, query=YARAL, connector="GoogleSecOps", **rewrite)
     doc = _doc(path)
-    assert "rule archer_t1055 {" in doc["query"] and 'mitre_attack_technique = "T1055"' in doc["query"]
-    assert doc["attack_override"]["default"]["rule_name"] == "archer_t1003_001"
+    assert "rule shikari_t1055 {" in doc["query"] and 'mitre_attack_technique = "T1055"' in doc["query"]
+    assert doc["attack_override"]["default"]["rule_name"] == "shikari_t1003_001"
 
 
 def test_library_content_change_and_restore():

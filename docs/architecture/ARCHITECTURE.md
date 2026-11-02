@@ -1,6 +1,6 @@
 # Architecture Documentation
 
-Complete architecture and design documentation for Archer.
+Complete architecture and design documentation for Shikari.
 
 ## Architecture Documents
 
@@ -11,16 +11,16 @@ Complete architecture and design documentation for Archer.
 
 ### System Diagrams
 
-The component architecture (web UI and `archer-cli`) is now a single
+The component architecture (web UI and `shikari-cli`) is now a single
 theme-aware inline HTML/SVG diagram at `static/diagrams/architecture.html`,
 rendered on the Help page. The old Graphviz `cli_diagram`/`web_diagram`
 DOT pipeline has been retired.
 
 #### Flow Diagrams
 Located in `diagrams/flow/`:
-- `archer_flow.dot` - System flow (GraphViz source)
-- `archer_flow.pdf` - System flow (PDF)
-- `archer_flow.png` - System flow (PNG)
+- `shikari_flow.dot` - System flow (GraphViz source)
+- `shikari_flow.pdf` - System flow (PDF)
+- `shikari_flow.png` - System flow (PNG)
 
 ### Updating Diagrams
 
@@ -39,10 +39,10 @@ python update.py
 - [Schema](SCHEMA_NORMALIZATION.md) - YAML schema design
 
 ### For Architects
-- [System Flow Diagram](diagrams/flow/archer_flow.pdf) - Overall system flow
-- [Component Architecture](../../static/diagrams/architecture.html) - Web UI and `archer-cli` (inline, on the Help page)
+- [System Flow Diagram](diagrams/flow/shikari_flow.pdf) - Overall system flow
+- [Component Architecture](../../static/diagrams/architecture.html) - Web UI and `shikari-cli` (inline, on the Help page)
 - [Generation Flow](../../static/diagrams/pipeline.html) - Step-by-step input → MITRESaw → queries → correlation → artefacts (light)
-- [The Archer Machine](../../static/diagrams/machine.html) - Interactive 3D isometric view of the runtime (three.js; drag/zoom/click)
+- [The Shikari Machine](../../static/diagrams/machine.html) - Interactive 3D isometric view of the runtime (three.js; drag/zoom/click)
 
 ## Directory Structure
 
@@ -54,13 +54,13 @@ docs/architecture/
 ├── SCHEMA_NORMALIZATION.md        # Schema design
 └── diagrams/
     └── flow/                      # System flow diagrams
-        ├── archer_flow.dot
-        ├── archer_flow.pdf
-        ├── archer_flow.png
+        ├── shikari_flow.dot
+        ├── shikari_flow.pdf
+        ├── shikari_flow.png
         └── update.py
 ```
 
-The component architecture (web UI and `archer-cli`) lives at
+The component architecture (web UI and `shikari-cli`) lives at
 `static/diagrams/architecture.html`. Two companion views sit beside it:
 `static/diagrams/pipeline.html` (a light, top-to-bottom generation flow) and
 `static/diagrams/machine.html` (an interactive 3D isometric runtime scene). All

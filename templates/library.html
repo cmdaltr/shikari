@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "shared_macros.html" import render_vendor_logo, render_correlation_techniques, render_quality_badges %}
-{% block title %}Archer - Library{% endblock %}
+{% block title %}Shikari - Library{% endblock %}
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/library.css') }}?v={{ request.app.state.asset_version }}">
@@ -91,7 +91,7 @@
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
                         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
                     </svg>
-                    <span style="font-weight: 600; color: #6d28d9; font-size: 1.05em;">Archer Value Summary</span>
+                    <span style="font-weight: 600; color: #6d28d9; font-size: 1.05em;">Shikari Value Summary</span>
                 </div>
                 <div style="color: #666; font-size: 0.95em; line-height: 1.6;">
                     You've generated <strong>{{ detections|length }}</strong> production-ready detections across <strong>{{ all_groups|length }}</strong> threat groups,
@@ -138,14 +138,14 @@
                 <!-- Time Efficiency -->
                 <div style="background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                   <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Time Efficiency</div>
-                  {# manual_hours and archer_hours now passed from backend #}
-                  {% set speedup = (manual_hours / archer_hours)|round(0)|int if archer_hours > 0 else 0 %}
+                  {# manual_hours and shikari_hours now passed from backend #}
+                  {% set speedup = (manual_hours / shikari_hours)|round(0)|int if shikari_hours > 0 else 0 %}
                   <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
                     {% if speedup > 0 %}{{ speedup }}x{% else %}N/A{% endif %}
                   </div>
                   <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.4;">
                     Manual: {{ manual_hours }} hrs<br>
-                    Archer: {{ archer_hours }} hrs
+                    Shikari: {{ shikari_hours }} hrs
                   </div>
                 </div>
 
@@ -232,10 +232,10 @@
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
                     <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
                   </svg>
-                  <span style="font-weight: 600; color: #d97706; font-size: 1.05em;">Archer Value Summary</span>
+                  <span style="font-weight: 600; color: #d97706; font-size: 1.05em;">Shikari Value Summary</span>
                 </div>
                 <div style="color: #666; font-size: 0.95em; line-height: 1.6;">
-                  Archer delivered <strong>${{ '{:,}'.format(cost_savings) }}</strong> in cost savings by automating <strong>{{ hours_saved }} hours</strong> of manual detection engineering.
+                  Shikari delivered <strong>${{ '{:,}'.format(cost_savings) }}</strong> in cost savings by automating <strong>{{ hours_saved }} hours</strong> of manual detection engineering.
                   {% if speedup > 0 %}Detections were generated <strong>{{ speedup }}x faster</strong> than manual development.{% endif %}
                   {% if osint_count.count > 0 %}With <strong>{{ osint_count.count }}</strong> detections validated against real-world threat intelligence, you have immediate production-ready coverage.{% endif %}
                   The fidelity score of <strong>{{ fidelity_score|round(0)|int }}/100</strong> reflects multi-platform coverage, behavioral correlation, and OSINT validation.
@@ -1118,19 +1118,13 @@
         </a>
       </div>
 
-      <!-- Quote -->
-      <div class="quote">
-        <p>
-          "Even if you can't see something, it doesn't mean it isn't there"<br>
-          <span>— Archer, Small Soldiers</span>
-        </p>
-      </div>
 
       <!-- Spacer for balance -->
       <div class="spacer"></div>
     </div>
 
     <!-- Timestamp and Attribution -->
+    <div class="footer-gloss"><span class="fg-word">shi·ka·ri</span><span class="fg-ipa">\shi-ˈkär-ē\</span><span class="fg-def">a professional big-game hunter or guide</span></div>
     <div class="timestamp">
       <br>
       <span style="font-size: 0.85em; opacity: 0.7; margin-top: 8px; display: block;">

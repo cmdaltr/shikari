@@ -7,8 +7,8 @@ import zipfile
 import pytest
 from fastapi.testclient import TestClient
 
-import archer.app as app_module
-from archer.build import correlation_files
+import shikari.app as app_module
+from shikari.build import correlation_files
 
 
 @pytest.fixture

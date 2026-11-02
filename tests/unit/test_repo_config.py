@@ -2,7 +2,7 @@
 
 import os
 
-import archer.export.repo_config as rc
+import shikari.export.repo_config as rc
 
 
 def test_load_default_when_missing(tmp_path, monkeypatch):

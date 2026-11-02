@@ -6,8 +6,8 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from archer import elevation
-from archer.database.models import Base, RoleRequest, User, UserRole, at_least, effective_role
+from shikari import elevation
+from shikari.database.models import Base, RoleRequest, User, UserRole, at_least, effective_role
 
 
 @pytest.fixture

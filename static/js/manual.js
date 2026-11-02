@@ -1,7 +1,7 @@
 // Client-side append/edit/draft handling for Manual Group Entry
 (function () {
-  var STORAGE_KEY = 'archer.manualEntries';
-  var STORAGE_GROUP_KEY = 'archer.manualGroupName';
+  var STORAGE_KEY = 'shikari.manualEntries';
+  var STORAGE_GROUP_KEY = 'shikari.manualGroupName';
   var entries = [];
 
   function safeParse(json) {

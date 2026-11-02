@@ -50,7 +50,7 @@ def is_normalized(query: str) -> bool:
 
 def main():
     """Run comprehensive verification."""
-    schema_path = Path(__file__).parent.parent / "archer" / "mappings" / "schemaSplunk.json"
+    schema_path = Path(__file__).parent.parent / "shikari" / "mappings" / "schemaSplunk.json"
 
     print("="*100)
     print("COMPREHENSIVE NORMALIZATION VERIFICATION")

@@ -1,5 +1,5 @@
 /**
- * Input Validation Functions for Archer
+ * Input Validation Functions for Shikari
  *
  * Client-side validation matching backend validation rules.
  * All functions return {valid: boolean, error: string}

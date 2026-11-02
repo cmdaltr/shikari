@@ -4,16 +4,16 @@
 
 ## Search indicators
 
-Enter an IP, domain, URL, file hash, email or CVE and Archer searches the reputable vendor, CERT/government, news and aggregator sources' reporting from the last 7 days for it — and its common defanged forms (`hxxp`, `[.]`, `(dot)`, `[@]`). The tier chips (Vendor TI, CERT/Gov, News, Aggregator) filter which sources it searches. Each hit shows the source, a tier badge, the date and a highlighted snippet, and links to the original; results are cached for the 7-day window, and recent searches sit as chips to re-run. The deep link `/ioc?q=<indicator>` runs a search directly — the Investigation agent and the `ioc_search` console/MCP tool use the same engine.
+Enter an IP, domain, URL, file hash, email or CVE and Shikari searches the reputable vendor, CERT/government, news and aggregator sources' reporting from the last 7 days for it — and its common defanged forms (`hxxp`, `[.]`, `(dot)`, `[@]`). The tier chips (Vendor TI, CERT/Gov, News, Aggregator) filter which sources it searches. Each hit shows the source, a tier badge, the date and a highlighted snippet, and links to the original; results are cached for the 7-day window, and recent searches sit as chips to re-run. The deep link `/ioc?q=<indicator>` runs a search directly — the Investigation agent and the `ioc_search` console/MCP tool use the same engine.
 
 ## Import
 
 Four ways in, all producing the same result as analysing a report — techniques and IOCs you review before generating:
 
-- **File upload** — drag a file onto the box or choose one: a STIX 2.1 bundle (`.json` with an `objects` list) or a MISP event (`.json` with an `Event`). Archer detects which.
+- **File upload** — drag a file onto the box or choose one: a STIX 2.1 bundle (`.json` with an `objects` list) or a MISP event (`.json` with an `Event`). Shikari detects which.
 - **Paste JSON** — the same, pasted in.
-- **TAXII collection** — the collection's `…/collections/<id>/` URL, with a username and password if the server needs them (used for that request only, never stored). Archer polls the collection, following pagination, and imports every object.
-- **MISP instance** — a MISP base URL and an API key. Archer queries `/events/restSearch` for recently-published events (default the last 30 days) and merges their techniques and IOCs. The key is used for that request only, never stored.
+- **TAXII collection** — the collection's `…/collections/<id>/` URL, with a username and password if the server needs them (used for that request only, never stored). Shikari polls the collection, following pagination, and imports every object.
+- **MISP instance** — a MISP base URL and an API key. Shikari queries `/events/restSearch` for recently-published events (default the last 30 days) and merges their techniques and IOCs. The key is used for that request only, never stored.
 
 From a STIX bundle, `attack-pattern` objects map to ATT&CK techniques (via their `mitre-attack` external reference), indicator patterns and cyber-observables map to IOCs, and an `intrusion-set` or `threat-actor` names the group. From a MISP event, attributes map to IOCs by type (including composites such as `filename|md5`), and MITRE galaxies and tags map to techniques.
 
@@ -25,10 +25,10 @@ Pick a saved run and download it as either format.
 
 **STIX 2.1 bundle** —
 
-- an `identity` for Archer and an `intrusion-set` for the group,
+- an `identity` for Shikari and an `intrusion-set` for the group,
 - an `attack-pattern` per technique, with its ATT&CK external reference,
 - `indicator` objects built from each detection's IOCs,
-- the detections themselves as `x-archer-detection` custom objects carrying the SIEM and the query,
+- the detections themselves as `x-shikari-detection` custom objects carrying the SIEM and the query,
 
 tied together with `uses`, `detects` and `indicates` relationships.
 

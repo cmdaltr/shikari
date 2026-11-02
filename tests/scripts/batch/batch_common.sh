@@ -1,5 +1,5 @@
 #!/bin/bash
-# Common functions for Archer test batch scripts
+# Common functions for Shikari test batch scripts
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -50,16 +50,16 @@ print_footer() {
     echo ""
 }
 
-check_archer_running() {
-    local url="${ARCHER_API_URL:-http://127.0.0.1:8000}"
+check_shikari_running() {
+    local url="${SHIKARI_API_URL:-http://127.0.0.1:8000}"
 
-    echo -n "Checking if Archer is running at ${url}... "
+    echo -n "Checking if Shikari is running at ${url}... "
     if curl -s "${url}/health" > /dev/null 2>&1; then
         echo -e "${GREEN}OK${NC}"
         return 0
     else
         echo -e "${RED}FAILED${NC}"
-        echo "Please start Archer before running tests"
+        echo "Please start Shikari before running tests"
         return 1
     fi
 }
@@ -87,8 +87,8 @@ run_batch() {
 
     print_header "$batch_id" "$batch_name" "$est_time"
 
-    # Check Archer is running
-    if ! check_archer_running; then
+    # Check Shikari is running
+    if ! check_shikari_running; then
         exit 1
     fi
 

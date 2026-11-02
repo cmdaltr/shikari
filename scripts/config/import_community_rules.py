@@ -19,7 +19,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from archer.importers import SplunkImporter, ElasticImporter
+from shikari.importers import SplunkImporter, ElasticImporter
 
 
 def import_splunk(input_dir: Path, output_dir: Path, min_risk_score: int = 40):
@@ -76,7 +76,7 @@ def import_sentinel(input_dir: Path, output_dir: Path):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Import community detection rules into Archer knowledge base",
+        description="Import community detection rules into Shikari knowledge base",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

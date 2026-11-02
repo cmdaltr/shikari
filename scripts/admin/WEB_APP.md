@@ -5,7 +5,7 @@ User administration and management utilities.
 ## Scripts
 
 ### create_admin.py
-Create a new administrator user for Archer.
+Create a new administrator user for Shikari.
 
 **Usage**:
 ```bash
@@ -54,7 +54,7 @@ Confirm password: ••••••••••••
 ## Security Notes
 
 - Passwords must meet minimum complexity requirements
-- Admin users have full access to all Archer features
+- Admin users have full access to all Shikari features
 - Use strong, unique passwords for all admin accounts
 - Consider using API keys for programmatic access instead of shared admin accounts
 

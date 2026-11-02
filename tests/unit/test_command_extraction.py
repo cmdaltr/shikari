@@ -2,7 +2,7 @@
 
 import pytest
 
-from archer.parsers.file_intelligence import FileIntelligenceParser, command_or_none
+from shikari.parsers.file_intelligence import FileIntelligenceParser, command_or_none
 
 
 @pytest.mark.parametrize("text,expected", [

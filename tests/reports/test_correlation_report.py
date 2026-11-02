@@ -6,7 +6,7 @@ Test script for correlation-only report generation
 import os
 import sys
 
-# Add archer to path (navigate up two levels from tests/reports/)
+# Add shikari to path (navigate up two levels from tests/reports/)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 
@@ -52,7 +52,7 @@ def test_correlation_only_report():
     # Test 1: Word Document with Correlations Only
     print("\n1. Testing Word Document (Correlations Only)...")
     try:
-        from archer.reports.generator import WordReportGenerator
+        from shikari.reports.generator import WordReportGenerator
 
         generator = WordReportGenerator()
         print("   ✓ Word generator initialized")
@@ -82,7 +82,7 @@ def test_correlation_only_report():
     # Test 2: PDF with Correlations Only
     print("\n2. Testing PDF (Correlations Only)...")
     try:
-        from archer.reports.generator import PDFReportGenerator
+        from shikari.reports.generator import PDFReportGenerator
 
         generator = PDFReportGenerator()
         print("   ✓ PDF generator initialized")

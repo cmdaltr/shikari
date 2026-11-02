@@ -1,7 +1,7 @@
 """Correlations inherit their detections' OSINT enrichment, and say when they're out of date (#23)."""
 from unittest.mock import patch
 
-from archer.build import correlation_osint as co
+from shikari.build import correlation_osint as co
 
 KQL = "DeviceProcessEvents\n| where Timestamp > ago(1d)\n| where ProcessCommandLine has \"runas\"\n| summarize by DeviceName"
 YARAL = ('rule r {\n  events:\n    $e.metadata.event_type = "PROCESS_LAUNCH"\n'
@@ -25,7 +25,7 @@ def test_inherited_merges_and_tags_each_part():
 
 def test_false_positives_fall_back_to_the_osint_index():
     d = {"technique_id": "T1134", "indicators": {"cmd": ["runas"]}}
-    with patch("archer.build.osint_index.known_false_positives", return_value=[{"text": "x", "url": "u"}]) as kfp:
+    with patch("shikari.build.osint_index.known_false_positives", return_value=[{"text": "x", "url": "u"}]) as kfp:
         assert co.inherited([d])["known_false_positives"] == [{"text": "x", "url": "u", "technique": "T1134"}]
     kfp.assert_called_once_with("T1134", terms=["runas"])
 

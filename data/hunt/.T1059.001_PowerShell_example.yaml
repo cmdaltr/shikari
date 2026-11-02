@@ -38,7 +38,7 @@ query: |
 hunt_metadata:
   created: 2024-01-15
   last_updated: 2024-01-15
-  author: Archer Threat Hunting Platform
+  author: Shikari Threat Hunting Platform
   confidence: High
   false_positive_rate: Low
   hunt_type: proactive

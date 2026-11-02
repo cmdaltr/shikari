@@ -449,7 +449,7 @@ references:
   - https://docs.microsoft.com/en-us/sysinternals/downloads/procdump
 
 metadata:
-  created_by: "Archer Setup Script"
+  created_by: "Shikari Setup Script"
   created_date: "2024-11-28"
   updated_date: "2024-11-28"
   version: "1.0"

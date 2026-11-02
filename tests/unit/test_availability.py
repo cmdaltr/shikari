@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-import archer.build.availability as av
+import shikari.build.availability as av
 
 
 def _mde(table):
@@ -52,7 +52,7 @@ def test_empty_config_gates_nothing():
 
 def test_export_excludes_unavailable(tmp_path, monkeypatch):
     import yaml
-    from archer.export import detections_git as dg
+    from shikari.export import detections_git as dg
 
     gen = tmp_path / "gen"
     gen.mkdir()
@@ -95,7 +95,7 @@ def test_source_catalogue_unions_runs_and_docs(tmp_path, monkeypatch):
 
 def test_export_keeps_all_when_exclude_off(tmp_path, monkeypatch):
     import yaml
-    from archer.export import detections_git as dg
+    from shikari.export import detections_git as dg
 
     gen = tmp_path / "gen"
     gen.mkdir()

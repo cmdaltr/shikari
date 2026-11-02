@@ -1,6 +1,6 @@
 # Untested Features
 
-This document describes features that have been implemented in Archer but have not been validated with live deployments or production environments.
+This document describes features that have been implemented in Shikari but have not been validated with live deployments or production environments.
 
 > ⚠️ **Status**: Code exists but not validated with live deployments
 
@@ -12,7 +12,7 @@ These features may work as intended but require testing and validation before be
 
 **Status**: Code written and unit-tested, not yet run on a real lab
 
-`scripts/telemetry/record-atomics.ps1` runs Atomic Red Team tests on a Windows, Linux or macOS test machine and saves each test's logs (Windows event logs; auditd and the journal; eslogger, the unified log and launch item plist changes on macOS). `python -m archer.telemetry --mde-export` fetches each test's Defender for Endpoint rows through Microsoft Graph's Advanced Hunting. Runs copied into `data/telemetry/lab/` appear on the Emulate page as **Your lab**.
+`scripts/telemetry/record-atomics.ps1` runs Atomic Red Team tests on a Windows, Linux or macOS test machine and saves each test's logs (Windows event logs; auditd and the journal; eslogger, the unified log and launch item plist changes on macOS). `python -m shikari.telemetry --mde-export` fetches each test's Defender for Endpoint rows through Microsoft Graph's Advanced Hunting. Runs copied into `data/telemetry/lab/` appear on the Emulate page as **Your lab**.
 
 Setup, step by step: [Recording a lab](../guide/20-recording-a-lab.md).
 
@@ -20,13 +20,13 @@ Setup, step by step: [Recording a lab](../guide/20-recording-a-lab.md).
 
 - The script parses in PowerShell 7 and its macOS plist functions were exercised; no atomic has been run with it
 - `--mde-export` matches devices by the manifest's host name (`DeviceName startswith`), and takes up to 5,000 rows per table per test
-- Running atomics from Archer itself (`archer-cli offline emulate`, the console's `emulate`, **Run Emulation** on Results) depended on an `archer.emulation` package that has been removed; those entry points say Coming soon
+- Running atomics from Shikari itself (`shikari-cli offline emulate`, the console's `emulate`, **Run Emulation** on Results) depended on an `shikari.emulation` package that has been removed; those entry points say Coming soon
 
 ## Query Execution
 
 **Status**: Splunk client implemented but not validated against a live Splunk; Defender XDR not implemented
 
-Running a generated query against the SIEM and reading the results back. `archer/query/splunk.py` (`SplunkClient`) runs SPL through Splunk's search jobs API. Defender XDR execution will be built with hit counts ([#16](https://github.com/cmdaltr/archer/issues/16)) on Microsoft Graph's `runHuntingQuery` (application permission `ThreatHunting.Read.All`), reusing the token and query code in `archer/telemetry/mde.py`. The older client for the retiring `api.securitycenter.microsoft.com` API was removed unused.
+Running a generated query against the SIEM and reading the results back. `shikari/query/splunk.py` (`SplunkClient`) runs SPL through Splunk's search jobs API. Defender XDR execution will be built with hit counts ([#16](https://github.com/cmdaltr/shikari/issues/16)) on Microsoft Graph's `runHuntingQuery` (application permission `ThreatHunting.Read.All`), reusing the token and query code in `shikari/telemetry/mde.py`. The older client for the retiring `api.securitycenter.microsoft.com` API was removed unused.
 
 ### Configuration
 
@@ -51,7 +51,7 @@ Needs a Splunk Enterprise or Cloud instance with API access and a user allowed t
 
 If you test any of these features, please help the community by:
 
-1. **Opening an issue** with your results: [GitHub Issues](https://github.com/cmdaltr/archer/issues)
+1. **Opening an issue** with your results: [GitHub Issues](https://github.com/cmdaltr/shikari/issues)
 2. **Sharing configurations** that worked in your environment
 3. **Reporting bugs** or unexpected behavior
 4. **Contributing fixes** via pull requests

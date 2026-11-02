@@ -1,0 +1,317 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1100" font-family="'Segoe UI', 'SF Pro Display', -apple-system, sans-serif">
+  <defs>
+    <style>
+      .title { font-size: 26px; font-weight: 700; fill: #ffffff; }
+      .subtitle { font-size: 13px; fill: #7a8fa6; }
+      .section-label { font-size: 11px; fill: #4ecdc4; font-weight: 600; letter-spacing: 1.5px; }
+      .box-title { font-size: 13px; fill: #ffffff; font-weight: 600; }
+      .box-detail { font-size: 10px; fill: #7a8fa6; }
+      .box-accent { font-size: 10px; fill: #4ecdc4; }
+      .connector-label { font-size: 10px; fill: #a0b8c8; font-weight: 500; }
+      .siem-label { font-size: 10px; fill: #f5c842; font-weight: 500; }
+    </style>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#4ecdc4"/>
+    </marker>
+    <marker id="arrowDim" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#2a4a5e"/>
+    </marker>
+    <marker id="arrowGold" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#f5c842"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1400" height="1100" fill="#0d1117" rx="8"/>
+
+  <!-- Title -->
+  <text x="60" y="46" class="title">Shikari — Full Workflow</text>
+  <text x="60" y="66" class="subtitle">Automated Threat Detection Engineering Pipeline</text>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- ROW 1: INPUT SOURCES                                    -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <text x="60" y="104" class="section-label">INPUT SOURCES</text>
+
+  <!-- MITRE ATT&amp;CK -->
+  <rect x="60" y="116" width="200" height="90" rx="8" fill="#141d2b" stroke="#2a4a5e" stroke-width="1"/>
+  <rect x="78" y="136" width="16" height="16" rx="3" fill="none" stroke="#4ecdc4" stroke-width="1.5"/>
+  <line x1="82" y1="140" x2="90" y2="148" stroke="#4ecdc4" stroke-width="1.2" opacity="0.6"/>
+  <line x1="82" y1="148" x2="90" y2="140" stroke="#4ecdc4" stroke-width="1.2" opacity="0.6"/>
+  <text x="102" y="147" class="box-title">MITRE ATT&amp;CK</text>
+  <text x="78" y="170" class="box-detail">STIX JSON bundles</text>
+  <text x="78" y="182" class="box-detail">Threat groups, techniques, software</text>
+  <text x="78" y="196" class="box-accent">APT29, Scattered Spider, ...</text>
+
+  <!-- CVEs -->
+  <rect x="280" y="116" width="200" height="90" rx="8" fill="#141d2b" stroke="#2a4a5e" stroke-width="1"/>
+  <circle cx="88" cy="0" r="0" fill="none"/>
+  <rect x="298" y="134" width="18" height="20" rx="2" fill="none" stroke="#4ecdc4" stroke-width="1.5"/>
+  <text x="303" y="150" style="font-size:9px; fill:#4ecdc4; font-weight:700">!</text>
+  <text x="324" y="147" class="box-title">CVE Intelligence</text>
+  <text x="298" y="170" class="box-detail">NVD / vulnerability databases</text>
+  <text x="298" y="182" class="box-detail">Platform identification</text>
+  <text x="298" y="196" class="box-accent">CVE-2024-XXXX</text>
+
+  <!-- File Uploads -->
+  <rect x="500" y="116" width="200" height="90" rx="8" fill="#141d2b" stroke="#2a4a5e" stroke-width="1"/>
+  <rect x="518" y="132" width="16" height="20" rx="2" fill="none" stroke="#4ecdc4" stroke-width="1.5"/>
+  <path d="M522,130 L530,126 L530,132" fill="none" stroke="#4ecdc4" stroke-width="1.2"/>
+  <text x="542" y="147" class="box-title">File Uploads</text>
+  <text x="518" y="170" class="box-detail">PDF, DOCX, TXT, JSON, CSV</text>
+  <text x="518" y="182" class="box-detail">YARA rules, blog URLs</text>
+  <text x="518" y="196" class="box-accent">AI-enhanced TTP extraction</text>
+
+  <!-- Manual / Chat -->
+  <rect x="720" y="116" width="200" height="90" rx="8" fill="#141d2b" stroke="#2a4a5e" stroke-width="1"/>
+  <polyline points="738,136 746,144 738,152" fill="none" stroke="#4ecdc4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="748" y1="152" x2="756" y2="152" stroke="#4ecdc4" stroke-width="1.5" stroke-linecap="round"/>
+  <text x="762" y="147" class="box-title">Manual / Chat</text>
+  <text x="738" y="170" class="box-detail">TTP + IOC submission</text>
+  <text x="738" y="182" class="box-detail">Ask Shikari conversational Q&amp;A</text>
+  <text x="738" y="196" class="box-accent">Interactive threat briefing</text>
+
+  <!-- Down arrows from inputs -->
+  <line x1="160" y1="206" x2="160" y2="248" stroke="#4ecdc4" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="380" y1="206" x2="380" y2="248" stroke="#4ecdc4" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="600" y1="206" x2="600" y2="248" stroke="#4ecdc4" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="820" y1="206" x2="820" y2="248" stroke="#4ecdc4" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- ROW 2: PROCESSING                                       -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <text x="60" y="272" class="section-label">PROCESSING</text>
+
+  <rect x="60" y="280" width="860" height="80" rx="10" fill="#141d2b" stroke="#4ecdc4" stroke-width="1.5"/>
+
+  <!-- Sub-modules inside processing -->
+  <rect x="80" y="296" width="185" height="44" rx="6" fill="#0d1117" stroke="#2a4a5e" stroke-width="0.75"/>
+  <text x="96" y="314" class="box-title">MITRE Extraction</text>
+  <text x="96" y="328" class="box-detail">Group → techniques → procedures</text>
+
+  <rect x="280" y="296" width="185" height="44" rx="6" fill="#0d1117" stroke="#2a4a5e" stroke-width="0.75"/>
+  <text x="296" y="314" class="box-title">File Intelligence</text>
+  <text x="296" y="328" class="box-detail">Parse → extract TTPs + IOCs</text>
+
+  <rect x="480" y="296" width="185" height="44" rx="6" fill="#0d1117" stroke="#2a4a5e" stroke-width="0.75"/>
+  <text x="496" y="314" class="box-title">CVE Processing</text>
+  <text x="496" y="328" class="box-detail">Lookup → platform → synth. techniques</text>
+
+  <rect x="680" y="296" width="220" height="44" rx="6" fill="#0d1117" stroke="#2a4a5e" stroke-width="0.75"/>
+  <text x="696" y="314" class="box-title">Schema Normalisation</text>
+  <text x="696" y="328" class="box-detail">Field mapping · platform alignment</text>
+
+  <!-- Down arrow from processing -->
+  <line x1="490" y1="360" x2="490" y2="400" stroke="#4ecdc4" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="500" y="385" class="connector-label">normalised TTPs + IOCs</text>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- ROW 3: DETECTION GENERATION                             -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <text x="60" y="424" class="section-label">DETECTION GENERATION</text>
+
+  <rect x="60" y="434" width="860" height="120" rx="10" fill="#141d2b" stroke="#4ecdc4" stroke-width="1.5"/>
+
+  <!-- Orchestrator label -->
+  <text x="80" y="458" class="box-title">Build Orchestrator</text>
+  <text x="80" y="472" class="box-detail">Per-technique compilation · query generation · YAML output</text>
+
+  <!-- SIEM output boxes -->
+  <rect x="80" y="488" width="190" height="48" rx="6" fill="#0d1117" stroke="#f5c842" stroke-width="1"/>
+  <text x="96" y="508" class="siem-label">Splunk</text>
+  <text x="96" y="522" class="box-detail">SPL queries</text>
+
+  <rect x="285" y="488" width="190" height="48" rx="6" fill="#0d1117" stroke="#f5c842" stroke-width="1"/>
+  <text x="301" y="508" class="siem-label">Microsoft Defender</text>
+  <text x="301" y="522" class="box-detail">KQL queries</text>
+
+  <rect x="490" y="488" width="190" height="48" rx="6" fill="#0d1117" stroke="#f5c842" stroke-width="1"/>
+  <text x="506" y="508" class="siem-label">Elasticsearch</text>
+  <text x="506" y="522" class="box-detail">Query DSL</text>
+
+  <rect x="695" y="488" width="205" height="48" rx="6" fill="#0d1117" stroke="#f5c842" stroke-width="1"/>
+  <text x="711" y="508" class="siem-label">Google SecOps</text>
+  <text x="711" y="522" class="box-detail">YARA-L rules</text>
+
+  <!-- Down arrow from detection gen -->
+  <line x1="490" y1="554" x2="490" y2="594" stroke="#4ecdc4" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="500" y="578" class="connector-label">YAML detection files</text>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- ROW 4: ENHANCEMENT (optional)                           -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <text x="60" y="618" class="section-label">ENHANCEMENT (OPTIONAL)</text>
+
+  <rect x="60" y="628" width="200" height="80" rx="8" fill="#141d2b" stroke="#2a4a5e" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="78" y="652" class="box-title">RAG Fidelity</text>
+  <text x="78" y="666" class="box-detail">3,400+ community examples</text>
+  <text x="78" y="680" class="box-detail">Embedding retrieval · enrichment</text>
+
+  <rect x="280" y="628" width="200" height="80" rx="8" fill="#141d2b" stroke="#2a4a5e" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="298" y="652" class="box-title">OSINT Comparison</text>
+  <text x="298" y="666" class="box-detail">Splunk · Elastic · Sentinel rules</text>
+  <text x="298" y="680" class="box-detail">Gap analysis · deduplication</text>
+
+  <rect x="500" y="628" width="200" height="80" rx="8" fill="#141d2b" stroke="#2a4a5e" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="518" y="652" class="box-title">AI Enhancement</text>
+  <text x="518" y="666" class="box-detail">LLM-powered query improvement</text>
+  <text x="518" y="680" class="box-detail">Prompt-driven refinement</text>
+
+  <rect x="720" y="628" width="200" height="80" rx="8" fill="#141d2b" stroke="#2a4a5e" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="738" y="652" class="box-title">Validation Testing</text>
+  <text x="738" y="666" class="box-detail">Containerised SIEM execution</text>
+  <text x="738" y="680" class="box-detail">Precision / recall / F1 scoring</text>
+
+  <!-- Down arrow from enhancement -->
+  <line x1="490" y1="708" x2="490" y2="748" stroke="#4ecdc4" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="500" y="732" class="connector-label">validated detections</text>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- ROW 5: CORRELATION ENGINE                               -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <text x="60" y="772" class="section-label">CORRELATION ENGINE</text>
+
+  <rect x="60" y="782" width="860" height="80" rx="10" fill="#141d2b" stroke="#4ecdc4" stroke-width="1.5"/>
+
+  <rect x="80" y="798" width="120" height="44" rx="6" fill="#0d1117" stroke="#2a4a5e" stroke-width="0.75"/>
+  <text x="96" y="816" class="box-title">Discovery</text>
+  <text x="96" y="828" class="box-detail">Find all YAMLs</text>
+
+  <line x1="200" y1="820" x2="218" y2="820" stroke="#2a4a5e" stroke-width="1" marker-end="url(#arrowDim)"/>
+
+  <rect x="220" y="798" width="120" height="44" rx="6" fill="#0d1117" stroke="#2a4a5e" stroke-width="0.75"/>
+  <text x="236" y="816" class="box-title">Pairing</text>
+  <text x="236" y="828" class="box-detail">Same-vendor pairs</text>
+
+  <line x1="340" y1="820" x2="358" y2="820" stroke="#2a4a5e" stroke-width="1" marker-end="url(#arrowDim)"/>
+
+  <rect x="360" y="798" width="160" height="44" rx="6" fill="#0d1117" stroke="#4ecdc4" stroke-width="1"/>
+  <text x="376" y="816" class="box-title">6-Factor Scoring</text>
+  <text x="376" y="828" class="box-accent">0–140 points per pair</text>
+
+  <line x1="520" y1="820" x2="538" y2="820" stroke="#2a4a5e" stroke-width="1" marker-end="url(#arrowDim)"/>
+
+  <rect x="540" y="798" width="120" height="44" rx="6" fill="#0d1117" stroke="#2a4a5e" stroke-width="0.75"/>
+  <text x="556" y="816" class="box-title">Filtering</text>
+  <text x="556" y="828" class="box-detail">min_relevance 0.75</text>
+
+  <line x1="660" y1="820" x2="678" y2="820" stroke="#2a4a5e" stroke-width="1" marker-end="url(#arrowDim)"/>
+
+  <rect x="680" y="798" width="220" height="44" rx="6" fill="#0d1117" stroke="#2a4a5e" stroke-width="0.75"/>
+  <text x="696" y="816" class="box-title">JOIN Generation</text>
+  <text x="696" y="828" class="box-detail">Multi-stage attack chain queries</text>
+
+  <!-- Down arrow from correlation -->
+  <line x1="490" y1="862" x2="490" y2="902" stroke="#4ecdc4" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- ROW 6: OUTPUT                                           -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <text x="60" y="926" class="section-label">OUTPUT</text>
+
+  <!-- Detection ZIP -->
+  <rect x="60" y="938" width="260" height="90" rx="8" fill="#141d2b" stroke="#2a4a5e" stroke-width="1"/>
+  <rect x="78" y="956" width="16" height="20" rx="2" fill="none" stroke="#4ecdc4" stroke-width="1.5"/>
+  <line x1="82" y1="968" x2="90" y2="968" stroke="#4ecdc4" stroke-width="1" opacity="0.5"/>
+  <line x1="82" y1="964" x2="88" y2="964" stroke="#4ecdc4" stroke-width="1" opacity="0.5"/>
+  <text x="102" y="968" class="box-title">Detection Package (ZIP)</text>
+  <text x="78" y="990" class="box-detail">detections/ — per-technique YAML files</text>
+  <text x="78" y="1002" class="box-detail">correlations/ — chained query JSON</text>
+  <text x="78" y="1014" class="box-detail">attack_flows/ — ATT&amp;CK Flow visualisation</text>
+
+  <!-- Detection Library -->
+  <rect x="340" y="938" width="260" height="90" rx="8" fill="#141d2b" stroke="#2a4a5e" stroke-width="1"/>
+  <ellipse cx="368" cy="962" rx="12" ry="5" fill="none" stroke="#4ecdc4" stroke-width="1.5"/>
+  <path d="M356,962 L356,974 C356,979 380,979 380,974 L380,962" fill="none" stroke="#4ecdc4" stroke-width="1.5"/>
+  <text x="392" y="968" class="box-title">Detection Library</text>
+  <text x="358" y="990" class="box-detail">SQLite persistence</text>
+  <text x="358" y="1002" class="box-detail">Search · tagging · versioning</text>
+  <text x="358" y="1014" class="box-detail">Coverage tracking per technique</text>
+
+  <!-- Integrations -->
+  <rect x="620" y="938" width="300" height="90" rx="8" fill="#141d2b" stroke="#2a4a5e" stroke-width="1"/>
+  <text x="638" y="960" class="box-title">Integrations</text>
+  <rect x="638" y="972" width="120" height="22" rx="4" fill="#0d1117" stroke="#2a4a5e" stroke-width="0.75"/>
+  <text x="650" y="987" class="box-accent">VECTR Hunt Tracking</text>
+  <rect x="766" y="972" width="136" height="22" rx="4" fill="#0d1117" stroke="#2a4a5e" stroke-width="0.75"/>
+  <text x="778" y="987" class="box-accent">Atomic Red Team</text>
+  <rect x="638" y="1000" width="120" height="22" rx="4" fill="#0d1117" stroke="#2a4a5e" stroke-width="0.75"/>
+  <text x="650" y="1015" class="box-accent">SIEM API Deploy</text>
+  <rect x="766" y="1000" width="136" height="22" rx="4" fill="#0d1117" stroke="#2a4a5e" stroke-width="0.75"/>
+  <text x="778" y="1015" class="box-accent">ATT&amp;CK Flow Export</text>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- SIDEBAR: LLM PROVIDERS                                  -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <text x="980" y="254" class="section-label">LLM PROVIDERS</text>
+
+  <rect x="980" y="266" width="370" height="200" rx="10" fill="#141d2b" stroke="#2a4a5e" stroke-width="1"/>
+
+  <rect x="1000" y="286" width="160" height="36" rx="6" fill="#0d1117" stroke="#2a4a5e" stroke-width="0.75"/>
+  <text x="1016" y="304" class="box-title">Anthropic Claude</text>
+  <text x="1016" y="316" class="box-accent">Default · highest quality</text>
+
+  <rect x="1180" y="286" width="150" height="36" rx="6" fill="#0d1117" stroke="#2a4a5e" stroke-width="0.75"/>
+  <text x="1196" y="304" class="box-title">OpenAI GPT</text>
+  <text x="1196" y="316" class="box-detail">gpt-4o · gpt-4-turbo</text>
+
+  <rect x="1000" y="334" width="160" height="36" rx="6" fill="#0d1117" stroke="#2a4a5e" stroke-width="0.75"/>
+  <text x="1016" y="352" class="box-title">Google Gemini</text>
+  <text x="1016" y="364" class="box-detail">Low cost option</text>
+
+  <rect x="1180" y="334" width="150" height="36" rx="6" fill="#0d1117" stroke="#2a4a5e" stroke-width="0.75"/>
+  <text x="1196" y="352" class="box-title">Local Ollama</text>
+  <text x="1196" y="364" class="box-accent">100% private</text>
+
+  <text x="1000" y="398" class="box-detail">Used by: AI Transform · Correlation · Chat · RAG · Validation</text>
+  <text x="1000" y="412" class="box-detail">Configurable per-session via provider abstraction layer</text>
+
+  <!-- Dashed line from LLM to main pipeline -->
+  <line x1="980" y1="366" x2="920" y2="320" stroke="#2a4a5e" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrowDim)"/>
+  <line x1="980" y1="390" x2="920" y2="494" stroke="#2a4a5e" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="980" y1="410" x2="920" y2="660" stroke="#2a4a5e" stroke-width="1" stroke-dasharray="4,3"/>
+
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- SIDEBAR: DOCKER SERVICES                                -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <text x="980" y="618" class="section-label">DOCKER SERVICES</text>
+
+  <rect x="980" y="628" width="370" height="80" rx="10" fill="#141d2b" stroke="#2a4a5e" stroke-width="1"/>
+
+  <rect x="1000" y="640" width="160" height="26" rx="5" fill="#0d1117" stroke="#f5c842" stroke-width="0.75"/>
+  <text x="1016" y="657" class="siem-label">Splunk Simulator</text>
+  <text x="1120" y="657" class="box-detail">:8001</text>
+
+  <rect x="1180" y="640" width="150" height="26" rx="5" fill="#0d1117" stroke="#f5c842" stroke-width="0.75"/>
+  <text x="1196" y="657" class="siem-label">MDE Simulator</text>
+  <text x="1290" y="657" class="box-detail">:8082</text>
+
+  <rect x="1000" y="674" width="160" height="26" rx="5" fill="#0d1117" stroke="#f5c842" stroke-width="0.75"/>
+  <text x="1016" y="691" class="siem-label">Elasticsearch</text>
+  <text x="1120" y="691" class="box-detail">:9200</text>
+
+  <rect x="1180" y="674" width="150" height="26" rx="5" fill="#0d1117" stroke="#f5c842" stroke-width="0.75"/>
+  <text x="1196" y="691" class="siem-label">SecOps Simulator</text>
+  <text x="1300" y="691" class="box-detail">:8081</text>
+
+  <!-- Dashed line from Docker to Validation -->
+  <line x1="980" y1="668" x2="920" y2="668" stroke="#f5c842" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrowGold)"/>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- LEGEND (bottom right)                                   -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <rect x="980" y="938" width="370" height="100" rx="8" fill="#0d1117" stroke="#1e3a4f" stroke-width="1"/>
+  <text x="1000" y="962" class="section-label">LEGEND</text>
+  <line x1="1000" y1="980" x2="1030" y2="980" stroke="#4ecdc4" stroke-width="1.5"/>
+  <text x="1040" y="984" class="box-detail">Primary data flow</text>
+  <line x1="1000" y1="1000" x2="1030" y2="1000" stroke="#2a4a5e" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="1040" y="1004" class="box-detail">Supporting service</text>
+  <rect x="1180" y="972" width="30" height="14" rx="4" fill="none" stroke="#4ecdc4" stroke-width="1.5"/>
+  <text x="1220" y="984" class="box-detail">Core component</text>
+  <rect x="1180" y="992" width="30" height="14" rx="4" fill="none" stroke="#f5c842" stroke-width="1"/>
+  <text x="1220" y="1004" class="box-detail">SIEM platform</text>
+  <rect x="1180" y="1012" width="30" height="14" rx="4" fill="none" stroke="#2a4a5e" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="1220" y="1024" class="box-detail">Optional feature</text>
+
+</svg>

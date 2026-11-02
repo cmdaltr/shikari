@@ -2,7 +2,7 @@
 import html
 import re
 
-import archer.app as app_module
+import shikari.app as app_module
 
 
 def _chain(correlation):

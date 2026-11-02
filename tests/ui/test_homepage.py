@@ -1,5 +1,5 @@
 """
-Playwright UI tests for the Archer home page.
+Playwright UI tests for the Shikari home page.
 
 These tests validate that every tab, form element, and interactive
 component on the home page renders and responds to user interaction.
@@ -20,7 +20,7 @@ class TestHomePage:
         page.goto(base_url)
         page.wait_for_load_state("networkidle")
 
-        assert "Archer" in page.title() or page.locator("text=Archer").count() > 0
+        assert "Shikari" in page.title() or page.locator("text=Shikari").count() > 0
         page.screenshot(path=os.path.join(screenshot_dir, "01_home_page.png"))
 
     def test_all_tabs_visible(self, authenticated_page, base_url, screenshot_dir):

@@ -10,7 +10,7 @@ Nothing in the engine yet — this is net-new, and deliberately so: it's outward
 
 ## Part A — Setup you provide
 
-Per SIEM you want hit counts for, a **read-only** API identity and endpoint. Read-only is the whole point — Archer must never write a rule or change state here.
+Per SIEM you want hit counts for, a **read-only** API identity and endpoint. Read-only is the whole point — Shikari must never write a rule or change state here.
 
 - **Microsoft Defender XDR (KQL)**
   - An Entra ID app registration (client-credentials flow): tenant ID, client ID, client secret.
@@ -26,12 +26,12 @@ Where the credentials live: a new admin-only **SIEM connections** config (same p
 
 **Also provide:** a non-production/test index or tenant with known, bounded data, and one or two detections whose expected hit count you already know, so I can confirm the counts are right rather than just plausible.
 
-**Expected outcome:** for at least one SIEM, read-only API credentials + endpoint configured in Archer, reachable from the host, plus a known-good dataset to validate against.
+**Expected outcome:** for at least one SIEM, read-only API credentials + endpoint configured in Shikari, reachable from the host, plus a known-good dataset to validate against.
 
-## Part B — Implementation plan (Archer)
+## Part B — Implementation plan (Shikari)
 
-1. **SIEM connection config** — `archer/siem/connections.py`: load/save per-SIEM `{endpoint, auth_ref}` to a gitignored JSON under `bespoke/`; admin routes `GET/POST /api/siem/connections` and a read-only `…/test`. Credentials referenced, never echoed back to the client. Mirrors `archer/export/repo_config.py`.
-2. **Read-only clients** — `archer/siem/clients/{mde,secops,elastic}.py`, each exposing `run_count(query, window) -> {count, scanned, took_ms}`. They **only** count: the saved query is wrapped to a count/aggregation (KQL `| count`, YARA-L stats/count, ES|QL `| STATS COUNT(*)`), time-boxed to a configurable window (default 24h, max 7d), and the client refuses anything that isn't a read/aggregation. No rows returned, nothing written.
+1. **SIEM connection config** — `shikari/siem/connections.py`: load/save per-SIEM `{endpoint, auth_ref}` to a gitignored JSON under `bespoke/`; admin routes `GET/POST /api/siem/connections` and a read-only `…/test`. Credentials referenced, never echoed back to the client. Mirrors `shikari/export/repo_config.py`.
+2. **Read-only clients** — `shikari/siem/clients/{mde,secops,elastic}.py`, each exposing `run_count(query, window) -> {count, scanned, took_ms}`. They **only** count: the saved query is wrapped to a count/aggregation (KQL `| count`, YARA-L stats/count, ES|QL `| STATS COUNT(*)`), time-boxed to a configurable window (default 24h, max 7d), and the client refuses anything that isn't a read/aggregation. No rows returned, nothing written.
 3. **Hit-count action** — per detection on Results, an on-demand "measure hits" call → the client → a count chip ("37 hits / 7d"), plus a crude FP signal (count vs a threshold band). Cache the last result with the run so it isn't re-run on every page load.
 4. **Guardrails** — strict read-only, aggregation-only, per-run and per-window caps, client-side rate limiting under the tenant limits, timeouts, and a kill switch. Never log query results or credentials.
 5. **Tests (offline)** — unit-test the query→count wrapping and the response parsing per SIEM with fixtures; mock the HTTP layer; assert the client rejects a non-read query. **Live validation** (against your test index) confirms the counts match the known-good numbers.

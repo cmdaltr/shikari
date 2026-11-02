@@ -1,32 +1,32 @@
-"""Stage 1 of in-app CALDERA provisioning (archer.lab.caldera_provision): the host/role/opt-in
+"""Stage 1 of in-app CALDERA provisioning (shikari.lab.caldera_provision): the host/role/opt-in
 gate, the config parse, and the task flow with the host calls mocked out."""
 
-import archer.lab.caldera_provision as p
+import shikari.lab.caldera_provision as p
 
 
 def test_can_provision_requires_macos(monkeypatch):
     monkeypatch.setattr(p.hosts, "os_name", lambda: "linux")
-    monkeypatch.setenv("ARCHER_ALLOW_LAB_PROVISION", "1")
+    monkeypatch.setenv("SHIKARI_ALLOW_LAB_PROVISION", "1")
     ok, why = p.can_provision(True)
     assert not ok and "macOS" in why
 
 
 def test_can_provision_requires_admin(monkeypatch):
     monkeypatch.setattr(p.hosts, "os_name", lambda: "macos")
-    monkeypatch.setenv("ARCHER_ALLOW_LAB_PROVISION", "1")
+    monkeypatch.setenv("SHIKARI_ALLOW_LAB_PROVISION", "1")
     assert p.can_provision(False) == (False, "Provisioning needs an admin account.")
 
 
 def test_can_provision_requires_optin(monkeypatch):
     monkeypatch.setattr(p.hosts, "os_name", lambda: "macos")
-    monkeypatch.delenv("ARCHER_ALLOW_LAB_PROVISION", raising=False)
+    monkeypatch.delenv("SHIKARI_ALLOW_LAB_PROVISION", raising=False)
     ok, why = p.can_provision(True)
-    assert not ok and "ARCHER_ALLOW_LAB_PROVISION" in why
+    assert not ok and "SHIKARI_ALLOW_LAB_PROVISION" in why
 
 
 def test_can_provision_allowed(monkeypatch):
     monkeypatch.setattr(p.hosts, "os_name", lambda: "macos")
-    monkeypatch.setenv("ARCHER_ALLOW_LAB_PROVISION", "yes")
+    monkeypatch.setenv("SHIKARI_ALLOW_LAB_PROVISION", "yes")
     assert p.can_provision(True) == (True, "")
 
 

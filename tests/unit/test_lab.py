@@ -1,18 +1,18 @@
 """The lab: host detection, templates filtered to the host, output parsing, and lifecycle
-dispatch — all with the one shell-out point (archer.lab.runner.run) patched, so nothing runs."""
+dispatch — all with the one shell-out point (shikari.lab.runner.run) patched, so nothing runs."""
 
 import json
 
 import pytest
 
-from archer.lab import engines, hosts, machines, provision, templates
-from archer.lab.runner import LabError, safe_name
+from shikari.lab import engines, hosts, machines, provision, templates
+from shikari.lab.runner import LabError, safe_name
 
 
 @pytest.fixture(autouse=True)
 def utm_already_quiet(monkeypatch):
     # Otherwise the first utmctl call reads UTM's real preferences
-    monkeypatch.setattr("archer.lab.engines._utm_quiet", True)
+    monkeypatch.setattr("shikari.lab.engines._utm_quiet", True)
 
 
 def test_safe_name_rejects_anything_that_could_reach_a_shell():
@@ -60,7 +60,7 @@ def test_a_missing_engine_is_reported_with_its_install_command(monkeypatch):
 def test_parse_docker_ps_skips_snapshot_images():
     out = "\n".join([
         json.dumps({"Names": "win11", "Image": "ubuntu:24.04", "State": "running", "Status": "Up 2m"}),
-        json.dumps({"Names": "old", "Image": "archer-snap/win11:clean", "State": "exited", "Status": "x"}),
+        json.dumps({"Names": "old", "Image": "shikari-snap/win11:clean", "State": "exited", "Status": "x"}),
         json.dumps({"Names": "box", "Image": "ubuntu:24.04", "State": "exited", "Status": "Exited (0)"}),
     ])
     rows = engines.parse_docker_ps(out)
@@ -80,20 +80,20 @@ def test_parse_tart_list_keeps_local_vms_and_hides_snapshots():
 
 def test_create_records_the_template_and_pulls_the_right_image(monkeypatch, tmp_path):
     calls = []
-    monkeypatch.setattr("archer.lab.engines.run", lambda argv, **k: calls.append(list(argv)) or "")
+    monkeypatch.setattr("shikari.lab.engines.run", lambda argv, **k: calls.append(list(argv)) or "")
     monkeypatch.setattr(hosts.platform, "machine", lambda: "arm64")
-    monkeypatch.setattr("archer.lab.registry._PATH", str(tmp_path / "machines.json"))
+    monkeypatch.setattr("shikari.lab.registry._PATH", str(tmp_path / "machines.json"))
     machines.create("ubuntu-container", "box1")
     assert ["docker", "pull", "ubuntu:24.04"] in calls
     assert any(c[:3] == ["docker", "run", "-d"] and "box1" in c for c in calls)
-    import archer.lab.registry as reg
+    import shikari.lab.registry as reg
     assert reg.get("docker", "box1")["template"] == "ubuntu-container"
 
 
 def test_create_refuses_an_unknown_template(monkeypatch, tmp_path):
     # There is no Windows template (no engine here can run Windows), so asking for one is refused
     monkeypatch.setattr(hosts.platform, "machine", lambda: "arm64")
-    monkeypatch.setattr("archer.lab.registry._PATH", str(tmp_path / "machines.json"))
+    monkeypatch.setattr("shikari.lab.registry._PATH", str(tmp_path / "machines.json"))
     assert "windows-vm" not in templates.BY_ID
     with pytest.raises(LabError):
         machines.create("windows-vm", "win1")
@@ -101,20 +101,20 @@ def test_create_refuses_an_unknown_template(monkeypatch, tmp_path):
 
 def test_docker_snapshot_and_revert_use_the_committed_image(monkeypatch):
     calls = []
-    monkeypatch.setattr("archer.lab.engines.run", lambda argv, **k: calls.append(list(argv)) or "")
-    monkeypatch.setattr("archer.lab.engines.run_ok", lambda argv, **k: True)
+    monkeypatch.setattr("shikari.lab.engines.run", lambda argv, **k: calls.append(list(argv)) or "")
+    monkeypatch.setattr("shikari.lab.engines.run_ok", lambda argv, **k: True)
     d = engines.Docker()
     d.snapshot("box", "clean")
-    assert ["docker", "commit", "box", "archer-snap/box:clean"] in calls
+    assert ["docker", "commit", "box", "shikari-snap/box:clean"] in calls
     d.revert("box", "clean")
     assert ["docker", "rm", "-f", "box"] in calls
-    assert any(c[:3] == ["docker", "run", "-d"] and "archer-snap/box:clean" in c for c in calls)
+    assert any(c[:3] == ["docker", "run", "-d"] and "shikari-snap/box:clean" in c for c in calls)
 
 
 def test_tart_start_spawns_and_snapshot_clones(monkeypatch):
     spawned, ran = [], []
-    monkeypatch.setattr("archer.lab.engines.spawn", lambda argv: spawned.append(list(argv)))
-    monkeypatch.setattr("archer.lab.engines.run", lambda argv, **k: ran.append(list(argv)) or "")
+    monkeypatch.setattr("shikari.lab.engines.spawn", lambda argv: spawned.append(list(argv)))
+    monkeypatch.setattr("shikari.lab.engines.run", lambda argv, **k: ran.append(list(argv)) or "")
     t = engines.Tart()
     t.start("mac1")
     assert spawned == [["tart", "run", "mac1", "--no-graphics"]]
@@ -124,7 +124,7 @@ def test_tart_start_spawns_and_snapshot_clones(monkeypatch):
 
 def test_provision_runs_the_os_script_inside_the_machine_and_remembers_it(monkeypatch, tmp_path):
     seen = {}
-    monkeypatch.setattr("archer.lab.registry._PATH", str(tmp_path / "machines.json"))
+    monkeypatch.setattr("shikari.lab.registry._PATH", str(tmp_path / "machines.json"))
 
     class FakeEngine:
         def exec(self, name, argv, timeout):
@@ -135,7 +135,7 @@ def test_provision_runs_the_os_script_inside_the_machine_and_remembers_it(monkey
     out = provision.run_step("docker", "box1", "linux", "logging")
     assert "auditd" in out and seen["name"] == "box1"
     assert seen["argv"][0] == "bash" and "auditd" in seen["argv"][-1]
-    import archer.lab.registry as reg
+    import shikari.lab.registry as reg
     reg.record("docker", "box1", "ubuntu-container", "linux", "ubuntu:24.04")
     reg.mark_provisioned("docker", "box1", "logging")
     assert "logging" in reg.get("docker", "box1")["provisioned"]
@@ -151,7 +151,7 @@ def test_windows_provisioning_uses_powershell_and_lists_three_steps():
 # --- Step 5: record (Atomic Red Team → Your lab). Nothing detonates: execute stays False. ---
 
 def test_clean_techniques_validates_and_dedupes():
-    from archer.lab import record as lab_run
+    from shikari.lab import record as lab_run
 
     assert lab_run.clean_techniques("t1059.001, T1053.003 T1059.001") == ["T1059.001", "T1053.003"]
     assert lab_run.clean_techniques(["T1003"]) == ["T1003"]
@@ -161,7 +161,7 @@ def test_clean_techniques_validates_and_dedupes():
 
 
 def test_plan_lists_the_steps_without_running_anything():
-    from archer.lab import record as lab_run
+    from shikari.lab import record as lab_run
 
     steps = lab_run.plan("docker", "box1", "linux", ["T1059.001"], "box1-run", revert_to="clean")
     joined = "\n".join(steps)
@@ -174,7 +174,7 @@ def test_plan_lists_the_steps_without_running_anything():
 
 
 def test_record_dry_run_runs_nothing(monkeypatch):
-    from archer.lab import record as lab_run
+    from shikari.lab import record as lab_run
 
     # Any shell-out or engine use would be a bug in the dry run — make them explode if touched
     def boom(*a, **k):
@@ -191,46 +191,46 @@ def test_record_dry_run_runs_nothing(monkeypatch):
     assert any("Dry run" in l for l in lines)
 
 
-def test_listing_shows_only_machines_archer_made(monkeypatch, tmp_path):
-    # Two VMs on the host; only one is in Archer's registry — the other is left out
-    monkeypatch.setattr("archer.lab.registry._PATH", str(tmp_path / "machines.json"))
+def test_listing_shows_only_machines_shikari_made(monkeypatch, tmp_path):
+    # Two VMs on the host; only one is in Shikari's registry — the other is left out
+    monkeypatch.setattr("shikari.lab.registry._PATH", str(tmp_path / "machines.json"))
     monkeypatch.setattr(engines.Docker, "list", lambda self: [])
     monkeypatch.setattr(engines.Tart, "list", lambda self: [
         {"engine": "tart", "name": "mine", "kind": "vm", "image": "", "os": "", "state": "stopped", "detail": ""},
         {"engine": "tart", "name": "sequoia-vm", "kind": "vm", "image": "", "os": "", "state": "stopped", "detail": ""},
     ])
-    import archer.lab.registry as reg
+    import shikari.lab.registry as reg
     reg.record("tart", "mine", "macos-vm", "macos", "ghcr.io/cirruslabs/macos", owner=1)
     names = [m["name"] for m in machines.listing(["tart"], user_id=1, is_admin=False)]
     assert names == ["mine"]  # sequoia-vm (not in the registry) is omitted
     assert machines.listing(["tart"], user_id=1, is_admin=False)[0]["os"] == "macos"
 
 
-def test_all_host_names_includes_vms_outside_archer(monkeypatch):
-    # For clash-free naming: every name on the host, Archer's and not
+def test_all_host_names_includes_vms_outside_shikari(monkeypatch):
+    # For clash-free naming: every name on the host, Shikari's and not
     monkeypatch.setattr(engines.Docker, "list", lambda self: [
-        {"engine": "docker", "name": "archer-ubuntu-1", "kind": "container", "image": "", "os": "linux", "state": "running", "detail": ""}])
-    monkeypatch.setattr("archer.lab.engines.run",
+        {"engine": "docker", "name": "shikari-ubuntu-1", "kind": "container", "image": "", "os": "linux", "state": "running", "detail": ""}])
+    monkeypatch.setattr("shikari.lab.engines.run",
                         lambda argv, **k: json.dumps([{"Source": "local", "Name": "sequoia-vm"},
-                                                      {"Source": "local", "Name": "archer-macos-1"}]))
+                                                      {"Source": "local", "Name": "shikari-macos-1"}]))
     names = machines.all_host_names(["docker", "tart"])
-    assert "archer-ubuntu-1" in names and "sequoia-vm" in names and "archer-macos-1" in names
+    assert "shikari-ubuntu-1" in names and "sequoia-vm" in names and "shikari-macos-1" in names
 
 
 # --- UTM engine (Windows/Linux VMs via QEMU; utmctl-driven, create is manual) ---
 
 def test_parse_utm_list_reads_the_table_and_marks_running():
     out = ("UUID                                  Status   Name\n"
-           "11111111-1111-1111-1111-111111111111  started  archer-win11\n"
-           "22222222-2222-2222-2222-222222222222  stopped  archer-ubuntu\n")
+           "11111111-1111-1111-1111-111111111111  started  shikari-win11\n"
+           "22222222-2222-2222-2222-222222222222  stopped  shikari-ubuntu\n")
     rows = engines.parse_utm_list(out)
-    assert [(r["name"], r["state"]) for r in rows] == [("archer-win11", "running"), ("archer-ubuntu", "stopped")]
+    assert [(r["name"], r["state"]) for r in rows] == [("shikari-win11", "running"), ("shikari-ubuntu", "stopped")]
     assert all(r["engine"] == "utm" and r["kind"] == "vm" for r in rows)
 
 
 def test_utm_snapshot_restore_and_start_use_utmctl(monkeypatch):
     calls = []
-    monkeypatch.setattr("archer.lab.engines.run", lambda argv, **k: calls.append(list(argv)) or "")
+    monkeypatch.setattr("shikari.lab.engines.run", lambda argv, **k: calls.append(list(argv)) or "")
     u = engines.UTM()
     u.snapshot("win", "clean")
     u.revert("win", "clean")
@@ -242,20 +242,20 @@ def test_utm_snapshot_restore_and_start_use_utmctl(monkeypatch):
 
 def test_utm_is_kept_out_of_the_dock_unless_you_chose_otherwise(monkeypatch):
     calls = []
-    monkeypatch.setattr("archer.lab.engines.run", lambda argv, **k: calls.append(list(argv)) or "")
+    monkeypatch.setattr("shikari.lab.engines.run", lambda argv, **k: calls.append(list(argv)) or "")
     write = ["defaults", "write", "com.utmapp.UTM", "HideDockIcon", "-bool", "true"]
 
-    # Never set: Archer sets it, once, before its first utmctl call
-    monkeypatch.setattr("archer.lab.engines._utm_quiet", False)
-    monkeypatch.setattr("archer.lab.engines.run_ok", lambda argv, **k: False)
+    # Never set: Shikari sets it, once, before its first utmctl call
+    monkeypatch.setattr("shikari.lab.engines._utm_quiet", False)
+    monkeypatch.setattr("shikari.lab.engines.run_ok", lambda argv, **k: False)
     engines.UTM().start("win")
     engines.UTM().stop("win")
     assert calls.count(write) == 1 and calls.index(write) < calls.index(["utmctl", "start", "--hide", "win"])
 
     # Set by you, either way: left alone
     calls.clear()
-    monkeypatch.setattr("archer.lab.engines._utm_quiet", False)
-    monkeypatch.setattr("archer.lab.engines.run_ok", lambda argv, **k: True)
+    monkeypatch.setattr("shikari.lab.engines._utm_quiet", False)
+    monkeypatch.setattr("shikari.lab.engines.run_ok", lambda argv, **k: True)
     engines.UTM().start("win")
     assert write not in calls
 
@@ -267,21 +267,21 @@ def test_utm_create_is_refused_with_guidance():
 
 def test_utm_clone_uses_utmctl(monkeypatch):
     calls = []
-    monkeypatch.setattr("archer.lab.engines.run", lambda argv, **k: calls.append(list(argv)) or "")
-    engines.UTM().clone("archer-win11", "archer-win11-2")
-    assert ["utmctl", "clone", "archer-win11", "--name", "archer-win11-2"] in calls
+    monkeypatch.setattr("shikari.lab.engines.run", lambda argv, **k: calls.append(list(argv)) or "")
+    engines.UTM().clone("shikari-win11", "shikari-win11-2")
+    assert ["utmctl", "clone", "shikari-win11", "--name", "shikari-win11-2"] in calls
 
 
 def test_machines_clone_carries_the_source_os(monkeypatch, tmp_path):
-    monkeypatch.setattr("archer.lab.registry._PATH", str(tmp_path / "m.json"))
+    monkeypatch.setattr("shikari.lab.registry._PATH", str(tmp_path / "m.json"))
     cloned = []
     monkeypatch.setattr(engines.UTM, "clone", lambda self, name, new: cloned.append((name, new)))
-    import archer.lab.registry as reg
-    reg.record("utm", "archer-win11", "utm-vm", "windows", "")
-    out = machines.clone("utm", "archer-win11", "archer-win11-2")
-    assert cloned == [("archer-win11", "archer-win11-2")]
+    import shikari.lab.registry as reg
+    reg.record("utm", "shikari-win11", "utm-vm", "windows", "")
+    out = machines.clone("utm", "shikari-win11", "shikari-win11-2")
+    assert cloned == [("shikari-win11", "shikari-win11-2")]
     assert out["os"] == "windows"
-    assert reg.get("utm", "archer-win11-2")["os"] == "windows"  # clone registered with the OS
+    assert reg.get("utm", "shikari-win11-2")["os"] == "windows"  # clone registered with the OS
 
 
 def test_machines_clone_refused_for_an_engine_without_clone(monkeypatch):
@@ -297,7 +297,7 @@ def test_utm_exec_puts_cmd_last_and_forwards_stdin(monkeypatch):
         seen["argv"], seen["input"] = list(argv), input_text
         return "ok"
 
-    monkeypatch.setattr("archer.lab.engines.run", fake_run)
+    monkeypatch.setattr("shikari.lab.engines.run", fake_run)
     engines.UTM().exec("vm", ["bash", "-lc", "id"], timeout=30, input_text="data")
     a = seen["argv"]
     assert a[:4] == ["utmctl", "exec", "--hide", "vm"] and "--input" in a
@@ -305,15 +305,15 @@ def test_utm_exec_puts_cmd_last_and_forwards_stdin(monkeypatch):
 
 
 def test_utm_vms_are_managed_and_adopt_sets_their_os(monkeypatch, tmp_path):
-    monkeypatch.setattr("archer.lab.registry._PATH", str(tmp_path / "m.json"))
+    monkeypatch.setattr("shikari.lab.registry._PATH", str(tmp_path / "m.json"))
     monkeypatch.setattr(engines.Docker, "list", lambda self: [])
     monkeypatch.setattr(engines.Tart, "list", lambda self: [])
     monkeypatch.setattr(engines.UTM, "list", lambda self: [
-        {"engine": "utm", "name": "archer-win11", "uuid": "u", "kind": "vm", "image": "",
+        {"engine": "utm", "name": "shikari-win11", "uuid": "u", "kind": "vm", "image": "",
          "os": "", "state": "stopped", "detail": "stopped"}])
     rows = machines.listing(["utm"])
-    assert rows and rows[0]["archer"] is True and rows[0]["adopted"] is False and rows[0]["os"] == ""
-    machines.adopt("utm", "archer-win11", "windows")
+    assert rows and rows[0]["shikari"] is True and rows[0]["adopted"] is False and rows[0]["os"] == ""
+    machines.adopt("utm", "shikari-win11", "windows")
     rows = machines.listing(["utm"])
     assert rows[0]["adopted"] is True and rows[0]["os"] == "windows"
 

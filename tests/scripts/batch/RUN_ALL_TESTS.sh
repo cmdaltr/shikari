@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run All Archer Feature Tests
+# Run All Shikari Feature Tests
 #
 # This script runs all test batches sequentially.
 # Estimated total time: ~2-3 hours
@@ -21,7 +21,7 @@ done
 
 echo ""
 echo -e "${BLUE}======================================================================${NC}"
-echo -e "${BLUE}  ARCHER COMPLETE TEST SUITE${NC}"
+echo -e "${BLUE}  SHIKARI COMPLETE TEST SUITE${NC}"
 echo -e "${BLUE}  Started: $(date '+%Y-%m-%d %H:%M:%S')${NC}"
 if [ "$QUICK_MODE" = true ]; then
     echo -e "${YELLOW}  Mode: QUICK (skipping slow tests)${NC}"
@@ -29,8 +29,8 @@ fi
 echo -e "${BLUE}======================================================================${NC}"
 echo ""
 
-# Check Archer is running
-if ! check_archer_running; then
+# Check Shikari is running
+if ! check_shikari_running; then
     exit 1
 fi
 

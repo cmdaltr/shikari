@@ -24,10 +24,10 @@ PAGES = Path(__file__).with_name("pages.yaml")
 OUT = ROOT / "static" / "guide"
 WIDTH, MAX_HEIGHT = 1440, 2600
 
-# Nothing that floats over the page belongs in a still: the Ask Archer button, toasts, and any of a
+# Nothing that floats over the page belongs in a still: the Ask Shikari button, toasts, and any of a
 # previous visit's dialogs
 TIDY = """() => {
-  document.querySelectorAll('#ask-archer-btn, #ask-archer-panel, .ag-shade, .toast, .toast-container').forEach(e => e.remove());
+  document.querySelectorAll('#ask-shikari-btn, #ask-shikari-panel, .ag-shade, .toast, .toast-container').forEach(e => e.remove());
   window.scrollTo(0, 0);
 }"""
 
@@ -43,7 +43,7 @@ def login(page, base, email, password):
     page.locator('button[type="submit"]').first.click()
     page.wait_for_load_state("networkidle")
     if "/login" in page.url:
-        sys.exit("Couldn't log in: set ARCHER_GUIDE_EMAIL and ARCHER_GUIDE_PASSWORD")
+        sys.exit("Couldn't log in: set SHIKARI_GUIDE_EMAIL and SHIKARI_GUIDE_PASSWORD")
 
 
 def settle(page):
@@ -59,8 +59,8 @@ def main():
     parser.add_argument("--base", default="http://127.0.0.1:8010")
     parser.add_argument("--only", nargs="*", help="page ids to capture (the rest keep their pictures)")
     args = parser.parse_args()
-    email = os.environ.get("ARCHER_GUIDE_EMAIL", "admin@archer.app")
-    password = os.environ.get("ARCHER_GUIDE_PASSWORD", "£missary_0f_the_G0rg0nite$")
+    email = os.environ.get("SHIKARI_GUIDE_EMAIL", "admin@shikari.app")
+    password = os.environ.get("SHIKARI_GUIDE_PASSWORD", "BigGameHunter")
 
     spec = yaml.safe_load(PAGES.read_text())["pages"]
     previous = {}

@@ -2,7 +2,7 @@
 
 from collections import Counter
 
-from archer.parsers import command_techniques as ct
+from shikari.parsers import command_techniques as ct
 
 
 def test_pair_then_binary_then_dll():

@@ -1,12 +1,12 @@
 # Threat library and assessments
 
-Archer already knows which groups matter to you (Company profile), what they do (MITRESaw), what you detect (Library, Coverage) and which logs record each technique (Emulate). What it didn't have is the record of **testing** — which procedures you ran, whether they were blocked, logged or alerted, and what changed afterwards. The threat library and assessments add that, VECTR-style. No AI is involved, and nothing is executed here: running atomics in a lab is stages 2 and 3 of the lab recording work.
+Shikari already knows which groups matter to you (Company profile), what they do (MITRESaw), what you detect (Library, Coverage) and which logs record each technique (Emulate). What it didn't have is the record of **testing** — which procedures you ran, whether they were blocked, logged or alerted, and what changed afterwards. The threat library and assessments add that, VECTR-style. No AI is involved, and nothing is executed here: running atomics in a lab is stages 2 and 3 of the lab recording work.
 
 **Build → Assessments** holds both on one page: a **Threat library** tab for the test cases, and a **Campaigns** tab for the assessments that run them.
 
 ## Threat library
 
-The Threat library tab turns ranked groups into test cases. Pick a company profile — its recommended groups — or name a single group. Archer reads MITRESaw's procedures for those groups and makes one test case per procedure: the technique, the procedure text, the indicators, and the matching Atomic Red Team test where a local atomics checkout is configured (`ATOMIC_REDTEAM_PATH`).
+The Threat library tab turns ranked groups into test cases. Pick a company profile — its recommended groups — or name a single group. Shikari reads MITRESaw's procedures for those groups and makes one test case per procedure: the technique, the procedure text, the indicators, and the matching Atomic Red Team test where a local atomics checkout is configured (`ATOMIC_REDTEAM_PATH`).
 
 Test cases sort by **prevalence** — how many of the chosen groups use the technique — so the ones the most relevant adversaries rely on come first. Each row shows how many of your detections already cover the technique, linking to them. The library is per user; building again adds only what's new.
 
@@ -28,7 +28,7 @@ Outcomes export two ways:
 
 ## Export for MACAT
 
-**Export for MACAT** (Threat library tab) downloads your test cases as a MACATable library TOML — the format [MACAT](https://www.macat.io) imports. Each test case becomes a `[[lib_procedures]]` entry tagged with the technique, tactic and attributing group, with the matching Atomic Red Team GUID noted so MACAT pairs it with the ART procedure it already syncs. Archer's test cases are intelligence, not runnable commands, so the export carries procedure metadata, not executable steps — MACAT runs the Atomic and pushes results to VECTR. It's a one-way, offline file; Archer takes no dependency on MACAT.
+**Export for MACAT** (Threat library tab) downloads your test cases as a MACATable library TOML — the format [MACAT](https://www.macat.io) imports. Each test case becomes a `[[lib_procedures]]` entry tagged with the technique, tactic and attributing group, with the matching Atomic Red Team GUID noted so MACAT pairs it with the ART procedure it already syncs. Shikari's test cases are intelligence, not runnable commands, so the export carries procedure metadata, not executable steps — MACAT runs the Atomic and pushes results to VECTR. It's a one-way, offline file; Shikari takes no dependency on MACAT.
 
 ## Notes
 

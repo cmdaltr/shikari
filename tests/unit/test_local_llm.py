@@ -2,8 +2,8 @@
 
 import pytest
 
-from archer.build import local_llm
-from archer.build.llm_queries import build_compact_local_prompt
+from shikari.build import local_llm
+from shikari.build.llm_queries import build_compact_local_prompt
 
 TECH = dict(technique_id="T1059.001", technique_name="PowerShell", tactic="Execution",
             procedure_example="Adversary runs an encoded PowerShell download cradle." * 50,
@@ -33,11 +33,11 @@ def test_compact_prompt_truncates_long_procedure():
 
 
 def test_run_cap_env(monkeypatch):
-    monkeypatch.delenv("ARCHER_LOCAL_LLM_CAP", raising=False)
+    monkeypatch.delenv("SHIKARI_LOCAL_LLM_CAP", raising=False)
     assert local_llm.local_run_cap() == local_llm.DEFAULT_CAP
-    monkeypatch.setenv("ARCHER_LOCAL_LLM_CAP", "3")
+    monkeypatch.setenv("SHIKARI_LOCAL_LLM_CAP", "3")
     assert local_llm.local_run_cap() == 3
-    monkeypatch.setenv("ARCHER_LOCAL_LLM_CAP", "nonsense")
+    monkeypatch.setenv("SHIKARI_LOCAL_LLM_CAP", "nonsense")
     assert local_llm.local_run_cap() == local_llm.DEFAULT_CAP
 
 

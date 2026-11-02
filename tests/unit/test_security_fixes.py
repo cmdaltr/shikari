@@ -7,12 +7,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-import archer.app as app_module
-from archer.auth.password import hash_password, validate_password, verify_password
-from archer.auth.password_reset import create_password_reset_request, reset_password_with_token
-from archer.build.queries import _q
-from archer.database.models import Base, PasswordReset, User, UserRole
-from archer.parsers import blog_analyzer
+import shikari.app as app_module
+from shikari.auth.password import hash_password, validate_password, verify_password
+from shikari.auth.password_reset import create_password_reset_request, reset_password_with_token
+from shikari.build.queries import _q
+from shikari.database.models import Base, PasswordReset, User, UserRole
+from shikari.parsers import blog_analyzer
 
 
 @pytest.fixture
@@ -85,7 +85,7 @@ class TestPasswordReset:
         db.close()
 
     def test_request_reset_never_returns_token(self, client, user, monkeypatch):
-        monkeypatch.setattr("archer.auth.email.EMAIL_ENABLED", False)
+        monkeypatch.setattr("shikari.auth.email.EMAIL_ENABLED", False)
         known = client.post("/api/auth/request-reset", json={"email": user.email}).json()
         unknown = client.post("/api/auth/request-reset", json={"email": "nobody@example.org"}).json()
         assert "token" not in known and "reset_url" not in known

@@ -1,6 +1,6 @@
 """MISP instance client (#19): restSearch response -> merged extraction, with requests mocked."""
 
-import archer.parsers.misp_client as mc
+import shikari.parsers.misp_client as mc
 
 EVENTS = {"response": [
     {"Event": {"info": "APT intrusion", "Attribute": [{"type": "ip-dst", "value": "203.0.113.9"}],

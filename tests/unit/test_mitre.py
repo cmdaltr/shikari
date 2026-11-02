@@ -14,11 +14,11 @@ class TestGetStixData:
 
     def test_get_stix_data_fetches_from_url(self):
         """Test that get_stix_data makes HTTP request."""
-        from archer.mitre.enterprise import get_stix_data
+        from shikari.mitre.enterprise import get_stix_data
 
         stix_content = '{"type": "bundle", "id": "bundle--test", "objects": []}'
 
-        with patch("archer.mitre.enterprise.requests.get") as mock_get, \
+        with patch("shikari.mitre.enterprise.requests.get") as mock_get, \
              patch("stix2.parse") as mock_parse:
 
             mock_response = MagicMock()
@@ -43,11 +43,11 @@ class TestGetStixData:
 
     def test_get_stix_data_network_fetch(self):
         """Test fetching STIX data from network when cache is stale."""
-        from archer.mitre.enterprise import get_stix_data
+        from shikari.mitre.enterprise import get_stix_data
 
         stix_content = '{"type": "bundle", "id": "bundle--test", "objects": []}'
 
-        with patch("archer.mitre.enterprise.requests.get") as mock_get, \
+        with patch("shikari.mitre.enterprise.requests.get") as mock_get, \
              patch("stix2.parse") as mock_parse:
 
             mock_response = MagicMock()
@@ -73,7 +73,7 @@ class TestObtainAllTechniques:
 
     def test_obtain_all_techniques_returns_list(self):
         """Test that obtain_all_techniques returns a list."""
-        from archer.mitre.enterprise import obtain_all_techniques
+        from shikari.mitre.enterprise import obtain_all_techniques
 
         # Create mock bundle with techniques
         mock_technique = {
@@ -92,7 +92,7 @@ class TestObtainAllTechniques:
 
     def test_obtain_all_techniques_multiple(self):
         """Test extracting multiple techniques."""
-        from archer.mitre.enterprise import obtain_all_techniques
+        from shikari.mitre.enterprise import obtain_all_techniques
 
         mock_techniques = [
             {
@@ -117,7 +117,7 @@ class TestObtainAllTechniques:
 
     def test_obtain_all_techniques_sorted(self):
         """Test that techniques are returned sorted."""
-        from archer.mitre.enterprise import obtain_all_techniques
+        from shikari.mitre.enterprise import obtain_all_techniques
 
         mock_techniques = [
             {
@@ -140,7 +140,7 @@ class TestObtainAllTechniques:
 
     def test_obtain_all_techniques_deduplicates(self):
         """Test that duplicate techniques are removed."""
-        from archer.mitre.enterprise import obtain_all_techniques
+        from shikari.mitre.enterprise import obtain_all_techniques
 
         mock_techniques = [
             {
@@ -163,7 +163,7 @@ class TestObtainAllTechniques:
 
     def test_obtain_all_techniques_ignores_non_techniques(self):
         """Test that non-technique objects are ignored."""
-        from archer.mitre.enterprise import obtain_all_techniques
+        from shikari.mitre.enterprise import obtain_all_techniques
 
         mock_objects = [
             {
@@ -194,7 +194,7 @@ class TestObtainTechniqueDescriptions:
 
     def test_obtain_technique_descriptions(self):
         """Test extracting technique descriptions."""
-        from archer.mitre.enterprise import obtain_technique_descriptions
+        from shikari.mitre.enterprise import obtain_technique_descriptions
 
         mock_technique = {
             "type": "attack-pattern",
@@ -218,7 +218,7 @@ class TestCheckGroupInMitre:
 
     def test_check_group_found_by_name(self):
         """Test finding a group by exact name."""
-        from archer.mitre.enterprise import check_group_in_mitre
+        from shikari.mitre.enterprise import check_group_in_mitre
 
         mock_group = {
             "type": "intrusion-set",
@@ -234,7 +234,7 @@ class TestCheckGroupInMitre:
 
     def test_check_group_found_by_alias(self):
         """Test finding a group by alias."""
-        from archer.mitre.enterprise import check_group_in_mitre
+        from shikari.mitre.enterprise import check_group_in_mitre
 
         mock_group = {
             "type": "intrusion-set",
@@ -250,7 +250,7 @@ class TestCheckGroupInMitre:
 
     def test_check_group_case_insensitive(self):
         """Test that group lookup is case-insensitive."""
-        from archer.mitre.enterprise import check_group_in_mitre
+        from shikari.mitre.enterprise import check_group_in_mitre
 
         mock_group = {
             "type": "intrusion-set",
@@ -266,7 +266,7 @@ class TestCheckGroupInMitre:
 
     def test_check_group_not_found(self):
         """Test group not found returns 'N'."""
-        from archer.mitre.enterprise import check_group_in_mitre
+        from shikari.mitre.enterprise import check_group_in_mitre
 
         mock_group = {
             "type": "intrusion-set",
@@ -286,7 +286,7 @@ class TestConsolidateTactics:
 
     def test_consolidate_tactics_extracts_phases(self):
         """Test extracting tactics from kill chain phases."""
-        from archer.mitre.enterprise import consolidate_tactics
+        from shikari.mitre.enterprise import consolidate_tactics
 
         # Simulate STIX kill chain phases format
         phases = [
@@ -302,7 +302,7 @@ class TestConsolidateTactics:
 
     def test_consolidate_tactics_removes_duplicates(self):
         """Test that duplicate tactics are removed."""
-        from archer.mitre.enterprise import consolidate_tactics
+        from shikari.mitre.enterprise import consolidate_tactics
 
         phases = [
             "KillChainPhase(kill_chain_name='mitre-attack', phase_name='execution')",
@@ -315,7 +315,7 @@ class TestConsolidateTactics:
 
     def test_consolidate_tactics_sorted(self):
         """Test that tactics are returned sorted."""
-        from archer.mitre.enterprise import consolidate_tactics
+        from shikari.mitre.enterprise import consolidate_tactics
 
         phases = [
             "KillChainPhase(kill_chain_name='mitre-attack', phase_name='persistence')",
@@ -332,7 +332,7 @@ class TestMergeDetectGuidance:
 
     def test_merge_detect_guidance(self):
         """Test merging data sources with blue team info."""
-        from archer.mitre.enterprise import merge_detect_guidance
+        from shikari.mitre.enterprise import merge_detect_guidance
 
         data_source = "'Process: Process Creation', 'Command: Command Execution'"
         blue_info = {"detection": "Monitor PowerShell"}
@@ -352,7 +352,7 @@ class TestEdgeCases:
 
     def test_empty_bundle(self):
         """Test handling of empty STIX bundle."""
-        from archer.mitre.enterprise import obtain_all_techniques
+        from shikari.mitre.enterprise import obtain_all_techniques
 
         mock_bundle = MagicMock()
         mock_bundle.objects = []
@@ -363,7 +363,7 @@ class TestEdgeCases:
 
     def test_technique_missing_external_references(self):
         """Test handling technique without external references."""
-        from archer.mitre.enterprise import obtain_all_techniques
+        from shikari.mitre.enterprise import obtain_all_techniques
 
         mock_technique = {
             "type": "attack-pattern",
@@ -383,7 +383,7 @@ class TestEdgeCases:
 
     def test_group_missing_aliases(self):
         """Test handling group without aliases."""
-        from archer.mitre.enterprise import check_group_in_mitre
+        from shikari.mitre.enterprise import check_group_in_mitre
 
         mock_group = {
             "type": "intrusion-set",

@@ -1,5 +1,5 @@
 """
-Pytest configuration for Archer test suite
+Pytest configuration for Shikari test suite
 
 Test Categories:
 - Functionality tests: Quick tests that verify endpoints respond correctly
@@ -36,14 +36,14 @@ def pytest_addoption(parser):
         help="run feature tests (generation tests)"
     )
     parser.addoption(
-        "--archer-url",
+        "--shikari-url",
         action="store",
-        default=os.getenv("ARCHER_BASE_URL", "http://127.0.0.1:8000"),
-        help="Archer base URL for testing"
+        default=os.getenv("SHIKARI_BASE_URL", "http://127.0.0.1:8000"),
+        help="Shikari base URL for testing"
     )
 
 
 @pytest.fixture(scope="session")
-def archer_url(request):
-    """Get Archer base URL from command line or environment"""
-    return request.config.getoption("--archer-url")
+def shikari_url(request):
+    """Get Shikari base URL from command line or environment"""
+    return request.config.getoption("--shikari-url")

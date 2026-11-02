@@ -25,7 +25,7 @@
 
   const techniqueId = () => (input.value.match(/T\d{4}(\.\d{3})?/i) || [''])[0].toUpperCase();
   const setTactics = list => tacticBox.querySelectorAll('input').forEach(cb => { cb.checked = list.includes(cb.value); });
-  const ruleFor = tid => 'archer_' + tid.toLowerCase().replace(/\W+/g, '_');
+  const ruleFor = tid => 'shikari_' + tid.toLowerCase().replace(/\W+/g, '_');
 
   function onTechnique() {
     const tid = techniqueId(), t = attack && attack.byId[tid];

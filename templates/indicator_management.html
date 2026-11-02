@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Archer - Indicator Management{% endblock %}
+{% block title %}Shikari - Indicator Management{% endblock %}
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
@@ -7,7 +7,7 @@
 <style>
   /* Page tabs: Search indicators | Import / export. An underline bar, distinct from the boxed
      source tabs inside Import. */
-  /* Two collapsible sections (Archer's house style), IOC search above STIX/TAXII. */
+  /* Two collapsible sections (Shikari's house style), IOC search above STIX/TAXII. */
   .im-sect { border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-primary); margin: 0 0 18px; }
   .im-sect > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 15px 18px; }
   .im-sect > summary::-webkit-details-marker { display: none; }
@@ -150,7 +150,7 @@
           <span class="sx-drop-text">Drop a STIX bundle or MISP event here, or <u>choose a file</u></span>
           <span class="sx-drop-name" id="sx-file-name"></span>
         </label>
-        <p class="ms-note">A STIX bundle (<code>objects</code>) or a MISP event (<code>Event</code>) — Archer detects which.</p>
+        <p class="ms-note">A STIX bundle (<code>objects</code>) or a MISP event (<code>Event</code>) — Shikari detects which.</p>
       </div>
       <div class="sx-pane" id="sx-pane-paste" hidden>
         <textarea id="sx-paste" class="form-input sx-well" placeholder='{"type":"bundle","objects":[ ... ]}  or  {"Event":{ ... }}'></textarea>
@@ -197,7 +197,7 @@
     <section class="ui-card ms-card">
       <h2>Export a run</h2>
       <p class="ms-note">A saved run becomes a STIX&nbsp;2.1 bundle (intrusion-set, an attack-pattern per technique,
-        IOC indicators, and the detections as <code>x-archer-detection</code> objects) or a MISP event
+        IOC indicators, and the detections as <code>x-shikari-detection</code> objects) or a MISP event
         (the group, techniques as ATT&amp;CK galaxy clusters, and the IOCs as attributes).</p>
       <div class="sx-export-row">
         <select id="sx-export-group" class="dropdown-styled sx-export-select" aria-label="Run to export">

@@ -1,8 +1,8 @@
-# Archer Security Features Documentation
+# Shikari Security Features Documentation
 
 ## Overview
 
-Archer implements comprehensive security features to protect user accounts and data. This document outlines all implemented security measures, configuration options, and best practices.
+Shikari implements comprehensive security features to protect user accounts and data. This document outlines all implemented security measures, configuration options, and best practices.
 
 ## Table of Contents
 
@@ -24,14 +24,14 @@ Archer implements comprehensive security features to protect user accounts and d
 ## Authentication & Authorization
 
 ### Overview
-Archer uses cookie-based session authentication with role-based access control (RBAC).
+Shikari uses cookie-based session authentication with role-based access control (RBAC).
 
 ### User Roles
 - **Admin**: Full system access, user management capabilities
 - **Standard**: Regular user access, cannot manage other users
 
 ### Implementation Details
-- **Location**: `archer/auth/session.py`, `archer/app.py`
+- **Location**: `shikari/auth/session.py`, `shikari/app.py`
 - **Session Storage**: SQLite database
 - **Session Duration**:
   - Default: 16 hours
@@ -40,8 +40,8 @@ Archer uses cookie-based session authentication with role-based access control (
 
 ### Default Credentials
 ```
-Email: admin@archer.app
-Password: £missary_0f_the_G0rg0nite$
+Email: admin@shikari.app
+Password: BigGameHunter
 ```
 
 **⚠️ IMPORTANT**: Change the default admin password immediately after first login!
@@ -53,7 +53,7 @@ Password: £missary_0f_the_G0rg0nite$
 ### Password Hashing
 - **Algorithm**: bcrypt with automatic salt generation
 - **Work Factor**: Configured for optimal security/performance balance
-- **Location**: `archer/auth/password.py`
+- **Location**: `shikari/auth/password.py`
 
 ### Password Requirements
 - **Minimum Length**: 12 characters
@@ -65,7 +65,7 @@ Password: £missary_0f_the_G0rg0nite$
 
 ### Password Validation
 ```python
-from archer.auth.password import validate_password_strength
+from shikari.auth.password import validate_password_strength
 
 # Returns (is_valid, error_message)
 is_valid, message = validate_password_strength("MyP@ssw0rd123")
@@ -78,7 +78,7 @@ is_valid, message = validate_password_strength("MyP@ssw0rd123")
 4. User clicks link, validates token, sets new password
 5. Token marked as used (single-use only)
 
-**Implementation**: `archer/auth/password_reset.py`
+**Implementation**: `shikari/auth/password_reset.py`
 
 ---
 
@@ -87,7 +87,7 @@ is_valid, message = validate_password_strength("MyP@ssw0rd123")
 ### Session Creation
 - Sessions created on successful login
 - Session ID stored in secure HTTP-only cookie
-- Cookie name: `archer_session`
+- Cookie name: `shikari_session`
 
 ### Session Validation
 - Checked on every authenticated request
@@ -103,7 +103,7 @@ is_valid, message = validate_password_strength("MyP@ssw0rd123")
 - User deactivation
 - Password change (optional: invalidate all sessions)
 
-**Implementation**: `archer/auth/session.py`
+**Implementation**: `shikari/auth/session.py`
 
 ---
 
@@ -125,13 +125,13 @@ LOCKOUT_DURATION_SECONDS = 900  # 15 minutes
 4. Automatic cleanup of old entries
 
 ### Implementation
-- **Location**: `archer/security/rate_limit.py`
+- **Location**: `shikari/security/rate_limit.py`
 - **Storage**: In-memory (for single-server deployments)
 - **Production Note**: Consider Redis for multi-server deployments
 
 ### Usage Example
 ```python
-from archer.security.rate_limit import check_rate_limit, record_attempt
+from shikari.security.rate_limit import check_rate_limit, record_attempt
 
 # Check if allowed
 is_allowed, attempts_remaining = check_rate_limit(email)
@@ -168,7 +168,7 @@ Tokens are random and stored per process, not signed, so run a single worker (th
 
 ### API Usage
 ```python
-from archer.security.csrf import generate_csrf_token, validate_csrf_token
+from shikari.security.csrf import generate_csrf_token, validate_csrf_token
 
 # Generate token
 token = generate_csrf_token(session_id)
@@ -178,7 +178,7 @@ if not validate_csrf_token(token, session_id):
     raise HTTPException(status_code=403, detail="Invalid CSRF token")
 ```
 
-**Implementation**: `archer/security/csrf.py`
+**Implementation**: `shikari/security/csrf.py`
 
 ---
 
@@ -206,7 +206,7 @@ class User(Base):
     locked_until = Column(DateTime, nullable=True)
 ```
 
-**Implementation**: `archer/database/models.py`, `archer/app.py`
+**Implementation**: `shikari/database/models.py`, `shikari/app.py`
 
 ---
 
@@ -252,7 +252,7 @@ class AuditLog(Base):
 
 ### Usage
 ```python
-from archer.database.audit import log_audit_event, EVENT_LOGIN_SUCCESS
+from shikari.database.audit import log_audit_event, EVENT_LOGIN_SUCCESS
 
 log_audit_event(
     db=db,
@@ -267,7 +267,7 @@ log_audit_event(
 
 ### Viewing Audit Logs
 ```python
-from archer.database.audit import get_audit_logs
+from shikari.database.audit import get_audit_logs
 
 # Get last 100 logs for a user
 logs = get_audit_logs(db, user_id=user_id, limit=100)
@@ -276,7 +276,7 @@ logs = get_audit_logs(db, user_id=user_id, limit=100)
 failed_attempts = get_failed_login_attempts(db, email=email, since_minutes=15)
 ```
 
-**Implementation**: `archer/database/audit.py`
+**Implementation**: `shikari/database/audit.py`
 
 ---
 
@@ -290,8 +290,8 @@ export SMTP_HOST=smtp.gmail.com
 export SMTP_PORT=587
 export SMTP_USERNAME=your-email@example.com
 export SMTP_PASSWORD=your-app-password
-export SMTP_FROM_EMAIL=noreply@archer.app
-export SMTP_FROM_NAME="Archer Security Platform"
+export SMTP_FROM_EMAIL=noreply@shikari.app
+export SMTP_FROM_NAME="Shikari Security Platform"
 export SMTP_USE_TLS=true
 export BASE_URL=https://your-domain.com
 ```
@@ -316,7 +316,7 @@ When `EMAIL_ENABLED=false`:
 - Clear security warnings
 - Branded templates
 
-**Implementation**: `archer/auth/email.py`
+**Implementation**: `shikari/auth/email.py`
 
 ---
 
@@ -348,7 +348,7 @@ class User(Base):
 - 1Password
 - Any TOTP-compatible app
 
-**Implementation**: `archer/auth/mfa.py`
+**Implementation**: `shikari/auth/mfa.py`
 
 ---
 
@@ -381,7 +381,7 @@ class APIKey(Base):
 
 ### Usage
 ```python
-from archer.auth.encryption import encrypt_api_key, decrypt_api_key
+from shikari.auth.encryption import encrypt_api_key, decrypt_api_key
 
 # Encrypt
 encrypted = encrypt_api_key(plain_key, master_password)
@@ -390,7 +390,7 @@ encrypted = encrypt_api_key(plain_key, master_password)
 plain_key = decrypt_api_key(encrypted, master_password)
 ```
 
-**Implementation**: `archer/auth/encryption.py`
+**Implementation**: `shikari/auth/encryption.py`
 
 ---
 
@@ -409,7 +409,7 @@ GET /api/admin/users
   "users": [
     {
       "id": 1,
-      "email": "admin@archer.app",
+      "email": "admin@shikari.app",
       "full_name": "Admin User",
       "role": "admin",
       "is_active": true,
@@ -461,7 +461,7 @@ DELETE /api/admin/users/{user_id}
 - Create, update, deactivate users
 - Reset user passwords
 
-**Implementation**: `archer/app.py` (lines 4578-4847)
+**Implementation**: `shikari/app.py` (lines 4578-4847)
 
 ---
 
@@ -651,17 +651,17 @@ DELETE /api/admin/users/{user_id}
 - `SECURITY_FEATURES.md`: This document
 
 ### Code References
-- Authentication: `archer/auth/`
-- Security: `archer/security/`
-- Database Models: `archer/database/models.py`
-- Audit Logging: `archer/database/audit.py`
+- Authentication: `shikari/auth/`
+- Security: `shikari/security/`
+- Database Models: `shikari/database/models.py`
+- Audit Logging: `shikari/database/audit.py`
 
 ### Getting Help
-- GitHub Issues: https://github.com/your-org/archer/issues
-- Security Issues: Report privately to security@archer.app
+- GitHub Issues: https://github.com/your-org/shikari/issues
+- Security Issues: Report privately to security@shikari.app
 
 ---
 
 **Last Updated**: 2025-01-20
 **Version**: 1.0
-**Maintained By**: Archer Development Team
+**Maintained By**: Shikari Development Team

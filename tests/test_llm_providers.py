@@ -6,10 +6,10 @@ Test script for LLM provider abstraction layer
 import os
 import sys
 
-# Add archer to path
+# Add shikari to path
 sys.path.insert(0, os.path.dirname(__file__))
 
-from archer.ai.llm.providers import LLMFactory, AnthropicProvider
+from shikari.ai.llm.providers import LLMFactory, AnthropicProvider
 
 
 def test_llm_factory():
@@ -108,7 +108,7 @@ def test_integration_with_generators():
     # Test SecOps generator
     print("\n1. Testing SecOps Generator:")
     try:
-        from archer.build.secops import SecOpsGenerator
+        from shikari.build.secops import SecOpsGenerator
 
         # Create with default provider
         gen = SecOpsGenerator()
@@ -125,7 +125,7 @@ def test_integration_with_generators():
     # Test Elastic generator
     print("\n2. Testing Elastic Generator:")
     try:
-        from archer.build.elastic import ElasticQueryGenerator
+        from shikari.build.elastic import ElasticQueryGenerator
 
         # Create with default provider
         gen = ElasticQueryGenerator()

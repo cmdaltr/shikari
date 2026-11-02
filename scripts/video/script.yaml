@@ -1,4 +1,4 @@
-# The Archer walkthrough video: narration and what happens on screen, scene by scene.
+# The Shikari walkthrough video: narration and what happens on screen, scene by scene.
 # scripts/video/make_video.py speaks each scene's narration with Piper, records the actions in a browser
 # spread across that time, and joins the scenes into one video with subtitles.
 #
@@ -46,9 +46,9 @@ say:
 scenes:
 
   - id: intro
-    chapter: What Archer is
+    chapter: What Shikari is
     narration: >
-      This is Archer. It turns MITRE ATT&CK into detections for Google SecOps, Defender XDR, Splunk and
+      This is Shikari. It turns MITRE ATT&CK into detections for Google SecOps, Defender XDR, Splunk and
       Elastic. Give it a threat group, a CVE, a threat report or a company, and it builds the queries,
       chains them into correlations, and shows you where you're blind. Almost all of it works without AI.
       Over the next few minutes we'll go through every part of it, and who each part is for.
@@ -73,7 +73,7 @@ scenes:
     chapter: Hunting a threat group
     narration: >
       Hunt is where most work starts. Type a threat group by any of its names. APT29, Cozy Bear and
-      Midnight Blizzard all find the same group. Archer collects every technique the group uses,
+      Midnight Blizzard all find the same group. Shikari collects every technique the group uses,
       directly, through its campaigns, and through the software it uses, and builds a detection for each.
     actions:
       - goto: /
@@ -84,7 +84,7 @@ scenes:
   - id: hunt-cves
     chapter: CVEs and techniques
     narration: >
-      Or enter CVEs. Archer reads the NVD record, the advisories and public proof-of-concept exploits,
+      Or enter CVEs. Shikari reads the NVD record, the advisories and public proof-of-concept exploits,
       and builds four kinds of query: the exploit request in your HTTP logs, the behaviour of
       exploitation, the shell an exploited server starts, and a sweep for the published indicators.
       Browse the last 30 days lists new CVEs, with CISA's known exploited ones marked. You can also
@@ -138,7 +138,7 @@ scenes:
   - id: analyse
     chapter: Analysing a report
     narration: >
-      Analyse builds detections from a threat report. Paste a URL or upload a PDF. Archer pulls out the
+      Analyse builds detections from a threat report. Paste a URL or upload a PDF. Shikari pulls out the
       techniques, the commands and the indicators, defanged ones included, and shows you every one
       before it generates anything. Untick the vendor's own domains and anything mentioned only in
       passing.
@@ -151,7 +151,7 @@ scenes:
   - id: profile-company
     chapter: Profiling a company
     narration: >
-      Profile starts from a company instead of a threat. Enter a domain and Archer works out the sector,
+      Profile starts from a company instead of a threat. Enter a domain and Shikari works out the sector,
       geography and hosting from public sources, then recommends the groups most likely to target it.
       The review shows an exposure map: what an attacker can see before they act, including whether
       the domain can be spoofed, its exposed services and its breach history.
@@ -167,7 +167,7 @@ scenes:
     chapter: Researching groups
     narration: >
       Research answers a different question: who targets finance in Europe? Enter keywords, and
-      Archer finds the matching groups and builds a table of the techniques they share. A technique
+      Shikari finds the matching groups and builds a table of the techniques they share. A technique
       several of your groups use is the best value for a detection.
     actions:
       - goto: /
@@ -215,8 +215,8 @@ scenes:
     narration: >
       The Threat Feed is the last seven days of technical research from vendors and governments,
       tagged with the industries, nations and products involved. By default it keeps what's relevant
-      to your industries and your stack. Save a watchlist, and Archer collects every six hours and
-      flags anything new. Analyse in Archer turns a post into detections.
+      to your industries and your stack. Save a watchlist, and Shikari collects every six hours and
+      flags anything new. Analyse in Shikari turns a post into detections.
     actions:
       - goto: /feed
       - show: section.fd-intro
@@ -261,7 +261,7 @@ scenes:
     narration: >
       Manual writes detections from your own intelligence, one technique at a time. Regex tests a
       pattern in the engine your SIEM actually uses, and catches the mistakes that only show up there.
-      And Agents put a model to work with Archer's tools, repairing queries that fail the checks,
+      And Agents put a model to work with Shikari's tools, repairing queries that fail the checks,
       triaging reports and sweeping coverage gaps, with every step shown and every change waiting for
       your approval.
     actions:
@@ -277,7 +277,7 @@ scenes:
     narration: >
       You don't need to remember all of this. The Help menu has a guide to every page, each part
       highlighted with what it's for, who uses it, and when it helps most, and tips for the things
-      that are easy to miss. Archer runs in a browser from a central server for the whole team, or as
+      that are easy to miss. Shikari runs in a browser from a central server for the whole team, or as
       an app on your own machine. It's on GitHub. Happy hunting.
     actions:
       - goto: /library

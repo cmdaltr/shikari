@@ -3,12 +3,12 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "archer"
+name = "shikari"
 version = "2.0.0"
-description = "Archer - Advanced Threat Hunting and Detection Engineering Platform"
+description = "Shikari - Advanced Threat Hunting and Detection Engineering Platform"
 readme = "README.md"
 authors = [
-    {name = "Archer Team"}
+    {name = "Shikari Team"}
 ]
 license = {text = "MIT"}
 requires-python = ">=3.10"
@@ -188,7 +188,7 @@ local-ai = [
     "sentencepiece>=0.1.99",
 ]
 
-# Desktop app window (archer-cli app). Linux also needs GTK (python3-gi, gir1.2-webkit2-4.1) or Qt
+# Desktop app window (shikari-cli app). Linux also needs GTK (python3-gi, gir1.2-webkit2-4.1) or Qt
 desktop = [
     "pywebview>=5.0",
     # Checks an organisation's server against the OS certificate store, as the window does
@@ -230,27 +230,27 @@ dev = [
 
 # All optional dependencies
 all = [
-    "archer[local-ai]",
-    "archer[analysis]",
-    "archer[viz]",
-    "archer[geo]",
-    "archer[dev]",
+    "shikari[local-ai]",
+    "shikari[analysis]",
+    "shikari[viz]",
+    "shikari[geo]",
+    "shikari[dev]",
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/archer"
-Documentation = "https://github.com/yourusername/archer/blob/main/README.md"
-Repository = "https://github.com/yourusername/archer"
-Issues = "https://github.com/yourusername/archer/issues"
+Homepage = "https://github.com/yourusername/shikari"
+Documentation = "https://github.com/yourusername/shikari/blob/main/README.md"
+Repository = "https://github.com/yourusername/shikari"
+Issues = "https://github.com/yourusername/shikari/issues"
 
 [project.scripts]
-archer-cli = "archer.service:main"
+shikari-cli = "shikari.service:main"
 
 [tool.setuptools]
-packages = ["archer"]
+packages = ["shikari"]
 
 [tool.setuptools.package-data]
-archer = [
+shikari = [
     "data/**/*",
     "static/**/*",
     "templates/**/*",

@@ -4,7 +4,7 @@ VECTR and adversary emulation modules have been archived. The code is preserved 
 
 ## Feature Flags
 
-Set the following in `archer/config.py`:
+Set the following in `shikari/config.py`:
 
 ```python
 VECTR_ENABLED: bool = True       # Re-enables VECTR export in the generate pipeline
@@ -16,22 +16,22 @@ EMULATION_ENABLED: bool = True   # Re-enables adversary emulation routes and CLI
 Move archived directories back to their original locations:
 
 ```bash
-mv _archive/vectr archer/vectr
-mv _archive/emulation archer/emulation
-mv _archive/emulation_data archer/data/emulation
+mv _archive/vectr shikari/vectr
+mv _archive/emulation shikari/emulation
+mv _archive/emulation_data shikari/data/emulation
 ```
 
 ## What Each Flag Controls
 
 ### `EMULATION_ENABLED`
 
-- `archer/app.py` — emulation block in the `/generate` route
-- `archer/app.py` — `/emulate` route (returns 503 when disabled)
-- `archer/cli/modules/__init__.py` — `EmulateModule` registration in the CLI console
+- `shikari/app.py` — emulation block in the `/generate` route
+- `shikari/app.py` — `/emulate` route (returns 503 when disabled)
+- `shikari/cli/modules/__init__.py` — `EmulateModule` registration in the CLI console
 
 ### `VECTR_ENABLED`
 
-- `archer/app.py` — VECTR export block in the `/generate` route
+- `shikari/app.py` — VECTR export block in the `/generate` route
 
 ## Restoring UI Elements
 
@@ -96,4 +96,4 @@ For emulation:
 # CALDERA requires a running CALDERA server with API key set via CALDERA_API_KEY
 ```
 
-See `EmulationConfig` and `VECTRConfig` in `archer/config.py` for all environment variables.
+See `EmulationConfig` and `VECTRConfig` in `shikari/config.py` for all environment variables.

@@ -1,4 +1,4 @@
-// Results page: anatomy workflow (templates/partials/anatomy.html, archer/visualization/anatomy.py)
+// Results page: anatomy workflow (templates/partials/anatomy.html, shikari/visualization/anatomy.py)
 // Exposed as initAnatomy so the Anatomy page can re-wire it after swapping in another group's
 // diagram in place. All listeners are on nodes inside #anatomy, so re-running after a swap binds
 // the new nodes and lets the old ones (and their listeners) be discarded.

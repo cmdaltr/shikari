@@ -4,7 +4,7 @@
 
 ## Threat group
 
-Type a group's ATT&CK name or any of its aliases: `APT29`, `Cozy Bear`, `Scattered Spider`, `UNC3944`. Archer finds the group in ATT&CK, collects every technique it's documented as using (directly, through its campaigns, and through the software it uses), and builds detections for each. When ATT&CK attributes a parent technique (Gallmaker's **T1027** Obfuscated Files or Information), its sub-techniques' indicators go into the parent's detection, which says which sub-techniques it includes; a sub-technique ATT&CK attributes to the group in its own right keeps its own detection.
+Type a group's ATT&CK name or any of its aliases: `APT29`, `Cozy Bear`, `Scattered Spider`, `UNC3944`. Shikari finds the group in ATT&CK, collects every technique it's documented as using (directly, through its campaigns, and through the software it uses), and builds detections for each. When ATT&CK attributes a parent technique (Gallmaker's **T1027** Obfuscated Files or Information), its sub-techniques' indicators go into the parent's detection, which says which sub-techniques it includes; a sub-technique ATT&CK attributes to the group in its own right keeps its own detection.
 
 A name ATT&CK doesn't know opens the [Manual](13-manual.md) page instead, so you can enter the group's techniques yourself.
 
@@ -12,11 +12,11 @@ When you've set a [technology stack](16-profile-and-settings.md#technology-stack
 
 ## CVE
 
-Enter one CVE or several, separated by commas: `CVE-2024-3400, CVE-2021-44228`. Each must look like `CVE-20YY-NNNN`. A CVE from the last 30 days is read from Archer's recent-CVE cache, and one in CISA's Known Exploited Vulnerabilities or naming a product in your technology stack has usually been researched already, so the hunt starts at once.
+Enter one CVE or several, separated by commas: `CVE-2024-3400, CVE-2021-44228`. Each must look like `CVE-20YY-NNNN`. A CVE from the last 30 days is read from Shikari's recent-CVE cache, and one in CISA's Known Exploited Vulnerabilities or naming a product in your technology stack has usually been researched already, so the hunt starts at once.
 
 **Browse the last 30 days** under the field lists the CVEs published in that time with an ID from this year (an older ID published now, such as CVE-2013-10076, is a backlog reaching an old bug), newest first: search by ID, product or phrase, and filter to **Exploited (KEV)**, **My technology stack** or **CVSS 7+**. Each shows its CVSS score (or *Not scored yet*: NVD analyses new CVEs days or weeks after they're published), whether it's in KEV and used by ransomware, the stack products it affects, and **Researched** when its hunt will start at once. Picking a CVE adds it to the field; picking it again takes it out. NVD hasn't listed the affected products for most CVEs of the last few weeks, so for those the products are the ones the description names.
 
-Archer reads the CVE's record from the NVD, the advisories and write-ups it links to, and the READMEs of public proof-of-concept exploits on GitHub. It builds four kinds of query:
+Shikari reads the CVE's record from the NVD, the advisories and write-ups it links to, and the READMEs of public proof-of-concept exploits on GitHub. It builds four kinds of query:
 
 | Query | From | What it matches |
 |---|---|---|
@@ -31,7 +31,7 @@ The exploit request, runtime shell and IOC sweep queries are the CVE's own, so t
 
 ## ATT&CK techniques
 
-Enter technique IDs separated by commas: `T1003, T1021.001, T1078`. Archer hunts each technique across every group that uses it, building queries from the indicators in ATT&CK's procedure examples; a parent technique (`T1003`) also takes its sub-techniques' examples, since its own are often vague. A **Research** bar shows the ATT&CK lookups before detections are built. The same hunt runs from the console (`hunt/technique`) and the API: see [Console, API and MCP](17-console-api-mcp.md). On a group's page, **Hunt techniques** fills this field with the group's techniques.
+Enter technique IDs separated by commas: `T1003, T1021.001, T1078`. Shikari hunts each technique across every group that uses it, building queries from the indicators in ATT&CK's procedure examples; a parent technique (`T1003`) also takes its sub-techniques' examples, since its own are often vague. A **Research** bar shows the ATT&CK lookups before detections are built. The same hunt runs from the console (`hunt/technique`) and the API: see [Console, API and MCP](17-console-api-mcp.md). On a group's page, **Hunt techniques** fills this field with the group's techniques.
 
 ## Options
 
@@ -47,7 +47,7 @@ Correlations are always built. Which SIEMs get queries is set in Environment →
 
 ## The AI question
 
-After **Generate**, Archer asks whether to use AI for this hunt. **No** runs the standard pipeline only. **Yes** also has a model write queries, one call per procedure, using the provider set in Profile → API Keys. Tick **Remember this choice** to stop being asked; change it later under Profile → API Keys → Hunt prompt.
+After **Generate**, Shikari asks whether to use AI for this hunt. **No** runs the standard pipeline only. **Yes** also has a model write queries, one call per procedure, using the provider set in Profile → API Keys. Tick **Remember this choice** to stop being asked; change it later under Profile → API Keys → Hunt prompt.
 
 ## What happens next
 

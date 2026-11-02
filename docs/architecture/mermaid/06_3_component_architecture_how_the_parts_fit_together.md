@@ -1,6 +1,6 @@
 # 3. Component Architecture — How the Parts Fit Together
 
-Shows how Archer's parts connect: the interfaces (web UI, console, CLI, MCP) → the FastAPI server → intelligence (ATT&CK and MITRESaw, CVEs, reports, Threat Feed, OSINT) → the build pipeline (technology stack, query builders, precision checks, IOC sweeps) → correlation → storage, with recorded telemetry (Emulate) and the tools alongside. Your lab runs CALDERA operations (the Atomic recorder is coming soon).
+Shows how Shikari's parts connect: the interfaces (web UI, console, CLI, MCP) → the FastAPI server → intelligence (ATT&CK and MITRESaw, CVEs, reports, Threat Feed, OSINT) → the build pipeline (technology stack, query builders, precision checks, IOC sweeps) → correlation → storage, with recorded telemetry (Emulate) and the tools alongside. Your lab runs CALDERA operations (the Atomic recorder is coming soon).
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
@@ -8,8 +8,8 @@ graph TB
     subgraph IFACE ["Interfaces"]
         direction LR
         WEB["Web UI<br/>server-rendered"]
-        CON["archer-cli console"]
-        CLI["archer-cli"]
+        CON["shikari-cli console"]
+        CLI["shikari-cli"]
         MCP["MCP server"]
     end
 
@@ -61,7 +61,7 @@ graph TB
 
     subgraph STORE ["Storage"]
         direction LR
-        DB["archer.db<br/>Library, users, Feed"]
+        DB["shikari.db<br/>Library, users, Feed"]
         YAML["Detection YAMLs<br/>data/groups/"]
         CJSON["Correlations<br/>data/correlate/"]
         BESPOKE["bespoke/ mappings<br/>gitignored"]

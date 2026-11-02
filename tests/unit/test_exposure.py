@@ -1,6 +1,6 @@
 """Organisation exposure map builder: nodes and links from a stored profile."""
 
-from archer.visualization import exposure
+from shikari.visualization import exposure
 
 
 PROFILE = {

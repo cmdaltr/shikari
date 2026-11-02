@@ -1,6 +1,6 @@
 """
 Detections on disk are rewritten when the generator changes, kept when edited by hand,
-and replaced on Regenerate (archer.build.yaml.detection_action).
+and replaced on Regenerate (shikari.build.yaml.detection_action).
 """
 import json
 import os
@@ -8,8 +8,8 @@ import os
 import pytest
 import yaml
 
-from archer.build import run_files
-from archer.build import yaml as writer
+from shikari.build import run_files
+from shikari.build import yaml as writer
 
 QUERY = "DeviceProcessEvents\n| where ProcessCommandLine has \"procdump\""
 
@@ -104,7 +104,7 @@ def test_a_run_rewrites_a_file_once(env):
 def test_a_description_that_opens_with_a_citation_stays_valid_yaml(tmp_path):
     import yaml as pyyaml
 
-    from archer.build.yaml import write_yaml
+    from shikari.build.yaml import write_yaml
 
     path = tmp_path / "FileDeletion_UDM.yaml"
     desc = ("(Citation: Earlier Report) [Vidar](https://attack.mitre.org/software/S9050) deleted it with "

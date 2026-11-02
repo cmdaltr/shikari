@@ -1,4 +1,4 @@
-// Build → Emulate → Lab → CALDERA operations (templates/emulate.html, archer/lab/web.py /api/lab/caldera/*):
+// Build → Emulate → Lab → CALDERA operations (templates/emulate.html, shikari/lab/web.py /api/lab/caldera/*):
 // plan an operation, run it, collect it, and the static check of detections and correlations against it.
 // Shares the Lab's modal and job log; the server runs one lab job at a time, CALDERA's included.
 (function () {
@@ -76,7 +76,7 @@
       // An agent on the host itself is a misconfiguration: macOS should detonate in a disposable
       // Tart VM, never on this Mac. Flag it amber and say so, rather than detonate on the host.
       const onHost = a.env === 'this host';
-      // Enrolled outside Archer: a live agent whose machine Archer doesn't manage (no engine match).
+      // Enrolled outside Shikari: a live agent whose machine Shikari doesn't manage (no engine match).
       const external = !onHost && !a.engine;
       // Labelled by paw, not host: the server runs on this Mac too, so an agent host of e.g.
       // macbook.local would otherwise read as the server. The paw is the agent's stable identity.
@@ -85,8 +85,8 @@
         : (envImg ? '' : (a.env ? esc(a.env) + ' · ' : '')) + esc(a.group || '(no group)');
       const data = ` data-paw="${esc(a.paw || a.host)}" data-engine="${esc(a.engine || '')}" data-machine="${esc(a.machine || '')}" data-env="${esc(a.env || '')}"`;
       const title = onHost ? 'Runs on the host itself — forget it and detonate macOS in a disposable Tart VM instead.'
-        : external ? 'Enrolled outside Archer — not a managed machine, so Archer can\'t start/stop/delete it.'
-        : `Managed by Archer (${esc(a.env)})`;
+        : external ? 'Enrolled outside Shikari — not a managed machine, so Shikari can\'t start/stop/delete it.'
+        : `Managed by Shikari (${esc(a.env)})`;
       svg += `<g class="netmap-node is-agent${onHost ? ' is-host' : ''}${external ? ' is-external' : ''}"${data}><rect x="${x}" y="${agentY}" width="${NW}" height="${NH}" rx="9"/>` +
         `<title>${title}</title>` +
         osMark(a.platform, x + 9, my2 - 8, a.paw || a.host || a.machine) +
@@ -100,7 +100,7 @@
   }
 
   // Click an agent node → a small menu of what can be done to it. Machine controls appear only when
-  // the agent maps to a machine Archer manages (Docker/Tart/UTM); every agent can be forgotten.
+  // the agent maps to a machine Shikari manages (Docker/Tart/UTM); every agent can be forgotten.
   function closeNodeMenu() { document.querySelector('.netmap-menu')?.remove(); }
 
   function nodeMenu(node, anchor) {
@@ -116,7 +116,7 @@
     box.className = 'netmap-menu';
     const note = (engine && machine) ? ''
       : env === 'this host' ? '<div class="netmap-menu-note">Runs on the host itself — forget it and detonate macOS in a disposable Tart VM instead.</div>'
-      : '<div class="netmap-menu-note">Archer didn\'t create this VM, so it can\'t start/stop/delete it here — manage it with the tool that made it (e.g. caldera-lab.sh).</div>';
+      : '<div class="netmap-menu-note">Shikari didn\'t create this VM, so it can\'t start/stop/delete it here — manage it with the tool that made it (e.g. caldera-lab.sh).</div>';
     box.innerHTML = `<div class="netmap-menu-head">${esc(paw)}${env ? ` <small>${esc(env)}</small>` : ''}</div>${items}${note}`;
     const nm = el('caldera-netmap'); nm.appendChild(box);
     const nr = nm.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
@@ -363,7 +363,7 @@
   }
 
   // Add a CALDERA agent for an OS that isn't present: provision a fresh managed machine and enrol it,
-  // or enrol one Archer already manages. Backed by /caldera/provision-agent and /caldera/enrol.
+  // or enrol one Shikari already manages. Backed by /caldera/provision-agent and /caldera/enrol.
   function addAgentDialog() {
     api('/api/lab/machines').then(({ machines, naming }) => {
       const ms = machines || [];
@@ -377,8 +377,8 @@
         { template: 'ubuntu-vm', engine: 'tart', label: 'Ubuntu 24.04 VM', tag: 'ubu24' },
         { template: 'ubuntu-container', engine: 'docker', label: 'Ubuntu 24.04 container', tag: 'ubu24' },
         { template: 'rocky-container', engine: 'docker', label: 'Rocky Linux 10 container', tag: 'rky10' }];
-      const nextName = tag => {  // the lab convention: achr-cal-<tag>, -N on a clash
-        const taken = new Set(ms.map(m => (m.name || '').toLowerCase())), base = 'achr-cal-' + (tag || 'vm');
+      const nextName = tag => {  // the lab convention: shi-cal-<tag>, -N on a clash
+        const taken = new Set(ms.map(m => (m.name || '').toLowerCase())), base = 'shi-cal-' + (tag || 'vm');
         if (!taken.has(base.toLowerCase())) return base;
         let i = 2; while (taken.has((base + '-' + i).toLowerCase())) i++; return base + '-' + i;
       };
@@ -434,15 +434,15 @@
   }
 
   function stepsDialog() {
-    // Archer drives a CALDERA server you run; it never ships an implant. scripts/telemetry/caldera-lab.sh
+    // Shikari drives a CALDERA server you run; it never ships an implant. scripts/telemetry/caldera-lab.sh
     // does the whole disposable-lab setup, so the steps lead with it.
     open('Deploy CALDERA', `
-      <p class="lab-hint">Archer drives a CALDERA server you run — it never ships an implant of its own. The repo's
+      <p class="lab-hint">Shikari drives a CALDERA server you run — it never ships an implant of its own. The repo's
         <code>scripts/telemetry/caldera-lab.sh</code> stands up a throwaway lab end to end; the steps below say what it does and the manual equivalent.</p>
       <ol class="lab-plan">
         <li><strong>A CALDERA server and red API key.</strong> <code>caldera-lab.sh up</code> builds a disposable CALDERA 5.2 server and enrols a couple of
-          Linux agents (group <code>disposable</code>); <code>caldera-lab.sh config</code> prints its URL and key. Or point Archer at a CALDERA you already run.</li>
-        <li><strong>Give Archer the key.</strong> Paste the server URL and red key in <a href="/profile?keytab=emulation#apikeys">Profile → API Keys → Emulation Tools</a> (encrypted per account).</li>
+          Linux agents (group <code>disposable</code>); <code>caldera-lab.sh config</code> prints its URL and key. Or point Shikari at a CALDERA you already run.</li>
+        <li><strong>Give Shikari the key.</strong> Paste the server URL and red key in <a href="/profile?keytab=emulation#apikeys">Profile → API Keys → Emulation Tools</a> (encrypted per account).</li>
         <li><strong>An agent on a disposable VM, in a group.</strong> Linux agents come up with <code>up</code>; for Windows,
           <code>caldera-lab.sh win &lt;utm-vm&gt;</code> runs sandcat on a UTM VM you've built (group <code>winlab</code>); for macOS,
           <code>caldera-lab.sh mac &lt;vm&gt;</code> clones a Tart VM and runs it (group <code>maclab</code>). Or deploy sandcat from CALDERA's own UI.</li>

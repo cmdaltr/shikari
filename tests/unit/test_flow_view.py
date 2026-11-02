@@ -1,7 +1,7 @@
 """Results-page attack flow: lanes, coverage, gaps, correlation edges and the Attack Flow export."""
 import textwrap
 
-from archer.visualization.flow_view import AF_EXTENSION, build_flow_view, to_attack_flow_bundle
+from shikari.visualization.flow_view import AF_EXTENSION, build_flow_view, to_attack_flow_bundle
 
 
 def _det(tmp_path, name, tid, tactics, connector):
@@ -86,7 +86,7 @@ def _links(view):
 
 
 def test_apply_edits_matches_what_the_page_shows(tmp_path):
-    from archer.visualization.flow_view import apply_edits
+    from shikari.visualization.flow_view import apply_edits
 
     view = _three_step_view(tmp_path)
     assert apply_edits(view, {}) == dict(view, edited=True)
@@ -105,7 +105,7 @@ def test_apply_edits_matches_what_the_page_shows(tmp_path):
 
 
 def test_edited_bundle_drops_unlinked_techniques(tmp_path):
-    from archer.visualization.flow_view import apply_edits
+    from shikari.visualization.flow_view import apply_edits
 
     bundle = to_attack_flow_bundle(apply_edits(_three_step_view(tmp_path), {"unlinked": ["T1059.001>T1071.001"]}), "G")
     actions = {o["technique_id"] for o in bundle["objects"] if o["type"] == "attack-action"}
@@ -115,7 +115,7 @@ def test_edited_bundle_drops_unlinked_techniques(tmp_path):
 
 
 def test_pre_compromise_techniques_are_shown_intel_only_ones_are_not_gaps():
-    from archer.visualization.flow_view import build_flow_view
+    from shikari.visualization.flow_view import build_flow_view
 
     attributed = [{"id": "T1595", "name": "Active Scanning", "tactics": ["Reconnaissance"]},
                   {"id": "T1583", "name": "Acquire Infrastructure", "tactics": ["Resource Development"]},
@@ -131,8 +131,8 @@ def test_pre_compromise_techniques_are_shown_intel_only_ones_are_not_gaps():
 
 
 def test_drag_and_drop_edits_reach_the_view_and_bundle(tmp_path):
-    from archer.visualization.flow_layouts import clean_state
-    from archer.visualization.flow_view import apply_edits
+    from shikari.visualization.flow_layouts import clean_state
+    from shikari.visualization.flow_view import apply_edits
 
     view = _three_step_view(tmp_path)
     state = clean_state({
@@ -159,8 +159,8 @@ def test_drag_and_drop_edits_reach_the_view_and_bundle(tmp_path):
 
 
 def test_every_tactic_has_a_phase_in_each_lifecycle_model():
-    from archer.visualization.flow_view import TACTIC_ORDER
-    from archer.visualization.frameworks import FRAMEWORKS
+    from shikari.visualization.flow_view import TACTIC_ORDER
+    from shikari.visualization.frameworks import FRAMEWORKS
 
     for fw in FRAMEWORKS:
         phases = {p["name"] for p in fw["phases"]}
@@ -169,7 +169,7 @@ def test_every_tactic_has_a_phase_in_each_lifecycle_model():
 
 
 def test_phase_goes_by_technique_then_parent_then_tactic():
-    from archer.visualization.frameworks import UNMAPPED, phase_of
+    from shikari.visualization.frameworks import UNMAPPED, phase_of
 
     assert phase_of("ckc", "T1566.001", "Initial Access") == "Delivery"
     assert phase_of("ckc", "T1190", "Initial Access") == "Exploitation"

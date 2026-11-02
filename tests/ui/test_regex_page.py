@@ -1,6 +1,6 @@
 """
 Playwright UI tests for the Regex page (Build → Regex): the flavour checks, matching, the
-time limit on runaway patterns, and the per-SIEM snippets. Needs a running Archer.
+time limit on runaway patterns, and the per-SIEM snippets. Needs a running Shikari.
 """
 import pytest
 
@@ -8,13 +8,13 @@ pytestmark = pytest.mark.ui
 
 
 def levels(page, pattern, flags="", flavour="kql"):
-    return page.evaluate("([p, f, fl]) => archerRegex.checks(p, f, fl).map(x => [x.level, x.text])", [pattern, flags, flavour])
+    return page.evaluate("([p, f, fl]) => shikariRegex.checks(p, f, fl).map(x => [x.level, x.text])", [pattern, flags, flavour])
 
 
 @pytest.fixture
 def regex_page(page, base_url):
     page.goto(f"{base_url}/regex")
-    page.wait_for_function("window.archerRegex")
+    page.wait_for_function("window.shikariRegex")
     return page
 
 
@@ -115,7 +115,7 @@ class TestRealEngines:
 
 class TestRegexSnippets:
     def test_escaping_per_siem(self, regex_page):
-        s = dict(regex_page.evaluate(r"""archerRegex.snippets('\\\\psexec\\.exe "x"', 'i')"""))
+        s = dict(regex_page.evaluate(r"""shikariRegex.snippets('\\\\psexec\\.exe "x"', 'i')"""))
         assert s["Defender XDR (KQL)"].endswith('@"(?i)\\\\psexec\\.exe ""x"""')
         assert s["Google SecOps (YARA-L)"].endswith("`) nocase")
         assert '\\\\\\\\psexec' in s["Splunk (SPL)"] and '\\"x\\"' in s["Splunk (SPL)"]

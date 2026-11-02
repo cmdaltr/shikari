@@ -2,12 +2,12 @@
 
 import pytest
 
-from archer.build import progress
+from shikari.build import progress
 
 
 @pytest.fixture(autouse=True)
 def progress_dir(tmp_path, monkeypatch):
-    from archer.build import run_files
+    from shikari.build import run_files
 
     monkeypatch.setattr(progress, "PROGRESS_DIR", str(tmp_path))
     monkeypatch.setattr(run_files, "RUNS_DIR", str(tmp_path / "runs"))
@@ -42,8 +42,8 @@ def test_updates_without_phase_keep_it():
 
 
 def test_ioc_only_report_completes_with_its_sweeps(monkeypatch):
-    from archer import app as app_module
-    from archer.build import ioc_sweep
+    from shikari import app as app_module
+    from shikari.build import ioc_sweep
 
     monkeypatch.setattr(app_module, "write_progress", progress.write_progress)
     monkeypatch.setattr(ioc_sweep, "write_ioc_sweeps", lambda *a, **k: ["IOCSweepX_GoogleSecOps.yaml", "IOCSweepX_MicrosoftThreatProtection.yaml"])
@@ -56,8 +56,8 @@ def test_ioc_only_report_completes_with_its_sweeps(monkeypatch):
 
 
 def test_report_with_nothing_to_sweep_or_build_says_why(monkeypatch):
-    from archer import app as app_module
-    from archer.build import ioc_sweep
+    from shikari import app as app_module
+    from shikari.build import ioc_sweep
 
     monkeypatch.setattr(app_module, "write_progress", progress.write_progress)
     monkeypatch.setattr(ioc_sweep, "write_ioc_sweeps", lambda *a, **k: [])
@@ -68,7 +68,7 @@ def test_report_with_nothing_to_sweep_or_build_says_why(monkeypatch):
 
 
 def test_run_records_the_files_it_wrote_or_retagged():
-    from archer.build import run_files
+    from shikari.build import run_files
 
     progress.start_progress("UNC3944", {})
     run_files.note("data/groups/T1566_GoogleSecOps.yaml", "UNC3944")
@@ -80,7 +80,7 @@ def test_run_records_the_files_it_wrote_or_retagged():
 
 
 def test_writes_outside_a_run_keep_the_last_manifest():
-    from archer.build import run_files
+    from shikari.build import run_files
 
     progress.start_progress("UNC3944", {})
     run_files.note("IOCSweepUNC3944_GoogleSecOps.yaml", "UNC3944")
@@ -91,7 +91,7 @@ def test_writes_outside_a_run_keep_the_last_manifest():
 
 
 def test_latest_run_keeps_only_correlations_between_its_files():
-    from archer.app import _run_correlations
+    from shikari.app import _run_correlations
 
     corrs = [
         {"a": "data/groups/A_GoogleSecOps.yaml", "b": "data/groups/B_GoogleSecOps.yaml"},
@@ -105,7 +105,7 @@ def test_latest_run_keeps_only_correlations_between_its_files():
 def test_osint_snippets_do_not_hide_a_broken_detection_query(tmp_path):
     # The OSINT snippet loop used to reuse the name "query", so the write guard checked
     # the last snippet instead of the detection
-    from archer.build.yaml import write_yaml
+    from shikari.build.yaml import write_yaml
 
     path = tmp_path / "X_DeviceEvents.yaml"
     osint = {"osint_compared": True, "comparison_date": "2026-10-11",
@@ -116,8 +116,8 @@ def test_osint_snippets_do_not_hide_a_broken_detection_query(tmp_path):
 
 
 def test_a_technique_counts_only_if_it_wrote_or_tagged_a_file():
-    from archer.build import run_files
-    from archer.build.orchestrator import _produced
+    from shikari.build import run_files
+    from shikari.build.orchestrator import _produced
 
     assert _produced("CVE-2024-3400", None)  # untracked (CLI): trust compile_query
     progress.start_progress("CVE-2024-3400", {})
@@ -129,7 +129,7 @@ def test_a_technique_counts_only_if_it_wrote_or_tagged_a_file():
 
 def test_brackets_inside_an_indicator_string_are_not_an_empty_group(tmp_path):
     # "()" in query used to refuse every query hunting for an API call by name
-    from archer.build.yaml import write_yaml
+    from shikari.build.yaml import write_yaml
 
     path = tmp_path / "DomainTrustDiscovery_DeviceProcessEvents.yaml"
     write_yaml(str(path), "Domain Trust Discovery", "T1482", "desc", "MicrosoftThreatProtection", ["Discovery"], "FIN13",
@@ -142,7 +142,7 @@ def test_technique_hunt_threshold_reaches_the_wrapper(monkeypatch):
     # every technique hunt failed with a TypeError before generating anything
     import inspect
 
-    from archer import app as app_module
+    from shikari import app as app_module
 
     assert "correlation_min_relevance" in inspect.signature(app_module.modified_process_group_wrapper).parameters
 

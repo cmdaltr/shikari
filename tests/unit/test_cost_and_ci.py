@@ -1,8 +1,8 @@
 """Run cost and the CI gate (#34)."""
 import yaml
 
-from archer.validation import ci
-from archer.validation.cost import cost
+from shikari.validation import ci
+from shikari.validation.cost import cost
 
 
 def checks(query, platform=None):
@@ -48,8 +48,8 @@ def test_the_gate_fails_bad_files_and_passes_good_ones(tmp_path, capsys):
 
 
 def test_made_columns_and_functions_are_not_unknown_fields():
-    from archer.build.exploit_detection import mde_exploit_query
-    from archer.validation.static_check import check_query
+    from shikari.build.exploit_detection import mde_exploit_query
+    from shikari.validation.static_check import check_query
 
     q = mde_exploit_query({"paths": ["/ssl-vpn/hipreport.esp"], "url_markers": ["../"]})
     assert not [f for f in check_query(q, "kql")["findings"] if f["check"] == "MDE-FIELD"]

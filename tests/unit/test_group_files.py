@@ -9,8 +9,8 @@ another group's detection.
 """
 import pytest
 
-from archer.ai.genai.engine import _list_yaml_files
-from archer.build.group_files import group_yaml_files
+from shikari.ai.genai.engine import _list_yaml_files
+from shikari.build.group_files import group_yaml_files
 
 
 def _write(d, name, groups):
@@ -57,7 +57,7 @@ def test_tagged_named_and_bespoke_files(groups_dir):
 
 
 def _stamped(d, name, groups, query="x"):
-    from archer.build.yaml import _stamp
+    from shikari.build.yaml import _stamp
 
     tags = "\n".join(f"  - {g} (Group)" for g in groups)
     body = f"name: x\ntags:\n{tags}\nquery: |\n  {query}\nversion: 1.0\n"
@@ -65,7 +65,7 @@ def _stamped(d, name, groups, query="x"):
 
 
 def test_prune_drops_the_group_from_files_its_run_did_not_make(tmp_path):
-    from archer.build.group_files import prune
+    from shikari.build.group_files import prune
 
     _stamped(tmp_path, "Made_UDM.yaml", ["Scattered Spider"])
     _stamped(tmp_path, "Shared_DeviceEvents.yaml", ["APT41", "Scattered Spider"])
@@ -85,8 +85,8 @@ def test_prune_drops_the_group_from_files_its_run_did_not_make(tmp_path):
 
 
 def test_a_query_refused_on_writing_is_not_the_runs(tmp_path, monkeypatch):
-    from archer.build import run_files
-    from archer.build.yaml import write_yaml
+    from shikari.build import run_files
+    from shikari.build.yaml import write_yaml
 
     monkeypatch.setattr(run_files, "RUNS_DIR", str(tmp_path / "runs"))
     run_files.begin("G-refused")

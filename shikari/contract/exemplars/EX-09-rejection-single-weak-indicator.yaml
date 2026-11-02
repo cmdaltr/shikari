@@ -1,0 +1,34 @@
+shikari_output:
+  contract_version: "1.0"
+  kind: rejection
+  request_ref: REQ-2026-10-10-009
+  rejection:
+    reason_code: SINGLE_WEAK_INDICATOR
+    secondary_codes:
+      - MAPPING_TOO_COARSE
+    detection_type_requested: scheduled_detection
+    siem_requested: yara_l
+    technique_ids_requested:
+      - T1134
+    blocking_criteria:
+      - R09.4
+      - R01.2
+      - R14.8
+    evidence:
+      - check: The request's indicator set contains at least one specific term, second field, second event or ordering that can anchor the rule
+        observed: The only supplied indicator is the string runas, extracted from the ATT&CK technique description; the intended match is an unanchored regex on target.process.command_line, which also matches runassistant and any argument containing the substring
+        expected: A campaign-specific image, path, argument pair, parent-child relation or sensor-observed action
+      - check: Technique ID is at sub-technique level where the parent has sub-techniques
+        observed: T1134 requested; T1134 has five sub-techniques (.001 to .005) and the request does not say which behaviour is observed
+        expected: One of T1134.001 to T1134.005 with the observable named
+      - check: A sensor-observed action for the technique exists in the ingested sources
+        observed: DeviceEvents (ingested per ENVPROFILE-B) carries ActionType ProcessPrimaryTokenModified, which is the observable for token impersonation or theft (T1134.001) and is not represented in the request
+        expected: The request to name the ActionType and the sub-technique it evidences
+    remediation:
+      - Re-submit as T1134.001 with log source DeviceEvents, ActionType ProcessPrimaryTokenModified, correlated with the initiating process image and account, and an allow-list for service-control and installer images; mapping and anchor then both pass.
+      - Do not emit any rule whose sole condition is a substring match on runas; workbook Q040 and Q044 show that pattern alerting on every raw event.
+    nearest_viable_alternative:
+      detection_type: scheduled_detection
+      siem: yara_l
+      log_source: DeviceEvents (metadata.product_event_type ProcessPrimaryTokenModified)
+      summary: privilege_escalation_t1134_001_udm_generic_primary_token_modified on the DeviceEvents-derived UDM event, aggregated per device and initiating process over 1 hour, with a declared allow-list of service images.

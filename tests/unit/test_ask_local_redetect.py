@@ -1,8 +1,8 @@
 """
-Ask finds a local LLM started after Archer.
+Ask finds a local LLM started after Shikari.
 
 Local endpoints were probed only at startup, so the 503's own advice ("start a
-local Ollama instance") did nothing until Archer was restarted.
+local Ollama instance") did nothing until Shikari was restarted.
 """
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -12,7 +12,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from archer import chat
+from shikari import chat
 
 OLLAMA = {"name": "Ollama", "provider": "ollama", "available": True, "model": "qwen3:8b"}
 
@@ -69,7 +69,7 @@ def _fails(message):
 
 
 def test_unassigned_ask_falls_back_when_a_provider_errors():
-    # A cloud key with no credit used to end Ask Archer even with Ollama running
+    # A cloud key with no credit used to end Ask Shikari even with Ollama running
     _, client = _client()
     cloud = [("Claude (Anthropic)", _fails("Error code: 400 - {'message': 'Your credit balance is too low'}"))]
     with patch.object(chat, "_cloud_candidates", return_value=cloud), \
@@ -83,11 +83,11 @@ def test_assigned_ask_reports_its_error_instead_of_falling_back():
     with patch.object(chat, "_local_candidates", return_value=[("Ollama", _answers("from ollama"))]):
         with pytest.raises(chat.HTTPException) as err:
             chat._generate([("Anthropic Claude / x", _fails("Error code: 400 - {'credit balance is too low'}"))],
-                           True, "Ask Archer", prompt="q")
+                           True, "Ask Shikari", prompt="q")
     assert err.value.status_code == 502 and "credit balance too low" in err.value.detail
 
 
 def test_every_failure_is_listed():
     with pytest.raises(chat.HTTPException) as err:
-        chat._generate([("A", _fails("boom")), ("B", _fails("bang"))], False, "Ask Archer", prompt="q")
+        chat._generate([("A", _fails("boom")), ("B", _fails("bang"))], False, "Ask Shikari", prompt="q")
     assert err.value.detail == "A: boom; B: bang"

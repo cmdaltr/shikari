@@ -1,10 +1,10 @@
-"""IOC parsing (archer.intelligence.ioc) and the IOC-search results cache (ioc_search)."""
+"""IOC parsing (shikari.intelligence.ioc) and the IOC-search results cache (ioc_search)."""
 
 import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from archer.intelligence import ioc
+from shikari.intelligence import ioc
 
 
 def test_classify_common_types():
@@ -42,7 +42,7 @@ def test_find_in_is_case_insensitive_and_misses_absent():
 
 
 def test_results_cache_reuse_and_purge(tmp_path, monkeypatch):
-    from archer.intelligence import ioc_search as m
+    from shikari.intelligence import ioc_search as m
     monkeypatch.setattr(m, "_RESULTS_CACHE", tmp_path / "ioc_results.json")
     monkeypatch.setattr(m, "load_sources", lambda: [{"name": "Talos", "url": "u", "tier": 1}])
     today = datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S +0000")

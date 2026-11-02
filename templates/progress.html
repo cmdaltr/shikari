@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Archer - Progress{% endblock %}
+{% block title %}Shikari - Progress{% endblock %}
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/style.css') }}?v={{ request.app.state.asset_version }}">
@@ -9,7 +9,7 @@
 /* Ensure consistent positioning across all browsers */
 
 
-/* Single background color throughout - matching How Archer Works page */
+/* Single background color throughout - matching How Shikari Works page */
 body, html {
   background: #f7fafc !important;
   overflow-x: hidden;
@@ -53,7 +53,7 @@ body, html {
 
 
 
-/* Logo at top center - between Back and How Archer Works */
+/* Logo at top center - between Back and How Shikari Works */
 .results-container {
   background: transparent !important;
   width: 1500px;
@@ -737,19 +737,13 @@ body, html {
       </a>
     </div>
 
-    <!-- Quote -->
-    <div class="quote">
-      <p>
-        "Even if you can't see something, it doesn't mean it isn't there"<br>
-        <span>— Archer, Small Soldiers</span>
-      </p>
-    </div>
 
     <!-- Spacer for balance -->
     <div class="spacer"></div>
   </div>
 
   <!-- Timestamp and Attribution -->
+  <div class="footer-gloss"><span class="fg-word">shi·ka·ri</span><span class="fg-ipa">\shi-ˈkär-ē\</span><span class="fg-def">a professional big-game hunter or guide</span></div>
   <div class="timestamp">
     {{ generated_time }}<br>
     <span style="font-size: 0.85em; opacity: 0.7; margin-top: 8px; display: block;">

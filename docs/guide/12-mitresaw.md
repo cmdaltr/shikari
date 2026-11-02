@@ -1,6 +1,6 @@
 # MITRESaw
 
-**Intel → MITRESaw** is the procedure data behind Archer's threat briefings and detections. [MITRESaw](https://github.com/cmdaltr/MITRESaw) walks ATT&CK and, for every group, lists each technique it uses, how the technique reaches the group, and the indicators in the procedure text.
+**Intel → MITRESaw** is the procedure data behind Shikari's threat briefings and detections. [MITRESaw](https://github.com/cmdaltr/MITRESaw) walks ATT&CK and, for every group, lists each technique it uses, how the technique reaches the group, and the indicators in the procedure text.
 
 ## The procedures
 
@@ -13,7 +13,7 @@ The header shows the ATT&CK version, and how many groups, techniques and procedu
 | Stop | Stops a run. The next run carries on from the last finished batch of 20 groups |
 | Download CSV / XLSX | The procedures as a spreadsheet; the XLSX is the evidence report |
 
-One rebuild runs at a time, and each is checked against Archer's own walk of ATT&CK.
+One rebuild runs at a time, and each is checked against Shikari's own walk of ATT&CK.
 
 The procedures table can be searched and filtered by group, technique, tactic and attribution:
 
@@ -25,7 +25,7 @@ The procedures table can be searched and filtered by group, technique, tactic an
 
 ## OSINT repositories
 
-The public detection-rule repositories Archer searches while generating, with each one's status. They're cloned under `data/repos` on start-up and kept up to date. LOLBAS, LOLDrivers and LOLRMM are listed too: they're used with the LOL datasets option, and only for binaries, drivers and RMM tools a group is seen using.
+The public detection-rule repositories Shikari searches while generating, with each one's status. They're cloned under `data/repos` on start-up and kept up to date. LOLBAS, LOLDrivers and LOLRMM are listed too: they're used with the LOL datasets option, and only for binaries, drivers and RMM tools a group is seen using.
 
 ## Indicator exclusions
 

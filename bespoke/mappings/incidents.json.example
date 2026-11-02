@@ -1,6 +1,6 @@
 [
   {
-    "_comment": "Curated public incidents, fed into the Ordered Adversary List (archer.intelligence.adversary_ranking). Copy to incidents.json and populate from your own threat-intel sources. ATT&CK carries no actor->victim map, so this is the only source that can attribute an incident to a specific company. Without this file the incidents dimension falls back to demonstrated activity (named ATT&CK campaigns) only.",
+    "_comment": "Curated public incidents, fed into the Ordered Adversary List (shikari.intelligence.adversary_ranking). Copy to incidents.json and populate from your own threat-intel sources. ATT&CK carries no actor->victim map, so this is the only source that can attribute an incident to a specific company. Without this file the incidents dimension falls back to demonstrated activity (named ATT&CK campaigns) only.",
     "group": "APT28",
     "victims": ["example.com", "subsidiary.co.uk"],
     "sectors": ["Government", "Defense / Military"],

@@ -1,18 +1,18 @@
 # The Guide Pictures and the Walkthrough Video
 
-Both are made by driving a browser through a running Archer, so they show the real pages and need remaking when the pages change. Make them from a throwaway instance, never your own: the pictures are committed, and the video is published.
+Both are made by driving a browser through a running Shikari, so they show the real pages and need remaking when the pages change. Make them from a throwaway instance, never your own: the pictures are committed, and the video is published.
 
 ## A Throwaway Instance
 
-An empty home with Archer's reference data, its own database (the default admin), one real hunt saved to the Library, and the sample company:
+An empty home with Shikari's reference data, its own database (the default admin), one real hunt saved to the Library, and the sample company:
 
 ```bash
-H=/tmp/archer-guide && mkdir -p $H/archer/data/cache
+H=/tmp/shikari-guide && mkdir -p $H/shikari/data/cache
 git ls-files data | while read f; do mkdir -p "$H/$(dirname "$f")"; cp "$f" "$H/$f"; done
-cp archer/data/cache/enterprise-attack.json* $H/archer/data/cache/
+cp shikari/data/cache/enterprise-attack.json* $H/shikari/data/cache/
 cp data/mitre_procedures.csv data/mitre_procedures.meta.json $H/data/ && touch $H/data/mitre_procedures.csv
-(cd $H && ARCHER_HOME=$H PYTHONPATH=$OLDPWD $OLDPWD/.venv/bin/python -m archer.cli.test_data populate)
-(cd $H && ARCHER_HOME=$H $OLDPWD/.venv/bin/python -m uvicorn archer.app:app --app-dir $OLDPWD --port 8010)
+(cd $H && SHIKARI_HOME=$H PYTHONPATH=$OLDPWD $OLDPWD/.venv/bin/python -m shikari.cli.test_data populate)
+(cd $H && SHIKARI_HOME=$H $OLDPWD/.venv/bin/python -m uvicorn shikari.app:app --app-dir $OLDPWD --port 8010)
 ```
 
 Then log in at `http://127.0.0.1:8010` as the default admin, hunt APT29 (answer No to AI), tick the Validation checklist and **Save to Library**.
@@ -35,11 +35,11 @@ It writes `static/guide/img/*.jpg` and `static/guide/guide.json`, and writes not
 Each scene is its own section: it fades in from black and out to black, so you add a new feature by adding a scene to `script.yaml` (its own `id`, `chapter`, `narration` and `actions`), drop one, or reorder them, and every join stays clean. A scene begins on its own page (`goto: <path>`) so it doesn't depend on the scene before it.
 
 ```bash
-python3.11 -m venv ~/.cache/archer/piper/venv && ~/.cache/archer/piper/venv/bin/pip install piper-tts
-mkdir -p ~/.cache/archer/piper/voices && cd ~/.cache/archer/piper/voices
+python3.11 -m venv ~/.cache/shikari/piper/venv && ~/.cache/shikari/piper/venv/bin/pip install piper-tts
+mkdir -p ~/.cache/shikari/piper/voices && cd ~/.cache/shikari/piper/voices
 curl -LO https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/cori/high/en_GB-cori-high.onnx
 curl -LO https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/cori/high/en_GB-cori-high.onnx.json
-cd - && .venv/bin/python scripts/video/make_video.py --base http://127.0.0.1:8010 --out ~/Movies/Archer
+cd - && .venv/bin/python scripts/video/make_video.py --base http://127.0.0.1:8010 --out ~/Movies/Shikari
 ```
 
-It writes `archer-walkthrough.mp4` (1080p), `archer-walkthrough.srt` (upload it to YouTube as the subtitles) and `youtube.txt` (a description with chapter times). `--only intro hunt` makes a quick draft of some scenes; `--voice` takes any other Piper voice, such as `en_GB-alan-medium`. The `say` list at the top of the script is how the voice pronounces what the subtitles spell (ATT&CK as "Attack", SIEM as "sim").
+It writes `shikari-walkthrough.mp4` (1080p), `shikari-walkthrough.srt` (upload it to YouTube as the subtitles) and `youtube.txt` (a description with chapter times). `--only intro hunt` makes a quick draft of some scenes; `--voice` takes any other Piper voice, such as `en_GB-alan-medium`. The `say` list at the top of the script is how the voice pronounces what the subtitles spell (ATT&CK as "Attack", SIEM as "sim").

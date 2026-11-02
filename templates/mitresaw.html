@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Archer - MITRESaw{% endblock %}
+{% block title %}Shikari - MITRESaw{% endblock %}
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
@@ -25,9 +25,9 @@
       <div><dt>Built</dt><dd id="ms-built">–</dd></div>
     </dl>
     <p class="ms-check" id="ms-check" hidden></p>
-    <p class="ms-note">MITRESaw runs on Archer's own ATT&amp;CK bundle (<code>-f Enterprise -D -E -q -A -S</code>), 20 groups at a time.
+    <p class="ms-note">MITRESaw runs on Shikari's own ATT&amp;CK bundle (<code>-f Enterprise -D -E -q -A -S</code>), 20 groups at a time.
       <strong>Update</strong> collects only the groups an ATT&amp;CK release changed; <strong>Full rebuild</strong> collects all of them (about 30 minutes).
-      A stopped run carries on from its last finished batch. One rebuild runs at a time, and each is checked against Archer's own walk of ATT&amp;CK.</p>
+      A stopped run carries on from its last finished batch. One rebuild runs at a time, and each is checked against Shikari's own walk of ATT&amp;CK.</p>
     <div class="ui-actions ms-actions">
       <span class="ms-state" id="ms-state" aria-live="polite"></span>
       <a class="btn-ghost ms-dl" id="ms-dl-csv" href="/api/mitresaw/download/csv">Download CSV</a>
@@ -42,7 +42,7 @@
   <!-- Moved from the Library's Filters: what generation reads, not what filters your library -->
   <section class="ui-card ms-card">
     <h2>OSINT Repositories <span class="ms-osint-overall" id="ms-osint-overall"></span></h2>
-    <p class="ms-note">Community detection rules Archer searches for each technique while generating: matches shape the query
+    <p class="ms-note">Community detection rules Shikari searches for each technique while generating: matches shape the query
       (OSINT Enhancement on the Hunt and Analyse tabs) and, with OSINT Comparison ticked, are scored against it. Cloned under
       <code>data/repos</code> on start-up and updated from upstream. LOLBAS, LOLDrivers and LOLRMM add indicators, with
       LOL datasets ticked (the default), only for the binaries, drivers and RMM tools a group is seen using; fetched at most daily. No AI is involved.</p>

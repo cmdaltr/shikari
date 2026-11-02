@@ -1,4 +1,4 @@
-/* Tabbed Interface Styles - Themed with Archer logo colors */
+/* Tabbed Interface Styles - Themed with Shikari logo colors */
 
 .tabs-container {
   background: #ffffff;
@@ -250,7 +250,7 @@
   color: #dc3545;
 }
 
-/* Button Styles - Themed with Archer red */
+/* Button Styles - Themed with Shikari red */
 /* .btn-primary: static/css/ui.css */
 .btn-primary:disabled {
   background: #6c757d !important;

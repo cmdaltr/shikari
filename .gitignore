@@ -39,7 +39,7 @@ profile_pictures/
 # DATA DIRECTORY - Exclude dynamically generated files, keep structure
 # Database files (runtime generated)
 data/*.db
-# Fernet key that decrypts every stored API key (archer/auth/encryption.py)
+# Fernet key that decrypts every stored API key (shikari/auth/encryption.py)
 data/.encryption_key
 data/.mitresaw.lock
 data/mitre_procedures.csv
@@ -94,7 +94,7 @@ data/progress/*
 # Each group's latest run: which detection files it produced
 data/runs/*
 data/ioc_flows/*
-# IOC first-seen dates for sweep expiry (archer/build/ioc_sweep.py)
+# IOC first-seen dates for sweep expiry (shikari/build/ioc_sweep.py)
 data/ioc_dates/
 data/llm_responses/*
 
@@ -111,16 +111,16 @@ data/emulation/evidence/*
 
 
 # Cache directory for MITRE ATT&CK data - runtime generated
-archer/data/cache/*
-!archer/data/cache/.gitkeep
+shikari/data/cache/*
+!shikari/data/cache/.gitkeep
 
 # Query examples repository (downloaded from GitHub)
-archer/data/query_examples/*
-!archer/data/query_examples/.gitkeep
-!archer/data/query_examples/README.md
+shikari/data/query_examples/*
+!shikari/data/query_examples/.gitkeep
+!shikari/data/query_examples/README.md
 
-# Atomic Red Team (static data - git submodule in archer/data/emulation/)
-archer/data/emulation/atomic-red-team/
+# Atomic Red Team (static data - git submodule in shikari/data/emulation/)
+shikari/data/emulation/atomic-red-team/
 
 # Test coverage
 .coverage
@@ -180,7 +180,7 @@ MITRESaw/
 # UI walkthrough run output
 tests/screenshots/walkthrough/
 
-# archer-cli start/stop supervisor state (archer/service.py)
+# shikari-cli start/stop supervisor state (shikari/service.py)
 data/run/
 logs/
 
@@ -199,6 +199,6 @@ data/feed/
 bespoke/llm_references/*
 !bespoke/llm_references/.gitkeep
 !bespoke/llm_references/README.md
-archer/contract/docs/01-diagnosis.md
-archer/contract/docs/05-exemplars.md
+shikari/contract/docs/01-diagnosis.md
+shikari/contract/docs/05-exemplars.md
 .envrc

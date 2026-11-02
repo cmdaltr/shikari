@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from archer.build import lol
-from archer.build import osint_index
+from shikari.build import lol
+from shikari.build import osint_index
 
 
 @pytest.fixture
@@ -92,7 +92,7 @@ def test_known_false_positives_only_for_the_named_tools(monkeypatch):
 
 
 def test_lol_enrichment_off_skips_the_lookup(monkeypatch):
-    from archer.build import detections, lol
+    from shikari.build import detections, lol
 
     monkeypatch.setattr(lol, "enrich", lambda *a: (_ for _ in ()).throw(AssertionError("looked up")))
     ids = {"sw": ["certutil.exe"]}
@@ -100,7 +100,7 @@ def test_lol_enrichment_off_skips_the_lookup(monkeypatch):
 
 
 def test_lol_enrichment_on_adds_without_touching_the_original(monkeypatch):
-    from archer.build import detections, lol
+    from shikari.build import detections, lol
 
     ref = {"source": "LOLBAS", "name": "Certutil.exe"}
     monkeypatch.setattr(lol, "enrich", lambda ids, tid, text: ({"cmd": ["Certutil.exe -urlcache"], "hash": ["abc"]}, [ref]))

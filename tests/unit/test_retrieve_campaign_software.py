@@ -1,7 +1,7 @@
 """The run's ATT&CK walk follows the same paths as MITRESaw: group, campaigns, and software either uses."""
 from types import SimpleNamespace
 
-from archer.mitre.retrieve import retrieve_techniques
+from shikari.mitre.retrieve import retrieve_techniques
 
 
 def _uses(src, dst, desc=None):

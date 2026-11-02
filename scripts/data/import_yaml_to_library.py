@@ -16,8 +16,8 @@ from datetime import datetime
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from archer.database.db import get_db
-from archer.database.models import LibraryDetection, DetectionType, VisibilityType, User
+from shikari.database.db import get_db
+from shikari.database.models import LibraryDetection, DetectionType, VisibilityType, User
 
 
 def load_yaml_file(yaml_path: str) -> dict:

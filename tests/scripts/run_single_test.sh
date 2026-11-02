@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run a single Archer feature test
+# Run a single Shikari feature test
 #
 # Usage:
 #   ./run_single_test.sh <test_name>
@@ -63,14 +63,14 @@ for arg in "$@"; do
     fi
 done
 
-# Check Archer is running
-ARCHER_URL="${ARCHER_API_URL:-http://127.0.0.1:8000}"
-echo -n "Checking Archer at ${ARCHER_URL}... "
-if curl -s "${ARCHER_URL}/health" > /dev/null 2>&1; then
+# Check Shikari is running
+SHIKARI_URL="${SHIKARI_API_URL:-http://127.0.0.1:8000}"
+echo -n "Checking Shikari at ${SHIKARI_URL}... "
+if curl -s "${SHIKARI_URL}/health" > /dev/null 2>&1; then
     echo -e "${GREEN}OK${NC}"
 else
     echo -e "${RED}FAILED${NC}"
-    echo -e "${YELLOW}Please start Archer before running tests${NC}"
+    echo -e "${YELLOW}Please start Shikari before running tests${NC}"
     exit 1
 fi
 

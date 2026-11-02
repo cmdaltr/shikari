@@ -1,18 +1,18 @@
 # CALDERA operations
 
-Run a [CALDERA](https://github.com/mitre/caldera) operation from **Emulate → Lab** (in the web app and the desktop app) or the `lab/caldera` [console module](17-console-api-mcp.md), pull back what each step ran, and check your saved detections and correlations against it ([#30](https://github.com/cmdaltr/archer/issues/30)). Archer drives the CALDERA server you run in your lab. It never ships an agent or a C2 of its own.
+Run a [CALDERA](https://github.com/mitre/caldera) operation from **Emulate → Lab** (in the web app and the desktop app) or the `lab/caldera` [console module](17-console-api-mcp.md), pull back what each step ran, and check your saved detections and correlations against it ([#30](https://github.com/cmdaltr/shikari/issues/30)). Shikari drives the CALDERA server you run in your lab. It never ships an agent or a C2 of its own.
 
 ## Why CALDERA as well as Atomic Red Team
 
 [Recording a lab](20-recording-a-lab.md) runs Atomic Red Team tests one technique at a time, each with its default inputs, from a local PowerShell session. That's the right tool for validating a single detection. It can't test two things that correlations depend on:
 
-| Need | Atomic Red Team in Archer | CALDERA |
+| Need | Atomic Red Team in Shikari | CALDERA |
 |---|---|---|
 | Fact chaining: one step's output feeds the next step's arguments | No. Each test runs standalone with default inputs | Yes. The `atomic` planner runs abilities in order, and the facts each step collects fill later steps' `#{fact}` placeholders |
 | Implant behaviour: a beaconing agent taking tasks over a C2 channel | No. Tests run in a local shell | Yes. The sandcat agent is a real implant, so detections keyed on its process lineage and beaconing are exercised |
 | Running on more than one host in one operation | One machine per run | An agent group spans hosts |
 
-Building either into Archer would make it an implant framework, so CALDERA does that part and Archer does the detection side. Atomic Red Team stays the per-technique path. Archer leaves out CALDERA's `atomic` plugin, its import of Atomic Red Team, when choosing an ability, unless no other ability runs the technique.
+Building either into Shikari would make it an implant framework, so CALDERA does that part and Shikari does the detection side. Atomic Red Team stays the per-technique path. Shikari leaves out CALDERA's `atomic` plugin, its import of Atomic Red Team, when choosing an ability, unless no other ability runs the technique.
 
 Pushing detections into CALDERA was dropped from #30: CALDERA has nowhere to take a detection.
 
@@ -20,9 +20,9 @@ Pushing detections into CALDERA was dropped from #30: CALDERA has nowhere to tak
 
 ### Provision it in one go (local macOS)
 
-On a macOS host you run Archer on yourself, the **Provision** button on the CALDERA card stands the whole lab up for you: it installs OrbStack, builds and runs a disposable CALDERA server, enrols agents, and saves the server and key to your profile — the in-app equivalent of `scripts/telemetry/caldera-lab.sh`. A step that needs you (your password for Homebrew, OrbStack's first launch) shows exactly what to do and carries on by itself once it's done, re-checking every 10 seconds. Nothing detonates during provisioning.
+On a macOS host you run Shikari on yourself, the **Provision** button on the CALDERA card stands the whole lab up for you: it installs OrbStack, builds and runs a disposable CALDERA server, enrols agents, and saves the server and key to your profile — the in-app equivalent of `scripts/telemetry/caldera-lab.sh`. A step that needs you (your password for Homebrew, OrbStack's first launch) shows exactly what to do and carries on by itself once it's done, re-checking every 10 seconds. Nothing detonates during provisioning.
 
-It's deliberately narrow — an **admin** account, a **macOS** host, and the opt-in `ARCHER_ALLOW_LAB_PROVISION=1` in the environment — so it can never fire on a shared server, where the host isn't your own machine. The **local desktop app** sets that flag for you (it runs its own server on your machine); running Archer any other way, set it yourself, e.g. in `.envrc` or before `archer-cli start`. Without all three gates you get the manual **Deploy** guide instead, and the server-side options below.
+It's deliberately narrow — an **admin** account, a **macOS** host, and the opt-in `SHIKARI_ALLOW_LAB_PROVISION=1` in the environment — so it can never fire on a shared server, where the host isn't your own machine. The **local desktop app** sets that flag for you (it runs its own server on your machine); running Shikari any other way, set it yourself, e.g. in `.envrc` or before `shikari-cli start`. Without all three gates you get the manual **Deploy** guide instead, and the server-side options below.
 
 Once a lab is up, the button turns green and reads **Re-provision** (run it again), with **De-provision** beside it to tear the lab down — stop the server, delete the agents, and remove CALDERA from your profile.
 
@@ -40,30 +40,30 @@ caldera:
   verify_tls: true
 ```
 
-`CALDERA_URL` and `CALDERA_API_KEY` in the environment override both the per-user setting and the file (handy for a throwaway run). Wherever it comes from, the key goes only in CALDERA's `KEY` header: it is never logged, returned by Archer's API or written to a manifest. Using it needs the Operational analyst role, like the rest of Lab.
+`CALDERA_URL` and `CALDERA_API_KEY` in the environment override both the per-user setting and the file (handy for a throwaway run). Wherever it comes from, the key goes only in CALDERA's `KEY` header: it is never logged, returned by Shikari's API or written to a manifest. Using it needs the Operational analyst role, like the rest of Lab.
 
-Once connected, the CALDERA card on **Emulate → Lab** shows the **agent topology**: the server (with its host's OS icon and hostname) and every agent beneath it, each labelled by paw with its OS icon, the environment it runs in (Docker, Tart, UTM, OrbStack) and its group. Click an agent to act on it — start, stop or delete it when Archer manages its machine, or forget it either way. An agent enrolled outside Archer is drawn dashed and greyed, so it's clear which machines Archer can drive.
+Once connected, the CALDERA card on **Emulate → Lab** shows the **agent topology**: the server (with its host's OS icon and hostname) and every agent beneath it, each labelled by paw with its OS icon, the environment it runs in (Docker, Tart, UTM, OrbStack) and its group. Click an agent to act on it — start, stop or delete it when Shikari manages its machine, or forget it either way. An agent enrolled outside Shikari is drawn dashed and greyed, so it's clear which machines Shikari can drive.
 
 ## Adding agents
 
-You don't have to leave Archer to add an agent. **+ Add agent** on the CALDERA card either provisions a fresh disposable machine and enrols it, or enrols one you already have:
+You don't have to leave Shikari to add an agent. **+ Add agent** on the CALDERA card either provisions a fresh disposable machine and enrols it, or enrols one you already have:
 
-- **Provision** — pick the OS (Linux or macOS; for Linux a full **Tart VM** or a light **Docker container**) and Archer creates the managed machine, boots it, and runs a sandcat agent in it, as one background job.
-- **Enrol** — run a sandcat agent on any running machine Archer already manages, a UTM Windows VM you've built included.
+- **Provision** — pick the OS (Linux or macOS; for Linux a full **Tart VM** or a light **Docker container**) and Shikari creates the managed machine, boots it, and runs a sandcat agent in it, as one background job.
+- **Enrol** — run a sandcat agent on any running machine Shikari already manages, a UTM Windows VM you've built included.
 
 The machine pulls the architecture-correct agent itself and runs it detached (systemd on Linux, launchd on macOS, a hidden process on Windows), so nothing streams over the hypervisor's guest agent — the amd64 default would fail on an arm64 Tart VM, so the right `architecture` is requested. macOS needs a base image with the Tart guest agent (the cirruslabs images ship it).
 
-Names follow a convention so the lab stays legible: an `achr-` prefix always, a `cal-` marker when the machine is provisioned for CALDERA, then an OS+version tag — `achr-cal-ubu24`, `achr-cal-rky10`, `achr-cal-mac15`, `achr-win11`, with a `-N` suffix on a clash. The tag is the distro+version actually provisioned (`ubu24` tracks cirruslabs' 24.04 base — it becomes `ubu26` once a 26.04 base ships; `rky10` is Rocky Linux 10; `mac15` is Sequoia; `win11` is Windows 11). Linux offers Ubuntu (Tart VM or Docker container) and Rocky (Docker container only — cirruslabs ships no Rocky Tart base). **Your machines** sorts Windows, then macOS, then Linux, hides Rivendell's own VMs (`rivendell-*`), and marks each as a CALDERA **agent** or **not enrolled**.
+Names follow a convention so the lab stays legible: an `shi-` prefix always, a `cal-` marker when the machine is provisioned for CALDERA, then an OS+version tag — `shi-cal-ubu24`, `shi-cal-rky10`, `shi-cal-mac15`, `shi-win11`, with a `-N` suffix on a clash. The tag is the distro+version actually provisioned (`ubu24` tracks cirruslabs' 24.04 base — it becomes `ubu26` once a 26.04 base ships; `rky10` is Rocky Linux 10; `mac15` is Sequoia; `win11` is Windows 11). Linux offers Ubuntu (Tart VM or Docker container) and Rocky (Docker container only — cirruslabs ships no Rocky Tart base). **Your machines** sorts Windows, then macOS, then Linux, hides Rivendell's own VMs (`rivendell-*`), and marks each as a CALDERA **agent** or **not enrolled**.
 
 The same from the command line:
 
 ```
-archer-cli caldera provision linux              # a Tart Ubuntu VM, enrolled
-archer-cli caldera provision linux --engine docker
-archer-cli caldera provision linux --distro rocky   # a Rocky 10 Docker container, enrolled
-archer-cli caldera provision macos              # needs a cirruslabs base
-archer-cli caldera enrol tart achr-cal-ubu24    # enrol a machine Archer manages
-archer-cli caldera list                         # managed machines, and which are agents
+shikari-cli caldera provision linux              # a Tart Ubuntu VM, enrolled
+shikari-cli caldera provision linux --engine docker
+shikari-cli caldera provision linux --distro rocky   # a Rocky 10 Docker container, enrolled
+shikari-cli caldera provision macos              # needs a cirruslabs base
+shikari-cli caldera enrol tart shi-cal-ubu24    # enrol a machine Shikari manages
+shikari-cli caldera list                         # managed machines, and which are agents
 ```
 
 The web, the desktop app (the same UI) and the CLI share one backend source for the naming and group convention, so they can't drift. For a throwaway lab from scratch, `scripts/telemetry/caldera-lab.sh` still does the whole bring-up end to end (`up` for the server and OrbStack Linux agents, `win <vm>` for a UTM Windows VM, `mac <vm>` for a Tart macOS VM), or deploy sandcat from CALDERA's own UI.
@@ -91,7 +91,7 @@ Each operation also becomes a recording source, **CALDERA**, one dataset per tec
 
 ### Capturing the endpoint's logs
 
-A command line overstates a detection: the query runs on what the endpoint logged. Under **Capture the endpoint's logs afterwards** choose how, and once collected Archer runs `scripts/telemetry/capture-window.ps1` on the agent's host. The script runs nothing but log readers. It reads each step's window (decide minus 5 s, to finish plus 20 s for clock skew and late events) back from the same logs the [lab recorder](20-recording-a-lab.md) uses, and imports them as a **Your lab** run named `caldera-<operation>`.
+A command line overstates a detection: the query runs on what the endpoint logged. Under **Capture the endpoint's logs afterwards** choose how, and once collected Shikari runs `scripts/telemetry/capture-window.ps1` on the agent's host. The script runs nothing but log readers. It reads each step's window (decide minus 5 s, to finish plus 20 s for clock skew and late events) back from the same logs the [lab recorder](20-recording-a-lab.md) uses, and imports them as a **Your lab** run named `caldera-<operation>`.
 
 Two ways to reach the host:
 
@@ -106,7 +106,7 @@ Two ways to reach the host:
 
 Either way it runs only log readers. Over the agent, nothing is installed: Windows uses the built-in Windows PowerShell (5.1) and Linux/macOS the native shell (`journalctl`/auditd, `log show`). The lab-machine path runs `capture-window.ps1`, so a non-Windows managed machine needs PowerShell 7 (Lab's **Set up**). Capturing via the agent handles every host the operation ran on in one pass — a separate **Your lab** run per host; the lab-machine path captures one managed host at a time.
 
-For how the capture hooks into Archer step by step and exactly where each operation's results land, see [CALDERA endpoint-log capture on a Windows host](../features/CALDERA_WINDOWS_CAPTURE.md).
+For how the capture hooks into Shikari step by step and exactly where each operation's results land, see [CALDERA endpoint-log capture on a Windows host](../features/CALDERA_WINDOWS_CAPTURE.md).
 
 ## The check
 

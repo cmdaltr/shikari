@@ -3,13 +3,13 @@ A complete agent in one file: a model, two tools and the loop that connects them
 
 It answers questions about a folder of detection YAML files ("do we detect T1003.001?",
 "which detections use DeviceProcessEvents?") by searching and reading the files itself.
-Nothing here depends on Archer: point it at any folder.
+Nothing here depends on Shikari: point it at any folder.
 
     pip install anthropic
     export ANTHROPIC_API_KEY=...
     python minimal_agent.py data/groups "Do we have a detection for LSASS dumping with comsvcs.dll?"
 
-Archer's own agents (archer/agents) are this loop plus approvals, a trace and sessions.
+Shikari's own agents (shikari/agents) are this loop plus approvals, a trace and sessions.
 """
 
 import json

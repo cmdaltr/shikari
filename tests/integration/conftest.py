@@ -37,7 +37,7 @@ def mock_dirs(temp_dir):
 @pytest.fixture
 def client(mock_dirs):
     """Create test client with mocked directories."""
-    with patch.dict("archer.config.__dict__", {
+    with patch.dict("shikari.config.__dict__", {
         "GENERATE_DIR": str(mock_dirs["generate"]),
         "CORRELATE_DIR": str(mock_dirs["correlate"]),
         "DRAFTS_DIR": str(mock_dirs["drafts"]),
@@ -45,7 +45,7 @@ def client(mock_dirs):
         "BLOG_DIR": str(mock_dirs["blog"]),
         "PROGRESS_DIR": str(mock_dirs["progress"]),
     }):
-        from archer.app import app
+        from shikari.app import app
         yield TestClient(app)
 
 

@@ -1,5 +1,5 @@
 """
-Reconnaissance and Resource Development are shown everywhere (archer.tactic_scope); only
+Reconnaissance and Resource Development are shown everywhere (shikari.tactic_scope); only
 the adversary-side techniques ("intel only") are never written as a detection or counted
 as a gap. Those the estate's logs see (T1595, T1598, T1594, T1589) are written.
 """
@@ -8,10 +8,10 @@ import os
 import pytest
 import yaml
 
-from archer import tactic_scope
-from archer.build import run_files
-from archer.build import yaml as writer
-from archer.visualization import navigator
+from shikari import tactic_scope
+from shikari.build import run_files
+from shikari.build import yaml as writer
+from shikari.visualization import navigator
 
 
 @pytest.fixture
@@ -85,7 +85,7 @@ def test_matrix_and_index_include_them():
 
 
 def test_detection_layer_uses_the_mapping_in_force(env, tmp_path):
-    from archer.build import attack_mapping
+    from shikari.build import attack_mapping
     d = tmp_path / "groups"
     d.mkdir()
     _write(d / "a.yaml", ["Initial Access"])

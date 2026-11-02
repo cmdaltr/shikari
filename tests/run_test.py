@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Comprehensive Test Suite for Archer Detection Generation Platform
+Comprehensive Test Suite for Shikari Detection Generation Platform
 
-This test suite validates all major components of Archer using realistic
+This test suite validates all major components of Shikari using realistic
 threat intelligence inputs including threat groups, CVEs, blogs, and company profiles.
 
 Run with: pytest tests/run_test.py -v --tb=short
@@ -41,7 +41,7 @@ from datetime import datetime
 # TEST CONFIGURATION
 # =============================================================================
 
-BASE_URL = os.getenv("ARCHER_BASE_URL", "http://127.0.0.1:8000")
+BASE_URL = os.getenv("SHIKARI_BASE_URL", "http://127.0.0.1:8000")
 TIMEOUT = 900  # 15 minutes for long-running generation tasks (large threat groups)
 SHORT_TIMEOUT = 30
 
@@ -142,8 +142,8 @@ class TestResult:
     error: Optional[str] = None
 
 
-class ArcherTestSuite:
-    """Comprehensive test suite for Archer platform"""
+class ShikariTestSuite:
+    """Comprehensive test suite for Shikari platform"""
 
     def __init__(self, base_url: str = BASE_URL, timeout: int = TIMEOUT):
         self.base_url = base_url
@@ -197,12 +197,12 @@ class ArcherTestSuite:
         start = time.time()
         try:
             response = self.session.get(f"{self.base_url}/", timeout=SHORT_TIMEOUT)
-            passed = response.status_code == 200 and "Archer" in response.text
+            passed = response.status_code == 200 and "Shikari" in response.text
             self.record_result(
                 "Home Page",
                 passed,
                 time.time() - start,
-                f"Status: {response.status_code}, Contains 'Archer': {'Archer' in response.text}"
+                f"Status: {response.status_code}, Contains 'Shikari': {'Shikari' in response.text}"
             )
             return passed
         except Exception as e:
@@ -925,7 +925,7 @@ class ArcherTestSuite:
         """Run all tests and return summary"""
 
         self.log("=" * 70)
-        self.log("ARCHER COMPREHENSIVE TEST SUITE")
+        self.log("SHIKARI COMPREHENSIVE TEST SUITE")
         self.log("=" * 70)
 
         # 1. Health & Connectivity
@@ -1037,10 +1037,10 @@ class ArcherTestSuite:
 @pytest.fixture(scope="module")
 def test_suite():
     """Create test suite instance"""
-    return ArcherTestSuite(BASE_URL)
+    return ShikariTestSuite(BASE_URL)
 
 
-class TestArcherHealth:
+class TestShikariHealth:
     """Health and connectivity tests"""
 
     def test_health_endpoint(self, test_suite):
@@ -1050,7 +1050,7 @@ class TestArcherHealth:
         assert test_suite.test_home_page()
 
 
-class TestArcherAPIs:
+class TestShikariAPIs:
     """API endpoint tests"""
 
     def test_threat_groups_api(self, test_suite):
@@ -1075,7 +1075,7 @@ class TestArcherAPIs:
         assert test_suite.test_technique_names_api()
 
 
-class TestArcherPages:
+class TestShikariPages:
     """Page load tests"""
 
     def test_library_page(self, test_suite):
@@ -1088,7 +1088,7 @@ class TestArcherPages:
         assert test_suite.test_manual_page()
 
 
-class TestArcherLibrary:
+class TestShikariLibrary:
     """Library API tests"""
 
     def test_library_detections_api(self, test_suite):
@@ -1099,7 +1099,7 @@ class TestArcherLibrary:
 
 
 @pytest.mark.feature
-class TestArcherThreatGroups:
+class TestShikariThreatGroups:
     """Threat group generation tests (feature)"""
 
     @pytest.mark.parametrize("group", THREAT_GROUPS)
@@ -1108,7 +1108,7 @@ class TestArcherThreatGroups:
 
 
 @pytest.mark.feature
-class TestArcherCVEs:
+class TestShikariCVEs:
     """CVE generation tests (feature)"""
 
     @pytest.mark.parametrize("cve", CVES)
@@ -1117,7 +1117,7 @@ class TestArcherCVEs:
 
 
 @pytest.mark.feature
-class TestArcherBlogs:
+class TestShikariBlogs:
     """Blog analysis tests (feature)"""
 
     @pytest.mark.parametrize("blog_url", BLOG_URLS)
@@ -1126,7 +1126,7 @@ class TestArcherBlogs:
 
 
 @pytest.mark.feature
-class TestArcherProfiles:
+class TestShikariProfiles:
     """Company profile tests (feature)"""
 
     @pytest.mark.parametrize("company", COMPANY_PROFILES)
@@ -1134,7 +1134,7 @@ class TestArcherProfiles:
         assert test_suite.test_company_profile(company)
 
 
-class TestArcherAdditional:
+class TestShikariAdditional:
     """Additional endpoint tests"""
 
     def test_emulation_endpoint(self, test_suite):
@@ -1151,14 +1151,14 @@ class TestArcherAdditional:
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Archer Comprehensive Test Suite")
+    parser = argparse.ArgumentParser(description="Shikari Comprehensive Test Suite")
     parser.add_argument("--list", nargs="?", const="all", metavar="TYPE",
                         help="List available test data. Options: all, groups, cves, blogs, profiles")
     parser.add_argument("--add", nargs=2, metavar=("TYPE", "VALUE"),
                         help="Add custom test data. TYPE: groups, cves, blogs, profiles")
     parser.add_argument("--remove", nargs=2, metavar=("TYPE", "VALUE"),
                         help="Remove custom test data. TYPE: groups, cves, blogs, profiles")
-    parser.add_argument("--url", default=BASE_URL, help="Archer base URL")
+    parser.add_argument("--url", default=BASE_URL, help="Shikari base URL")
     parser.add_argument("--skip-feature-tests", action="store_true",
                         help="Skip feature tests (generation tests)")
     parser.add_argument("--groups", type=int, default=2,
@@ -1291,49 +1291,49 @@ if __name__ == "__main__":
             print(f"'{rm_value}' is not a custom entry in {rm_type} (built-in entries cannot be removed)")
         exit(0)
 
-    # Pre-flight check: ensure Archer is running
-    def _check_archer(url):
+    # Pre-flight check: ensure Shikari is running
+    def _check_shikari(url):
         try:
             requests.get(f"{url}/health", timeout=3)
             return True
         except Exception:
             return False
 
-    if not _check_archer(args.url):
-        start_script = Path(__file__).parent.parent / "scripts" / "deployment" / "start-archer.py"
+    if not _check_shikari(args.url):
+        start_script = Path(__file__).parent.parent / "scripts" / "deployment" / "start-shikari.py"
         if not start_script.exists():
-            print(f"Archer is not running at {args.url} and start script not found.")
+            print(f"Shikari is not running at {args.url} and start script not found.")
             exit(1)
 
         try:
-            answer = input(f"Archer is not running at {args.url}. Start it now? [Y/n] ").strip().lower()
+            answer = input(f"Shikari is not running at {args.url}. Start it now? [Y/n] ").strip().lower()
         except (EOFError, KeyboardInterrupt):
             print()
             exit(1)
 
         if answer in ("", "y", "yes"):
-            print("Starting Archer in the background...")
+            print("Starting Shikari in the background...")
             subprocess.Popen(
                 [sys.executable, str(start_script), "--background"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-            # Wait for Archer to become available
+            # Wait for Shikari to become available
             max_wait = 30
             waited = 0
             while waited < max_wait:
                 time.sleep(1)
                 waited += 1
-                if _check_archer(args.url):
-                    print(f"Archer is running at {args.url}")
+                if _check_shikari(args.url):
+                    print(f"Shikari is running at {args.url}")
                     break
             else:
-                print(f"Archer did not start within {max_wait}s.")
+                print(f"Shikari did not start within {max_wait}s.")
                 exit(1)
         else:
             exit(0)
 
-    suite = ArcherTestSuite(args.url, args.timeout)
+    suite = ShikariTestSuite(args.url, args.timeout)
 
     # Single item tests
     if args.group:

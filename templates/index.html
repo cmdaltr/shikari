@@ -2,10 +2,10 @@
 <html data-theme="light">
 <head>
     <title>{{ brand.name }} - Home</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
-    <link rel="shortcut icon" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon.png') }}">
-    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon-precomposed.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', path=brand.icon_32) }}?v={{ request.app.state.asset_version }}">
+    <link rel="shortcut icon" href="{{ url_for('static', path=brand.icon_32) }}?v={{ request.app.state.asset_version }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path=brand.apple_icon) }}">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path=brand.apple_icon) }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -46,14 +46,14 @@
       
 
       /* Fixed position button - aligned with 1320px content edge */
-      .how-archer-link {
+      .how-shikari-link {
         position: fixed !important;
         top: 20px !important;
         right: max(2em, calc((100vw - 1500px) / 2)) !important;
         z-index: 10000 !important;
       }
 
-      .how-archer-link:hover {
+      .how-shikari-link:hover {
         background: var(--accent) !important;
         color: white !important;
       }
@@ -85,7 +85,7 @@
         color: var(--text-tertiary) !important;
       }
 
-      [data-theme="dark"] .how-archer-link {
+      [data-theme="dark"] .how-shikari-link {
         background: rgba(45, 45, 45, 0.95) !important;
       }
 
@@ -146,6 +146,7 @@
     </style>
     {% endblock %}
     <link rel="stylesheet" href="{{ url_for('static', path='css/ui.css') }}?v={{ request.app.state.asset_version }}">
+    {% include "partials/brand_style.html" %}
 </head>
 <body>
     <!-- Authentication Modal (shown when user is not authenticated) -->
@@ -203,13 +204,36 @@
     <div class="container" style="width: 1500px; max-width: calc(100vw - 4em); margin: 0 auto; padding: 2em; padding-top: 80px; padding-bottom: 80px; position: relative; box-sizing: border-box;">
       <!-- Page title / app name with banner -->
       <div class="header" style="text-align: center; margin-bottom: 3em;">
-        <div style="margin-bottom: 1em; margin-top: 28px;">
-          <img src="{{ url_for('static', path=brand.banner) }}" alt="{{ brand.name }}" style="width: auto; height: auto; max-width: 100%; max-height: 209px; filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.3));">
+        <div class="hp-hero" style="margin-bottom: 1em; margin-top: 28px;">
+          <img class="brand-light" src="{{ url_for('static', path=brand.hero) }}" alt="{{ brand.name }}">
+          <img class="brand-dark" src="{{ url_for('static', path=brand.hero_dark) }}" alt="{{ brand.name }}">
         </div>
         <p style="color: #666666; font-size: 14px; font-weight: 500; letter-spacing: 2.5px; margin-top: 15px;">
           AUTOMATED MULTI-VENDOR THREAT HUNTING & DETECTION SUITE
         </p>
       </div>
+      <style>
+        /* Home hero: 40% larger at rest (322px), shrinking to 50% as the page is scrolled. */
+        .hp-hero { --hero-h: 380px; line-height: 0; }
+        .hp-hero img { width: auto; height: auto; max-width: 100%; max-height: var(--hero-h);
+          filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.3)); transition: max-height .12s linear; }
+      </style>
+      <script>
+        (function () {
+          var hero = document.querySelector('.hp-hero');
+          if (!hero) return;
+          var MAX = 380, MIN = 190, RANGE = 260, pending = false;   // shrink over the first 260px of scroll
+          function update() {
+            var y = Math.min(window.scrollY || window.pageYOffset || 0, RANGE);
+            hero.style.setProperty('--hero-h', (MAX - (MAX - MIN) * (y / RANGE)).toFixed(1) + 'px');
+            pending = false;
+          }
+          window.addEventListener('scroll', function () {
+            if (!pending) { pending = true; requestAnimationFrame(update); }
+          }, { passive: true });
+          update();
+        })();
+      </script>
 
       <!-- Tabbed interface inspired by VirusTotal -->
       <div class="tabs-container home-tabs">
@@ -307,7 +331,7 @@
                     <input type="text" name="cve_id" id="cve_input" class="form-input"
                            placeholder="e.g., CVE-2024-1234 or CVE-2021-44228, CVE-2022-22965">
                     <p class="hp-feed-hint"><button type="button" class="hp-link-btn" id="cve-browse">Browse the last 30 days</button> of CVEs, with CISA's known exploited</p>
-                    <!-- Recent CVEs picker: archer.intelligence.cve_feed via /api/cves/recent (static/js/index.js) -->
+                    <!-- Recent CVEs picker: shikari.intelligence.cve_feed via /api/cves/recent (static/js/index.js) -->
                     <dialog class="cve-picker" id="cve-picker" aria-labelledby="cve-picker-title">
                       <div class="cvp-head">
                         <div>
@@ -422,7 +446,7 @@
             <details class="hypo" id="hypo">
               <summary class="hypo-summary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2V17h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z"/></svg>
-                <span><strong>Or start from a hunting hypothesis</strong><small>Describe what you think an adversary is doing; Archer maps it to ATT&amp;CK and generates the detections and correlations.</small></span>
+                <span><strong>Or start from a hunting hypothesis</strong><small>Describe what you think an adversary is doing; Shikari maps it to ATT&amp;CK and generates the detections and correlations.</small></span>
               </summary>
               <div class="hypo-body">
                 <textarea id="hypo-text" class="form-input" rows="3" maxlength="1000"
@@ -1946,7 +1970,7 @@
               </div>
 
               <div class="hp-actions">
-                <!-- AI choice, set by the prompt before reading (archerAskAi) -->
+                <!-- AI choice, set by the prompt before reading (shikariAskAi) -->
                 <input type="hidden" name="ai_provider" id="upload_ai_provider" value="">
                 <input type="hidden" name="ai_model" id="upload_ai_model" value="">
                 <button type="button" class="hp-btn" id="upload_btn" disabled>Analyse</button>
@@ -1987,7 +2011,7 @@
               </div>
 
               <div class="hp-secondary">
-                <p class="hp-hint">Archer looks the company up (Wikidata, its homepage and OSINT sources), works out its sector and where it operates, and recommends the threat groups that target organisations like it. You then choose which groups to generate detections for.</p>
+                <p class="hp-hint">Shikari looks the company up (Wikidata, its homepage and OSINT sources), works out its sector and where it operates, and recommends the threat groups that target organisations like it. You then choose which groups to generate detections for.</p>
               </div>
 
               <div class="hp-options">
@@ -2066,19 +2090,13 @@
           </a>
         </div>
 
-        <!-- Quote -->
-        <div class="quote">
-          <p>
-            "Even if you can't see something, it doesn't mean it isn't there"<br>
-            <span>— Archer, Small Soldiers</span>
-          </p>
-        </div>
 
         <!-- Spacer for balance -->
         <div class="spacer"></div>
       </div>
 
       <!-- Timestamp and Attribution -->
+      <div class="footer-gloss"><span class="fg-word">shi·ka·ri</span><span class="fg-ipa">\shi-ˈkär-ē\</span><span class="fg-def">a professional big-game hunter or guide</span></div>
       <div class="timestamp">
         <span style="font-size: 0.85em; opacity: 0.7; display: block;">
           Splunk®, Microsoft®, Google® and Elastic® names and logos are trademarks of their respective companies.
@@ -2272,10 +2290,10 @@
     </script>
 
     <!-- ================================================================
-         Ask Archer – floating chat widget
+         Ask Shikari – floating chat widget
          ================================================================ -->
     <style>
-      #ask-archer-btn {
+      #ask-shikari-btn {
         position: fixed;
         bottom: 48px;
         right: 28px;
@@ -2297,9 +2315,9 @@
         white-space: nowrap;
         transition: background .2s, transform .15s;
       }
-      #ask-archer-btn:hover { background: #4f46e5; transform: scale(1.04); }
+      #ask-shikari-btn:hover { background: #4f46e5; transform: scale(1.04); }
 
-      #ask-archer-panel {
+      #ask-shikari-panel {
         position: fixed;
         bottom: 160px;
         right: 28px;
@@ -2318,12 +2336,12 @@
         pointer-events: none;
         transition: opacity .2s, transform .2s;
       }
-      #ask-archer-panel.open {
+      #ask-shikari-panel.open {
         opacity: 1;
         transform: translateY(0) scale(1);
         pointer-events: all;
       }
-      #ask-archer-panel.expanded { height: calc(90vh - 168px); }
+      #ask-shikari-panel.expanded { height: calc(90vh - 168px); }
       .aap-header {
         padding: 12px 16px;
         background: #181825;
@@ -2340,7 +2358,7 @@
       .aap-messages { flex: 1; overflow-y: auto; padding: 14px 14px 8px; display: flex; flex-direction: column; gap: 10px; }
       .aap-msg { max-width: 92%; padding: 9px 13px; border-radius: 10px; font-size: 1em; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
       .aap-msg.user { align-self: flex-end; background: #6366f1; color: #fff; border-bottom-right-radius: 3px; }
-      .aap-msg.archer { align-self: flex-start; background: #313244; color: #cdd6f4; border-bottom-left-radius: 3px; }
+      .aap-msg.shikari { align-self: flex-start; background: #313244; color: #cdd6f4; border-bottom-left-radius: 3px; }
       .aap-msg.error { align-self: flex-start; background: #3d1a1a; color: #f38ba8; border-bottom-left-radius: 3px; }
       .aap-typing { align-self: flex-start; color: #6c7086; font-size: .936em; padding: 4px 8px; }
       .aap-input-row { display: flex; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid #3d3d5c; flex-shrink: 0; background: #181825; }
@@ -2353,28 +2371,28 @@
       .aap-provider { font-size: .68em; color: #6c7086; padding: 0 14px 8px; background: #181825; text-align: right; flex-shrink: 0; }
     </style>
 
-    <button id="ask-archer-btn" title="Ask Archer" aria-label="Ask Archer">
+    <button id="ask-shikari-btn" title="Ask Shikari" aria-label="Ask Shikari">
       <svg width="29" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
       </svg>
-      <span>Ask Archer</span>
+      <span>Ask Shikari</span>
     </button>
 
-    <div id="ask-archer-panel" role="dialog" aria-label="Ask Archer">
+    <div id="ask-shikari-panel" role="dialog" aria-label="Ask Shikari">
       <div class="aap-header">
         <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
         <div style="flex:1;">
-          <div class="aap-title">Ask Archer</div>
+          <div class="aap-title">Ask Shikari</div>
           <div class="aap-subtitle">ATT&amp;CK, queries, threat groups</div>
         </div>
         <button id="aap-expand" aria-label="Expand" title="Expand" style="background:none;border:none;color:#6c7086;cursor:pointer;font-size:14px;padding:4px 6px;margin-right:2px;line-height:1;">&#x26F6;</button>
         <button id="aap-close" aria-label="Close">&#10005;</button>
       </div>
       <div class="aap-messages" id="aap-messages">
-        <div class="aap-msg archer">Greetings. Ask me anything about threat detection — techniques, SIEM queries, threat groups, or anything in your generated detections.</div>
+        <div class="aap-msg shikari">Greetings. Ask me anything about threat detection — techniques, SIEM queries, threat groups, or anything in your generated detections.</div>
       </div>
       <div class="aap-provider" id="aap-provider"></div>
       <div class="aap-input-row">
@@ -2385,8 +2403,8 @@
 
     <script>
     (function () {
-      const btn    = document.getElementById('ask-archer-btn');
-      const panel  = document.getElementById('ask-archer-panel');
+      const btn    = document.getElementById('ask-shikari-btn');
+      const panel  = document.getElementById('ask-shikari-panel');
       const close  = document.getElementById('aap-close');
       const expand = document.getElementById('aap-expand');
       const msgs   = document.getElementById('aap-messages');
@@ -2397,9 +2415,9 @@
       function setOpen(open) {
         panel.classList.toggle('open', open);
         if (open) input.focus();
-        try { localStorage.setItem('archerChatOpen', open ? '1' : '0'); } catch(e) {}
+        try { localStorage.setItem('shikariChatOpen', open ? '1' : '0'); } catch(e) {}
       }
-      try { if (localStorage.getItem('archerChatOpen') === '1') setOpen(true); } catch(e) {}
+      try { if (localStorage.getItem('shikariChatOpen') === '1') setOpen(true); } catch(e) {}
 
       btn.addEventListener('click', () => setOpen(!panel.classList.contains('open')));
       close.addEventListener('click', () => setOpen(false));
@@ -2427,7 +2445,7 @@
         addMsg(q, 'user');
         const typing = document.createElement('div');
         typing.className = 'aap-typing';
-        typing.textContent = 'Archer is thinking…';
+        typing.textContent = 'Shikari is thinking…';
         msgs.appendChild(typing);
         msgs.scrollTop = msgs.scrollHeight;
         const groupInput = document.getElementById('group_name') || document.querySelector('[name="group_name"]');
@@ -2444,7 +2462,7 @@
             addMsg('Error: ' + (err.detail || res.statusText), 'error');
           } else {
             const data = await res.json();
-            addMsg(data.answer, 'archer');
+            addMsg(data.answer, 'shikari');
             if (data.provider) provEl.textContent = 'Powered by ' + data.provider;
           }
         } catch (e) {
@@ -2478,7 +2496,7 @@
                 </div>
             </div>
             <div style="padding: 24px;">
-                <p id="ai-prompt-intro" style="margin: 0 0 16px 0; color: #666; line-height: 1.6;">Archer can use AI to generate detections alongside the standard pipeline.</p>
+                <p id="ai-prompt-intro" style="margin: 0 0 16px 0; color: #666; line-height: 1.6;">Shikari can use AI to generate detections alongside the standard pipeline.</p>
 
                 <!-- Several providers in the profile: pick one (the assigned one is preselected) -->
                 <div id="ai-provider-picker" style="display: none; margin-bottom: 16px;">
@@ -2503,7 +2521,7 @@
     // The AI prompt before a run (GitHub #10), for Hunt and Upload: offered only when the
     // user's profile has a provider that can generate detections; the provider assigned to
     // detection generation is preselected, and a remembered choice skips the prompt.
-    // archerAskAi({title, purpose, run}, onChoice) calls onChoice(providerId, modelId),
+    // shikariAskAi({title, purpose, run}, onChoice) calls onChoice(providerId, modelId),
     // both empty for "no AI".
     (function() {
         var options = [];
@@ -2530,7 +2548,7 @@
             }
         }
 
-        window.archerAskAi = function(text, onChoice) {
+        window.shikariAskAi = function(text, onChoice) {
             pending = onChoice;
             var modal = document.getElementById('ai-prompt-modal');
             var yesBtn = document.getElementById('ai-prompt-yes-btn');
@@ -2567,7 +2585,7 @@
                         yesBtn.textContent = 'Yes';
                     } else {
                         picker.style.display = 'block';
-                        intro.textContent = 'Archer can use AI to ' + text.purpose + '.';
+                        intro.textContent = 'Shikari can use AI to ' + text.purpose + '.';
                         yesBtn.textContent = 'Use this and ' + text.run;
                     }
                     noBtn.textContent = 'Run without AI';
@@ -2596,7 +2614,7 @@
             var genBtn = document.getElementById('generate_btn');
             if (genBtn) genBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-                window.archerAskAi({ title: 'Use AI for this hunt?', purpose: 'generate detections alongside the standard pipeline', run: 'run hunt' },
+                window.shikariAskAi({ title: 'Use AI for this hunt?', purpose: 'generate detections alongside the standard pipeline', run: 'run hunt' },
                     function(providerId, modelId) {
                         document.getElementById('hidden_ai_provider').value = providerId;
                         document.getElementById('hidden_ai_model').value = modelId;

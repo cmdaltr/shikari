@@ -263,18 +263,18 @@ def read_json_file():
 @pytest.fixture(autouse=True)
 def _ioc_flows_in_tmp(tmp_path, monkeypatch):
     """write_ioc_sweeps saves an IOC flow; keep it out of the real data/ioc_flows."""
-    from archer.build import ioc_flow
+    from shikari.build import ioc_flow
 
     monkeypatch.setattr(ioc_flow, "IOC_FLOWS_DIR", str(tmp_path / "ioc_flows"))
     # ...and the IOC first-seen dates out of data/ioc_dates
-    from archer.build import ioc_sweep
+    from shikari.build import ioc_sweep
     monkeypatch.setattr(ioc_sweep, "IOC_DATES_DIR", str(tmp_path / "ioc_dates"))
 
 
 @pytest.fixture(autouse=True)
 def _watchlists_in_tmp(tmp_path, monkeypatch):
     """Feed refreshes check watchlists; keep them out of the real data/feed/watchlists."""
-    from archer.intelligence import watchlists
+    from shikari.intelligence import watchlists
 
     monkeypatch.setattr(watchlists, "WATCH_DIR", str(tmp_path / "watchlists"))
 
@@ -282,6 +282,6 @@ def _watchlists_in_tmp(tmp_path, monkeypatch):
 @pytest.fixture(autouse=True)
 def _isolated_technique_yield_ledger(tmp_path, monkeypatch):
     """LLM calls in tests record empty results; keep them out of data/technique_yield_llm.json."""
-    from archer.build import technique_yield
+    from shikari.build import technique_yield
 
     monkeypatch.setattr(technique_yield, "LEDGER_PATH", str(tmp_path / "technique_yield_llm.json"))

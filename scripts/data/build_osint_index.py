@@ -4,7 +4,7 @@ build_osint_index.py - Build the MITRE ATT&CK technique -> OSINT rule index
 
 Walks the locally-cloned OSINT repos (Elastic, Splunk, Azure Sentinel) once and writes a reverse index (data/cache/osint_technique_index.json)
 mapping technique IDs to matching rules in each repo. Once this exists,
-archer/build/osint_comparison.py looks up techniques in it instead of
+shikari/build/osint_comparison.py looks up techniques in it instead of
 grepping each repo on every single OSINT comparison call.
 
 Run this after updating the OSINT repos (update_osint.py), or on a schedule
@@ -21,8 +21,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from archer.build.osint_repos import ensure_repos_ready
-from archer.build.osint_index import build_full_index, get_index_age_hours
+from shikari.build.osint_repos import ensure_repos_ready
+from shikari.build.osint_index import build_full_index, get_index_age_hours
 
 
 def main():

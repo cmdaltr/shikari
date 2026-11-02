@@ -1,7 +1,7 @@
 """The lock that keeps two processes from writing the same files, on any OS."""
 import pytest
 
-from archer import filelock
+from shikari import filelock
 
 
 def test_a_held_lock_refuses_a_second_holder(tmp_path):

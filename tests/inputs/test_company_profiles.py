@@ -39,7 +39,7 @@ class TestCompanyProfileValidation:
     """Tests for company profile input validation."""
 
     @pytest.mark.parametrize("company", WELL_KNOWN_COMPANIES[:4])
-    def test_known_company_accepted(self, client, ensure_archer_running, company):
+    def test_known_company_accepted(self, client, ensure_shikari_running, company):
         """Test that well-known companies are accepted."""
         response = client.post(
             "/profile",
@@ -49,7 +49,7 @@ class TestCompanyProfileValidation:
 
         assert response.status_code in [200, 302, 401, 422]
 
-    def test_empty_company_name_rejected(self, client, ensure_archer_running):
+    def test_empty_company_name_rejected(self, client, ensure_shikari_running):
         """Test that empty company name is rejected."""
         response = client.post(
             "/profile",
@@ -59,7 +59,7 @@ class TestCompanyProfileValidation:
 
         assert response.status_code in [200, 302, 400, 401, 422]
 
-    def test_whitespace_company_name(self, client, ensure_archer_running):
+    def test_whitespace_company_name(self, client, ensure_shikari_running):
         """Test that whitespace-only company name is handled."""
         response = client.post(
             "/profile",
@@ -73,7 +73,7 @@ class TestCompanyProfileValidation:
 class TestCompanyProfileAnalysis:
     """Tests for company profile analysis."""
 
-    def test_profile_returns_industry(self, client, ensure_archer_running):
+    def test_profile_returns_industry(self, client, ensure_shikari_running):
         """Test that profile analysis identifies industry."""
         response = client.post(
             "/profile",
@@ -91,7 +91,7 @@ class TestCompanyProfileAnalysis:
             # May or may not detect industry
             assert response.status_code in [200, 401]
 
-    def test_profile_returns_threat_landscape(self, client, ensure_archer_running):
+    def test_profile_returns_threat_landscape(self, client, ensure_shikari_running):
         """Test that profile analysis includes threat landscape."""
         response = client.post(
             "/profile",
@@ -109,7 +109,7 @@ class TestCompanyProfileAnalysis:
             assert response.status_code in [200, 401]
 
     @pytest.mark.parametrize("company,expected_industry", INDUSTRY_SPECIFIC_COMPANIES[:3])
-    def test_industry_detection(self, client, ensure_archer_running, company, expected_industry):
+    def test_industry_detection(self, client, ensure_shikari_running, company, expected_industry):
         """Test that correct industry is detected for specific companies."""
         response = client.post(
             "/profile",
@@ -124,7 +124,7 @@ class TestCompanyProfileAnalysis:
 class TestCompanyProfileGeneration:
     """Tests for company profile-based detection generation."""
 
-    def test_profile_generate_detections_endpoint(self, client, ensure_archer_running):
+    def test_profile_generate_detections_endpoint(self, client, ensure_shikari_running):
         """Test profile-based detection generation endpoint."""
         response = client.post(
             "/profile/generate-detections",
@@ -137,7 +137,7 @@ class TestCompanyProfileGeneration:
 
         assert response.status_code in [200, 302, 303, 400, 401, 404, 422]
 
-    def test_profile_generate_with_custom_techniques(self, client, ensure_archer_running):
+    def test_profile_generate_with_custom_techniques(self, client, ensure_shikari_running):
         """Test profile generation with custom technique selection."""
         response = client.post(
             "/profile/generate-detections",
@@ -150,7 +150,7 @@ class TestCompanyProfileGeneration:
 
         assert response.status_code in [200, 302, 303, 400, 401, 404, 422]
 
-    def test_profile_generate_without_techniques(self, client, ensure_archer_running):
+    def test_profile_generate_without_techniques(self, client, ensure_shikari_running):
         """Test profile generation without specifying techniques."""
         response = client.post(
             "/profile/generate-detections",
@@ -167,13 +167,13 @@ class TestCompanyProfileGeneration:
 class TestCompanyProfileResults:
     """Tests for company profile results."""
 
-    def test_profile_page_loads(self, client, ensure_archer_running):
+    def test_profile_page_loads(self, client, ensure_shikari_running):
         """Test that profile page loads."""
         response = client.get("/profile")
 
         assert response.status_code in [200, 302, 401, 422]
 
-    def test_profile_history_endpoint(self, client, ensure_archer_running):
+    def test_profile_history_endpoint(self, client, ensure_shikari_running):
         """Test profile history API endpoint."""
         response = client.get("/api/profile/history")
 
@@ -184,7 +184,7 @@ class TestCompanyProfileResults:
 class TestCompanyProfileEdgeCases:
     """Edge case tests for company profile input."""
 
-    def test_unknown_company(self, client, ensure_archer_running):
+    def test_unknown_company(self, client, ensure_shikari_running):
         """Test handling of unknown company names."""
         response = client.post(
             "/profile",
@@ -195,7 +195,7 @@ class TestCompanyProfileEdgeCases:
         # Should handle gracefully
         assert response.status_code in [200, 302, 400, 401, 422]
 
-    def test_company_with_special_characters(self, client, ensure_archer_running):
+    def test_company_with_special_characters(self, client, ensure_shikari_running):
         """Test company name with special characters."""
         response = client.post(
             "/profile",
@@ -205,7 +205,7 @@ class TestCompanyProfileEdgeCases:
 
         assert response.status_code in [200, 302, 401, 422]
 
-    def test_company_with_numbers(self, client, ensure_archer_running):
+    def test_company_with_numbers(self, client, ensure_shikari_running):
         """Test company name with numbers."""
         response = client.post(
             "/profile",
@@ -215,7 +215,7 @@ class TestCompanyProfileEdgeCases:
 
         assert response.status_code in [200, 302, 401, 422]
 
-    def test_international_company_name(self, client, ensure_archer_running):
+    def test_international_company_name(self, client, ensure_shikari_running):
         """Test international/non-ASCII company names."""
         response = client.post(
             "/profile",
@@ -225,7 +225,7 @@ class TestCompanyProfileEdgeCases:
 
         assert response.status_code in [200, 302, 400, 401, 422]
 
-    def test_very_long_company_name(self, client, ensure_archer_running):
+    def test_very_long_company_name(self, client, ensure_shikari_running):
         """Test very long company name."""
         long_name = "The Very Long Company Name That Goes On And On " * 5
         response = client.post(
@@ -240,7 +240,7 @@ class TestCompanyProfileEdgeCases:
 class TestCompanyProfileSecurity:
     """Security tests for company profile input."""
 
-    def test_xss_prevention(self, client, ensure_archer_running):
+    def test_xss_prevention(self, client, ensure_shikari_running):
         """Test that XSS in company name is prevented."""
         response = client.post(
             "/profile",
@@ -253,7 +253,7 @@ class TestCompanyProfileSecurity:
         if response.status_code == 200:
             assert "<script>" not in response.text
 
-    def test_sql_injection_prevention(self, client, ensure_archer_running):
+    def test_sql_injection_prevention(self, client, ensure_shikari_running):
         """Test that SQL injection is prevented."""
         response = client.post(
             "/profile",
@@ -264,7 +264,7 @@ class TestCompanyProfileSecurity:
         # Should handle safely
         assert response.status_code in [200, 302, 400, 401, 422]
 
-    def test_command_injection_prevention(self, client, ensure_archer_running):
+    def test_command_injection_prevention(self, client, ensure_shikari_running):
         """Test that command injection is prevented."""
         response = client.post(
             "/profile",

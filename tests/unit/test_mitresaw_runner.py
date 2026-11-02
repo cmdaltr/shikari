@@ -1,7 +1,7 @@
 """
-Archer runs MITRESaw on its own ATT&CK bundle, with MITRESaw's current flags, one run at
+Shikari runs MITRESaw on its own ATT&CK bundle, with MITRESaw's current flags, one run at
 a time, only accepts output from that run, and checks it against its own walk of ATT&CK
-(archer.mitre.procedures).
+(shikari.mitre.procedures).
 """
 import json
 import os
@@ -11,19 +11,19 @@ from types import SimpleNamespace
 
 import pytest
 
-from archer.mitre import procedures as p
+from shikari.mitre import procedures as p
 
 
 @pytest.fixture
 def saw(tmp_path, monkeypatch):
-    mitresaw, archer = tmp_path / "MITRESaw", tmp_path / "archer"
+    mitresaw, shikari = tmp_path / "MITRESaw", tmp_path / "shikari"
     mitresaw.mkdir()
     (mitresaw / "MITRESaw.py").write_text("")
-    bundle = archer / "enterprise-attack.json"
+    bundle = shikari / "enterprise-attack.json"
     bundle.parent.mkdir()
     bundle.write_text('{"objects": []}')
     monkeypatch.setattr(p, "_MITRESAW_DIR", mitresaw)
-    monkeypatch.setattr(p, "_ARCHER_BUNDLE", bundle)
+    monkeypatch.setattr(p, "_SHIKARI_BUNDLE", bundle)
     monkeypatch.setattr(p, "_mitresaw_python", lambda: "python")
     monkeypatch.setattr(p, "_LOCK", tmp_path / ".mitresaw.lock")
     calls = []
@@ -46,8 +46,8 @@ def test_shares_the_bundle_and_skips_fetch(saw):
     assert csv.read_text() == "group_sw_id\n"
 
 
-def test_fetches_when_archer_has_no_bundle(saw, monkeypatch, tmp_path):
-    monkeypatch.setattr(p, "_ARCHER_BUNDLE", tmp_path / "missing.json")
+def test_fetches_when_shikari_has_no_bundle(saw, monkeypatch, tmp_path):
+    monkeypatch.setattr(p, "_SHIKARI_BUNDLE", tmp_path / "missing.json")
     p.run_mitresaw_detection(output_csv=saw.out, force=True)
     assert "-F" in saw.calls[0]
 

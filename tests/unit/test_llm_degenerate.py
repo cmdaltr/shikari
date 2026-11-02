@@ -1,6 +1,6 @@
 """Degenerate local-LLM response guard (#9): loop/truncation rejection."""
 
-from archer.build.llm_queries import detect_degenerate_response
+from shikari.build.llm_queries import detect_degenerate_response
 
 
 def test_valid_json_passes():
@@ -9,7 +9,7 @@ def test_valid_json_passes():
 
 
 def test_contract_document_passes():
-    doc = '{"archer_output": {"technique_id": "T1003.001", "detections": [{"siem": "mde", "query": "a"}]}}'
+    doc = '{"shikari_output": {"technique_id": "T1003.001", "detections": [{"siem": "mde", "query": "a"}]}}'
     assert detect_degenerate_response(doc) is None
 
 

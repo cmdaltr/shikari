@@ -1,7 +1,7 @@
 """Files named for a product are renamed for the query language, and the names indexes hold follow."""
 import json
 
-from archer.build import migrate_names
+from shikari.build import migrate_names
 
 
 def test_files_and_the_names_that_point_at_them(tmp_path, monkeypatch):

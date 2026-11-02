@@ -2,10 +2,10 @@
 <html data-theme="light">
 <head>
     <title>{{ brand.name }} - Login</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
-    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon.png') }}">
-    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon-precomposed.png') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', path=brand.icon_32) }}?v={{ request.app.state.asset_version }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', path=brand.icon_32) }}?v={{ request.app.state.asset_version }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path=brand.apple_icon) }}">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path=brand.apple_icon) }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -90,14 +90,14 @@
       }
 
       /* Fixed position button - aligned with 1320px content edge */
-      .how-archer-link {
+      .how-shikari-link {
         position: fixed !important;
         top: 28px !important;
         right: calc((100vw - 1320px) / 2 + 52px) !important;
         z-index: 10000 !important;
       }
 
-      .how-archer-link:hover {
+      .how-shikari-link:hover {
         background: var(--accent) !important;
         color: white !important;
       }
@@ -129,7 +129,7 @@
         color: var(--text-tertiary) !important;
       }
 
-      [data-theme="dark"] .how-archer-link {
+      [data-theme="dark"] .how-shikari-link {
         background: rgba(45, 45, 45, 0.95) !important;
       }
 
@@ -151,25 +151,38 @@
     </style>
     {% endblock %}
     <link rel="stylesheet" href="{{ url_for('static', path='css/ui.css') }}?v={{ request.app.state.asset_version }}">
+    {% include "partials/brand_style.html" %}
 </head>
 <body>
     <!-- Global Navigation Controls (Dark Mode + Profile) -->
     {% include "partials/nav_controls.html" %}
     {% block content %}
     <div style="flex: 1; width: 100%;">
-    <div class="container" style="width: 1500px; max-width: calc(100vw - 4em); margin: 0 auto; padding: 2em; padding-top: 80px; padding-bottom: 80px; position: relative; box-sizing: border-box;">
+    <div class="container" style="width: 1500px; max-width: calc(100vw - 4em); margin: 0 auto; padding: 2em; padding-top: 100px; padding-bottom: 80px; position: relative; box-sizing: border-box;">
       <!-- Page title / app name with banner -->
-      <div class="header" style="text-align: center; margin-bottom: 3em;">
-        <div style="margin-bottom: 1em; margin-top: 28px;">
-          <img src="{{ url_for('static', path=brand.banner) }}" alt="{{ brand.name }}" style="width: auto; height: auto; max-height: 150px; filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.3));">
-        </div>
-        <p style="color: #666666; font-size: 14px; font-weight: 500; letter-spacing: 2.5px; margin-top: 15px;">
-          LOGIN
-        </p>
+      <div class="page-header">
+        <h1>Login</h1>
+        <p>Sign in to your {{ brand.name }} account</p>
       </div>
 
+      <style>
+        /* Perched bateleur centred in the left quarter of the login card; form fills the right 75% */
+        .tabs-container { position: relative; min-height: 640px; }
+        .login-bird-col { position: absolute; left: 12%; top: 0; bottom: 0; width: 25%;
+          display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 1; }
+        .login-bird { height: 600px; max-height: 94%; width: auto;
+          filter: drop-shadow(0 6px 16px rgba(0,0,0,0.30)); }
+        .tabs-container .profile-container { padding-left: 25%; min-height: 600px;
+          display: flex; flex-direction: column; justify-content: center; box-sizing: border-box; }
+        @media (max-width: 1100px) {
+          .tabs-container { min-height: 0; }
+          .login-bird-col { display: none; }
+          .tabs-container .profile-container { padding-left: 0; min-height: 0; display: block; }
+        }
+      </style>
       <!-- Tabbed interface inspired by VirusTotal -->
       <div class="tabs-container">
+        <div class="login-bird-col"><img class="login-bird" src="{{ url_for('static', path='images/shikari/shikari-bird.png') }}" alt="" aria-hidden="true"></div>
         <div class="tabs-header" style="display: none;">
           <button class="tab-button active" data-tab="profile">
             <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -558,16 +571,15 @@
           </a>
         </div>
 
-        <!-- Quote -->
-        <div class="quote">
-          <p>
-            "Even if you can't see something, it doesn't mean it isn't there"<br>
-            <span>— Archer, Small Soldiers</span>
-          </p>
-        </div>
 
         <!-- Spacer for balance -->
         <div class="spacer"></div>
+      </div>
+      <div class="footer-gloss"><span class="fg-word">shi·ka·ri</span><span class="fg-ipa">\shi-ˈkär-ē\</span><span class="fg-def">a professional big-game hunter or guide</span></div>
+      <div class="timestamp">
+        <span style="font-size: 0.85em; opacity: 0.7; display: block;">
+          Splunk®, Microsoft®, Google® and Elastic® names and logos are trademarks of their respective companies.
+        </span>
       </div>
     </footer>
 

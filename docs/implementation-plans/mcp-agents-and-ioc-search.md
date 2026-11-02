@@ -1,6 +1,6 @@
 # Plan — MCP tools, agents, functions, and IOC search
 
-Scope: four related pieces of work. Guiding principle throughout (Archer's house rule): **deterministic,
+Scope: four related pieces of work. Guiding principle throughout (Shikari's house rule): **deterministic,
 offline, no-AI where possible**; AI and agents only where the task is genuinely open-ended. The verdict
 up front, so the rest is detail:
 
@@ -15,8 +15,8 @@ up front, so the rest is detail:
 
 ## Part 1 — MCP tools
 
-Archer **already ships an MCP server**: `archer-cli mcp` (`archer/mcp_server.py`), a stdio server built
-over `ArcherClient`, exposing the server-side console agent tools (`hunt_report`, `analyse_report`,
+Shikari **already ships an MCP server**: `shikari-cli mcp` (`shikari/mcp_server.py`), a stdio server built
+over `ShikariClient`, exposing the server-side console agent tools (`hunt_report`, `analyse_report`,
 `hunt_cve`, `intel_company`, …). So this is **curate + extend**, not build-from-scratch.
 
 **Do not** add a tool per component. The test for a tool: *would an external LLM/agent actually call
@@ -33,13 +33,13 @@ this?* Rendering paths, CRUD on internal rows, and one-off helpers fail it.
 | `profile_company` | `_launch_company_profile` | **add** | domain → background profile |
 | `rank_adversaries` | `adversary_ranking.rank_adversaries` | **add** | domain → top-10 likely actors (no AI) |
 | `coverage` | `/api/coverage/*` | **add** | saved detections vs ATT&CK/cloud |
-| `mitresaw_traverse` | `archer.mitre.procedures` | **add** | group → procedures/evidence (3 attribution paths) |
+| `mitresaw_traverse` | `shikari.mitre.procedures` | **add** | group → procedures/evidence (3 attribution paths) |
 | `emulate_plan` | CALDERA plan (read-only) | **add** | target+group → operation plan; **execute stays out of MCP** (live detonation is a deliberate UI action) |
 | `ioc_search` | Part 4 | **add after P4** | IOC → reputable recent reporting |
 
 ### Build notes
-- Extend the existing tool registry behind `ArcherClient`/`mcp_server.py`; keep one server, two transports (stdio for Claude Code; the HTTP API already exists for everything else).
-- Auth: reuse `ARCHER_TOKEN` (Profile → Security → API Tokens), same as the console server modules.
+- Extend the existing tool registry behind `ShikariClient`/`mcp_server.py`; keep one server, two transports (stdio for Claude Code; the HTTP API already exists for everything else).
+- Auth: reuse `SHIKARI_TOKEN` (Profile → Security → API Tokens), same as the console server modules.
 - Safety: read/plan tools are safe to expose; anything that **executes** (CALDERA detonation, SIEM writes, deletes) stays out of the tool set or is hard-gated — never a one-call side effect from an agent.
 - Mark long-running tools (profile, hunt) as async/background and return a job id + poll tool, mirroring the web flow.
 
@@ -52,7 +52,7 @@ branching), not when it wraps a deterministic function. Two solid ones, a third 
 
 ### A. Threat Briefing agent *(solid)*
 - **Job:** for a group or an org, produce a practitioner briefing — who they are, likely TTPs against *this* org, coverage gaps, recommended next hunts.
-- **Beats a function because:** it synthesises across `rank_adversaries` + `mitresaw_traverse` + `coverage` + the profile, and writes prose. There's already a `threat_briefing` endpoint (`archer/chat.py`) to graduate into this.
+- **Beats a function because:** it synthesises across `rank_adversaries` + `mitresaw_traverse` + `coverage` + the profile, and writes prose. There's already a `threat_briefing` endpoint (`shikari/chat.py`) to graduate into this.
 - **Tools:** `rank_adversaries`, `mitresaw_traverse`, `coverage`, `profile_company` (read).
 - **Guardrail:** the inputs stay deterministic/no-AI; the agent only does the synthesis layer.
 
@@ -76,8 +76,8 @@ Small, cross-cutting, reused by Part 1/2/4 and the UI:
 
 | Function/module | Purpose | Reused by |
 |---|---|---|
-| `archer/intelligence/ioc.py` | classify (ip/domain/url/hash/email/cve/…), normalise, **defang/refang** (`hxxp`, `[.]`, `(dot)`) | IOC search, Investigation agent, MCP |
-| `archer/data/intel_sources.yaml` + loader | the curated ~100 reputable sources (name, RSS, tier, tags) | IOC search, Threat Feed (could share) |
+| `shikari/intelligence/ioc.py` | classify (ip/domain/url/hash/email/cve/…), normalise, **defang/refang** (`hxxp`, `[.]`, `(dot)`) | IOC search, Investigation agent, MCP |
+| `shikari/data/intel_sources.yaml` + loader | the curated ~100 reputable sources (name, RSS, tier, tags) | IOC search, Threat Feed (could share) |
 | `rank_adversaries` | already built (`adversary_ranking`) | exposure/review, MCP, briefing agent |
 | `incident_sources` | already built (feeds) | adversary ranking, (future) IOC enrichment |
 
@@ -94,7 +94,7 @@ agent compose the specific tools instead.
 ### Approach — feed-first, no-AI core (recommended)
 Reputable *by construction* (we own the source list), deterministic, cacheable, no paid search key.
 
-1. **Source registry** — `archer/data/intel_sources.yaml`, ~100 curated sources, each: `name`, `homepage`, `rss` (one or more Atom/RSS URLs), `tier`, `tags`. Tiers:
+1. **Source registry** — `shikari/data/intel_sources.yaml`, ~100 curated sources, each: `name`, `homepage`, `rss` (one or more Atom/RSS URLs), `tier`, `tags`. Tiers:
    - **T1 vendor TI research:** Mandiant/Google TAG, Microsoft MSTIC, Talos, Unit 42, CrowdStrike, SentinelOne, ESET, Securelist, Check Point Research, Trend Micro, Sophos X-Ops, FortiGuard, Proofpoint, Secureworks CTU, Volexity, Group-IB, Dragos (OT), Red Canary, Huntress, The DFIR Report …
    - **T2 CERT/gov:** CISA (+ KEV alerts), NCSC-UK, CERT-EU, ACSC, JPCERT …
    - **T3 reputable news/community:** BleepingComputer, The Hacker News, The Record, DarkReading, SecurityWeek, Krebs, Malwarebytes Labs …
@@ -108,8 +108,8 @@ Reputable *by construction* (we own the source list), deterministic, cacheable, 
 - Refang on input, search defanged + plain forms in page text.
 
 ### Architecture
-- `archer/intelligence/ioc.py` — classify/normalise/defang.
-- `archer/intelligence/ioc_search.py` — engine (feed fetch + match + rank); reads the source registry + feed cache.
+- `shikari/intelligence/ioc.py` — classify/normalise/defang.
+- `shikari/intelligence/ioc_search.py` — engine (feed fetch + match + rank); reads the source registry + feed cache.
 - API: `GET /api/ioc/search?ioc=…` (auth; background for slow page fetches, poll for results); `POST /api/ioc/feeds/refresh` (admin) to warm the feed cache.
 - UI: **Intel → IOC Search** — input + results with **tier badges** and highlighted snippets; a **pivot** button from the exposure map (an exposed CVE/IP → IOC search).
 - Caching keeps render fast; the live fetch is the only networked step.

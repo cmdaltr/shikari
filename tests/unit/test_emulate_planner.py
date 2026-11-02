@@ -2,7 +2,7 @@
 
 import tomllib
 
-from archer.telemetry.planner import (_best_dataset, _collect, plan_to_runsheet, plan_to_test_cases)
+from shikari.telemetry.planner import (_best_dataset, _collect, plan_to_runsheet, plan_to_test_cases)
 
 
 def test_best_dataset_prefers_visible_then_most_events():
@@ -66,7 +66,7 @@ def test_plan_to_test_cases_shape():
 
 
 def test_plan_test_cases_export_as_valid_macatable():
-    from archer.assessments.macat import test_cases_to_macatable
+    from shikari.assessments.macat import test_cases_to_macatable
 
     data = tomllib.loads(test_cases_to_macatable(plan_to_test_cases(_plan())))
     assert len(data["lib_procedures"]) == 2

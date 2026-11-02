@@ -1,9 +1,9 @@
 <#
-Install or upgrade the Archer desktop app on Windows from a GitHub release (desktop/README.md).
+Install or upgrade the Shikari desktop app on Windows from a GitHub release (desktop/README.md).
 
     powershell -ExecutionPolicy Bypass -File install.ps1                    the latest release
     powershell -ExecutionPolicy Bypass -File install.ps1 -Version v2.1.0    a given release
-    powershell -ExecutionPolicy Bypass -File install.ps1 -File Archer.msi   an installer already downloaded
+    powershell -ExecutionPolicy Bypass -File install.ps1 -File Shikari.msi   an installer already downloaded
     powershell -ExecutionPolicy Bypass -File install.ps1 -NoDotnet         on ARM64, skip the .NET download
 
 The repository is private: set GH_TOKEN (or GITHUB_TOKEN) to a token that can read it, or be logged
@@ -13,7 +13,7 @@ for the current user, so it needs no administrator rights. Works in Windows Powe
 On Windows on ARM64 it also downloads Microsoft's .NET Desktop Runtime (8 or later, about 55 MB),
 per user, with Microsoft's own dotnet-install.ps1 after checking its signature, unless one is
 already installed. It isn't in the installer: the ARM64 app's native window needs it, and without
-it Archer opens in an Edge app window instead (archer/desktop_edge.py), so the download is optional.
+it Shikari opens in an Edge app window instead (shikari/desktop_edge.py), so the download is optional.
 #>
 param(
     [string]$Version = "latest",
@@ -25,7 +25,7 @@ $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
-$repo = if ($env:ARCHER_REPO) { $env:ARCHER_REPO } else { "cmdaltr/archer" }
+$repo = if ($env:SHIKARI_REPO) { $env:SHIKARI_REPO } else { "cmdaltr/shikari" }
 # The processor, not this process: an x64 PowerShell under emulation on ARM still gets the ARM64 build
 $arm = (Get-CimInstance Win32_Processor | Select-Object -First 1).Architecture -eq 12
 $suffix = if ($arm) { "-windows-arm64.msi" } else { "-windows-x64.msi" }
@@ -40,9 +40,9 @@ function Test-DesktopRuntime {
 
 function Install-DesktopRuntime($dir) {
     if (Test-DesktopRuntime) { Write-Host ".NET Desktop Runtime: already installed"; return }
-    # A failed download costs the native window, not Archer: it opens in Edge instead
+    # A failed download costs the native window, not Shikari: it opens in Edge instead
     try {
-        Write-Host "Downloading the .NET Desktop Runtime (ARM64) for Archer's window"
+        Write-Host "Downloading the .NET Desktop Runtime (ARM64) for Shikari's window"
         $script = Join-Path $dir "dotnet-install.ps1"
         Invoke-WebRequest -UseBasicParsing -OutFile $script "https://dot.net/v1/dotnet-install.ps1"
         $sig = Get-AuthenticodeSignature $script
@@ -53,11 +53,11 @@ function Install-DesktopRuntime($dir) {
         if (-not (Test-DesktopRuntime)) { throw "it didn't install" }
     }
     catch {
-        Write-Warning "No .NET Desktop Runtime ($_): Archer will open in an Edge window instead"
+        Write-Warning "No .NET Desktop Runtime ($_): Shikari will open in an Edge window instead"
     }
 }
 
-$tmp = Join-Path ([IO.Path]::GetTempPath()) ("archer-" + [Guid]::NewGuid())
+$tmp = Join-Path ([IO.Path]::GetTempPath()) ("shikari-" + [Guid]::NewGuid())
 New-Item -ItemType Directory $tmp | Out-Null
 
 try {
@@ -88,7 +88,7 @@ try {
     }
     $File = (Resolve-Path $File).Path
 
-    if (Get-Process Archer -ErrorAction SilentlyContinue) { Write-Host "Archer is running: quit it to use the new version" }
+    if (Get-Process Shikari -ErrorAction SilentlyContinue) { Write-Host "Shikari is running: quit it to use the new version" }
     $log = Join-Path $tmp "install.log"
     $p = Start-Process msiexec.exe -ArgumentList "/i", "`"$File`"", "/qb", "/l*v", "`"$log`"" -Wait -PassThru
     # 3010: installed, a restart is pending for something else
@@ -97,16 +97,16 @@ try {
         throw "msiexec failed with $($p.ExitCode)"
     }
     if ($arm -and -not $NoDotnet) { Install-DesktopRuntime $tmp }
-    # It's a per-user install (LocalAppData\Programs\<author>\Archer\Archer.exe, three deep); don't
+    # It's a per-user install (LocalAppData\Programs\<author>\Shikari\Shikari.exe, three deep); don't
     # recurse the whole of Program Files, which takes minutes on an ARM64 machine. Fall back to a
     # machine-wide install there, but bounded.
-    $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Depth 4 -Filter Archer.exe -ErrorAction SilentlyContinue |
+    $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Depth 4 -Filter Shikari.exe -ErrorAction SilentlyContinue |
         Select-Object -First 1
     if (-not $exe) {
-        $exe = Get-ChildItem "$env:ProgramFiles" -Recurse -Depth 4 -Filter Archer.exe -ErrorAction SilentlyContinue |
+        $exe = Get-ChildItem "$env:ProgramFiles" -Recurse -Depth 4 -Filter Shikari.exe -ErrorAction SilentlyContinue |
             Select-Object -First 1
     }
-    Write-Host "Installed $(if ($exe) { $exe.FullName } else { 'Archer' }): open it from the Start menu"
+    Write-Host "Installed $(if ($exe) { $exe.FullName } else { 'Shikari' }): open it from the Start menu"
 }
 finally {
     Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue

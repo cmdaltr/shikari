@@ -1,14 +1,14 @@
 # Company profile
 
-**Home → Profile** starts from a company instead of a threat. Enter its primary domain (`rolls-royce.com`; `https://` and paths are stripped) and Archer works out who is likely to target it, then generates detections for the groups you choose.
+**Home → Profile** starts from a company instead of a threat. Enter its primary domain (`rolls-royce.com`; `https://` and paths are stripped) and Shikari works out who is likely to target it, then generates detections for the groups you choose.
 
 ## How it works
 
-1. **Look the company up.** Profiling runs in the background with a progress page of its seven stages (domain, OSINT, industry, geography, technology, supply chain, recommendations), the same as a hunt. Archer reads Wikidata, the company's homepage and OSINT sources to establish its name, sector, where it operates and where its site is hosted. It also looks at its technology stack for relevant CVEs.
+1. **Look the company up.** Profiling runs in the background with a progress page of its seven stages (domain, OSINT, industry, geography, technology, supply chain, recommendations), the same as a hunt. Shikari reads Wikidata, the company's homepage and OSINT sources to establish its name, sector, where it operates and where its site is hosted. It also looks at its technology stack for relevant CVEs.
    Wikidata lists a company's industries with its main one first, and the sector follows that order: Rolls-Royce's "aerospace industry, energy industry, weapons industry" is defence. The other sectors are noted in the profile's evidence ("Also in: energy") but don't choose the groups.
 2. **Recommend threat groups.** Groups whose ATT&CK descriptions say they target that sector or region are ranked, and the profile gets a risk score.
 3. **Review.** When profiling finishes it opens a **Review** page: the company's branding, the profile summary (company, industry, location, hosting, source, risk score), the [exposure map](#exposure-map), and the recommended groups laid out in columns — each with a **likelihood** of targeting this organisation (how strongly its sector and region match the group's known targeting), the top three ticked. Tick or untick any. If the profile saw products (the web server banner, WordPress, the email provider from the MX records), **Add to my technology stack** adds them to Environment → [Technology stack](16-profile-and-settings.md#technology-stack). Use it only when the company is your own.
-4. **Generate.** Archer runs a [Hunt](02-hunt.md) for each ticked group. Each gets its own [Results](06-results.md) page.
+4. **Generate.** Shikari runs a [Hunt](02-hunt.md) for each ticked group. Each gets its own [Results](06-results.md) page.
 
 The profile is saved, so the same company doesn't have to be re-run; the Review page, exposure map and catalogue entry are all built from it. Open the Review page again any time from the [Catalogue](#companies-catalogue).
 
@@ -27,7 +27,7 @@ Select any node or link for the detail behind it; the CVE node links each CVE to
 
 ## Ordered Adversary List
 
-Below the exposure map (and on the Review page) Archer ranks the **ten ATT&CK groups most likely to target the organisation**. No AI — it is computed from data Archer already holds or caches, and each row shows which signals drove it and a short why.
+Below the exposure map (and on the Review page) Shikari ranks the **ten ATT&CK groups most likely to target the organisation**. No AI — it is computed from data Shikari already holds or caches, and each row shows which signals drove it and a short why.
 
 | Signal | What it matches |
 |---|---|
@@ -38,11 +38,11 @@ Below the exposure map (and on the Review page) Archer ranks the **ten ATT&CK gr
 
 Each actor carries a **likelihood** and a band. **High** means the organisation's own attack surface or a demonstrated incident is in play — not just a sector or region overlap.
 
-The incident signal merges three reputable, structured feeds — **VCDB** (VERIS Community Database), **CISA KEV** and **ransomware.live** — with an analyst-curated `bespoke/mappings/incidents.json` (schema in the committed `.example`). The feeds are cached locally so ranking never touches the network; an admin refreshes them with `python -m archer.intelligence.incident_sources` (or `kev vcdb` to skip the leak-site feed), or `POST /api/incidents/refresh`. A footnote under the list shows which feeds are cached and when.
+The incident signal merges three reputable, structured feeds — **VCDB** (VERIS Community Database), **CISA KEV** and **ransomware.live** — with an analyst-curated `bespoke/mappings/incidents.json` (schema in the committed `.example`). The feeds are cached locally so ranking never touches the network; an admin refreshes them with `python -m shikari.intelligence.incident_sources` (or `kev vcdb` to skip the leak-site feed), or `POST /api/incidents/refresh`. A footnote under the list shows which feeds are cached and when.
 
 ## Companies Catalogue
 
-**Intel → Catalogue** (`/catalogue`, top of the Intel menu) lists every organisation profiled so far, newest first — a Library for companies. Each card opens that company's exposure map. Set your own organisation's domain in **Profile → Organisation** and Archer profiles it automatically and **stars** it here (sorted first); its exposure map and Ordered Adversary List then carry a *your organisation* badge.
+**Intel → Catalogue** (`/catalogue`, top of the Intel menu) lists every organisation profiled so far, newest first — a Library for companies. Each card opens that company's exposure map. Set your own organisation's domain in **Profile → Organisation** and Shikari profiles it automatically and **stars** it here (sorted first); its exposure map and Ordered Adversary List then carry a *your organisation* badge.
 
 ## Options
 

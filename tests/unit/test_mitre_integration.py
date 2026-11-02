@@ -20,7 +20,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-# Add archer to path
+# Add shikari to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 
@@ -80,7 +80,7 @@ def create_mock_mitre_bundle():
 
 def test_check_group_in_mitre():
     """Test that check_group_in_mitre finds groups by name."""
-    from archer.mitre import check_group_in_mitre
+    from shikari.mitre import check_group_in_mitre
 
     mock_bundle = create_mock_mitre_bundle()
 
@@ -92,7 +92,7 @@ def test_check_group_in_mitre():
 
 def test_check_group_in_mitre_by_alias():
     """Test that check_group_in_mitre finds groups by alias."""
-    from archer.mitre import check_group_in_mitre
+    from shikari.mitre import check_group_in_mitre
 
     mock_bundle = create_mock_mitre_bundle()
 
@@ -104,7 +104,7 @@ def test_check_group_in_mitre_by_alias():
 
 def test_check_group_in_mitre_not_found():
     """Test that unknown groups return 'N'."""
-    from archer.mitre import check_group_in_mitre
+    from shikari.mitre import check_group_in_mitre
 
     mock_bundle = create_mock_mitre_bundle()
 
@@ -116,7 +116,7 @@ def test_check_group_in_mitre_not_found():
 
 def test_retrieve_group():
     """Test retrieving a group ID by name."""
-    from archer.mitre import retrieve_group
+    from shikari.mitre import retrieve_group
 
     mock_bundle = create_mock_mitre_bundle()
 
@@ -128,7 +128,7 @@ def test_retrieve_group():
 
 def test_retrieve_techniques():
     """Test getting techniques used by a threat group."""
-    from archer.mitre import retrieve_group, retrieve_techniques
+    from shikari.mitre import retrieve_group, retrieve_techniques
 
     mock_bundle = create_mock_mitre_bundle()
 
@@ -145,7 +145,7 @@ def test_retrieve_techniques():
 
 def test_progress_file_creation():
     """Test that progress files are created correctly."""
-    from archer.build.progress import write_progress, read_progress
+    from shikari.build.progress import write_progress, read_progress
 
     with tempfile.TemporaryDirectory() as tmpdir:
         progress_dir = Path(tmpdir)
@@ -158,7 +158,7 @@ def test_progress_file_creation():
             "current_technique": "T1059.001",
         }
 
-        with patch("archer.build.progress.PROGRESS_DIR", str(progress_dir)):
+        with patch("shikari.build.progress.PROGRESS_DIR", str(progress_dir)):
             write_progress("TestGroup", progress_data)
 
             result = read_progress("TestGroup")
@@ -171,7 +171,7 @@ def test_progress_file_creation():
 
 def test_progress_status_complete():
     """Test that progress shows completion status."""
-    from archer.build.progress import write_progress, read_progress
+    from shikari.build.progress import write_progress, read_progress
 
     with tempfile.TemporaryDirectory() as tmpdir:
         progress_dir = Path(tmpdir)
@@ -182,7 +182,7 @@ def test_progress_status_complete():
             "total_yaml": 10,
         }
 
-        with patch("archer.build.progress.PROGRESS_DIR", str(progress_dir)):
+        with patch("shikari.build.progress.PROGRESS_DIR", str(progress_dir)):
             write_progress("CompleteGroup", progress_data)
 
             result = read_progress("CompleteGroup")
@@ -194,7 +194,7 @@ def test_progress_status_complete():
 
 def test_progress_status_failed():
     """Test that progress shows failure status."""
-    from archer.build.progress import write_progress, read_progress
+    from shikari.build.progress import write_progress, read_progress
 
     with tempfile.TemporaryDirectory() as tmpdir:
         progress_dir = Path(tmpdir)
@@ -204,7 +204,7 @@ def test_progress_status_failed():
             "error": "API connection timeout",
         }
 
-        with patch("archer.build.progress.PROGRESS_DIR", str(progress_dir)):
+        with patch("shikari.build.progress.PROGRESS_DIR", str(progress_dir)):
             write_progress("FailedGroup", progress_data)
 
             result = read_progress("FailedGroup")

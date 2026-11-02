@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Run Archer Feature Tests
+Run Shikari Feature Tests
 
 This module defines test scenarios for various detection generation workflows.
 Each test case specifies inputs and processing options to validate.
@@ -50,8 +50,8 @@ except ImportError:
 # CONFIGURATION
 # =============================================================================
 
-# API URL - override with ARCHER_API_URL env var
-API_URL = os.environ.get("ARCHER_API_URL", "http://127.0.0.1:8000")
+# API URL - override with SHIKARI_API_URL env var
+API_URL = os.environ.get("SHIKARI_API_URL", "http://127.0.0.1:8000")
 
 # Timeouts
 DEFAULT_TIMEOUT = 900  # 15 minutes for long-running generation tasks
@@ -877,8 +877,8 @@ TEST_LOOKUP = {test.name: test for test in ALL_TESTS}
 # TEST RUNNER
 # =============================================================================
 
-class ArcherTestRunner:
-    """Runs Archer feature tests via REST API."""
+class ShikariTestRunner:
+    """Runs Shikari feature tests via REST API."""
 
     def __init__(self, base_url: str = API_URL, timeout: int = DEFAULT_TIMEOUT):
         self.base_url = base_url
@@ -893,7 +893,7 @@ class ArcherTestRunner:
         sys.stdout.flush()
 
     def check_health(self) -> bool:
-        """Check if Archer is running."""
+        """Check if Shikari is running."""
         try:
             response = self.session.get(
                 f"{self.base_url}/health",
@@ -1122,7 +1122,7 @@ class ArcherTestRunner:
     def run_tests(self, tests: List[TestCase], wait: bool = True) -> Dict:
         """Run multiple tests and return summary."""
         self.log("=" * 70)
-        self.log("ARCHER FEATURE TEST SUITE")
+        self.log("SHIKARI FEATURE TEST SUITE")
         self.log("=" * 70)
         self.log(f"Running {len(tests)} tests")
         self.log("")
@@ -1242,7 +1242,7 @@ def show_test(name: str):
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Archer Feature Test Suite",
+        description="Shikari Feature Test Suite",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__
     )
@@ -1263,7 +1263,7 @@ def main():
 
     # Options
     parser.add_argument("--url", type=str, default=API_URL,
-                        help=f"Archer API URL (default: {API_URL})")
+                        help=f"Shikari API URL (default: {API_URL})")
     parser.add_argument("--wait", action="store_true",
                         help="Wait for test completion")
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT,
@@ -1291,9 +1291,9 @@ def main():
         return
 
     if args.status:
-        runner = ArcherTestRunner(args.url, args.timeout)
+        runner = ShikariTestRunner(args.url, args.timeout)
         if not runner.check_health():
-            print(f"Error: Cannot connect to Archer at {args.url}")
+            print(f"Error: Cannot connect to Shikari at {args.url}")
             sys.exit(1)
 
         status = runner.get_status()
@@ -1317,9 +1317,9 @@ def main():
             print(f"Use --list to see available tests")
             sys.exit(1)
 
-        runner = ArcherTestRunner(args.url, args.timeout)
+        runner = ShikariTestRunner(args.url, args.timeout)
         if not runner.check_health():
-            print(f"Error: Cannot connect to Archer at {args.url}")
+            print(f"Error: Cannot connect to Shikari at {args.url}")
             sys.exit(1)
 
         test = TEST_LOOKUP[args.run]
@@ -1338,9 +1338,9 @@ def main():
 
         print(f"Found {len(tests)} tests matching tags: {args.run_tags}")
 
-        runner = ArcherTestRunner(args.url, args.timeout)
+        runner = ShikariTestRunner(args.url, args.timeout)
         if not runner.check_health():
-            print(f"Error: Cannot connect to Archer at {args.url}")
+            print(f"Error: Cannot connect to Shikari at {args.url}")
             sys.exit(1)
 
         results = runner.run_tests(tests, wait=args.wait)
@@ -1351,9 +1351,9 @@ def main():
         sys.exit(0 if results["failed"] == 0 else 1)
 
     if args.run_all:
-        runner = ArcherTestRunner(args.url, args.timeout)
+        runner = ShikariTestRunner(args.url, args.timeout)
         if not runner.check_health():
-            print(f"Error: Cannot connect to Archer at {args.url}")
+            print(f"Error: Cannot connect to Shikari at {args.url}")
             sys.exit(1)
 
         results = runner.run_tests(ALL_TESTS, wait=args.wait)

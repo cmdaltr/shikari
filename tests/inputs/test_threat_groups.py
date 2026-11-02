@@ -31,7 +31,7 @@ INVALID_THREAT_GROUPS = [
 class TestThreatGroupValidation:
     """Tests for threat group input validation."""
 
-    def test_threat_groups_api_returns_groups(self, client, ensure_archer_running):
+    def test_threat_groups_api_returns_groups(self, client, ensure_shikari_running):
         """Test that the threat groups API returns a list of groups."""
         response = client.get("/threat_groups")
 
@@ -40,7 +40,7 @@ class TestThreatGroupValidation:
         assert "groups" in data
         assert len(data["groups"]) > 0, "Expected at least some threat groups"
 
-    def test_threat_groups_api_contains_known_groups(self, client, ensure_archer_running):
+    def test_threat_groups_api_contains_known_groups(self, client, ensure_shikari_running):
         """Test that known APT groups are in the list."""
         response = client.get("/threat_groups")
         data = response.json()
@@ -55,7 +55,7 @@ class TestThreatGroupValidation:
                 known in g for g in group_names_lower
             ), f"Expected to find {known} in threat groups"
 
-    def test_generate_with_empty_group_name(self, client, ensure_archer_running):
+    def test_generate_with_empty_group_name(self, client, ensure_shikari_running):
         """Test that empty group name is rejected."""
         response = client.post(
             "/generate",
@@ -66,7 +66,7 @@ class TestThreatGroupValidation:
         # Should either return error or redirect back
         assert response.status_code in [200, 302, 400, 401, 422]
 
-    def test_generate_with_whitespace_group_name(self, client, ensure_archer_running):
+    def test_generate_with_whitespace_group_name(self, client, ensure_shikari_running):
         """Test that whitespace-only group name is handled."""
         response = client.post(
             "/generate",
@@ -80,7 +80,7 @@ class TestThreatGroupValidation:
 class TestThreatGroupGeneration:
     """Tests for threat group detection generation."""
 
-    def test_generate_initiates_for_valid_group(self, client, ensure_archer_running):
+    def test_generate_initiates_for_valid_group(self, client, ensure_shikari_running):
         """Test that generation initiates for a valid threat group."""
         response = client.post(
             "/generate",
@@ -95,7 +95,7 @@ class TestThreatGroupGeneration:
         # Should accept and redirect to progress page
         assert response.status_code in [200, 302, 303, 401]
 
-    def test_progress_endpoint_returns_status(self, client, ensure_archer_running):
+    def test_progress_endpoint_returns_status(self, client, ensure_shikari_running):
         """Test that progress endpoint returns status for a group."""
         # First initiate a generation
         client.post(
@@ -120,7 +120,7 @@ class TestThreatGroupGeneration:
         assert "progress" in data or "status" in data or "ok" in data
 
     @pytest.mark.parametrize("group_name", ["FIN7", "Sandworm Team"])
-    def test_generate_with_various_groups(self, client, ensure_archer_running, group_name):
+    def test_generate_with_various_groups(self, client, ensure_shikari_running, group_name):
         """Test generation initiation for various threat groups."""
         response = client.post(
             "/generate",
@@ -137,7 +137,7 @@ class TestThreatGroupGeneration:
 class TestThreatGroupOptions:
     """Tests for threat group generation options."""
 
-    def test_generate_with_osint_enhancement(self, client, ensure_archer_running):
+    def test_generate_with_osint_enhancement(self, client, ensure_shikari_running):
         """Test generation with OSINT enhancement enabled."""
         response = client.post(
             "/generate",
@@ -150,7 +150,7 @@ class TestThreatGroupOptions:
 
         assert response.status_code in [200, 302, 303, 401]
 
-    def test_generate_with_correlation(self, client, ensure_archer_running):
+    def test_generate_with_correlation(self, client, ensure_shikari_running):
         """Test generation with correlation enabled."""
         response = client.post(
             "/generate",
@@ -163,7 +163,7 @@ class TestThreatGroupOptions:
 
         assert response.status_code in [200, 302, 303, 401]
 
-    def test_generate_with_all_options(self, client, ensure_archer_running):
+    def test_generate_with_all_options(self, client, ensure_shikari_running):
         """Test generation with all options enabled."""
         response = client.post(
             "/generate",
@@ -181,7 +181,7 @@ class TestThreatGroupOptions:
 class TestThreatGroupResults:
     """Tests for threat group generation results."""
 
-    def test_results_page_loads(self, client, ensure_archer_running):
+    def test_results_page_loads(self, client, ensure_shikari_running):
         """Test that results page loads for a group."""
         response = client.get(
             "/results",
@@ -191,7 +191,7 @@ class TestThreatGroupResults:
         # Should either show results or indicate no results
         assert response.status_code in [200, 404]
 
-    def test_results_api_returns_data(self, client, ensure_archer_running):
+    def test_results_api_returns_data(self, client, ensure_shikari_running):
         """Test results API endpoint."""
         response = client.get(
             "/api/results",

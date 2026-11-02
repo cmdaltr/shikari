@@ -7,11 +7,11 @@ TypeError (NoneType + str) and fail the whole CVE hunt.
 """
 from unittest.mock import MagicMock, patch
 
-from archer.intelligence.cve_hunter import CVEHunter
+from shikari.intelligence.cve_hunter import CVEHunter
 
 
 def _hunter(tmp_path):
-    with patch("archer.config.CVE_CACHE_DIR", str(tmp_path)):
+    with patch("shikari.config.CVE_CACHE_DIR", str(tmp_path)):
         return CVEHunter()
 
 
@@ -47,7 +47,7 @@ def test_github_poc_null_description_normalised(tmp_path):
     }]}
     response.raise_for_status = MagicMock()
 
-    with patch("archer.intelligence.cve_hunter.requests.get", return_value=response):
+    with patch("shikari.intelligence.cve_hunter.requests.get", return_value=response):
         pocs = hunter._search_github_pocs("CVE-2024-3400")
 
     assert pocs[0]["description"] == ""
@@ -72,7 +72,7 @@ def test_reference_iocs_read_write_ups_and_skip_catalogues(tmp_path):
 
     nvd = {"references": ["https://nvd.nist.gov/vuln/detail/CVE-2024-3400", "https://github.com/x/poc",
                           *pages, "https://www.volexity.com/blog/cve"]}
-    with patch("archer.parsers.blog_analyzer.analyze_blog_post", side_effect=fake):
+    with patch("shikari.parsers.blog_analyzer.analyze_blog_post", side_effect=fake):
         refs = _hunter(tmp_path)._reference_iocs(nvd)
 
     assert seen == list(pages)  # catalogue and code host skipped, duplicate read once

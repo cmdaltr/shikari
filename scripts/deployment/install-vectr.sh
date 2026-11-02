@@ -6,7 +6,7 @@
 # Docker Compose. Idempotent: re-running keeps the existing .env (so the Postgres credentials and
 # data key aren't rotated out from under an initialised database).
 #
-# VECTR is the campaign/assessment side Archer integrates with (issue #26); this stands up the
+# VECTR is the campaign/assessment side Shikari integrates with (issue #26); this stands up the
 # instance that integration needs. See docs/implementation-plans/26-vectr.md.
 #
 # Prerequisites (per docs.vectr.io): a Docker host on x86-64 — ARM is NOT supported, so run this on
@@ -94,7 +94,7 @@ say "Using compose file: $(basename "$COMPOSE_FILE")"
 
 # ---- .env: generate secrets once, then preserve ---------------------------
 ENV_FILE="$INSTALL_DIR/.env"
-MARKER="# archer-vectr-installer: configured — do not regenerate (would orphan the database)"
+MARKER="# shikari-vectr-installer: configured — do not regenerate (would orphan the database)"
 
 set_env() {  # set_env KEY VALUE — update in place or append
   local key="$1" val="$2"
@@ -106,7 +106,7 @@ set_env() {  # set_env KEY VALUE — update in place or append
   fi
 }
 
-if grep -q "archer-vectr-installer" "$ENV_FILE" 2>/dev/null; then
+if grep -q "shikari-vectr-installer" "$ENV_FILE" 2>/dev/null; then
   say "Existing configured .env found — keeping its secrets. Updating hostname/port only."
   set_env VECTR_HOSTNAME "$VECTR_HOSTNAME"
   set_env VECTR_PORT "$VECTR_PORT"
@@ -166,11 +166,11 @@ cat <<EOF
  URL:       https://${VECTR_HOSTNAME}:${VECTR_PORT}   (HTTPS only; self-signed cert — accept the warning)
  Login:     admin  /  11_ThisIsTheFirstPassword_11    (change it immediately: Profile menu)
 
- Next, for the Archer integration (#26):
+ Next, for the Shikari integration (#26):
    1. Change the admin password.
    2. Profile icon (top right) -> Profile -> API Key tab -> Create API Key.
       Copy the ID and Secret now — the secret is shown only once.
-   3. Archer auth header:  Authorization: VEC1 <key_id>:<key_secret>
+   3. Shikari auth header:  Authorization: VEC1 <key_id>:<key_secret>
    4. GraphQL endpoint:    https://${VECTR_HOSTNAME}:${VECTR_PORT}/sra-purpletools-rest/graphql
       (queries take a 'db' argument, e.g. db: "FS_THREAT_INDEX")
 

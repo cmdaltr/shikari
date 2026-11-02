@@ -3,19 +3,19 @@ Google SecOps correlations: two single-event UDM searches -> one two-event UDM j
 
 SecOps was skipped by the correlation engine entirely, and the grouping step that
 merges correlations by technique pair ignored vendor, so it would have spliced SecOps
-into KQL. Correlations are now Search joins (archer.build.udm), not YARA-L rules;
+into KQL. Correlations are now Search joins (shikari.build.udm), not YARA-L rules;
 YARA-L inputs (detections written before the move) are converted first.
 """
 import re
 
-from archer.ai.genai import engine
-from archer.build.udm import build_join, from_yaral
+from shikari.ai.genai import engine
+from shikari.build.udm import build_join, from_yaral
 
 
 def _rule(tid, name, events):
     return f"""rule {tid.replace('.', '_')} {{
   meta:
-    author = "Archer Detection Engineering"
+    author = "Shikari Detection Engineering"
     description = "Detects {name} ({tid})"
     mitre_attack_technique = "{tid}"
     severity = "MEDIUM"
@@ -36,7 +36,7 @@ RDP = from_yaral(_rule("T1021.001", "Remote Desktop Protocol", '$e.metadata.even
 def test_two_searches_become_one_host_bound_join():
     q = build_join(PHISH, PWSH, "Phishing", "PowerShell")
 
-    assert q.startswith("// archer_corr_t1566_then_t1059_001:")
+    assert q.startswith("// shikari_corr_t1566_then_t1059_001:")
     assert "$e." not in q and "re.regex" not in q and not q.lstrip().startswith("rule ")
     assert "$e1.principal.hostname = $host" in q and "$e2.principal.hostname = $host" in q
     assert "$e1.target.process.command_line = /mshta/ nocase" in q
@@ -55,11 +55,11 @@ def test_merged_side_is_one_bracketed_line_of_alternatives():
     assert len(alt) == 1  # statements are ANDed line by line; alternatives must share one
     assert alt[0].startswith("((") and ") or (" in alt[0] and alt[0].endswith("))")
     assert "PowerShell / Remote Desktop Protocol" in q
-    assert q.startswith("// archer_corr_t1566_then_t1059_001_plus1:")
+    assert q.startswith("// shikari_corr_t1566_then_t1059_001_plus1:")
 
 
 def test_regex_and_string_literals_are_not_rebound():
-    q = build_join('// archer_x: X · ATT&CK T1\nmetadata.event_type = "target.x" and target.url = /principal\\.y/', PWSH)
+    q = build_join('// shikari_x: X · ATT&CK T1\nmetadata.event_type = "target.x" and target.url = /principal\\.y/', PWSH)
     assert '$e1.metadata.event_type = "target.x"' in q and "$e1.target.url = /principal\\.y/" in q
 
 
@@ -70,7 +70,7 @@ def test_kql_or_a_join_is_refused():
 
 def test_engine_routes_secops_pairs_to_the_join_builder():
     out = engine._combine_queries("googlesecops", PHISH, PWSH, "a/Phishing_GoogleSecOps.yaml", "b/PowerShell_GoogleSecOps.yaml")
-    assert out.startswith("// archer_corr_")
+    assert out.startswith("// shikari_corr_")
     assert "Phishing and PowerShell on the same host" in out
 
 
@@ -88,12 +88,12 @@ def test_grouping_never_mixes_vendors():
 
     assert [c["vendor"] for c in grouped] == ["googlesecops", "mde"]  # SecOps first, not merged
     secops = grouped[0]["combined_query"]
-    assert secops.startswith("// archer_corr_") and "DeviceProcessEvents" not in secops
-    assert "archer_corr" not in grouped[1]["combined_query"]
+    assert secops.startswith("// shikari_corr_") and "DeviceProcessEvents" not in secops
+    assert "shikari_corr" not in grouped[1]["combined_query"]
 
 
 def test_older_joins_lose_outcome_and_empty_filter():
-    from archer.build.udm import normalise_join
+    from shikari.build.udm import normalise_join
 
     old = build_join(PHISH, PWSH) + '\n\noutcome:\n  $first = min($e1.metadata.event_timestamp.seconds)'
     old = old.replace("match:", '$host != ""\n\nmatch:')

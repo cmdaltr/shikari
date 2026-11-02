@@ -13,8 +13,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from archer.database.models import Base, LibraryDetection, User, DetectionType
-from archer.visualization import flow_layouts as fl
+from shikari.database.models import Base, LibraryDetection, User, DetectionType
+from shikari.visualization import flow_layouts as fl
 
 
 @pytest.fixture
@@ -66,14 +66,14 @@ def _client(db):
     app = FastAPI()
     app.include_router(fl.router)
     client = TestClient(app)
-    client.cookies.set("archer_session", "s")
+    client.cookies.set("shikari_session", "s")
     return client
 
 
 def test_put_requires_results_in_library_then_round_trips(db):
     state = {"vertical": True, "removed": ["T1105"], "offsets": {"T1105": [4, 5]}}
     with patch.object(fl, "get_db", lambda: iter([db])), \
-         patch("archer.auth.get_user_from_session_id", return_value=SimpleNamespace(id=1)), \
+         patch("shikari.auth.get_user_from_session_id", return_value=SimpleNamespace(id=1)), \
          patch.object(db, "close"):
         client = _client(db)
         r = client.put("/api/flow-layout", json={"group_name": "Scattered Spider", "state": state})
@@ -92,7 +92,7 @@ def test_put_rejects_anonymous_and_oversized(db):
     app.include_router(fl.router)
     client = TestClient(app)
     assert client.put("/api/flow-layout", json={"group_name": "x", "state": {}}).status_code == 401
-    client.cookies.set("archer_session", "s")
+    client.cookies.set("shikari_session", "s")
     big = {"group_name": "x", "state": {"removed": ["T1105"] * 60000}}
     assert client.put("/api/flow-layout", json=big).status_code == 413
 
@@ -106,7 +106,7 @@ def test_group_from_tag_reverses_library_tag():
 
 
 def test_layout_goes_when_the_groups_last_library_item_does(db):
-    from archer.database.models import FlowLayout
+    from shikari.database.models import FlowLayout
     db.add(User(id=2, email="b@b.c", full_name="B", password_hash="x"))
     _save_to_library(db, ["Group:Scattered Spider"])
     _save_to_library(db, ["Group:Scattered Spider", "Hunt-1"])
@@ -146,7 +146,7 @@ def test_export_applies_edits_to_the_saved_view(tmp_path):
     app = FastAPI()
     app.include_router(fl.router)
     client = TestClient(app)
-    with patch("archer.config.ATTACK_FLOWS_DIR", str(tmp_path)):
+    with patch("shikari.config.ATTACK_FLOWS_DIR", str(tmp_path)):
         r = client.post("/api/attack-flow/export", json={"group_name": "Scattered Spider", "state": {}})
         assert r.status_code == 200
         assert "Scattered_Spider_edited_flow.json" in r.headers["content-disposition"]
@@ -159,8 +159,8 @@ def test_export_applies_edits_to_the_saved_view(tmp_path):
 
 
 def test_library_flows_lists_each_saved_group_with_its_flow(db, tmp_path, monkeypatch):
-    monkeypatch.setattr("archer.config.ATTACK_FLOWS_DIR", str(tmp_path))
-    monkeypatch.setattr("archer.build.progress.read_progress", lambda g: {})
+    monkeypatch.setattr("shikari.config.ATTACK_FLOWS_DIR", str(tmp_path))
+    monkeypatch.setattr("shikari.build.progress.read_progress", lambda g: {})
     (tmp_path / "APT29_flow_view.json").write_text(json.dumps(
         {"group_name": "APT29", "view": {"lanes": [], "stats": {"techniques": 3}}}))
     _save_to_library(db, ["Group:APT29", "Incident-1"])

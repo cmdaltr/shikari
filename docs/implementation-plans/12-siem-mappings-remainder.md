@@ -22,7 +22,7 @@ Two separate needs:
 
 **Expected outcome:** for the editor — your field/index values to hand (or confirmation the current bespoke files are authoritative); for the test — read-only SIEM credentials configured (the #16 SIEM-connections config).
 
-## Part B — Implementation plan (Archer)
+## Part B — Implementation plan (Shikari)
 
 **Editor (offline — needs only your values) — DONE**
 1. ✅ **Profile → Config → SIEM field mapping**, per SIEM: loads the active schema (base or custom via `schema_overrides.override_info`), shows it in a JSON editor with override status, saves to `schema<SIEM>_custom.json` (`save_override`), and **Reset to base** removes it (`reset_override`). The whole-file JSON editor covers Splunk's large schema and the simpler Elastic/MDE/SecOps ones uniformly. Routes `GET/POST /api/siem-mappings/schema` + `…/schema/reset` (admin-gated).

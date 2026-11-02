@@ -1,17 +1,17 @@
-# Agents in Archer
+# Agents in Shikari
 
 An agent is a model in a loop with tools. You give it a task; it picks a tool, reads what comes back, and picks again until it can answer. That's the whole idea. The rest is about which tools it gets, what its instructions say, and what it's allowed to do without asking.
 
-Archer has six agents, an MCP server that gives the same tools to any MCP client, and a one-file example you can read in five minutes.
+Shikari has six agents, an MCP server that gives the same tools to any MCP client, and a one-file example you can read in five minutes.
 
 | Where | What |
 |---|---|
 | Web | **Agents** page (robot icon in the top bar) |
-| Console | `archer-cli console` → `use agent/repair`, `agent/ask`, `agent/triage`, `agent/sweep`, `agent/audit`, `agent/tune` |
-| MCP | `archer-cli mcp`: Archer's tools and the six agents' prompts in Claude Code, Claude Desktop or your own agent |
-| Example | [`examples/agents/minimal_agent.py`](../../examples/agents/minimal_agent.py): about 100 lines, no Archer dependency |
+| Console | `shikari-cli console` → `use agent/repair`, `agent/ask`, `agent/triage`, `agent/sweep`, `agent/audit`, `agent/tune` |
+| MCP | `shikari-cli mcp`: Shikari's tools and the six agents' prompts in Claude Code, Claude Desktop or your own agent |
+| Example | [`examples/agents/minimal_agent.py`](../../examples/agents/minimal_agent.py): about 100 lines, no Shikari dependency |
 
-Agents run on any provider in your profile that can call tools (Profile → API Keys): Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok, or a local endpoint (Ollama, LM Studio, llama.cpp). Pick one on the Agents page or with `set PROVIDER` in the console. Without a choice, Claude is used if you have an Anthropic key (it's the most reliable at multi-step tool use), otherwise your Ask Archer provider.
+Agents run on any provider in your profile that can call tools (Profile → API Keys): Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok, or a local endpoint (Ollama, LM Studio, llama.cpp). Pick one on the Agents page or with `set PROVIDER` in the console. Without a choice, Claude is used if you have an Anthropic key (it's the most reliable at multi-step tool use), otherwise your Ask Shikari provider.
 
 ## The loop
 
@@ -39,15 +39,15 @@ python examples/agents/minimal_agent.py data/groups "Do we have a detection for 
 
 It searched for `comsvcs`, `MiniDump` and `T1003.001`, read the two LSASS Memory files, and pointed out that the SecOps regex expects the literal text `PID`, so it can never match a real command line. A grep would have found the files; the agent also judged them.
 
-## Archer's six agents
+## Shikari's six agents
 
-All six are the same runtime ([`archer/agents/runtime.py`](../../archer/agents/runtime.py)) with different instructions and tool sets ([`definitions.py`](../../archer/agents/definitions.py)). Each shows a different pattern.
+All six are the same runtime ([`shikari/agents/runtime.py`](../../shikari/agents/runtime.py)) with different instructions and tool sets ([`definitions.py`](../../shikari/agents/definitions.py)). Each shows a different pattern.
 
 ### Detection repair: check, fix, check again
 
 The tools are `find_query_errors`, `get_detection`, `check_query`, `mde_columns`, `technique_info` and `save_query_fix`.
 
-The agent runs the static checks over a run's queries, reads each failing detection, fixes only what the checks flag, re-checks its fix, and saves it with a reason. This is the evaluator-optimiser pattern: the checker ([`archer/validation/static_check.py`](../../archer/validation/static_check.py)) is deterministic code, and the model is only trusted with the fix. The save route refuses any query that still has errors, so a confused model can't write a broken query. The previous query goes into the file's `repair_history`.
+The agent runs the static checks over a run's queries, reads each failing detection, fixes only what the checks flag, re-checks its fix, and saves it with a reason. This is the evaluator-optimiser pattern: the checker ([`shikari/validation/static_check.py`](../../shikari/validation/static_check.py)) is deterministic code, and the model is only trusted with the fix. The save route refuses any query that still has errors, so a confused model can't write a broken query. The previous query goes into the file's `repair_history`.
 
 The checks:
 
@@ -62,11 +62,11 @@ The contract lint never covered SPL; these SPL checks are new and deliberately c
 
 The first real run found an IOC sweep projecting `FileName`, `FolderPath` and `SHA256` from `DeviceNetworkEvents`, which MDE refuses ("Failed to resolve column"). The agent looked up the table's columns, projected the `InitiatingProcess*` equivalents, checked the result and saved it, in 5 turns. The sweep generator now gets this right too. Across the library, the checks find about 40 errors in roughly 1,250 queries, mostly SecOps rules testing a field their event type never carries.
 
-### Ask Archer (agent): look it up, don't recall it
+### Ask Shikari (agent): look it up, don't recall it
 
 The tools are the read tools (coverage, results, ATT&CK, library, `check_query`) plus the hunts.
 
-The plain Ask Archer panel answers from the model's memory. The agent answers from Archer: asked which of FIN7's Execution techniques have no detection, it called `group_coverage`, then `technique_coverage` and `technique_info`, wrote an MDE query for the biggest gap and ran it through `check_query` before showing it. It can start hunts, but only with your approval and only when you ask for detections Archer doesn't have.
+The plain Ask Shikari panel answers from the model's memory. The agent answers from Shikari: asked which of FIN7's Execution techniques have no detection, it called `group_coverage`, then `technique_coverage` and `technique_info`, wrote an MDE query for the biggest gap and ran it through `check_query` before showing it. It can start hunts, but only with your approval and only when you ask for detections Shikari doesn't have.
 
 ### Intel triage: plan across steps
 
@@ -88,19 +88,19 @@ The tools are `search_library`, `get_detection`, `technique_coverage`, `techniqu
 
 It gathers the saved library, groups detections by what they detect, compares the queries of suspected pairs (same technique and platform, same logic and indicators is a duplicate), notes lopsided coverage, and flags detections resting on indicators that `noisy_indicators` shows recorded across many unrelated techniques — a likely false-positive source. The output is a report: duplicates to consolidate, overlaps to reconcile, and notes.
 
-`noisy_indicators` is the recorded-telemetry false-positive check ([Emulate](../guide/19-emulate.md)) as a tool: give it a detection's match values, or a technique whose own recorded values it should vet, and it says which appear in enough other techniques' recordings to be poor discriminators. Ask Archer has it too.
+`noisy_indicators` is the recorded-telemetry false-positive check ([Emulate](../guide/19-emulate.md)) as a tool: give it a detection's match values, or a technique whose own recorded values it should vet, and it says which appear in enough other techniques' recordings to be poor discriminators. Ask Shikari has it too.
 
 ### Detection tuning: specific, not broader
 
 The tools are `get_run_results`, `get_detection`, `noisy_indicators`, `technique_info`, `mde_columns`, `check_query` and `save_query_fix`.
 
-This is repair's evaluator-optimiser pattern again, with a different evaluator. Repair's checker is the static and precision checks ([`static_check.py`](../../archer/validation/static_check.py), which folds in [`precision.py`](../../archer/validation/precision.py)): they catch queries that won't parse, reference a column that isn't there, or are structurally over-broad — a bare generic word, a numeric column matched as a string. Tuning starts where those stop: a query can pass every one of them and still rest on `ProcessName endswith "powershell.exe"`, which `precision.py` can't fault because nothing is wrong with it structurally. `noisy_indicators` supplies the evidence the static checks can't — that literal is recorded while 190-odd unrelated techniques run — so the agent has a reason to tighten it.
+This is repair's evaluator-optimiser pattern again, with a different evaluator. Repair's checker is the static and precision checks ([`static_check.py`](../../shikari/validation/static_check.py), which folds in [`precision.py`](../../shikari/validation/precision.py)): they catch queries that won't parse, reference a column that isn't there, or are structurally over-broad — a bare generic word, a numeric column matched as a string. Tuning starts where those stop: a query can pass every one of them and still rest on `ProcessName endswith "powershell.exe"`, which `precision.py` can't fault because nothing is wrong with it structurally. `noisy_indicators` supplies the evidence the static checks can't — that literal is recorded while 190-odd unrelated techniques run — so the agent has a reason to tighten it.
 
 For each detection it reads the indicators, runs `noisy_indicators` on them with the technique, and tightens only the ones resting on noisy indicators: it requires a specific indicator alongside the noisy one, binds the parent process, or adds a distinctive command-line fragment, then checks the result with `check_query` and saves it with a reason. It only ever makes a query more specific. The guard rails matter here: recorded telemetry is four labs' background, not the user's estate, so a noisy indicator is a reason to look, not a verdict. When a detection has nothing specific to anchor on, the agent leaves it and says so rather than weaken a real detection, and `save_query_fix` keeps the previous query in `repair_history` either way. Changing a query waits for your approval, as every changing tool does.
 
 ## Two APIs, one loop
 
-[`llm.py`](../../archer/agents/llm.py) adapts the loop to Anthropic's Messages API and to the OpenAI-compatible Chat Completions API that every other provider speaks. The differences are only in shape: where the system prompt goes, how a tool request is marked up (a `tool_use` content block, or `tool_calls` with the arguments as a JSON string), and how results go back (one user message of `tool_result` blocks, or one `tool` message per result). The loop, the tools and the approvals don't change.
+[`llm.py`](../../shikari/agents/llm.py) adapts the loop to Anthropic's Messages API and to the OpenAI-compatible Chat Completions API that every other provider speaks. The differences are only in shape: where the system prompt goes, how a tool request is marked up (a `tool_use` content block, or `tool_calls` with the arguments as a JSON string), and how results go back (one user message of `tool_result` blocks, or one `tool` message per result). The loop, the tools and the approvals don't change.
 
 ## History
 
@@ -126,21 +126,21 @@ Every turn resends the conversation so far, so input tokens grow with the number
 
 Each agent has a turn limit (repair 60, ask 20, triage 25). Hunts that an agent starts don't use AI unless it passes `use_ai`; then your profile's per-run call cap applies.
 
-## MCP: Archer as tools for any agent
+## MCP: Shikari as tools for any agent
 
 ```bash
-claude mcp add archer --env ARCHER_TOKEN=arch_... -- /path/to/archer/.venv/bin/python -m archer.mcp_server
+claude mcp add shikari --env SHIKARI_TOKEN=arch_... -- /path/to/shikari/.venv/bin/python -m shikari.mcp_server
 ```
 
-Create the token in Profile → Security → API Tokens. It's shown once, works with MFA, and revoking it signs out whatever uses it; `ARCHER_EMAIL` and `ARCHER_PASSWORD` still work for accounts without MFA.
+Create the token in Profile → Security → API Tokens. It's shown once, works with MFA, and revoking it signs out whatever uses it; `SHIKARI_EMAIL` and `SHIKARI_PASSWORD` still work for accounts without MFA.
 
-`archer-cli mcp` exposes the same 21 tools the agents use, with the 5 changing tools marked as not read-only so the client asks first, plus the six agents' instructions as prompts (`repair`, `ask`, `triage`, `sweep`, `audit`, `tune`). It signs in to a running Archer as you, so hunts use your AI settings and your keys stay on the server.
+`shikari-cli mcp` exposes the same 21 tools the agents use, with the 5 changing tools marked as not read-only so the client asks first, plus the six agents' instructions as prompts (`repair`, `ask`, `triage`, `sweep`, `audit`, `tune`). It signs in to a running Shikari as you, so hunts use your AI settings and your keys stay on the server.
 
 ## Building your own
 
-**A tool** is a `Tool(name, description, input_schema, fn, changes=False)` in [`archer/agents/tools.py`](../../archer/agents/tools.py). Write the description for the model: say what it returns and when to use it. Keep results small (the runtime truncates at 20,000 characters) and return errors as text the model can act on. If the tool needs server logic, add it to `archer/client.py` so the console and MCP server get it too.
+**A tool** is a `Tool(name, description, input_schema, fn, changes=False)` in [`shikari/agents/tools.py`](../../shikari/agents/tools.py). Write the description for the model: say what it returns and when to use it. Keep results small (the runtime truncates at 20,000 characters) and return errors as text the model can act on. If the tool needs server logic, add it to `shikari/client.py` so the console and MCP server get it too.
 
-**An agent** is an `Agent(name, title, summary, system, inputs, tools, task)` in [`definitions.py`](../../archer/agents/definitions.py). Most of the work is in the system prompt: what good looks like, the order to work in, what not to do, and what to finish with. Give it the fewest tools that do the job; every extra tool is another wrong turn it can take.
+**An agent** is an `Agent(name, title, summary, system, inputs, tools, task)` in [`definitions.py`](../../shikari/agents/definitions.py). Most of the work is in the system prompt: what good looks like, the order to work in, what not to do, and what to finish with. Give it the fewest tools that do the job; every extra tool is another wrong turn it can take.
 
 **Testing** without spending money: [`tests/unit/test_agent_runtime.py`](../../tests/unit/test_agent_runtime.py) scripts the model's responses and checks the loop, approvals, errors and turn limits.
 
@@ -148,7 +148,7 @@ Create the token in Profile → Security → API Tokens. It's shown once, works 
 
 On local `qwen3:8b` through Ollama, the Ask agent answered "which of FIN7's Execution techniques have no detection?" correctly in 2 turns (one `group_coverage` call), taking about 110 seconds on an Intel Mac Mini. Small models get through short lookups like that; on longer runs (repair, triage) they tend to stop early, skip the check step, or call tools with malformed arguments. Two settings matter:
 
-- **Context.** Ollama defaults to 4k tokens and truncates silently, and one tool result can be 5k. `archer-cli start` runs Ollama with `OLLAMA_CONTEXT_LENGTH=16384` unless you set it yourself.
+- **Context.** Ollama defaults to 4k tokens and truncates silently, and one tool result can be 5k. `shikari-cli start` runs Ollama with `OLLAMA_CONTEXT_LENGTH=16384` unless you set it yourself.
 - **Tool support.** The model has to support tool calling (qwen3, qwen2.5, llama3.1, mistral do; base and coder-base models don't).
 
 ## Known gaps

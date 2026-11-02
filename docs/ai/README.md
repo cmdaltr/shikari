@@ -1,6 +1,6 @@
-# Archer AI Documentation
+# Shikari AI Documentation
 
-Complete guide to AI-powered detection generation, model configuration, and training in Archer.
+Complete guide to AI-powered detection generation, model configuration, and training in Shikari.
 
 ## Quick Start
 
@@ -24,10 +24,10 @@ See **[MODEL_CONFIGURATION.md](MODEL_CONFIGURATION.md)** for complete setup guid
 ### 2. Start Using AI Features
 
 ```bash
-# Start Archer
+# Start Shikari
 docker-compose up --build
 # or
-uvicorn archer.app:app --reload
+uvicorn shikari.app:app --reload
 
 # Access at http://localhost:8000
 # Navigate to Generate → Select technique → AI-powered generation
@@ -94,7 +94,7 @@ uvicorn archer.app:app --reload
 1. Read [MODEL_CONFIGURATION.md](MODEL_CONFIGURATION.md) → Quick Start
 2. Choose a provider (Anthropic recommended for quality)
 3. Add API key to `.env`
-4. Start Archer
+4. Start Shikari
 
 **Time**: 5 minutes
 
@@ -107,7 +107,7 @@ uvicorn archer.app:app --reload
 **Steps**:
 1. Run automated setup: `python scripts/ai/setup_local_llm.py`
 2. Script auto-selects model based on your RAM
-3. Start Archer
+3. Start Shikari
 
 **Time**: 15-30 minutes (depending on model download)
 
@@ -125,7 +125,7 @@ uvicorn archer.app:app --reload
 1. Read [TRAIN_AI.md](TRAIN_AI.md) → Custom High-Fidelity Queries section
 2. Create JSONL training data with your queries
 3. Run training: `python scripts/ai/train_ai.py custom --import-dir custom_queries/`
-4. Fine-tune model: `python -m archer.ai.training.pipelines.training`
+4. Fine-tune model: `python -m shikari.ai.training.pipelines.training`
 
 **Time**: 2-4 hours (setup + training)
 
@@ -198,7 +198,7 @@ uvicorn archer.app:app --reload
 LLM_PROVIDER=ollama  # or anthropic, openai, google
 LLM_MODEL=llama3.1:70b-instruct-q4_K_M
 
-# Restart Archer
+# Restart Shikari
 docker-compose restart
 ```
 
@@ -215,8 +215,8 @@ python scripts/ai/train_ai.py osint --all
 python scripts/ai/train_ai.py custom --import queries.json
 
 # Train model
-python -m archer.ai.training.pipelines.training \
-    --data archer/ai/training/datasets/hunting_queries/ \
+python -m shikari.ai.training.pipelines.training \
+    --data shikari/ai/training/datasets/hunting_queries/ \
     --model llama3.1:70b \
     --epochs 5 --lora
 ```
@@ -230,8 +230,8 @@ curl http://localhost:11434/api/tags
 # Test model via CLI
 ollama run llama3.1:70b "Generate a KQL query to detect PowerShell downloads"
 
-# Check Archer logs
-docker-compose logs -f archer
+# Check Shikari logs
+docker-compose logs -f shikari
 ```
 
 ---
@@ -269,7 +269,7 @@ python scripts/ai/setup_local_llm.py --ram 16  # Forces 8B model
 
 ```bash
 # Validate training data format
-python scripts/ai/train_ai.py custom --validate archer/ai/training/datasets/
+python scripts/ai/train_ai.py custom --validate shikari/ai/training/datasets/
 
 # Check you have enough examples (minimum 20-50 recommended)
 ```
@@ -290,8 +290,8 @@ python scripts/ai/train_ai.py custom --validate archer/ai/training/datasets/
 - [scripts/ai/train_ai.py](../../scripts/ai/train_ai.py) - Training data collection
 
 ### Other Documentation
-- [Getting Started](../../GETTING_STARTED.md) - Archer setup
-- [Usage Guide](../USAGE.md) - How to use Archer
+- [Getting Started](../../GETTING_STARTED.md) - Shikari setup
+- [Usage Guide](../USAGE.md) - How to use Shikari
 - [Architecture](../architecture/ARCHITECTURE.md) - System architecture
 
 ---
@@ -300,7 +300,7 @@ python scripts/ai/train_ai.py custom --validate archer/ai/training/datasets/
 
 1. **Check documentation**: Start with [MODEL_CONFIGURATION.md](MODEL_CONFIGURATION.md)
 2. **Review examples**: See each doc's "Quick Examples" section
-3. **Check logs**: `docker-compose logs -f archer`
+3. **Check logs**: `docker-compose logs -f shikari`
 4. **Test components**:
    - Ollama: `curl http://localhost:11434/api/tags`
    - Model: `ollama run <model-name> "test prompt"`

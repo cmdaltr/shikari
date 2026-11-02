@@ -1,12 +1,12 @@
-"""Personal API tokens (archer/auth/tokens.py): hashed, map to a session, revocable."""
+"""Personal API tokens (shikari/auth/tokens.py): hashed, map to a session, revocable."""
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from archer.auth import tokens
-from archer.auth.session import get_user_from_session_id
-from archer.database.models import ApiToken, Base, User
+from shikari.auth import tokens
+from shikari.auth.session import get_user_from_session_id
+from shikari.database.models import ApiToken, Base, User
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def db(tmp_path, monkeypatch):
     session = factory()
     session.add(User(id=1, email="u@x", full_name="u", password_hash="x"))
     session.commit()
-    monkeypatch.setattr("archer.database.db.SessionLocal", factory)
+    monkeypatch.setattr("shikari.database.db.SessionLocal", factory)
     monkeypatch.setattr(tokens, "_sessions", {})
     yield session
     session.close()

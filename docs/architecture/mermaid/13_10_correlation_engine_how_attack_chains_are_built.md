@@ -1,6 +1,6 @@
 # 10. Correlation Engine — How Attack Chains Are Built
 
-How Archer links individual detections into attack chains: read detection metadata → group by tactic phase → score each pair on 5 criteria (group match 30pts, attack sequence 20pts, data availability 20pts, severity 15pts, specificity 15pts) → threshold at 70 → build combined correlation query.
+How Shikari links individual detections into attack chains: read detection metadata → group by tactic phase → score each pair on 5 criteria (group match 30pts, attack sequence 20pts, data availability 20pts, severity 15pts, specificity 15pts) → threshold at 70 → build combined correlation query.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%

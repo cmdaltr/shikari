@@ -1,4 +1,4 @@
-# Using Archer
+# Using Shikari
 
 Where each task is done, and the command-line tools. Each page of the web app has its own page in the [user guide](guide/README.md); this is the map.
 
@@ -22,37 +22,37 @@ The menu bar has three menus (Detections, Intel, Build), then Profile and Help. 
 | Write detections from your own TTPs | Build → Manual | [Manual](guide/13-manual.md) |
 | Test a regex for a SIEM | Build → Regex | [Regex](guide/14-regex.md) |
 | See which logs record each technique; check detections against recorded attacks | Build → Emulate | [Emulate](guide/19-emulate.md) |
-| Ask questions; repair queries; triage a report | Build → Agents; the chat button | [Agents and Ask Archer](guide/15-agents-and-ask-archer.md) |
+| Ask questions; repair queries; triage a report | Build → Agents; the chat button | [Agents and Ask Shikari](guide/15-agents-and-ask-shikari.md) |
 | Set SIEMs, technology stack, industries, keys, MFA | Profile | [Profile and settings](guide/16-profile-and-settings.md) |
 
-Running atomics from Archer itself (**Run Emulation** on Results, `archer-cli offline emulate`) is **Coming soon**; for now, [record a lab](guide/20-recording-a-lab.md) on your own machines.
+Running atomics from Shikari itself (**Run Emulation** on Results, `shikari-cli offline emulate`) is **Coming soon**; for now, [record a lab](guide/20-recording-a-lab.md) on your own machines.
 
 ## The console, client, API and MCP server
 
-`archer-cli console`, the Python client (`archer.client.ArcherClient`), the REST API (live reference at `http://localhost:8000/docs`) and `archer-cli mcp` all drive a running server as a user: [Console, API and MCP](guide/17-console-api-mcp.md). Worked API examples: [API_INTEGRATION_GUIDE.md](features/API_INTEGRATION_GUIDE.md).
+`shikari-cli console`, the Python client (`shikari.client.ShikariClient`), the REST API (live reference at `http://localhost:8000/docs`) and `shikari-cli mcp` all drive a running server as a user: [Console, API and MCP](guide/17-console-api-mcp.md). Worked API examples: [API_INTEGRATION_GUIDE.md](features/API_INTEGRATION_GUIDE.md).
 
-## `archer-cli offline`: the pipeline without the server
+## `shikari-cli offline`: the pipeline without the server
 
 ```bash
-archer-cli offline generate "APT29"                     # detections for a group into data/groups
-archer-cli offline generate "APT29" --correlate         # then correlate them
-archer-cli offline generate "APT29" --llm               # with the bespoke prompts and your AI provider (Mode 1)
-archer-cli offline generate "APT29" --no-llm            # template-based fallback (Mode 2)
-archer-cli offline generate "APT29" --hypothesis "..."  # an optional hypothesis for the group
-archer-cli offline correlate "APT29"                    # correlations from the group's detections in data/groups
-archer-cli offline correlate "APT29" --yaml-dir DIR --output FILE --min-queries 2 --max-queries 6 -v
-archer-cli offline hunt "PowerShell"  # a technique by name (partial match) or ID
-archer-cli offline emulate T1059.001  # Coming soon
+shikari-cli offline generate "APT29"                     # detections for a group into data/groups
+shikari-cli offline generate "APT29" --correlate         # then correlate them
+shikari-cli offline generate "APT29" --llm               # with the bespoke prompts and your AI provider (Mode 1)
+shikari-cli offline generate "APT29" --no-llm            # template-based fallback (Mode 2)
+shikari-cli offline generate "APT29" --hypothesis "..."  # an optional hypothesis for the group
+shikari-cli offline correlate "APT29"                    # correlations from the group's detections in data/groups
+shikari-cli offline correlate "APT29" --yaml-dir DIR --output FILE --min-queries 2 --max-queries 6 -v
+shikari-cli offline hunt "PowerShell"  # a technique by name (partial match) or ID
+shikari-cli offline emulate T1059.001  # Coming soon
 ```
 
 ## Recorded telemetry
 
 ```bash
-python -m archer.telemetry                             # what's built
-python -m archer.telemetry --build                     # fetch what the sources changed (first run ~1.2 GB)
-python -m archer.telemetry --build --source lab        # just your lab's runs
-python -m archer.telemetry --guide <GUIDE zip>         # Defender XDR alerting per technique (Microsoft GUIDE)
-python -m archer.telemetry --mde-export data/telemetry/lab/<run>   # Coming soon: Defender's rows for a lab run
+python -m shikari.telemetry                             # what's built
+python -m shikari.telemetry --build                     # fetch what the sources changed (first run ~1.2 GB)
+python -m shikari.telemetry --build --source lab        # just your lab's runs
+python -m shikari.telemetry --guide <GUIDE zip>         # Defender XDR alerting per technique (Microsoft GUIDE)
+python -m shikari.telemetry --mde-export data/telemetry/lab/<run>   # Coming soon: Defender's rows for a lab run
 ```
 
 See [Emulate](guide/19-emulate.md) and [Recording a lab](guide/20-recording-a-lab.md).

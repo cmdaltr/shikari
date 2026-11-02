@@ -1,4 +1,4 @@
-# Archer Scripts
+# Shikari Scripts
 
 Utility scripts organized by functionality.
 

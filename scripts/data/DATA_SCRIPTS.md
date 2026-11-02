@@ -12,12 +12,12 @@ Clone/update the OSINT detection rule repositories.
 python scripts/data/update_osint.py
 ```
 
-**What it updates** (the list lives in `archer/build/osint_repos.py`, `REPOS`):
+**What it updates** (the list lives in `shikari/build/osint_repos.py`, `REPOS`):
 - **Elastic Detection Rules** (`elastic/detection-rules`)
 - **Splunk Security Content** (`splunk/security_content`)
 - **Azure Sentinel** analytic rules (`Azure/Azure-Sentinel`, sparse: `Detections/` and each solution's `Analytic Rules/`)
 - **Google SecOps** YARA-L rules (`chronicle/detection-rules`, sparse: `rules/community/`)
-- **LOLBAS**, **LOLRMM** and **LOLDrivers** JSON (`archer/build/lol.py`, at most daily; skipped when
+- **LOLBAS**, **LOLRMM** and **LOLDrivers** JSON (`shikari/build/lol.py`, at most daily; skipped when
   repos are picked by flag), indexed into `data/cache/lol_index.json`
 
 **Process**:
@@ -27,8 +27,8 @@ python scripts/data/update_osint.py
 
 `--elastic`, `--splunk`, `--azure-sentinel` and `--chronicle` pick repos; `--force` ignores the
 hourly check. Fetching needs only the standard library (Python 3.9+), so it runs on a
-connected machine without Archer's dependencies for air-gapped installs; there it skips the
-index, which `build_osint_index.py` builds where Archer is installed.
+connected machine without Shikari's dependencies for air-gapped installs; there it skips the
+index, which `build_osint_index.py` builds where Shikari is installed.
 
 **Frequency**:
 - Initial setup: Automatic (via Docker entrypoint)
@@ -59,7 +59,7 @@ python scripts/data/build_osint_index.py --skip-clone   # build from what's alre
 - Writes `data/cache/osint_technique_index.json`: `{technique_id: {source: [{name, source_url, query_snippet, false_positives?}, ...]}}`
   (`false_positives` from Elastic and Splunk rules, for `known_false_positives` in detection YAML)
 
-Without this index, `archer/build/osint_comparison.py` searches live on every
+Without this index, `shikari/build/osint_comparison.py` searches live on every
 OSINT comparison call — a `grep -r` subprocess per technique per repo. With the
 index built, those same lookups become a single dict access. The comparison
 functions fall back to the old live search automatically if the index hasn't
@@ -73,14 +73,14 @@ index doesn't regenerate itself when the repos change.
 ### build_world_map.py
 Build `static/images/world_equal_earth.svg`, the Cyber Powers page's map: every country
 (Natural Earth 1:110m, via `world-atlas`) on the Equal Earth projection, one `<path>` per
-country named in `data-name`. Standard library only; the SVG is committed, so Archer needs no
+country named in `data-name`. Standard library only; the SVG is committed, so Shikari needs no
 map library or network at runtime.
 
 ```bash
 python3 scripts/data/build_world_map.py
 ```
 
-Run it again only to change the map itself; the tiers live in `archer/intelligence/cyber_powers.py`.
+Run it again only to change the map itself; the tiers live in `shikari/intelligence/cyber_powers.py`.
 
 ### vendor_flags.py
 Vendor the flag of every country on that map from [flag-icons](https://github.com/lipis/flag-icons)
@@ -110,8 +110,8 @@ python scripts/data/extract_mitre_procedures.py
 - Generates a styled XLSX evidence report with atomic indicators and reference material
 - Copies output to `data/mitre_procedures.csv` and `data/mitre_procedures.xlsx`
 
-Delegates to `archer.mitre.procedures.run_mitresaw()` — this script is a thin CLI wrapper.
-Can also be run as: `python -m archer.mitre.procedures`
+Delegates to `shikari.mitre.procedures.run_mitresaw()` — this script is a thin CLI wrapper.
+Can also be run as: `python -m shikari.mitre.procedures`
 
 **Output**: `data/mitre_procedures.csv` (12 columns) + `data/mitre_procedures.xlsx`
 
@@ -123,7 +123,7 @@ Can also be run as: `python -m archer.mitre.procedures`
 ---
 
 ### import_yaml_to_library.py
-Import YAML detection files to Archer's detection library.
+Import YAML detection files to Shikari's detection library.
 
 **Usage**:
 ```bash
@@ -131,7 +131,7 @@ python scripts/data/import_yaml_to_library.py <file_or_directory>
 ```
 
 **Supported formats**:
-- Custom Archer YAML format
+- Custom Shikari YAML format
 - Splunk savedsearches format
 - Elastic detection rule format
 

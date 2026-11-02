@@ -1,6 +1,6 @@
 """Text extraction runs sentences together; the join is not a domain."""
 
-from archer.parsers.file_intelligence import FileIntelligenceParser
+from shikari.parsers.file_intelligence import FileIntelligenceParser
 
 
 def test_sentence_join_is_not_a_domain():

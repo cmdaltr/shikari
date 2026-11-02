@@ -1,9 +1,9 @@
-"""Static query checks (archer.validation.static_check)."""
+"""Static query checks (shikari.validation.static_check)."""
 
 import pytest
 
-from archer.build.ioc_sweep import mde_sweep
-from archer.validation.static_check import check_query
+from shikari.build.ioc_sweep import mde_sweep
+from shikari.validation.static_check import check_query
 
 
 def _checks(result):

@@ -1,5 +1,5 @@
 """
-Integration Tests for Archer Web API.
+Integration Tests for Shikari Web API.
 
 Tests the FastAPI web endpoints, verifying response structure,
 content, and error handling following the rivendell testing pattern.
@@ -144,7 +144,7 @@ class TestProgressStatusAPI:
         with open(progress_file, "w") as f:
             json.dump(sample_progress_data, f)
 
-        with patch("archer.app.read_progress") as mock_read:
+        with patch("shikari.app.read_progress") as mock_read:
             mock_read.return_value = sample_progress_data
 
             response = client.get("/progress_status?group_name=TestGroup")
@@ -166,7 +166,7 @@ class TestProgressStatusAPI:
 
     def test_progress_status_nonexistent_group(self, client):
         """Test progress status for non-existent group."""
-        with patch("archer.app.read_progress") as mock_read:
+        with patch("shikari.app.read_progress") as mock_read:
             mock_read.return_value = {}
 
             response = client.get("/progress_status?group_name=NonExistent")
@@ -189,7 +189,7 @@ class TestCorrelationsAPI:
         with open(corr_file, "w") as f:
             json.dump(sample_correlation_data, f)
 
-        with patch("archer.app.CORRELATE_DIR", str(mock_dirs["correlate"])):
+        with patch("shikari.app.CORRELATE_DIR", str(mock_dirs["correlate"])):
             response = client.get("/correlations/TestGroup.json")
 
             assert response.status_code == 200
@@ -199,7 +199,7 @@ class TestCorrelationsAPI:
 
     def test_correlations_not_found(self, client, mock_dirs):
         """Test correlations for non-existent group returns 404."""
-        with patch("archer.app.CORRELATE_DIR", str(mock_dirs["correlate"])):
+        with patch("shikari.app.CORRELATE_DIR", str(mock_dirs["correlate"])):
             response = client.get("/correlations/NonExistent.json")
 
             assert response.status_code == 404
@@ -215,7 +215,7 @@ class TestDraftsAPI:
 
     def test_save_draft_success(self, client, mock_dirs, sample_draft_data):
         """Test saving a draft successfully."""
-        with patch("archer.app.DRAFTS_DIR", str(mock_dirs["drafts"])):
+        with patch("shikari.app.DRAFTS_DIR", str(mock_dirs["drafts"])):
             response = client.post(
                 "/save_draft",
                 json=sample_draft_data,
@@ -231,7 +231,7 @@ class TestDraftsAPI:
 
     def test_save_draft_missing_draft_id(self, client, mock_dirs):
         """Test saving draft without draft_id fails."""
-        with patch("archer.app.DRAFTS_DIR", str(mock_dirs["drafts"])):
+        with patch("shikari.app.DRAFTS_DIR", str(mock_dirs["drafts"])):
             response = client.post(
                 "/save_draft",
                 json={"group_name": "APT29"},  # Missing draft_id
@@ -245,7 +245,7 @@ class TestDraftsAPI:
         """Test saving user-scoped draft."""
         user_draft = {**sample_draft_data, "user_id": "user123"}
 
-        with patch("archer.app.DRAFTS_DIR", str(mock_dirs["drafts"])):
+        with patch("shikari.app.DRAFTS_DIR", str(mock_dirs["drafts"])):
             response = client.post(
                 "/save_draft",
                 json=user_draft,
@@ -264,7 +264,7 @@ class TestDraftsAPI:
         """Test saving draft with mismatched user_id header."""
         user_draft = {**sample_draft_data, "user_id": "user123"}
 
-        with patch("archer.app.DRAFTS_DIR", str(mock_dirs["drafts"])):
+        with patch("shikari.app.DRAFTS_DIR", str(mock_dirs["drafts"])):
             response = client.post(
                 "/save_draft",
                 json=user_draft,
@@ -283,7 +283,7 @@ class TestDraftsAPI:
         with open(draft_file, "w") as f:
             json.dump(sample_draft_data, f)
 
-        with patch("archer.app.DRAFTS_DIR", str(mock_dirs["drafts"])):
+        with patch("shikari.app.DRAFTS_DIR", str(mock_dirs["drafts"])):
             response = client.get("/load_draft?draft_id=test-draft-001")
 
             assert response.status_code == 200
@@ -306,8 +306,8 @@ class TestBlogAnalysisAPI:
 
     def test_analyze_blog_success(self, client, mock_dirs, sample_blog_analysis):
         """Test successful blog analysis."""
-        with patch("archer.parsers.blog_analyzer.analyze_blog_post") as mock_analyze, \
-             patch("archer.app.BLOG_DIR", str(mock_dirs["blog"])):
+        with patch("shikari.parsers.blog_analyzer.analyze_blog_post") as mock_analyze, \
+             patch("shikari.app.BLOG_DIR", str(mock_dirs["blog"])):
 
             mock_analyze.return_value = sample_blog_analysis
 
@@ -338,8 +338,8 @@ class TestBlogAnalysisAPI:
 
     def test_analyze_blog_invalid_scheme(self, client, mock_dirs):
         """Test blog analysis rejects invalid URL schemes."""
-        with patch("archer.parsers.blog_analyzer.analyze_blog_post") as mock_analyze, \
-             patch("archer.app.BLOG_DIR", str(mock_dirs["blog"])):
+        with patch("shikari.parsers.blog_analyzer.analyze_blog_post") as mock_analyze, \
+             patch("shikari.app.BLOG_DIR", str(mock_dirs["blog"])):
 
             mock_analyze.return_value = {
                 "success": False,
@@ -357,8 +357,8 @@ class TestBlogAnalysisAPI:
 
     def test_analyze_blog_ssrf_blocked(self, client, mock_dirs):
         """Test blog analysis blocks SSRF attempts."""
-        with patch("archer.parsers.blog_analyzer.analyze_blog_post") as mock_analyze, \
-             patch("archer.app.BLOG_DIR", str(mock_dirs["blog"])):
+        with patch("shikari.parsers.blog_analyzer.analyze_blog_post") as mock_analyze, \
+             patch("shikari.app.BLOG_DIR", str(mock_dirs["blog"])):
 
             mock_analyze.return_value = {
                 "success": False,
@@ -376,8 +376,8 @@ class TestBlogAnalysisAPI:
 
     def test_analyze_blog_private_ip_blocked(self, client, mock_dirs):
         """Test blog analysis blocks private IPs."""
-        with patch("archer.parsers.blog_analyzer.analyze_blog_post") as mock_analyze, \
-             patch("archer.app.BLOG_DIR", str(mock_dirs["blog"])):
+        with patch("shikari.parsers.blog_analyzer.analyze_blog_post") as mock_analyze, \
+             patch("shikari.app.BLOG_DIR", str(mock_dirs["blog"])):
 
             mock_analyze.return_value = {
                 "success": False,
@@ -395,8 +395,8 @@ class TestBlogAnalysisAPI:
 
     def test_analyze_blog_extracts_iocs(self, client, mock_dirs, sample_blog_analysis):
         """Test blog analysis extracts IOCs."""
-        with patch("archer.parsers.blog_analyzer.analyze_blog_post") as mock_analyze, \
-             patch("archer.app.BLOG_DIR", str(mock_dirs["blog"])):
+        with patch("shikari.parsers.blog_analyzer.analyze_blog_post") as mock_analyze, \
+             patch("shikari.app.BLOG_DIR", str(mock_dirs["blog"])):
 
             mock_analyze.return_value = sample_blog_analysis
 
@@ -498,7 +498,7 @@ class TestAPIPerformance:
         """Test progress status responds quickly."""
         import time
 
-        with patch("archer.app.read_progress") as mock_read:
+        with patch("shikari.app.read_progress") as mock_read:
             mock_read.return_value = {}
 
             start = time.time()

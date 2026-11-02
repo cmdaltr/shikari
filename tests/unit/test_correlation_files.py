@@ -1,10 +1,10 @@
 """One file per correlation, written once correlations are final; hand edits survive the next run."""
 import yaml
 
-from archer.build import correlation_files as cf
-from archer.build.yaml import file_state
+from shikari.build import correlation_files as cf
+from shikari.build.yaml import file_state
 
-JOIN = """// archer_corr_t1134_then_t1098: Access Token Manipulation and Account Manipulation on the same host within 1h · ATT&CK T1134, T1098 · severity HIGH
+JOIN = """// shikari_corr_t1134_then_t1098: Access Token Manipulation and Account Manipulation on the same host within 1h · ATT&CK T1134, T1098 · severity HIGH
 $e1.metadata.event_type = "PROCESS_LAUNCH" and ($e1.target.process.command_line = /runas/ nocase)
 $e1.principal.hostname = $host
 

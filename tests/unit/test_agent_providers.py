@@ -1,4 +1,4 @@
-"""Agents on any tool-calling provider (archer/agents/llm.py), which one is picked, and saved sessions."""
+"""Agents on any tool-calling provider (shikari/agents/llm.py), which one is picked, and saved sessions."""
 
 import json
 import time
@@ -10,11 +10,11 @@ from cryptography.fernet import Fernet
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from archer.agents import agent_llm, store
-from archer.agents.runtime import Agent, Tool, start
-from archer.ai import assignment
-from archer.auth.encryption import encrypt_api_key
-from archer.database.models import APIKey, Base, User
+from shikari.agents import agent_llm, store
+from shikari.agents.runtime import Agent, Tool, start
+from shikari.ai import assignment
+from shikari.auth.encryption import encrypt_api_key
+from shikari.database.models import APIKey, Base, User
 
 KEY = Fernet.generate_key()
 
@@ -27,9 +27,9 @@ def db(tmp_path, monkeypatch):
     session = factory()
     session.add(User(id=1, email="u@x", full_name="u", password_hash="x"))
     session.commit()
-    monkeypatch.setattr("archer.database.db.SessionLocal", factory)
+    monkeypatch.setattr("shikari.database.db.SessionLocal", factory)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    with patch("archer.auth.encryption.get_encryption_key", return_value=KEY):
+    with patch("shikari.auth.encryption.get_encryption_key", return_value=KEY):
         yield session
     session.close()
 
@@ -115,7 +115,7 @@ def test_the_loop_runs_on_an_openai_compatible_api_and_is_saved(db):
 
 @pytest.mark.unit
 def test_a_session_cut_off_by_a_restart_reads_back_as_interrupted(db):
-    from archer.database.models import AgentRun
+    from shikari.database.models import AgentRun
 
     db.add(AgentRun(id="a" * 32, user_id=1, agent="ask", status="running", events="[]"))
     db.commit()
@@ -127,8 +127,8 @@ def test_a_session_cut_off_by_a_restart_reads_back_as_interrupted(db):
 
 @pytest.mark.unit
 def test_an_interrupted_session_continues_from_its_saved_conversation(db):
-    from archer.agents.runtime import resume
-    from archer.database.models import AgentRun
+    from shikari.agents.runtime import resume
+    from shikari.database.models import AgentRun
 
     conversation = [
         {"role": "user", "content": "hello"},

@@ -1,6 +1,6 @@
 import json
 
-from archer.mitre import procedures as p
+from shikari.mitre import procedures as p
 
 
 def _bundle(path, version):

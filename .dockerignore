@@ -8,7 +8,7 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
-archer/build/
+shikari/build/
 
 # Large runtime-generated data (cloned at startup or generated at runtime)
 data/repos/

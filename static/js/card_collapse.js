@@ -50,7 +50,7 @@
     }
   }
 
-  const keyOf = title => `archer.collapsed:${location.pathname}:${title.textContent.trim().replace(/\s+/g, ' ').slice(0, 60)}`;
+  const keyOf = title => `shikari.collapsed:${location.pathname}:${title.textContent.trim().replace(/\s+/g, ' ').slice(0, 60)}`;
   // '1' collapsed, '0' opened (only kept for cards collapsed by default), nothing: the card's default
   const remembered = (key, dflt) => { try { const v = localStorage.getItem(key); return v === null ? dflt : v === '1'; } catch (e) { return dflt; } };
   const remember = (key, on, dflt) => { try { on ? localStorage.setItem(key, '1') : dflt ? localStorage.setItem(key, '0') : localStorage.removeItem(key); } catch (e) {} };

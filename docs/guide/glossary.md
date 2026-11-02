@@ -1,11 +1,11 @@
 # Glossary
 
-| Term | Meaning in Archer |
+| Term | Meaning in Shikari |
 |---|---|
-| ATT&CK | MITRE ATT&CK Enterprise: the catalogue of attacker tactics, techniques, groups, software and campaigns Archer works from |
+| ATT&CK | MITRE ATT&CK Enterprise: the catalogue of attacker tactics, techniques, groups, software and campaigns Shikari works from |
 | Tactic | The attacker's goal at a stage of an attack (Initial Access, Persistence, Lateral Movement…) |
 | Technique, sub-technique | How a tactic is achieved: **T1003** OS Credential Dumping; **T1003.001** its LSASS Memory variant |
-| Procedure | A documented instance of a group using a technique, in ATT&CK's words. Archer takes its indicators from these |
+| Procedure | A documented instance of a group using a technique, in ATT&CK's words. Shikari takes its indicators from these |
 | Group | A threat actor ATT&CK tracks (APT29, Scattered Spider), with aliases |
 | Campaign, software | ATT&CK's records of an operation and of malware or tools. A group's techniques can reach it through either |
 | TTPs | Tactics, techniques and procedures |
@@ -16,8 +16,8 @@
 | Correlation | Several detections chained into one query that fires when their steps happen together within a time window |
 | Attack flow | A group's techniques laid out by tactic, marked detected or not |
 | Threat briefing | A run's coverage, its weakest stage and the gaps to close first |
-| OSINT Enhancement | Merging indicators and known false positives from public detection rules into Archer's queries |
-| OSINT Comparison | Scoring Archer's queries against public rules, and building from those rules where ATT&CK has no indicators |
+| OSINT Enhancement | Merging indicators and known false positives from public detection rules into Shikari's queries |
+| OSINT Comparison | Scoring Shikari's queries against public rules, and building from those rules where ATT&CK has no indicators |
 | LOL datasets | LOLBAS (Windows binaries), LOLDrivers (vulnerable and malicious drivers) and LOLRMM (remote management tools) |
 | Reference queries | Your own production-tested queries in `bespoke/llm_references/`, used as templates and examples |
 | Bespoke | Your organisation's own prompts, templates, mappings and reference queries, kept out of git |
@@ -33,4 +33,4 @@
 | GUIDE | Microsoft's dataset of Defender XDR alerts from thousands of organisations, with triage grades; Emulate's source for Defender's own alerting |
 | True, benign, false positive | Customers' triage grades in GUIDE: a real attack; real activity that wasn't malicious; a wrong alert |
 | IISS | The International Institute for Strategic Studies, whose cyber power tiers the Cyber Powers map uses |
-| MCP | Model Context Protocol: how AI clients such as Claude Code call Archer's tools |
+| MCP | Model Context Protocol: how AI clients such as Claude Code call Shikari's tools |

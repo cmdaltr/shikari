@@ -4,9 +4,9 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from archer.build import orchestrator, run_files
-from archer.intelligence import feed
-from archer.intelligence import tech_stack as stack
+from shikari.build import orchestrator, run_files
+from shikari.intelligence import feed
+from shikari.intelligence import tech_stack as stack
 
 ATTACK_PLATFORMS = {"Windows", "macOS", "Linux", "ESXi", "IaaS", "Network Devices", "PRE", "Office Suite",
                     "SaaS", "Identity Provider", "Containers"}
@@ -128,7 +128,7 @@ def test_feed_relevance_follows_the_stack():
         out = {p["url"]: p for p in feed.view([], stack=["windows", "fortinet"])["posts"]}
         everything = {p["url"]: p for p in feed.view([])["posts"]}
     assert out["a"]["relevant"] is False and out["a"]["off_stack"] == ["Progress MOVEit"]
-    assert out["b"]["relevant"] is True and out["b"]["stack"] == ["Fortinet (FortiGate, FortiOS)"]
+    assert out["b"]["relevant"] is True and out["b"]["stack"] == ["Fortinet"]
     assert out["c"]["relevant"] is True  # GitHub as the attacker's host
     assert all(p["relevant"] for p in everything.values())
 

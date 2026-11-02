@@ -1,12 +1,12 @@
 """
-The server asks for the latest ATT&CK on every start, cheaply (archer.mitre.enterprise),
-and the Library lists every SIEM in Archer's order.
+The server asks for the latest ATT&CK on every start, cheaply (shikari.mitre.enterprise),
+and the Library lists every SIEM in Shikari's order.
 """
 import json
 
 import requests
 
-from archer.mitre import enterprise
+from shikari.mitre import enterprise
 
 BUNDLE = json.dumps({"type": "bundle", "id": "bundle--00000000-0000-4000-8000-000000000000", "objects": [
     {"type": "x-mitre-collection", "id": "x-mitre-collection--00000000-0000-4000-8000-000000000001",
@@ -67,7 +67,7 @@ def test_offline_falls_back_to_the_cache(tmp_path, monkeypatch):
 
 
 def test_library_lists_every_siem_in_order():
-    from archer.app import _library_vendor_slots
+    from shikari.app import _library_vendor_slots
 
     slots = _library_vendor_slots([{"name": "splunk", "display_name": "Splunk", "count": 1, "detections": ["x"]},
                                    {"name": "microsoft", "display_name": "MDE", "count": 2, "detections": ["a", "b"]}],

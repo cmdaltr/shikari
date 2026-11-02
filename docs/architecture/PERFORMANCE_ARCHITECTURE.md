@@ -1,8 +1,8 @@
-# Archer Performance Architecture
+# Shikari Performance Architecture
 
 ## Executive Summary
 
-**Archer is fast because it uses deterministic algorithms and intelligent engineering, NOT AI/ML inference.**
+**Shikari is fast because it uses deterministic algorithms and intelligent engineering, NOT AI/ML inference.**
 
 - **100 detections:** 15-30 seconds (no API calls)
 - **500 correlations:** 2-5 seconds evaluation
@@ -16,7 +16,7 @@
 
 ### Core Philosophy
 
-Archer follows a **"Smart Defaults, Optional AI"** architecture:
+Shikari follows a **"Smart Defaults, Optional AI"** architecture:
 
 1. **Default Mode (Fast & Free):** Uses deterministic algorithms, regex patterns, and rule-based logic
 2. **Optional AI Mode:** Can integrate OpenAI/local LLMs for advanced semantic analysis when explicitly enabled
@@ -24,7 +24,7 @@ Archer follows a **"Smart Defaults, Optional AI"** architecture:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Archer Architecture                       │
+│                    Shikari Architecture                       │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │  ┌──────────────┐      ┌──────────────┐                    │
@@ -80,7 +80,7 @@ Archer follows a **"Smart Defaults, Optional AI"** architecture:
 
 **Implementation:**
 ```python
-# archer/app.py - Startup event
+# shikari/app.py - Startup event
 @app.on_event("startup")
 async def startup_event():
     # Download MITRE ATT&CK STIX bundle (one time)
@@ -104,7 +104,7 @@ async def startup_event():
 
 **Implementation:**
 ```python
-# archer/app.py - Background threading
+# shikari/app.py - Background threading
 @app.post("/generate")
 async def generate(group_name: str, ...):
     def _bg():
@@ -129,7 +129,7 @@ async def generate(group_name: str, ...):
 
 **Implementation:**
 ```python
-# archer/build/queries.py - Template approach
+# shikari/build/queries.py - Template approach
 def build_query(technique, indicators, platform):
     if platform == "mde":
         # Template with placeholders
@@ -162,7 +162,7 @@ def build_query(technique, indicators, platform):
 
 **Implementation:**
 ```python
-# archer/ai/genai/engine.py - Scoring function
+# shikari/ai/genai/engine.py - Scoring function
 def _score_correlation(corr, file_info):
     score = 0.0
 
@@ -238,7 +238,7 @@ def _estimate_semantic_overlap_kql(q1, q2):
 
 **Dictionary Lookups (O(1) average case):**
 ```python
-# archer/mitre/enterprise.py
+# shikari/mitre/enterprise.py
 TECHNIQUE_MAP = {
     "T1003": "OS Credential Dumping",
     "T1021": "Remote Services",
@@ -347,7 +347,7 @@ app.state.groups = obtain_all_groups()       # 140+ threat actors
 
 **Implementation:**
 ```python
-# archer/ai/genai/engine.py - AI integration points
+# shikari/ai/genai/engine.py - AI integration points
 if ai_generators == "true" and OPENAI_API_KEY:
     try:
         # Optional: Use GPT for semantic analysis
@@ -366,7 +366,7 @@ else:
 
 ## Comparison with AI-Based Tools
 
-| Aspect | Archer (Deterministic) | Typical AI Tool |
+| Aspect | Shikari (Deterministic) | Typical AI Tool |
 |--------|------------------------|-----------------|
 | **Speed** | ✅ <1s per detection | ❌ 5-30s LLM latency |
 | **Cost** | ✅ $0 (local) | ❌ $0.01-0.50 per query |
@@ -525,7 +525,7 @@ Time = min(Pairs, 10000) × 0.001s
 
 ## Conclusion
 
-**Archer's speed comes from:**
+**Shikari's speed comes from:**
 1. ✅ Smart caching (load once, reuse everywhere)
 2. ✅ Efficient data structures (dicts, sets, O(1) lookups)
 3. ✅ Template-based generation (not LLM token generation)
@@ -538,18 +538,18 @@ Time = min(Pairs, 10000) × 0.001s
 - ❌ Skipping features (full MITRE coverage)
 - ❌ Sacrificing quality (7 quality filters)
 
-**The optional AI enhancement is exactly that - optional.** Archer's core engine is deterministic, fast, free, and privacy-preserving by design.
+**The optional AI enhancement is exactly that - optional.** Shikari's core engine is deterministic, fast, free, and privacy-preserving by design.
 
 ---
 
 ## References
 
-- **Source Code:** [archer/ai/genai/engine.py](../../archer/ai/genai/engine.py) - Correlation engine
-- **Detection Builder:** [archer/build/detections.py](../../archer/build/detections.py) - Query generation
-- **MITRE Integration:** [archer/mitre/enterprise.py](../../archer/mitre/enterprise.py) - Data fetching
+- **Source Code:** [shikari/ai/genai/engine.py](../../shikari/ai/genai/engine.py) - Correlation engine
+- **Detection Builder:** [shikari/build/detections.py](../../shikari/build/detections.py) - Query generation
+- **MITRE Integration:** [shikari/mitre/enterprise.py](../../shikari/mitre/enterprise.py) - Data fetching
 
 ---
 
 **Last Updated:** 2025-01-30
-**Archer Version:** 1.0
+**Shikari Version:** 1.0
 **Author:** CTH Team

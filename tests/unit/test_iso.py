@@ -1,11 +1,11 @@
-"""Tests for archer.lab.iso — the Windows-ISO inspector, driven by synthetic ISO9660 images."""
+"""Tests for shikari.lab.iso — the Windows-ISO inspector, driven by synthetic ISO9660 images."""
 
 import struct
 
 import pytest
 
-from archer.lab import iso
-from archer.lab.iso import SECTOR
+from shikari.lab import iso
+from shikari.lab.iso import SECTOR
 
 # Sector map for the fixtures below.
 _ROOT, _SOURCES, _EFI, _BOOT = 20, 21, 22, 23

@@ -27,7 +27,7 @@
   let FRAMEWORKS = [];
   try { FRAMEWORKS = JSON.parse(($('af-frameworks') || {}).textContent || '[]'); } catch (e) { FRAMEWORKS = []; }
   // Which tab is open: a per-viewer preference, not part of the saved edits
-  const FW_KEY = 'archer.flowFramework';
+  const FW_KEY = 'shikari.flowFramework';
   let framework = 'attack';
   try { framework = localStorage.getItem(FW_KEY) || 'attack'; } catch (e) { /* storage blocked */ }
   if (!FRAMEWORKS.some(f => f.key === framework)) framework = 'attack';
@@ -149,7 +149,7 @@
     }
   }
 
-  document.addEventListener('archer:library-saved', () => {
+  document.addEventListener('shikari:library-saved', () => {
     if (!layout.logged_in) return;
     persist = true;
     clearTimeout(saveTimer);

@@ -1,5 +1,5 @@
 """Defender XDR cloud-native tables (CloudAppEvents, Identity*) only for cloud techniques or cloud indicators."""
-from archer.build import queries
+from shikari.build import queries
 
 FLAT = {"DeviceEvents": ["ActionType"], "CloudAppEvents": ["ActionType", "ActivityType"],
         "IdentityLogonEvents": ["ActionType", "Application"]}

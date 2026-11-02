@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html data-theme="light">
 <head>
-    <title>Archer - Help</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
-    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon.png') }}">
-    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon-precomposed.png') }}">
+    <title>Shikari - Help</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', path=brand.icon_32) }}?v={{ request.app.state.asset_version }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', path=brand.icon_32) }}?v={{ request.app.state.asset_version }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path=brand.apple_icon) }}">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path=brand.apple_icon) }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -103,7 +103,7 @@
             color: white;
         }
 
-        .how-archer-link {
+        .how-shikari-link {
             position: fixed;
             top: 20px;
             right: calc((100vw - 1320px) / 2);
@@ -124,11 +124,11 @@
             box-sizing: border-box;
         }
 
-        [data-theme="dark"] .how-archer-link {
+        [data-theme="dark"] .how-shikari-link {
             background: rgba(45, 45, 45, 0.95);
         }
 
-        .how-archer-link:hover {
+        .how-shikari-link:hover {
             background: var(--accent);
             color: white;
         }
@@ -395,6 +395,22 @@
         .library-table tr:hover {
             background: #f8f9fa;
         }
+        /* Dependency table status glyphs: green tick / red cross / muted N/A */
+        .dep-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .dep-status svg {
+            width: 16px;
+            height: 16px;
+            flex: 0 0 auto;
+        }
+        .dep-ok { color: #16a34a; }
+        .dep-missing { color: #ef4444; }
+        .dep-na { color: var(--text-secondary); opacity: 0.75; }
         .workflow-step {
             background: #f8f9fa;
             border-left: 4px solid #C53030;
@@ -661,6 +677,7 @@
         }
     </style>
     <link rel="stylesheet" href="{{ url_for('static', path='css/ui.css') }}?v={{ request.app.state.asset_version }}">
+    {% include "partials/brand_style.html" %}
 </head>
 <body>
     <a id="top"></a>
@@ -672,7 +689,7 @@
 
         <div class="page-header">
             <h1>Help</h1>
-            <p>How Archer works: its architecture, the libraries it builds on and where it uses AI</p>
+            <p>How Shikari works: its architecture, the libraries it builds on and where it uses AI</p>
         </div>
 
         <!-- Tab Navigation -->
@@ -725,7 +742,7 @@
             <!-- Overview Tab -->
             <div class="tab-pane active" id="tab-overview">
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                Archer turns MITRE ATT&CK threat intelligence into detection queries for <strong>Microsoft Defender XDR,
+                Shikari turns MITRE ATT&CK threat intelligence into detection queries for <strong>Microsoft Defender XDR,
                 Google SecOps, Splunk and Elastic</strong>. Point it at a threat group, a CVE, a report or a company and it
                 generates coverage for every technique involved, chains the detections into correlations, and checks them
                 before you keep them. It is open source and self-hosted, and <strong>works without AI by default</strong> —
@@ -763,7 +780,7 @@
                     <ul>
                         <li>Off by default — never in the critical path</li>
                         <li>Local Ollama or a cloud provider</li>
-                        <li>Ask Archer, grounded in your data</li>
+                        <li>Ask Shikari, grounded in your data</li>
                         <li>Six agents (repair, ask, triage, sweep, audit, tune)</li>
                         <li>Threat briefings and report triage</li>
                         <li>Tools shared over MCP</li>
@@ -786,8 +803,8 @@
                     <h4>Four ways in</h4>
                     <ul>
                         <li>The web UI (server-rendered, no JS framework)</li>
-                        <li><code>archer-cli</code> supervisor and console</li>
-                        <li><code>archer-cli offline</code> — no server needed</li>
+                        <li><code>shikari-cli</code> supervisor and console</li>
+                        <li><code>shikari-cli offline</code> — no server needed</li>
                         <li>MCP, for any MCP client</li>
                         <li>Accounts, roles and MFA throughout</li>
                     </ul>
@@ -798,30 +815,64 @@
             <h2 class="hiw-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Frequently Asked Questions</h2>
 
             <details class="faq-item">
-                <summary class="faq-question">What is Archer and what does it do?</summary>
+                <summary class="faq-question">What is Shikari and what does it do?</summary>
                 <div class="faq-answer">
-                    <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Archer turns MITRE ATT&CK threat intelligence into detection queries for Microsoft Defender XDR, Google SecOps, Splunk and Elastic. Point it at a threat group, a CVE, a report or a company and it generates coverage for every technique involved, chains the detections into correlations, and checks them before you keep them. It is open source and self-hosted, and works without AI by default.</p>
+                    <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Shikari turns MITRE ATT&CK threat intelligence into detection queries for Microsoft Defender XDR, Google SecOps, Splunk and Elastic. Point it at a threat group, a CVE, a report or a company and it generates coverage for every technique involved, chains the detections into correlations, and checks them before you keep them. It is open source and self-hosted, and works without AI by default.</p>
                 </div>
             </details>
 
             <details class="faq-item">
-                <summary class="faq-question">Do I need an AI provider to use Archer?</summary>
+                <summary class="faq-question">Do I need an AI provider to use Shikari?</summary>
                 <div class="faq-answer">
-                    <p>No. Archer works without AI by default, and the whole pipeline — generation, correlation and the checks — is deterministic code. AI is opt-in and never in the critical path: it adds Ask Archer, the agents and threat briefings. When you do want it, you can point Archer at a local model through Ollama or a cloud provider (Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok), so nothing has to leave your machine.</p>
+                    <p>No. Shikari works without AI by default, and the whole pipeline — generation, correlation and the checks — is deterministic code. AI is opt-in and never in the critical path: it adds Ask Shikari, the agents and threat briefings. When you do want it, you can point Shikari at a local model through Ollama or a cloud provider (Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok), so nothing has to leave your machine.</p>
                 </div>
             </details>
 
             <details class="faq-item">
-                <summary class="faq-question">Why is Archer so fast? Is it using AI or machine learning?</summary>
+                <summary class="faq-question">What do I need installed? Does Shikari need Docker?</summary>
+                <div class="faq-answer">
+                    <p>No. Shikari's core runs on Python alone — or in Docker, if you prefer — with nothing optional added: hunts, report analysis, company profiles and exposure maps, research, SIEM queries for all four platforms, ATT&CK and MITRESaw, Coverage, Flows, the Library, Detections as code, the threat feed, Cyber Powers, and IOC search with STIX, TAXII and MISP in and out. The maps are server-rendered and STIX/MISP need no extra libraries.</p>
+
+                    <p>A few optional components are opt-in, and each is simply unavailable — never a broken app — when it isn't there. Shikari checks this host ({{ dependencies.host }}) each time you open this page:</p>
+
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 1em;">
+                        <tr style="background: var(--bg-secondary); border-bottom: 2px solid var(--border);">
+                            <th style="padding: 8px; text-align: left;">Component</th>
+                            <th style="padding: 8px; text-align: left;">Enables</th>
+                            <th style="padding: 8px; text-align: left; white-space: nowrap;">On this host</th>
+                        </tr>
+                        {% for dep in dependencies.rows %}
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 8px;"><strong>{{ dep.name }}</strong></td>
+                            <td style="padding: 8px;">{{ dep.enables }}</td>
+                            <td style="padding: 8px; white-space: nowrap;" title="{{ dep.detail }}">
+                                {% if dep.status == 'installed' %}
+                                <span class="dep-status dep-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Installed</span>
+                                {% elif dep.status == 'na' %}
+                                <span class="dep-status dep-na"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="5" y1="5" x2="19" y2="19"/></svg>N/A</span>
+                                {% else %}
+                                <span class="dep-status dep-missing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Not installed</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+
+                    <p style="margin-top: 1em;"><span class="dep-status dep-na" style="margin:0 .2em;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="5" y1="5" x2="19" y2="19"/></svg>N/A</span> means this host's OS or CPU can't run it — Tart needs Apple Silicon, UTM needs macOS. Rocky 10 is Docker-only, so a host without Docker loses both Rocky and the Ubuntu container but keeps its Tart VM and the rest. An AI provider can also be a key you add under Profile → API Keys, which this host-level check doesn't see.</p>
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-question">Why is Shikari so fast? Is it using AI or machine learning?</summary>
                 <div class="faq-answer">
                     <p>Generation is deterministic code, not model inference. The ATT&CK bundle and the OSINT rule index are built once and read from disk; indicators are matched with compiled patterns and dictionary lookups; queries come from per-platform builders, not token-by-token from an LLM; and correlation scoring is arithmetic over the techniques. A full group of 30–50 techniques takes minutes, and a single detection well under a second — and it all runs locally against a SQLite database, offline if you want.</p>
 
-                    <p>When you turn AI on, it sits beside this, never inside it: Ask Archer, the agents and briefings call a model you choose (local or cloud), and if one isn't configured the deterministic path is simply what runs. So the speed, the privacy and the repeatability are the default, and AI is something you add when it earns its place.</p>
+                    <p>When you turn AI on, it sits beside this, never inside it: Ask Shikari, the agents and briefings call a model you choose (local or cloud), and if one isn't configured the deterministic path is simply what runs. So the speed, the privacy and the repeatability are the default, and AI is something you add when it earns its place.</p>
 
                     <table style="width: 100%; border-collapse: collapse; margin-top: 1em;">
                         <tr style="background: var(--bg-secondary); border-bottom: 2px solid var(--border);">
                             <th style="padding: 8px; text-align: left;">Aspect</th>
-                            <th style="padding: 8px; text-align: left;">Archer's pipeline</th>
+                            <th style="padding: 8px; text-align: left;">Shikari's pipeline</th>
                             <th style="padding: 8px; text-align: left;">An LLM-in-the-loop generator</th>
                         </tr>
                         <tr style="border-bottom: 1px solid var(--border);">
@@ -879,7 +930,7 @@
             <details class="faq-item">
                 <summary class="faq-question">What file formats can Analyse read?</summary>
                 <div class="faq-answer">
-                    <p>The Analyse tab reads multiple threat intelligence file formats including: PDF, TXT, Markdown (MD), JSON, CSV, Excel (XLSX/XLS), Word (DOCX/DOC), and YARA rules (.yar/.yara). Archer automatically extracts TTPs (Tactics, Techniques, and Procedures) and IOCs (Indicators of Compromise) from these files.</p>
+                    <p>The Analyse tab reads multiple threat intelligence file formats including: PDF, TXT, Markdown (MD), JSON, CSV, Excel (XLSX/XLS), Word (DOCX/DOC), and YARA rules (.yar/.yara). Shikari automatically extracts TTPs (Tactics, Techniques, and Procedures) and IOCs (Indicators of Compromise) from these files.</p>
                 </div>
             </details>
 
@@ -937,16 +988,16 @@
             </details>
 
             <details class="faq-item">
-                <summary class="faq-question">How fast is Archer at generating detections?</summary>
+                <summary class="faq-question">How fast is Shikari at generating detections?</summary>
                 <div class="faq-answer">
-                    <p>Archer is optimized for speed with template caching, parallel processing, and async operations. Generating 200 detection queries for a threat group like APT29 takes approximately 30 seconds with caching enabled (compared to 4-5 minutes without optimization). First-time runs take about 45 seconds while subsequent cached runs complete in about 5 seconds.</p>
+                    <p>Shikari is optimized for speed with template caching, parallel processing, and async operations. Generating 200 detection queries for a threat group like APT29 takes approximately 30 seconds with caching enabled (compared to 4-5 minutes without optimization). First-time runs take about 45 seconds while subsequent cached runs complete in about 5 seconds.</p>
                 </div>
             </details>
 
             <details class="faq-item">
-                <summary class="faq-question">What output formats does Archer generate?</summary>
+                <summary class="faq-question">What output formats does Shikari generate?</summary>
                 <div class="faq-answer">
-                    <p>Archer generates multiple output formats:</p>
+                    <p>Shikari generates multiple output formats:</p>
                     <ul>
                         <li><strong>YAML files:</strong> Individual detection rules in standardized YAML format</li>
                         <li><strong>Vendor queries:</strong> Splunk SPL and Microsoft KQL queries</li>
@@ -967,7 +1018,7 @@
             <details class="faq-item">
                 <summary class="faq-question">How do I customize mapping files for my environment?</summary>
                 <div class="faq-answer">
-                    <p>Archer uses three mapping files to control detection generation for different environments:</p>
+                    <p>Shikari uses three mapping files to control detection generation for different environments:</p>
                     <ul>
                         <li><strong>indicatorMapping.json:</strong> Maps indicator types (cmd, file, ip, domain, etc.) to data sources and fields</li>
                         <li><strong>platformMapping.json:</strong> Defines which platforms (Windows, Linux, AWS, Azure) are supported by each data source</li>
@@ -980,14 +1031,14 @@
                         <li>Custom EDR solutions: Add new vendor mappings for CrowdStrike, Carbon Black, SentinelOne, etc.</li>
                         <li>Disabling unused sources: Remove or comment out data sources you don't have</li>
                     </ul>
-                    <p><strong>Best practices:</strong> Always backup mapping files before modifying, validate JSON syntax, test with small groups first, and document your changes. See the <a href="https://github.com/cmdaltr/archer/blob/main/docs/guides/MAPPING_FILES_GUIDE.md" target="_blank" style="color: #8B0000; text-decoration: underline;">Mapping Files Configuration Guide</a> for detailed instructions and examples.</p>
+                    <p><strong>Best practices:</strong> Always backup mapping files before modifying, validate JSON syntax, test with small groups first, and document your changes. See the <a href="https://github.com/cmdaltr/shikari/blob/main/docs/guides/MAPPING_FILES_GUIDE.md" target="_blank" style="color: #8B0000; text-decoration: underline;">Mapping Files Configuration Guide</a> for detailed instructions and examples.</p>
                 </div>
             </details>
 
             <details class="faq-item">
-                <summary class="faq-question">What data sources does Archer pull from?</summary>
+                <summary class="faq-question">What data sources does Shikari pull from?</summary>
                 <div class="faq-answer">
-                    <p>Archer pulls from multiple authoritative sources:</p>
+                    <p>Shikari pulls from multiple authoritative sources:</p>
                     <ul>
                         <li><strong>MITRE ATT&CK:</strong> Official enterprise-attack.json for technique mappings</li>
                         <li><strong>Community repositories:</strong> Elastic detection rules, Splunk security content</li>
@@ -998,14 +1049,14 @@
             </details>
 
             <details class="faq-item">
-                <summary class="faq-question">Is Archer suitable for production use?</summary>
+                <summary class="faq-question">Is Shikari suitable for production use?</summary>
                 <div class="faq-answer">
-                    <p>Archer generates production-quality detection queries, but as with any automated tool, you should review and test all detections in your environment before deploying to production. Different organizations have different baselines, and tuning is essential to reduce false positives and ensure the detections work correctly with your specific data sources and infrastructure.</p>
+                    <p>Shikari generates production-quality detection queries, but as with any automated tool, you should review and test all detections in your environment before deploying to production. Different organizations have different baselines, and tuning is essential to reduce false positives and ensure the detections work correctly with your specific data sources and infrastructure.</p>
                 </div>
             </details>
 
             <details class="faq-item">
-                <summary class="faq-question">How do I get started with Archer?</summary>
+                <summary class="faq-question">How do I get started with Shikari?</summary>
                 <div class="faq-answer">
                     <p>Getting started is easy:</p>
                     <ol>
@@ -1019,16 +1070,16 @@
             </details>
 
             <details class="faq-item">
-                <summary class="faq-question">Does Archer work offline?</summary>
+                <summary class="faq-question">Does Shikari work offline?</summary>
                 <div class="faq-answer">
-                    <p>Archer requires internet access for the initial setup to download MITRE ATT&CK data and OSINT repositories. Once cached, it can generate detections offline without requiring external API calls (unless you enable AI enhancement). All OSINT sources are cloned locally, so Archer doesn't rely on external APIs for core functionality.</p>
+                    <p>Shikari requires internet access for the initial setup to download MITRE ATT&CK data and OSINT repositories. Once cached, it can generate detections offline without requiring external API calls (unless you enable AI enhancement). All OSINT sources are cloned locally, so Shikari doesn't rely on external APIs for core functionality.</p>
                 </div>
             </details>
 
             <details class="faq-item">
-                <summary class="faq-question">How does Archer handle software (malware/tools) in threat groups?</summary>
+                <summary class="faq-question">How does Shikari handle software (malware/tools) in threat groups?</summary>
                 <div class="faq-answer">
-                    <p>Archer uses <strong>software-to-technique traversal</strong> to extract actionable indicators from malware and tools. Instead of just detecting software names like "BlackCat" or "Mimikatz", Archer automatically:</p>
+                    <p>Shikari uses <strong>software-to-technique traversal</strong> to extract actionable indicators from malware and tools. Instead of just detecting software names like "BlackCat" or "Mimikatz", Shikari automatically:</p>
                     <ol>
                         <li>Identifies which techniques the software employs (e.g., BlackCat uses T1083 File Discovery, T1486 Data Encryption)</li>
                         <li>Extracts technical indicators from those techniques (e.g., <code>net use</code>, <code>fsutil behavior set</code>)</li>
@@ -1047,7 +1098,7 @@
             <details class="faq-item">
                 <summary class="faq-question">How are correlations scored and prioritized?</summary>
                 <div class="faq-answer">
-                    <p>Archer scores correlations on a 140-point scale based on six key factors:</p>
+                    <p>Shikari scores correlations on a 140-point scale based on six key factors:</p>
                     <ul>
                         <li><strong>Technique Criticality (30 points):</strong> High-impact techniques like credential dumping, lateral movement, and data exfiltration score higher</li>
                         <li><strong>Tactic Priority (20 points):</strong> Correlations involving critical tactics (Credential Access, Lateral Movement, Exfiltration, Impact) score significantly higher than lower-priority tactics (Execution, Discovery)</li>
@@ -1069,9 +1120,9 @@
             </details>
 
             <details class="faq-item">
-                <summary class="faq-question">How does Archer handle multi-cloud environments (AWS/Azure/GCP)?</summary>
+                <summary class="faq-question">How does Shikari handle multi-cloud environments (AWS/Azure/GCP)?</summary>
                 <div class="faq-answer">
-                    <p>Archer includes sophisticated <strong>cloud platform separation</strong> to prevent mixing AWS, Azure, and GCP indicators incorrectly:</p>
+                    <p>Shikari includes sophisticated <strong>cloud platform separation</strong> to prevent mixing AWS, Azure, and GCP indicators incorrectly:</p>
                     <ul>
                         <li><strong>Cloud-native logs:</strong> AWS CloudTrail, Azure Activity Log, and GCP Audit logs are only used for their respective cloud platforms</li>
                         <li><strong>Endpoint detection:</strong> Endpoint logs (Windows, Linux, Defender XDR tables) can detect cloud CLI tools running on endpoints (e.g., <code>aws</code>, <code>az</code>, <code>gcloud</code> commands)</li>
@@ -1085,7 +1136,7 @@
             <details class="faq-item">
                 <summary class="faq-question">How do correlation filters work?</summary>
                 <div class="faq-answer">
-                    <p>Archer uses multiple intelligent filters to ensure only high-quality correlations are generated:</p>
+                    <p>Shikari uses multiple intelligent filters to ensure only high-quality correlations are generated:</p>
                     <ul>
                         <li><strong>Attack Progression Filter:</strong> Only correlates techniques that follow logical kill chain sequences (e.g., Initial Access → Execution → Privilege Escalation)</li>
                         <li><strong>Semantic Overlap Filters:</strong> Removes near-duplicates (>75% overlap) and completely unrelated pairs (<20% overlap)</li>
@@ -1150,7 +1201,7 @@
             <details class="faq-item">
                 <summary class="faq-question">How can I test which correlation settings work best for me?</summary>
                 <div class="faq-answer">
-                    <p>Archer includes a test script to evaluate different filter combinations:</p>
+                    <p>Shikari includes a test script to evaluate different filter combinations:</p>
 
                     <pre><code>python test_correlation_filters.py "Scattered Spider"</code></pre>
 
@@ -1169,12 +1220,12 @@
             </details>
 
             <details class="faq-item">
-                <summary class="faq-question">What are the various approaches to building correlations available in Archer and how do I invoke each one?</summary>
+                <summary class="faq-question">What are the various approaches to building correlations available in Shikari and how do I invoke each one?</summary>
                 <div class="faq-answer">
-                    <p>Archer uses <strong>one correlation engine</strong> that automatically runs after detection generation. However, you can influence the quality of correlations by choosing different <strong>detection generation modes</strong>:</p>
+                    <p>Shikari uses <strong>one correlation engine</strong> that automatically runs after detection generation. However, you can influence the quality of correlations by choosing different <strong>detection generation modes</strong>:</p>
 
                     <h4>The Correlation Engine (Always Enabled)</h4>
-                    <p>Archer's correlation engine uses a <strong>rule-based heuristic scoring system</strong> with 6 factors (0-140 points) to intelligently pair detections within each vendor. This engine:</p>
+                    <p>Shikari's correlation engine uses a <strong>rule-based heuristic scoring system</strong> with 6 factors (0-140 points) to intelligently pair detections within each vendor. This engine:</p>
                     <ul>
                         <li>Automatically runs after detection generation completes</li>
                         <li>Cannot be disabled (always generates correlations)</li>
@@ -1329,8 +1380,8 @@
 
             <h3 id="arch-how-it-fits-together">How it fits together</h3>
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                Archer turns MITRE ATT&amp;CK threat intelligence into detections for Microsoft Defender XDR, Google SecOps,
-                Splunk and Elastic. The same pipeline runs behind every interface — the web UI, the <code>archer-cli</code>
+                Shikari turns MITRE ATT&amp;CK threat intelligence into detections for Microsoft Defender XDR, Google SecOps,
+                Splunk and Elastic. The same pipeline runs behind every interface — the web UI, the <code>shikari-cli</code>
                 supervisor, the console and the MCP server — and it works without AI by default. A model is optional, and off
                 unless you turn it on.
             </p>
@@ -1342,7 +1393,7 @@
                             <a class="diagram-overlay" href="{{ url_for('static', path='diagrams/architecture.html') }}" target="_blank" rel="noopener" aria-label="Open the architecture diagram full size"></a>
                             <span class="diagram-badge">&#8599; full size</span>
                             <iframe id="arch-frame" src="{{ url_for('static', path='diagrams/architecture.html') }}?v={{ request.app.state.asset_version }}"
-                                    title="Archer architecture — web UI and archer-cli" loading="lazy" scrolling="no"
+                                    title="Shikari architecture — web UI and shikari-cli" loading="lazy" scrolling="no"
                                     style="width:100%;border:1px solid var(--border-color);border-radius:10px;background:transparent;display:block;pointer-events:none"></iframe>
                         </div>
                     </div>
@@ -1351,22 +1402,22 @@
                             <a class="diagram-overlay" href="{{ url_for('static', path='diagrams/pipeline.html') }}" target="_blank" rel="noopener" aria-label="Open the generation-flow diagram full size"></a>
                             <span class="diagram-badge">&#8599; full size</span>
                             <iframe class="diagram-thumb" src="{{ url_for('static', path='diagrams/pipeline.html') }}?v={{ request.app.state.asset_version }}"
-                                    title="Archer generation flow" loading="lazy" scrolling="no" style="pointer-events:none"></iframe>
+                                    title="Shikari generation flow" loading="lazy" scrolling="no" style="pointer-events:none"></iframe>
                         </div>
                         <div class="diagram-caption">The <strong>generation flow</strong> — input &rarr; MITRESaw &rarr; queries &rarr; correlation &rarr; artefacts.</div>
                     </div>
                     <div class="diagram-cell">
                         <div class="diagram-click">
-                            <a class="diagram-overlay" href="{{ url_for('static', path='diagrams/machine.html') }}" target="_blank" rel="noopener" aria-label="Open the Archer machine diagram full size"></a>
+                            <a class="diagram-overlay" href="{{ url_for('static', path='diagrams/machine.html') }}" target="_blank" rel="noopener" aria-label="Open the Shikari machine diagram full size"></a>
                             <span class="diagram-badge">&#8599; open &amp; interact</span>
                             <iframe class="diagram-thumb" src="{{ url_for('static', path='diagrams/machine.html') }}?v={{ request.app.state.asset_version }}"
-                                    title="The Archer machine" loading="lazy" scrolling="no" style="pointer-events:none"></iframe>
+                                    title="The Shikari machine" loading="lazy" scrolling="no" style="pointer-events:none"></iframe>
                         </div>
-                        <div class="diagram-caption">The <strong>Archer machine</strong> — interactive 3D runtime (drag to orbit, click a part).</div>
+                        <div class="diagram-caption">The <strong>Shikari machine</strong> — interactive 3D runtime (drag to orbit, click a part).</div>
                     </div>
                 </div>
                 <div class="diagram-caption" style="text-align:center; margin-top:14px">
-                    The web UI (top) and <code>archer-cli</code> (bottom) — the same pipeline. Click the diagram to open it
+                    The web UI (top) and <code>shikari-cli</code> (bottom) — the same pipeline. Click the diagram to open it
                     <a href="{{ url_for('static', path='diagrams/architecture.html') }}" target="_blank" rel="noopener">full size</a>.
                 </div>
             </div>
@@ -1383,14 +1434,14 @@
                     <li><strong>Correlation engine</strong> — chains detections across tactics on one host or account within a time window.</li>
                     <li><strong>IOC sweeps</strong> — a branch off a report or CVE: indicator sweeps with an expiry.</li>
                 </ol>
-                <p>Optional AI sits alongside the pipeline, never in its critical path: Ask Archer and the agents, driven by a
+                <p>Optional AI sits alongside the pipeline, never in its critical path: Ask Shikari and the agents, driven by a
                 local Ollama model or a cloud provider only when you enable them.</p>
             </div>
 
             <hr style="border: none; border-top: 1px solid var(--border); margin: 2.5em 0;">
             <h3 id="arch-the-same-pipeline-from-a-terminal">The same pipeline from a terminal</h3>
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                <code>archer-cli</code> is the supervisor — <code>start</code>, <code>status</code>, <code>restart</code>,
+                <code>shikari-cli</code> is the supervisor — <code>start</code>, <code>status</code>, <code>restart</code>,
                 <code>mcp</code>, <code>console</code> — and the console and offline modes run the identical stages without a
                 browser. A few surfaces are web-only (the saved Library, the Coverage matrix and Flows); everything else is
                 reachable from the command line.
@@ -1399,14 +1450,14 @@
             <div class="workflow-step">
                 <h4>Without a server at all</h4>
                 <pre><code># The pipeline with no server running
-archer-cli offline generate "APT29"      # detections for a threat group
-archer-cli offline hunt T1003.001        # one technique, by name or ID
-archer-cli offline correlate "APT29"     # correlation rules
+shikari-cli offline generate "APT29"      # detections for a threat group
+shikari-cli offline hunt T1003.001        # one technique, by name or ID
+shikari-cli offline correlate "APT29"     # correlation rules
 
 # The supervisor and interfaces
-archer-cli start | status | restart      # run the server
-archer-cli console                       # the modules interactively
-archer-cli mcp                           # Archer's tools for any MCP client</code></pre>
+shikari-cli start | status | restart      # run the server
+shikari-cli console                       # the modules interactively
+shikari-cli mcp                           # Shikari's tools for any MCP client</code></pre>
             </div>
 
             <div class="workflow-step">
@@ -1431,7 +1482,7 @@ archer-cli mcp                           # Archer's tools for any MCP client</co
 
 
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                This section details Archer's complete detection generation workflow, from initial input through final output.
+                This section details Shikari's complete detection generation workflow, from initial input through final output.
                 It covers the six-stage process including threat intelligence lookup, machine learning-based query generation,
                 correlation analysis, OSINT enhancement, validation, and attack flow visualization.
             </p>
@@ -1727,14 +1778,14 @@ data/APT29/
             <nav class="tab-toc" aria-label="On this page"><span class="toc-label">On this page</span><a href="#atta-example-flows">Example flows</a><a href="#atta-types-of-attack-flows">Types of Attack Flows</a><a href="#atta-attack-flow-schema">Attack Flow Schema</a></nav>
 
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                Archer generates <strong>attack flow diagrams</strong> following the
+                Shikari generates <strong>attack flow diagrams</strong> following the
                 <a href="https://github.com/center-for-threat-informed-defense/attack-flow" target="_blank" style="color: #C53030;">
                 MITRE ATT&CK Flow specification</a>. These visualizations show technique sequences and attack paths.
             </p>
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
                 <strong>ATT&amp;CK isn't linear.</strong> Its tactics are an adversary's goals, not steps in a fixed order:
                 a group can reach Discovery before Execution, return to Credential Access after Lateral Movement, or skip tactics altogether.
-                Archer lays tactics out left to right in ATT&amp;CK's usual order for reading, but never treats that order as the sequence a group followed.
+                Shikari lays tactics out left to right in ATT&amp;CK's usual order for reading, but never treats that order as the sequence a group followed.
                 The order that matters is the one the correlation links show: one technique seen before another on the same host.
             </p>
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
@@ -1742,7 +1793,7 @@ data/APT29/
                 rearrange and link them), the <a href="https://www.lockheedmartin.com/en-us/capabilities/cyber/cyber-kill-chain.html" target="_blank" style="color: #C53030;">Cyber Kill Chain</a>
                 (Lockheed Martin) and the <a href="https://cloud.google.com/security/resources/insights/targeted-attack-lifecycle" target="_blank" style="color: #C53030;">Targeted Attack Lifecycle</a>
                 (Mandiant). A technique goes by its tactic, or by the technique itself where that says more, such as phishing as Delivery.
-                The mapping is Archer's own (<code>archer/visualization/frameworks.py</code>), since neither model has an official ATT&amp;CK crosswalk.
+                The mapping is Shikari's own (<code>shikari/visualization/frameworks.py</code>), since neither model has an official ATT&amp;CK crosswalk.
             </p>
             
 
@@ -1856,7 +1907,7 @@ data/APT29/
                 <h4>The noisy signal, as a tool</h4>
                 <p>The same noise check is a tool, <code>noisy_indicators</code>, for the agents and any MCP client. The
                 <strong>Library audit</strong> agent uses it to flag weak detections and <strong>Detection tuning</strong> to
-                tighten them; Ask Archer has it too.</p>
+                tighten them; Ask Shikari has it too.</p>
             </div>
 
             <div class="workflow-step">
@@ -1878,12 +1929,12 @@ data/APT29/
             </div>
                         <!-- AI and Agents Tab -->
             <div class="tab-pane" id="tab-ai-agents">
-            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">How Archer uses AI &mdash; the optional generation modes, what a model adds over the heuristics, and the agents that drive the tools. AI is opt-in and off by default.</p>
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">How Shikari uses AI &mdash; the optional generation modes, what a model adds over the heuristics, and the agents that drive the tools. AI is opt-in and off by default.</p>
             <nav class="tab-toc" aria-label="On this page"><span class="toc-label">On this page</span><a href="#aiag-generation-modes">Generation Modes</a><a href="#aiag-what-ai-enhances">What AI Enhances</a><a href="#aiag-models-used">Models Used</a><a href="#aiag-ai-vs-non-ai-performance">AI vs Non-AI Performance</a><a href="#aiag-agents">Agents</a></nav>
 
 
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                Archer supports <strong>5 generation modes</strong> ranging from fast heuristics to advanced AI models.
+                Shikari supports <strong>5 generation modes</strong> ranging from fast heuristics to advanced AI models.
                 Configure via <code>GENAI_MODE</code> environment variable or
                 <a href="http://localhost:8000/profile" target="_blank" style="color: #C53030;">Profile</a>.
             </p>
@@ -1935,7 +1986,7 @@ data/APT29/
             </table>
 
             <div class="callout callout-info">
-                <strong>Mode Selection:</strong> Archer automatically selects the best available mode. If <code>OPENAI_API_KEY</code>
+                <strong>Mode Selection:</strong> Shikari automatically selects the best available mode. If <code>OPENAI_API_KEY</code>
                 is set, it defaults to <strong>ai_generators</strong>. Otherwise, it gracefully falls back to <strong>heuristic</strong> mode.
             </div>
 
@@ -2015,7 +2066,7 @@ AI recognizes this as:
 
             <div class="callout callout-success">
                 <strong>✅ Privacy Note:</strong> OpenAI API does not retain data sent via API. You can disable AI
-                enhancement entirely and Archer will fall back to high-quality regex-based extraction.
+                enhancement entirely and Shikari will fall back to high-quality regex-based extraction.
             </div>
 
             <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
@@ -2057,7 +2108,7 @@ AI recognizes this as:
             <h3 id="aiag-agents">Agents</h3>
             <p style="line-height: 1.6;">
                 An agent is a model in a loop with tools: it picks a tool, reads the result, and picks again until it can
-                answer. The model never runs anything itself; Archer runs the tool it asks for and sends the result back.
+                answer. The model never runs anything itself; Shikari runs the tool it asks for and sends the result back.
                 Tools that change something (hunts, saving a query) wait for your approval.
             </p>
             <table class="library-table">
@@ -2065,7 +2116,7 @@ AI recognizes this as:
                 <tbody>
                     <tr><td><strong>Detection repair</strong></td><td>Check, fix, check again</td>
                         <td>Static checks over a run's queries (Defender XDR schema, SecOps UDM search structure, SPL structure); fixes what fails, re-checks, saves with a reason. A query that still has errors can't be saved.</td></tr>
-                    <tr><td><strong>Ask Archer (agent)</strong></td><td>Look it up</td>
+                    <tr><td><strong>Ask Shikari (agent)</strong></td><td>Look it up</td>
                         <td>Answers from coverage, results, ATT&amp;CK and the library instead of memory; checks any query it writes; can start hunts.</td></tr>
                     <tr><td><strong>Intel triage</strong></td><td>Plan across steps</td>
                         <td>Report → techniques and IOCs → coverage gaps → hunt → briefing.</td></tr>
@@ -2073,7 +2124,7 @@ AI recognizes this as:
             </table>
             <p style="line-height: 1.6;">
                 Run them from the <a href="/agents" style="color: #C53030;">Agents</a> page, the console
-                (<code>use agent/repair</code>) or any MCP client: <code>archer-cli mcp</code> exposes the same tools and the
+                (<code>use agent/repair</code>) or any MCP client: <code>shikari-cli mcp</code> exposes the same tools and the
                 agents' prompts to Claude Code, Claude Desktop or your own agent. <code>examples/agents/minimal_agent.py</code>
                 is a complete agent in about 100 lines. Full guide: <code>docs/agents/README.md</code>.
             </p>
@@ -2081,7 +2132,7 @@ AI recognizes this as:
 <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
 
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                An agent is a model in a loop with Archer's tools: it picks a tool, reads the result and picks again until it
+                An agent is a model in a loop with Shikari's tools: it picks a tool, reads the result and picks again until it
                 can answer. Every step is shown as it happens and kept, so you can read back what it did. Agents run on any
                 provider in your profile that can call tools; Claude is the most reliable at multi-step tool use, and small
                 local models often stop early. Anything that changes something waits for your approval — read-only tools never do.
@@ -2093,7 +2144,7 @@ AI recognizes this as:
                 </thead>
                 <tbody>
                     <tr><td><strong>Detection repair</strong></td><td>A run</td><td>Runs the static and precision checks over the run's queries, fixes only what they flag, re-checks each fix and saves it with a reason. A query that still fails can't be saved.</td></tr>
-                    <tr><td><strong>Ask Archer</strong></td><td>A question</td><td>Answers from your Library, coverage, ATT&amp;CK and hunts — looking things up with tools rather than from memory.</td></tr>
+                    <tr><td><strong>Ask Shikari</strong></td><td>A question</td><td>Answers from your Library, coverage, ATT&amp;CK and hunts — looking things up with tools rather than from memory.</td></tr>
                     <tr><td><strong>Intel triage</strong></td><td>A report</td><td>Finds your coverage gaps for it, suggests and runs hunts, and writes a briefing.</td></tr>
                     <tr><td><strong>Coverage sweep</strong></td><td>A group</td><td>Lists the group's undetected techniques, hunts the gaps, and reports what closed and what can't be.</td></tr>
                     <tr><td><strong>Library audit</strong></td><td>Optional focus</td><td>Reviews the saved library for duplicates and overlaps, and flags detections resting on noisy indicators. Reports only.</td></tr>
@@ -2104,9 +2155,9 @@ AI recognizes this as:
             <div class="workflow-step">
                 <h4>Console and MCP</h4>
                 <p>The same six agents are in the console (<code>agent/repair</code> … <code>agent/tune</code>) and over MCP:
-                <code>archer-cli mcp</code> gives any MCP client — Claude Code, Claude Desktop or your own agent — Archer's 21
+                <code>shikari-cli mcp</code> gives any MCP client — Claude Code, Claude Desktop or your own agent — Shikari's 21
                 tools and the six agents' prompts, with the changing tools marked so the client asks first. It signs in to a
-                running Archer as you, so hunts use your AI settings and your keys stay on the server.</p>
+                running Shikari as you, so hunts use your AI settings and your keys stay on the server.</p>
             </div>
             
             </div>
@@ -2114,12 +2165,12 @@ AI recognizes this as:
 
             <!-- Intel and Profile Tab -->
             <div class="tab-pane" id="tab-intel-profile">
-            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Where intelligence comes into Archer before it becomes detections, and how a company profile seeds a hunt.</p>
+            <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Where intelligence comes into Shikari before it becomes detections, and how a company profile seeds a hunt.</p>
             <nav class="tab-toc" aria-label="On this page"><span class="toc-label">On this page</span><a href="#intp-intel">Intel</a><a href="#intp-company-profiling">Company profiling</a></nav>
             <h3 id="intp-intel">Intel</h3>
 
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                The Intel menu is where threat intelligence comes into Archer before it becomes detections — the weekly feed,
+                The Intel menu is where threat intelligence comes into Shikari before it becomes detections — the weekly feed,
                 the companies you've profiled, and the report and actor research that seeds a hunt.
             </p>
 
@@ -2136,11 +2187,11 @@ AI recognizes this as:
                 email or CVE — and its common defanged forms — across the reputable vendor, CERT/government, news and aggregator
                 sources from the last 7 days, filterable by tier and cached for the window. No AI.</p>
                 <p><strong>Import / export</strong> takes intelligence in the other direction: STIX bundles, TAXII collections and
-                MISP events arrive as often as blog posts, so Archer takes those as a hunt input too — by file upload, pasted JSON,
+                MISP events arrive as often as blog posts, so Shikari takes those as a hunt input too — by file upload, pasted JSON,
                 a polled TAXII collection, or a pull from a MISP instance (<code>/events/restSearch</code> with an API key, used for
                 that request only). Attack-patterns become techniques, indicator patterns and observables become IOCs, and an
                 intrusion-set names the group — the same review-then-generate path as a report. A finished run exports the other
-                way, as a STIX 2.1 bundle (detections carried as <code>x-archer-detection</code> objects) or a MISP event
+                way, as a STIX 2.1 bundle (detections carried as <code>x-shikari-detection</code> objects) or a MISP event
                 (techniques as ATT&amp;CK galaxy clusters, IOCs as attributes). Both round-trip. No AI.</p>
             </div>
 
@@ -2160,7 +2211,7 @@ AI recognizes this as:
             <h3 id="intp-company-profiling">Company profiling</h3>
 
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                Profiling starts from a company instead of a threat: enter a domain and Archer works out who is likely to target
+                Profiling starts from a company instead of a threat: enter a domain and Shikari works out who is likely to target
                 it, then generates detections for the groups you choose. It reads Wikidata, the company's homepage and OSINT to
                 establish its sector, where it operates and where its site is hosted, and fingerprints the technology stack for
                 relevant CVEs — all in the background, with a progress page of its seven stages.
@@ -2217,19 +2268,13 @@ AI recognizes this as:
                     </a>
                 </div>
 
-                <!-- Quote -->
-                <div class="quote">
-                    <p>
-                        "Even if you can't see something, it doesn't mean it isn't there"<br>
-                        <span>— Archer, Small Soldiers</span>
-                    </p>
-                </div>
 
                 <!-- Spacer for balance -->
                 <div class="spacer"></div>
             </div>
 
             <!-- Timestamp and Attribution -->
+            <div class="footer-gloss"><span class="fg-word">shi·ka·ri</span><span class="fg-ipa">\shi-ˈkär-ē\</span><span class="fg-def">a professional big-game hunter or guide</span></div>
             <div class="timestamp">
                 <br>
                 <span style="font-size: 0.85em; opacity: 0.7; margin-top: 8px; display: block;">

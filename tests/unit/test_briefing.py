@@ -1,6 +1,6 @@
 """Threat briefing without AI: coverage, weakest stage and gaps from a run's attack flow."""
 
-from archer.build import briefing
+from shikari.build import briefing
 
 
 def _node(tid, detected, attributed=True, degree=0, name=None):
@@ -23,7 +23,7 @@ def test_coverage_weakest_tactic_and_gaps_by_action_then_severity():
     assert [g["id"] for g in b["gaps"]] == ["T1027", "T1070", "T1190"]
     assert [g["action"] for g in b["gaps"]] == ["build", "build", "research"]
     assert b["by_action"] == {"build": 2, "source": 0, "research": 1}
-    assert b["summary"].startswith("Archer has detections for 4 of 7 attributed techniques (57%) across 3 tactics.")
+    assert b["summary"].startswith("Shikari has detections for 4 of 7 attributed techniques (57%) across 3 tactics.")
     assert "Defense Evasion: 1 of 3 detected" in b["summary"]
 
 

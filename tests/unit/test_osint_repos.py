@@ -4,7 +4,7 @@ import tarfile
 
 import pytest
 
-from archer.build import osint_repos
+from shikari.build import osint_repos
 
 
 def _tarball(files):

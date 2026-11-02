@@ -1,6 +1,6 @@
 # SIEM data sources
 
-A detection can only fire if the estate ingests the data it reads. An MDE→SecOps feed, for instance, might carry file and registry events but not process launches, so a process-based detection would sit in the SIEM and never trigger. **Profile → Config → SIEM data sources** records what the estate actually ingests, so Archer flags the detections that can't fire and keeps them out of what you deploy. No AI is involved.
+A detection can only fire if the estate ingests the data it reads. An MDE→SecOps feed, for instance, might carry file and registry events but not process launches, so a process-based detection would sit in the SIEM and never trigger. **Profile → Config → SIEM data sources** records what the estate actually ingests, so Shikari flags the detections that can't fire and keeps them out of what you deploy. No AI is involved.
 
 ## What varies, and what doesn't
 

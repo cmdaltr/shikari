@@ -14,7 +14,7 @@ The cards under the map list the countries in each tier or confidence level, or 
 
 ## Attribution confidence
 
-Archer reads each group's ATT&CK description for attribution wording. No AI is used.
+Shikari reads each group's ATT&CK description for attribution wording. No AI is used.
 
 | Level | Wording |
 |---|---|

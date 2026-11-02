@@ -1,50 +1,50 @@
 <div align="center">
-<a href="https://github.com/cmdaltr/archer">
-<img src="static/images/archer_banner.png" alt="Archer - Automated Multi-Vendor Threat HUNTING & DETECTION SUITE" width="600px" height="600px">
+<a href="https://github.com/cmdaltr/shikari">
+<img src="static/images/shikari/shikari-hero-light.png" alt="Shikari - Automated Multi-Vendor Threat Hunting & Detection Suite" width="620px">
 </a>
 </div>
 
 <br>
 
-Archer automates threat hunting and detection engineering from MITRE ATT&CK. Give it a threat group, CVE or threat report and it generates, validates and correlates detections for Google SecOps (YARA-L), Microsoft Defender (KQL) and Elastic (ES\|QL), with coverage mapping, attack flows and MITRESaw procedure intel. AI is optional.
+Shikari automates threat hunting and detection engineering from MITRE ATT&CK. Give it a threat group, CVE or threat report and it generates, validates and correlates detections for Google SecOps (YARA-L), Microsoft Defender (KQL) and Elastic (ES\|QL), with coverage mapping, attack flows and MITRESaw procedure intel. AI is optional.
 
-**🧭 How Archer compares to other detection tooling: [COMPARISON.md](COMPARISON.md)**
+**🧭 How Shikari compares to other detection tooling: [COMPARISON.md](COMPARISON.md)**
 
 ## 🛠️ Setup and Usage
 
-**📘 User guide, one page per part of Archer: [docs/guide](docs/guide/README.md)**
+**📘 User guide, one page per part of Shikari: [docs/guide](docs/guide/README.md)**
 
 **📖 Setup instructions: [GETTING_STARTED.md](GETTING_STARTED.md)**
 
 **⌨️ Usage instructions and guidance: [USAGE.md](docs/USAGE.md)**
 
-### Running Archer
+### Running Shikari
 
 ```bash
-./archer-cli install  # once: links `archer-cli` into ~/bin
-archer-cli start      # background; restarts Archer (and Ollama) if they crash
-archer-cli status
-archer-cli logs -f
-archer-cli restart
-archer-cli stop
+./shikari-cli install  # once: links `shikari-cli` into ~/bin
+shikari-cli start      # background; restarts Shikari (and Ollama) if they crash
+shikari-cli status
+shikari-cli logs -f
+shikari-cli restart
+shikari-cli stop
 ```
 
-`archer-cli start` runs a small supervisor (`archer/service.py`) that starts uvicorn and, if Ollama is installed but not running, `ollama serve`. If either dies, it's started again (1s, then backing off to 60s; it gives up after 6 failed starts in a row, e.g. a port clash). Options are remembered: `--port`, `--no-reload`, `--no-ollama`, `--ollama-models DIR` (an external volume that isn't mounted falls back to Ollama's default folder rather than creating an empty one). `archer-cli serve` runs the server in the foreground without the supervisor; `archer-cli docker ...` is `docker compose` with the project's compose file. The same command has the console (`archer-cli console`), a dry-run preview (`archer-cli preview <group>`), the MCP server (`archer-cli mcp`) and the pipeline without the server (`archer-cli offline generate|correlate|hunt`).
+`shikari-cli start` runs a small supervisor (`shikari/service.py`) that starts uvicorn and, if Ollama is installed but not running, `ollama serve`. If either dies, it's started again (1s, then backing off to 60s; it gives up after 6 failed starts in a row, e.g. a port clash). Options are remembered: `--port`, `--no-reload`, `--no-ollama`, `--ollama-models DIR` (an external volume that isn't mounted falls back to Ollama's default folder rather than creating an empty one). `shikari-cli serve` runs the server in the foreground without the supervisor; `shikari-cli docker ...` is `docker compose` with the project's compose file. The same command has the console (`shikari-cli console`), a dry-run preview (`shikari-cli preview <group>`), the MCP server (`shikari-cli mcp`) and the pipeline without the server (`shikari-cli offline generate|correlate|hunt`).
 
 ### Desktop App
 
-Installers for macOS, Windows and Linux are on the Releases page: they bundle everything, with no Python or checkout needed. Each connects to your organisation's Archer server (users type its address, or IT sets it by MDM or Group Policy) or runs Archer on that computer. See [desktop/README.md](desktop/README.md). From a checkout instead:
+Installers for macOS, Windows and Linux are on the Releases page: they bundle everything, with no Python or checkout needed. Each connects to your organisation's Shikari server (users type its address, or IT sets it by MDM or Group Policy) or runs Shikari on that computer. See [desktop/README.md](desktop/README.md). From a checkout instead:
 
 ```bash
 pip install -e '.[desktop]'      # pywebview, for a native window
-archer-cli app install --dock    # macOS: ~/Applications/Archer.app, kept in the Dock
-archer-cli app install           # Linux: application menu entry (~/.local/share/applications)
-archer-cli app uninstall
+shikari-cli app install --dock    # macOS: ~/Applications/Shikari.app, kept in the Dock
+shikari-cli app install           # Linux: application menu entry (~/.local/share/applications)
+shikari-cli app uninstall
 ```
 
-On Windows, from the repository: `.venv\Scripts\python archer\desktop.py install` adds Start menu and desktop shortcuts (pin to the taskbar from the Start menu).
+On Windows, from the repository: `.venv\Scripts\python shikari\desktop.py install` adds Start menu and desktop shortcuts (pin to the taskbar from the Start menu).
 
-The app launches this checkout's `.venv`, so it updates with `git pull`; it isn't a frozen copy. Opening it starts the server if it isn't running and shows Archer in its own window. Quitting stops a server the app started and leaves one from `archer-cli start` alone. Without pywebview it uses a Chrome/Edge/Brave app window, or the default browser. On Linux the native window also needs GTK (`python3-gi gir1.2-webkit2-4.1`) or Qt. If the repository sits in OneDrive on macOS, the first launch asks for permission to access files in OneDrive; allow it. Icons are built from `archer.png` by `desktop/make_icons.py`.
+The app launches this checkout's `.venv`, so it updates with `git pull`; it isn't a frozen copy. Opening it starts the server if it isn't running and shows Shikari in its own window. Quitting stops a server the app started and leaves one from `shikari-cli start` alone. Without pywebview it uses a Chrome/Edge/Brave app window, or the default browser. On Linux the native window also needs GTK (`python3-gi gir1.2-webkit2-4.1`) or Qt. If the repository sits in OneDrive on macOS, the first launch asks for permission to access files in OneDrive; allow it. Icons are built from `shikari.png` by `desktop/make_icons.py`.
 
 ---
 <br>
@@ -70,27 +70,27 @@ The app launches this checkout's `.venv`, so it updates with `git pull`; it isn'
 - 🛡️ **Threat Briefing** - ATT&CK prioritisation grounded in real MITRE data and your detection coverage gaps
 - 🧹 **IOC sweeps** - Report and CVE indicators as sweep queries: a known-good list, files in system folders matched only when written, and IPs and domains that expire after 90 days ([details](docs/guide/03-analyse.md#what-the-ioc-sweep-leaves-out-or-narrows))
 - 🔬 **Research Tab** - Actor technique consolidation with keyword/country filtering, tactic filtering, and professional XLSX export
-- 💬 **Ask Archer** - Conversational Q&A panel for ATT&CK questions and SIEM query generation
+- 💬 **Ask Shikari** - Conversational Q&A panel for ATT&CK questions and SIEM query generation
 - 🌐 **Web UI & CLI** - VirusTotal-inspired tabbed interface plus command-line tools
-- 🖥️ **Interactive Console (`archer-cli console`)** - Metasploit-style interactive shell with module selection, options, tab-completion
-- 🤖 **Agents** - Detection repair, Ask Archer with tools, and intel triage: a model in a loop with Archer's tools, with approval for anything that changes something ([docs](docs/agents/README.md))
-- 🔌 **MCP Server (`archer-cli mcp`)** - Archer's tools and agent prompts for Claude Code, Claude Desktop or any MCP client
+- 🖥️ **Interactive Console (`shikari-cli console`)** - Metasploit-style interactive shell with module selection, options, tab-completion
+- 🤖 **Agents** - Detection repair, Ask Shikari with tools, and intel triage: a model in a loop with Shikari's tools, with approval for anything that changes something ([docs](docs/agents/README.md))
+- 🔌 **MCP Server (`shikari-cli mcp`)** - Shikari's tools and agent prompts for Claude Code, Claude Desktop or any MCP client
 - 🎯 **RAG Fidelity Enhancement** - Improve query quality using 3,400+ community detection examples ([docs](docs/rag/README.md))
 - 🏢 **Organization-Specific Customization** - Bespoke sample searches and global exclusions for your environment
 
 ### ⚔️ Adversary Emulation with CALDERA
 
-Archer closes the loop between red and blue: it runs a real adversary and then checks your detections against what that adversary actually left in the logs. It drives a [CALDERA](https://github.com/mitre/caldera) server you run in your own lab — Archer never ships an agent or a C2 of its own — and tests what single-shot Atomic runs can't ([#30](https://github.com/cmdaltr/archer/issues/30), [guide](docs/guide/25-caldera.md)).
+Shikari closes the loop between red and blue: it runs a real adversary and then checks your detections against what that adversary actually left in the logs. It drives a [CALDERA](https://github.com/mitre/caldera) server you run in your own lab — Shikari never ships an agent or a C2 of its own — and tests what single-shot Atomic runs can't ([#30](https://github.com/cmdaltr/shikari/issues/30), [guide](docs/guide/25-caldera.md)).
 
 - **Chained operations with a real implant** - the sandcat agent beacons and takes tasks over C2, and each step's facts feed the next, so detections keyed on process lineage, beaconing and multi-step behaviour are exercised — not just a command run in a local shell.
 - **Zero-touch log capture** - each step's endpoint logs are read back over the agent's own C2 channel, on Windows, Linux or macOS, with nothing installed on the host and no hypervisor access.
 - **Static detection and correlation checks** - saved detections and correlations are checked against what ran — per technique (matched / missed / no detection) and per correlation (every part on one host, inside its window) — with no AI and no SIEM.
-- **Provision agents in Archer** - an agent-topology diagram, and **+ Add agent** to provision a disposable VM or container (Ubuntu on Tart or Docker, Rocky Linux on Docker, macOS on Tart, Windows on UTM) and enrol it, or enrol one you already manage — the machine pulls the architecture-correct sandcat itself. Names follow a convention (`achr-` always, a `cal-` marker for CALDERA machines, then an OS+version tag: `achr-cal-ubu24`, `achr-cal-rky10`, `achr-cal-mac15`, `achr-win11`), and every view shows which machines are enrolled.
-- **Wherever you work** - run, check and provision from the web UI, the desktop app, the `archer-cli caldera` command, or the `lab/caldera` console module — one shared backend, so they can't drift.
+- **Provision agents in Shikari** - an agent-topology diagram, and **+ Add agent** to provision a disposable VM or container (Ubuntu on Tart or Docker, Rocky Linux on Docker, macOS on Tart, Windows on UTM) and enrol it, or enrol one you already manage — the machine pulls the architecture-correct sandcat itself. Names follow a convention (`shi-` always, a `cal-` marker for CALDERA machines, then an OS+version tag: `shi-cal-ubu24`, `shi-cal-rky10`, `shi-cal-mac15`, `shi-win11`), and every view shows which machines are enrolled.
+- **Wherever you work** - run, check and provision from the web UI, the desktop app, the `shikari-cli caldera` command, or the `lab/caldera` console module — one shared backend, so they can't drift.
 
 ### Additional Features
 
-- **Detection Validation** - Every detection carries an AI-free quality grade (A–F), false-positive risk and run cost; optionally test queries against containerised SIEMs with sample events, timed. A CI gate (`python -m archer.validation.ci`) fails a build on detections below your thresholds ([docs](docs/features/RUNTIME_VALIDATION.md))
+- **Detection Validation** - Every detection carries an AI-free quality grade (A–F), false-positive risk and run cost; optionally test queries against containerised SIEMs with sample events, timed. A CI gate (`python -m shikari.validation.ci`) fails a build on detections below your thresholds ([docs](docs/features/RUNTIME_VALIDATION.md))
 - **Cloud coverage** - ATT&CK's cloud techniques by provider (AWS, Azure, GCP, Identity and SaaS) against your saved detections, with a gaps-only view (Detections → Coverage, `GET /api/coverage/cloud`) ([guide](docs/guide/08-coverage.md#cloud-coverage))
 - **API and automation** - Batch hunts, streamed run progress (SSE) and signed webhooks on run and watchlist events ([guide](docs/features/API_INTEGRATION_GUIDE.md#workflow-11-webhooks))
 - **Detection Library** - Save, search, tag, share, and export your generated detections
@@ -98,8 +98,8 @@ Archer closes the loop between red and blue: it runs a real adversary and then c
 - **Ordered Adversary List** - The top-10 ATT&CK groups most likely to target an organisation, ranked (no AI) from industry, geography, exposed OSINT and public incidents — VCDB, CISA KEV and ransomware.live merged with your own curated set. Shown on the exposure map; set your own domain in Profile → Organisation to auto-profile and star it ([guide](docs/guide/04-company-profile.md#ordered-adversary-list))
 - **CVE Hunting** - Generate detections from CVE IDs with NVD enrichment
 - **Query Execution** - Splunk API client (code implemented, see [UNTESTED.md](docs/other/UNTESTED.md)); Defender XDR planned with hit counts (#16)
-- **Running atomics from Archer** - Coming soon; [record a lab](docs/guide/20-recording-a-lab.md) on your own VMs for now (#22)
-- **Threat library with red and blue outcomes (VECTR-style)** - Built (Build → Assessments, #24); CALDERA operations run from Emulate → Lab ([#30](https://github.com/cmdaltr/archer/issues/30), [guide](docs/guide/25-caldera.md)), for the fact chaining and implant behaviour Atomic runs can't give. MACAT was declined ([#31](https://github.com/cmdaltr/archer/issues/31)): Atomic Red Team's macOS tests and the lab recorder already cover it
+- **Running atomics from Shikari** - Coming soon; [record a lab](docs/guide/20-recording-a-lab.md) on your own VMs for now (#22)
+- **Threat library with red and blue outcomes (VECTR-style)** - Built (Build → Assessments, #24); CALDERA operations run from Emulate → Lab ([#30](https://github.com/cmdaltr/shikari/issues/30), [guide](docs/guide/25-caldera.md)), for the fact chaining and implant behaviour Atomic runs can't give. MACAT was declined ([#31](https://github.com/cmdaltr/shikari/issues/31)): Atomic Red Team's macOS tests and the lab recorder already cover it
 
 ### Security & User Management
 - 🔐 **Enterprise Authentication** - Bcrypt password hashing, session management, MFA support (TOTP)
@@ -115,13 +115,13 @@ Archer closes the loop between red and blue: it runs a real adversary and then c
 
 ### Threat Feed
 
-The Threat Feed (Intel → Feed, or `intel/feed` in the console) is a wall of the last seven days of research, one card per post: title, a two-to-three sentence description, and tags. The search box matches titles and descriptions; the filters show posts relevant to you (your industries, plus anything opportunistic or financially motivated), your industries only, opportunistic or financial only, or everything. Set your industries in Profile → Threat Feed industries. **Analyse in Archer** opens a post on the Home page's Analyse tab.
+The Threat Feed (Intel → Feed, or `intel/feed` in the console) is a wall of the last seven days of research, one card per post: title, a two-to-three sentence description, and tags. The search box matches titles and descriptions; the filters show posts relevant to you (your industries, plus anything opportunistic or financially motivated), your industries only, opportunistic or financial only, or everything. Set your industries in Profile → Threat Feed industries. **Analyse in Shikari** opens a post on the Home page's Analyse tab.
 
-The feed is collected in the background every time Archer starts, whenever you press **Refresh now**, and when the Feed is opened six hours after the last collection; while any watchlist exists, every six hours. **Watch** saves a search as a watchlist: posts that match it later are flagged on the Feed and counted on the menu, and can be emailed. Only posts it hasn't seen are fetched and analysed, so a refresh with nothing new takes about ten seconds. No AI is involved: tags come from regular expressions over the text and ATT&CK's own group data.
+The feed is collected in the background every time Shikari starts, whenever you press **Refresh now**, and when the Feed is opened six hours after the last collection; while any watchlist exists, every six hours. **Watch** saves a search as a watchlist: posts that match it later are flagged on the Feed and counted on the menu, and can be emailed. Only posts it hasn't seen are fetched and analysed, so a refresh with nothing new takes about ten seconds. No AI is involved: tags come from regular expressions over the text and ATT&CK's own group data.
 
 Sources (RSS/Atom): Microsoft Threat Intelligence, Google Threat Intelligence (Mandiant), Unit 42, Cisco Talos, CrowdStrike, SentinelLABS, Kaspersky Securelist, ESET WeLiveSecurity, Proofpoint, The DFIR Report, Red Canary, Huntress, Elastic Security Labs, CISA, NCSC (UK), Recorded Future, Trend Micro Research, Rapid7, FortiGuard Labs, Symantec Threat Hunter, Volexity, Zscaler ThreatLabz, Sekoia, Group-IB, Bitdefender Labs and JPCERT/CC. Admins can add their own.
 
-**Search all research** finds a campaign, tool or actor name ("GhostAction", "RedSun") at any date. It searches three places. First, Archer's archive of every post its sources' feeds have carried (data/feed/archive.json); every collection adds the whole of each feed, so some sources reach back to 2016 and the archive grows from then on. Second, ATT&CK's groups, software and campaigns, by name, alias or description. Third, optionally, Google News and Bing News. Web results are de-duplicated, English only, and kept only when they read as security stories. The web search sends the keyword to Google and Bing, so it is a checkbox. Results are cached for an hour.
+**Search all research** finds a campaign, tool or actor name ("GhostAction", "RedSun") at any date. It searches three places. First, Shikari's archive of every post its sources' feeds have carried (data/feed/archive.json); every collection adds the whole of each feed, so some sources reach back to 2016 and the archive grows from then on. Second, ATT&CK's groups, software and campaigns, by name, alias or description. Third, optionally, Google News and Bing News. Web results are de-duplicated, English only, and kept only when they read as security stories. The web search sends the keyword to Google and Bing, so it is a checkbox. Results are cached for an hour.
 
 Tags are taken from the post's title and its technical paragraphs only: a paragraph with a technique ID, hash, IP, defanged domain, file name, command-line tool, registry key or command-line switch, and the paragraph either side. A CVE makes a paragraph technical only when the post has one of those other indicators too, because newsletters and policy pieces cite CVEs in passing. A passing mention in a policy piece or a reading list doesn't count.
 
@@ -136,30 +136,30 @@ Posts with no technique ID, IOCs or named group, and no CVE alongside another in
 
 ### Techniques that can't produce a detection
 
-About 318 of ATT&CK's 697 techniques name no command, file, registry key or other indicator in their description or in any group's procedure examples (**T1190**, **T1566.001**, much of Reconnaissance and Resource Development). The standard pipeline can't build a query for them; only AI or OSINT can. Archer keeps that list in `archer/data/technique_yield.json`, rebuilt when ATT&CK's version changes:
+About 318 of ATT&CK's 697 techniques name no command, file, registry key or other indicator in their description or in any group's procedure examples (**T1190**, **T1566.001**, much of Reconnaissance and Resource Development). The standard pipeline can't build a query for them; only AI or OSINT can. Shikari keeps that list in `shikari/data/technique_yield.json`, rebuilt when ATT&CK's version changes:
 
 - A technique hunt whose techniques are all on the list, run without AI or OSINT, is refused with the reason instead of producing an empty run; `hunt/technique` says which techniques will produce nothing before it starts.
 - Every run records the techniques that produced nothing and why, shown at the top of its results page.
 - With AI, a technique the model has returned no queries for on three runs in a row is skipped (no prompt spent) until a call succeeds or the list is reset.
 
 ```bash
-.venv/bin/python -m archer.build.technique_yield              # both lists
-.venv/bin/python -m archer.build.technique_yield --reset-llm  # forget the AI list
+.venv/bin/python -m shikari.build.technique_yield              # both lists
+.venv/bin/python -m shikari.build.technique_yield --reset-llm  # forget the AI list
 ```
 
 ## 📚 Documentation & Resources
 
-### Archer Documentation
+### Shikari Documentation
 
 **📖 [Complete Documentation Index](docs/DOCS_INDEX.md)** - Browse all documentation by category
 
 **Quick Links:**
 - **Getting Started:** [GETTING_STARTED.md](GETTING_STARTED.md) | [Mapping Setup](GETTING_STARTED.md#step-4-configure-mapping-files-critical) | [User Guide](docs/guide/README.md)
-- **Interactive Console:** [archer-cli console Guide](#-interactive-console-archer-cli-console)
+- **Interactive Console:** [shikari-cli console Guide](#-interactive-console-shikari-cli-console)
 - **Usage:** [Where everything is, and the CLI](docs/USAGE.md) | [Auto-Generated API Docs](http://localhost:8000/docs)
 - **Research:** [Actor consolidation and XLSX export](docs/guide/05-research.md)
 - **Threat Briefing:** [On the Results page](docs/guide/06-results.md) | [API Reference](docs/features/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing)
-- **Ask Archer:** [Agents and Ask Archer](docs/guide/15-agents-and-ask-archer.md)
+- **Ask Shikari:** [Agents and Ask Shikari](docs/guide/15-agents-and-ask-shikari.md)
 - **Emulate:** [Recorded telemetry](docs/guide/19-emulate.md) | [Recording a lab (coming soon)](docs/guide/20-recording-a-lab.md) | [CALDERA operations](docs/guide/25-caldera.md)
 - **Agents & MCP:** [Agents guide](docs/agents/README.md) | [Minimal agent example](examples/agents/minimal_agent.py)
 - **API Integration:** [API Integration Guide](docs/features/API_INTEGRATION_GUIDE.md)
@@ -178,19 +178,19 @@ About 318 of ATT&CK's 697 techniques name no command, file, registry key or othe
 ---
 <br>
 
-## 🖥️ Interactive Console (archer-cli console)
+## 🖥️ Interactive Console (shikari-cli console)
 
-`archer-cli console` is a Metasploit-style interactive shell for building detection queries, running correlations and hunting techniques.
+`shikari-cli console` is a Metasploit-style interactive shell for building detection queries, running correlations and hunting techniques.
 
 ### Launch
 
 ```bash
-archer-cli console
+shikari-cli console
 ```
 
 ### Modules
 
-Local modules run in the console's own process. Server modules drive a running Archer server through `archer/client.py`, the same client the MCP server and agents use, so they run exactly what the web app runs: the profile's AI assignment and call cap, IOC sweeps, IOC flow and the latest-run view.
+Local modules run in the console's own process. Server modules drive a running Shikari server through `shikari/client.py`, the same client the MCP server and agents use, so they run exactly what the web app runs: the profile's AI assignment and call cap, IOC sweeps, IOC flow and the latest-run view.
 
 | Module | Runs | Description |
 |--------|------|-------------|
@@ -205,16 +205,16 @@ Local modules run in the console's own process. Server modules drive a running A
 | `intel/company` | server | Profile a company from OSINT and hunt the groups that target it |
 | `intel/feed` | server | This week's research, tagged by industry, nation and motive; `SEARCH` titles and descriptions, `SHOW relevant\|all` (`INDUSTRIES list` to choose yours) |
 | `research/actors` | server | Find actors by keyword (country, industry) and consolidate their techniques; XLSX export |
-| `ai/ask` | server | Ask Archer |
+| `ai/ask` | server | Ask Shikari |
 | `ai/briefing` | server | Threat briefing: prioritised techniques and coverage gaps |
 | `ai/settings` | server | Show or change the AI provider and model for Ask and detection generation |
 | `results` | server | A run's detections, correlations and IOC flow; zip download |
 | `agent/repair` | server | Agent: fix a run's queries that won't parse or can't match, re-checking each fix |
-| `agent/ask` | server | Agent: Ask Archer with tools (library, coverage, ATT&CK, hunts) |
+| `agent/ask` | server | Agent: Ask Shikari with tools (library, coverage, ATT&CK, hunts) |
 | `agent/triage` | server | Agent: triage a threat report into coverage gaps, hunts and a briefing |
 | `agent/history` | server | Recent agent runs (kept across restarts); replay one, or `CONTINUE true` to carry on an interrupted or stopped one (**only on the provider it started on**) |
 
-Server modules sign in with `ARCHER_TOKEN`, an API token from Profile → Security → API Tokens (works with MFA), or with `ARCHER_EMAIL` and `ARCHER_PASSWORD` (the console prompts for anything unset), against `ARCHER_URL` (default `http://127.0.0.1:8000`). Agents take `PROVIDER` and `MODEL` too. `PROVIDER assigned` uses the hunt choice you remembered in the web app, otherwise your detection assignment; `PROVIDER none` runs without AI.
+Server modules sign in with `SHIKARI_TOKEN`, an API token from Profile → Security → API Tokens (works with MFA), or with `SHIKARI_EMAIL` and `SHIKARI_PASSWORD` (the console prompts for anything unset), against `SHIKARI_URL` (default `http://127.0.0.1:8000`). Agents take `PROVIDER` and `MODEL` too. `PROVIDER assigned` uses the hunt choice you remembered in the web app, otherwise your detection assignment; `PROVIDER none` runs without AI.
 
 ### Commands
 
@@ -236,16 +236,16 @@ Tab-completion is supported for commands, module names, option names, and option
 ### Example Session
 
 ```
-$ archer-cli console
+$ shikari-cli console
 
-archer-cli > use generate
-archer-cli (generate) > set GROUP APT29
+shikari-cli > use generate
+shikari-cli (generate) > set GROUP APT29
   GROUP => APT29
-archer-cli (generate) > set MODE llm
+shikari-cli (generate) > set MODE llm
   MODE => llm
-archer-cli (generate) > set CORRELATE true
+shikari-cli (generate) > set CORRELATE true
   CORRELATE => True
-archer-cli (generate) > show options
+shikari-cli (generate) > show options
 
   Module options (generate):
 
@@ -259,7 +259,7 @@ archer-cli (generate) > show options
   OSINT                False                     no         Enable OSINT enhancement
   OSINT_COMPARE        False                     no         Enable OSINT comparison
 
-archer-cli (generate) > run
+shikari-cli (generate) > run
 [*] Generating detections for APT29 (mode: llm)
 ...
 ```
@@ -276,10 +276,10 @@ Search across three domains from the console:
 | `all` | All three domains |
 
 ```
-archer-cli > search mitre PowerShell
-archer-cli > search library APT29
-archer-cli > search bespoke credential
-archer-cli > search all T1059
+shikari-cli > search mitre PowerShell
+shikari-cli > search library APT29
+shikari-cli > search bespoke credential
+shikari-cli > search all T1059
 ```
 
 Results are colour-coded by type (technique, group, software, detection, correlation, reference) with highlighted search terms.
@@ -287,9 +287,9 @@ Results are colour-coded by type (technique, group, software, detection, correla
 ### Server Module Example
 
 ```
-archer-cli > use hunt/cve
-archer-cli (hunt/cve) > set CVE CVE-2024-3400
-archer-cli (hunt/cve) > run
+shikari-cli > use hunt/cve
+shikari-cli (hunt/cve) > set CVE CVE-2024-3400
+shikari-cli (hunt/cve) > run
   Run started: CVE-2024-3400
   … detections
   … complete
@@ -308,7 +308,7 @@ The `generate` module supports three modes via `set MODE <mode>`:
 
 | Mode | Description |
 |------|-------------|
-| `standard` | Default — uses Archer's built-in indicator extraction and platform validation |
+| `standard` | Default — uses Shikari's built-in indicator extraction and platform validation |
 | `llm` | Sends bespoke prompt templates + technique data to the detection provider in your profile (Profile → API Keys), capped at the profile's max LLM calls per run |
 | `fallback` | Template-based query builder — maps MITRESaw evidence indicators to SIEM fields using bespoke mapping files, no LLM needed |
 
@@ -317,7 +317,7 @@ The `generate` module supports three modes via `set MODE <mode>`:
 
 ## 🤝 Contributing
 
-Feel free to open issues or submit pull requests to improve Archer.
+Feel free to open issues or submit pull requests to improve Shikari.
 
 ---
 <br>

@@ -2,7 +2,7 @@
 
 **Build → Regex** tests a regular expression against your own sample text and checks it for the SIEM it will run in. A pattern that works in one engine can fail to compile, match nothing, or match everything in another. This page catches that before the query reaches the SIEM.
 
-Everything runs in your browser. Nothing you type is sent to Archer or anywhere else. The page remembers your last pattern, text and flavour in your browser only.
+Everything runs in your browser. Nothing you type is sent to Shikari or anywhere else. The page remembers your last pattern, text and flavour in your browser only.
 
 ## Using it
 
@@ -27,7 +27,7 @@ Everything runs in your browser. Nothing you type is sent to Archer or anywhere 
 | Google SecOps | RE2 | `re.regex()`, `re.capture()` in YARA-L | Anywhere in the value | RE2 (re2js) |
 | Splunk | PCRE2 | `regex`, `rex`, `match()` | Anywhere in the value | PCRE2 10.49, with Splunk's limits |
 | Elastic | Lucene regexp | EQL `regex`, ES\|QL `RLIKE`, the `regexp` query | **The whole value** | JavaScript, translated |
-| Python | `re` | Archer's own code, scripts | Anywhere (with `search`) | JavaScript, translated |
+| Python | `re` | Shikari's own code, scripts | Anywhere (with `search`) | JavaScript, translated |
 | JavaScript | ECMAScript | Browsers, Node | Anywhere | JavaScript |
 
 The status line names the engine each result came from. Defender XDR and Google SecOps patterns run in re2js, the JavaScript port of Google's RE2/J, so a pattern RE2 refuses fails here with RE2's own message. Splunk patterns run in PCRE2 built to WebAssembly from the official release, with Splunk's default `[rex]` limits from `limits.conf` (`match_limit = 100000`, `depth_limit = 1000`). A pattern that reaches them is reported as Splunk would stop it.

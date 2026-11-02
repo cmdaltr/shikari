@@ -1,6 +1,6 @@
 """Cloud coverage by provider (#36)."""
 
-from archer.build.cloud_coverage import applies, cloud_coverage, providers_of, siem_of
+from shikari.build.cloud_coverage import applies, cloud_coverage, providers_of, siem_of
 
 ATTACK = {
     "T1580": {"name": "Cloud Infrastructure Discovery", "x_mitre_platforms": ["IaaS"],

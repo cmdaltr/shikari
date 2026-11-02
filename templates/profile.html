@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html data-theme="light">
 <head>
-    <title>Archer - Profile</title>
-    <link rel="icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
-    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', path='favicon-32.png') }}?v={{ request.app.state.asset_version }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon.png') }}">
-    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path='apple-touch-icon-precomposed.png') }}">
+    <title>Shikari - Profile</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', path=brand.icon_32) }}?v={{ request.app.state.asset_version }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', path=brand.icon_32) }}?v={{ request.app.state.asset_version }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', path=brand.apple_icon) }}">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="{{ url_for('static', path=brand.apple_icon) }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -90,14 +90,14 @@
       }
 
       /* Fixed position button - aligned with 1320px content edge */
-      .how-archer-link {
+      .how-shikari-link {
         position: fixed !important;
         top: 28px !important;
         right: calc((100vw - 1320px) / 2 + 52px) !important;
         z-index: 10000 !important;
       }
 
-      .how-archer-link:hover {
+      .how-shikari-link:hover {
         background: var(--accent) !important;
         color: white !important;
       }
@@ -129,7 +129,7 @@
         color: var(--text-tertiary) !important;
       }
 
-      [data-theme="dark"] .how-archer-link {
+      [data-theme="dark"] .how-shikari-link {
         background: rgba(45, 45, 45, 0.95) !important;
       }
 
@@ -151,6 +151,7 @@
     </style>
     {% endblock %}
     <link rel="stylesheet" href="{{ url_for('static', path='css/ui.css') }}?v={{ request.app.state.asset_version }}">
+    {% include "partials/brand_style.html" %}
 </head>
 <body>
     <!-- Global Navigation Controls (Library|Home|Logout|Profile|Dark|Help) -->
@@ -160,7 +161,7 @@
     <div class="container" style="width: 1500px; max-width: calc(100vw - 4em); margin: 0 auto; padding: 2em; padding-top: 100px; padding-bottom: 80px; position: relative; box-sizing: border-box;">
       <div class="page-header">
         <h1>Profile</h1>
-        <p>Your account, the SIEMs and industries Archer works to, API keys and settings</p>
+        <p>Your account, the SIEMs and industries Shikari works to, API keys and settings</p>
       </div>
 
       <!-- Tabbed interface inspired by VirusTotal -->
@@ -301,7 +302,7 @@
                            class="form-input"
                            placeholder="e.g. yourcompany.com"
                            value="{{ user.organisation if user and user.organisation else '' }}">
-                    <p class="industries-hint" style="margin-top: 6px;">Your own organisation's domain. Archer profiles it, stars it in the
+                    <p class="industries-hint" style="margin-top: 6px;">Your own organisation's domain. Shikari profiles it, stars it in the
                       <a href="/catalogue">company catalogue</a>, and builds its <strong>Ordered Adversary List</strong> — the actors most likely to target you.</p>
                   </div>
                 </div>
@@ -365,7 +366,7 @@
                 </div>
               </section>
 
-              <!-- Threat feed industries (archer.intelligence.feed) -->
+              <!-- Threat feed industries (shikari.intelligence.feed) -->
               <section class="industries" id="industries">
                 <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>Threat Feed industries</h3>
                 <p class="industries-hint">The <a href="/feed">Threat Feed</a> keeps the week's research about groups that target these industries. Opportunistic activity, such as supply-chain compromise, is shown whatever you choose.</p>
@@ -377,7 +378,7 @@
               </section>
             </div>
 
-            <!-- Products the organisation runs (archer.intelligence.tech_stack): group hunts leave out what can't happen there -->
+            <!-- Products the organisation runs (shikari.intelligence.tech_stack): group hunts leave out what can't happen there -->
             <section class="industries tech-stack" id="tech-stack">
               <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Technology stack</h3>
               <p class="industries-hint">Tick everything your organisation runs, operating systems included. Group hunts then leave out techniques whose ATT&amp;CK platforms you don't have (ESXi, containers, network devices) and procedures aimed at products you don't run (a SolarWinds supply-chain compromise when you have no SolarWinds). Technique, CVE and report hunts are generated anyway, with a note on Results. Leave it all unticked and everything applies.</p>
@@ -474,7 +475,7 @@
                   AI Models
                 </h3>
                 <div id="ai-provider-rows"></div>
-                <div class="apikey-hint">Cloud providers need their API key. A local model (Ollama, LM Studio, llama.cpp) needs its server URL; it answers Ask Archer only for now (<a href="https://github.com/cmdaltr/archer/issues/9" target="_blank">#9</a>).</div>
+                <div class="apikey-hint">Cloud providers need their API key. A local model (Ollama, LM Studio, llama.cpp) needs its server URL; it answers Ask Shikari only for now (<a href="https://github.com/cmdaltr/shikari/issues/9" target="_blank">#9</a>).</div>
               </div>
 
               <!-- AI Assignment: which provider each job uses (GitHub #10) -->
@@ -488,7 +489,7 @@
                 <p class="apikey-hint" style="margin-top: 0;">The provider and model for each job: the same for both, or different. Lists the providers above.</p>
 
                 <div class="ai-assign-row">
-                  <label class="apikey-label" for="assign-ask-provider">Ask Archer</label>
+                  <label class="apikey-label" for="assign-ask-provider">Ask Shikari</label>
                   <select class="form-input" id="assign-ask-provider" data-job="ask"></select>
                   <input type="text" class="form-input" id="assign-ask-model" list="assign-ask-models" placeholder="Model (blank = provider default)">
                   <datalist id="assign-ask-models"></datalist>
@@ -704,7 +705,7 @@
                            placeholder="Configuration path"
                            disabled>
                   </div>
-                  <div class="apikey-hint">Running atomics from Archer itself is coming soon; record a lab on your own VMs for now</div>
+                  <div class="apikey-hint">Running atomics from Shikari itself is coming soon; record a lab on your own VMs for now</div>
                 </div>
 
                 <div class="apikey-item">
@@ -717,7 +718,7 @@
                            placeholder="https://caldera.lab:8888"
                            id="caldera-url">
                   </div>
-                  <div class="apikey-hint">Your lab's CALDERA server, for <b>Emulate → Lab → CALDERA operations</b>. Archer drives it over its REST API; it never ships an agent or a C2 of its own.</div>
+                  <div class="apikey-hint">Your lab's CALDERA server, for <b>Emulate → Lab → CALDERA operations</b>. Shikari drives it over its REST API; it never ships an agent or a C2 of its own.</div>
                 </div>
 
                 <div class="apikey-item">
@@ -966,13 +967,13 @@
               </div>
             </div>
 
-            <!-- API tokens (archer/auth/tokens.py) -->
+            <!-- API tokens (shikari/auth/tokens.py) -->
             <div class="security-section api-tokens">
               <div style="height: 1px; background: var(--border-color); margin: 32px 0 24px;"></div>
               <h3 class="section-title" id="sec-api-tokens"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>API Tokens</h3>
               <p style="color: var(--text-secondary); margin-bottom: 16px;">
-                For the console (<code>archer-cli console</code>), the MCP server and your own scripts: set
-                <code>ARCHER_TOKEN</code> instead of a password. Works with MFA. A token acts as you, so treat it
+                For the console (<code>shikari-cli console</code>), the MCP server and your own scripts: set
+                <code>SHIKARI_TOKEN</code> instead of a password. Works with MFA. A token acts as you, so treat it
                 like a password; revoke it here if it leaks.
               </p>
               <form id="api-token-form" class="api-token-form" autocomplete="off">
@@ -991,7 +992,7 @@
               </table>
             </div>
 
-            <!-- Access & elevation (archer/elevation.py) -->
+            <!-- Access & elevation (shikari/elevation.py) -->
             <div class="security-section access-section" id="access-section">
               <div style="height: 1px; background: var(--border-color); margin: 32px 0 24px;"></div>
               <h3 class="section-title" id="sec-access"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l7 4v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>Access &amp; elevation</h3>
@@ -1179,14 +1180,14 @@
                   Webhooks
                 </h3>
                 <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6; margin-bottom: 20px;">
-                  URLs Archer POSTs JSON to when a hunt finishes or fails, or a watchlist finds new posts. Each delivery is
-                  signed with the webhook's secret (<code>X-Archer-Signature: sha256=…</code>); the secret is shown once,
-                  when you add the webhook. <a href="https://github.com/cmdaltr/archer/blob/main/docs/features/API_INTEGRATION_GUIDE.md#workflow-11-webhooks">How to check it</a>.
+                  URLs Shikari POSTs JSON to when a hunt finishes or fails, or a watchlist finds new posts. Each delivery is
+                  signed with the webhook's secret (<code>X-Shikari-Signature: sha256=…</code>); the secret is shown once,
+                  when you add the webhook. <a href="https://github.com/cmdaltr/shikari/blob/main/docs/features/API_INTEGRATION_GUIDE.md#workflow-11-webhooks">How to check it</a>.
                 </p>
                 <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;">
                   <div style="flex:3 1 260px;min-width:0;">
                     <label style="display:block;font-weight:600;margin-bottom:6px;">URL</label>
-                    <input type="url" id="wh-url" class="form-input" placeholder="https://hooks.example.com/archer" style="width:100%;box-sizing:border-box;">
+                    <input type="url" id="wh-url" class="form-input" placeholder="https://hooks.example.com/shikari" style="width:100%;box-sizing:border-box;">
                   </div>
                   <div style="flex:2 1 200px;min-width:0;">
                     <label style="display:block;font-weight:600;margin-bottom:6px;">Description <span style="font-weight:400;color:var(--text-secondary);">(optional)</span></label>
@@ -2008,7 +2009,7 @@
           function downloadBackupCodes() {
             if (currentBackupCodes.length === 0) return;
 
-            const text = 'Archer Account Backup Codes\n' +
+            const text = 'Shikari Account Backup Codes\n' +
                         '================================\n\n' +
                         'Each code can only be used once.\n' +
                         'Store these codes in a secure location.\n\n' +
@@ -2018,7 +2019,7 @@
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'archer-backup-codes.txt';
+            a.download = 'shikari-backup-codes.txt';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -2510,19 +2511,13 @@
           </a>
         </div>
 
-        <!-- Quote -->
-        <div class="quote">
-          <p>
-            "Even if you can't see something, it doesn't mean it isn't there"<br>
-            <span>— Archer, Small Soldiers</span>
-          </p>
-        </div>
 
         <!-- Spacer for balance -->
         <div class="spacer"></div>
       </div>
 
       <!-- Timestamp and Attribution -->
+      <div class="footer-gloss"><span class="fg-word">shi·ka·ri</span><span class="fg-ipa">\shi-ˈkär-ē\</span><span class="fg-def">a professional big-game hunter or guide</span></div>
       <div class="timestamp">
         <span style="font-size: 0.85em; opacity: 0.7; display: block;">
           Vendor logos are stylized representations. Splunk®, Microsoft®, Google® and Elastic® are registered trademarks of their respective companies.

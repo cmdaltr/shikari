@@ -1,15 +1,15 @@
 """
-Unit tests for the lab/caldera console module (archer.cli.modules.lab).
+Unit tests for the lab/caldera console module (shikari.cli.modules.lab).
 
-The module is a thin console front for archer.lab.caldera, so these mock the caldera functions and
+The module is a thin console front for shikari.lab.caldera, so these mock the caldera functions and
 assert the module dispatches to them correctly and never talks to a live server itself.
 """
 
 import pytest
 
-from archer.cli.modules import MODULE_REGISTRY
-from archer.lab import caldera
-from archer.lab.runner import LabError
+from shikari.cli.modules import MODULE_REGISTRY
+from shikari.lab import caldera
+from shikari.lab.runner import LabError
 
 
 @pytest.fixture

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Archer - Emulate{% endblock %}
+{% block title %}Shikari - Emulate{% endblock %}
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
@@ -20,7 +20,7 @@
   <!-- Planner (#25): target -> dataset, platforms, logs to collect, SIEMs -> deploy -->
   <section class="ui-card ms-card ep-card" id="emulate-planner">
     <h2>Plan an emulation</h2>
-    <p class="ms-note">Pick a target and Archer builds the plan: the dataset to validate each technique against, the Atomic test, the logs to collect and where to validate. Review it, then deploy.</p>
+    <p class="ms-note">Pick a target and Shikari builds the plan: the dataset to validate each technique against, the Atomic test, the logs to collect and where to validate. Review it, then deploy.</p>
     <div class="ep-pick">
       <div class="ep-seg" role="tablist">
         <button type="button" class="ep-kind is-active" data-kind="group" role="tab">Group</button>
@@ -41,7 +41,7 @@
         </table>
       </div>
       <div class="ep-deploy">
-        <div class="ep-deploy-head"><strong>Deploy</strong><span class="ms-note">Archer can't run atomics in-app yet (<a href="https://github.com/cmdaltr/archer/issues/22" target="_blank" rel="noopener">#22</a>). Export the plan, run it on your lab, and record outcomes in an <a href="/assessments">assessment</a>.</span></div>
+        <div class="ep-deploy-head"><strong>Deploy</strong><span class="ms-note">Shikari can't run atomics in-app yet (<a href="https://github.com/cmdaltr/shikari/issues/22" target="_blank" rel="noopener">#22</a>). Export the plan, run it on your lab, and record outcomes in an <a href="/assessments">assessment</a>.</span></div>
         <div class="ep-deploy-actions">
           <a class="btn-primary" id="ep-runsheet" href="#">Download run sheet</a>
           <a class="btn-secondary" id="ep-macat" href="#">Export for MACAT</a>
@@ -63,7 +63,7 @@
     <div class="em-dg">
       <svg viewBox="0 0 960 250" role="img" aria-labelledby="em-dg-title em-dg-desc" preserveAspectRatio="xMidYMid meet">
         <title id="em-dg-title">The Emulate pipeline</title>
-        <desc id="em-dg-desc">The Lab section builds machines you record attacks on. Those recordings, plus shipped public datasets, are mapped to ATT&amp;CK, then Archer checks whether your detections' indicators appear in the recorded events, and shows the result organised by technique, group or data source.</desc>
+        <desc id="em-dg-desc">The Lab section builds machines you record attacks on. Those recordings, plus shipped public datasets, are mapped to ATT&amp;CK, then Shikari checks whether your detections' indicators appear in the recorded events, and shows the result organised by technique, group or data source.</desc>
         <defs>
           <marker id="em-dg-arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" class="em-dg-head"/>
@@ -115,7 +115,7 @@
         <rect x="16" y="182" width="160" height="48" rx="8" class="em-dg-node em-dg-pub"/>
         <use href="#ic-db" x="26" y="197" width="18" height="18" class="em-ic em-ic-red"/>
         <text x="50" y="202" class="em-dg-t em-dg-start">Public datasets</text>
-        <text x="50" y="217" class="em-dg-s em-dg-start">shipped with Archer</text>
+        <text x="50" y="217" class="em-dg-s em-dg-start">shipped with Shikari</text>
 
         <!-- Feeders into the pipeline -->
         <path d="M176,144 C194,144 192,170 206,172" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
@@ -143,8 +143,8 @@
         <path d="M760,175 L782,175" class="em-dg-link" marker-end="url(#em-dg-arrow)"/>
       </svg>
     </div>
-    <p class="ms-note">Recordings are real attacks run in a lab with logging on — the public datasets that ship with Archer, plus any you record yourself in <strong>Lab</strong> below.
-      Each is mapped to ATT&amp;CK, then Archer checks whether the indicators your detections match actually appear in the recorded events. The result is the <strong>Recorded telemetry</strong> views below, organised by technique, group or data source. No AI is involved.</p>
+    <p class="ms-note">Recordings are real attacks run in a lab with logging on — the public datasets that ship with Shikari, plus any you record yourself in <strong>Lab</strong> below.
+      Each is mapped to ATT&amp;CK, then Shikari checks whether the indicators your detections match actually appear in the recorded events. The result is the <strong>Recorded telemetry</strong> views below, organised by technique, group or data source. No AI is involved.</p>
     <div class="em-sources-head">
       <h3 class="ui-subtitle">Public datasets</h3>
     </div>
@@ -152,7 +152,7 @@
     <div class="em-rec-row">
       <p class="ms-note">Each recording is one tool run in a lab with logging on (Sysmon, Windows auditing, PowerShell, cloud audit logs), mapped to ATT&amp;CK by the people who recorded it.
         It shows that a technique can be recorded and by which log, for that tool in that lab; not every way the technique can be done.
-        The recordings ship with Archer; <strong>Update</strong> (or <code>python -m archer.telemetry --build</code>) fetches what the sources have changed since.</p>
+        The recordings ship with Shikari; <strong>Update</strong> (or <code>python -m shikari.telemetry --build</code>) fetches what the sources have changed since.</p>
       <div class="em-build-row">
         <button type="button" class="btn-primary" id="em-build" hidden>Update</button>
         <span class="ms-state" id="em-state" aria-live="polite"></span>
@@ -161,11 +161,11 @@
     <pre class="ms-log" id="em-log" hidden></pre>
   </section>
 
-  <!-- Lab: its own section — the host, the machines you record on, and CALDERA operations (archer.lab) -->
+  <!-- Lab: its own section — the host, the machines you record on, and CALDERA operations (shikari.lab) -->
   <section class="ui-card ms-card em-lab-block" id="lab">
       <h2>Your lab</h2>
-      <p class="ms-note">Install, create and manage the containers and VMs an emulation records on, without leaving Archer.
-        Archer drives Docker and Tart to create Linux and macOS machines, and UTM for Windows (and other OSes QEMU runs) — you build the UTM VM once, then Archer manages it.
+      <p class="ms-note">Install, create and manage the containers and VMs an emulation records on, without leaving Shikari.
+        Shikari drives Docker and Tart to create Linux and macOS machines, and UTM for Windows (and other OSes QEMU runs) — you build the UTM VM once, then Shikari manages it.
         The machines are disposable — snapshot one before you turn logging on or run atomics, and revert when you're done.</p>
 
       <div class="lab-host" id="lab-host"></div>
@@ -183,11 +183,11 @@
         </div>
       </div>
 
-      <!-- CALDERA (#30): operations on agent groups, their topology, results and the static check (archer.lab.caldera) -->
+      <!-- CALDERA (#30): operations on agent groups, their topology, results and the static check (shikari.lab.caldera) -->
       <div class="lab-caldera" id="caldera" hidden>
         <h3 class="ui-subtitle lab-head"><svg class="lab-head-ic" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 4.5V8l2.5 1.5"/></svg>CALDERA operations</h3>
         <p class="ms-note">Chained emulation on CALDERA agents: each step's facts feed the next, and the agent behaves like an implant, which the Atomic runs above can't do.
-          Plan first, then run; Archer pulls back what each step ran and checks your detections and correlations against it. No AI.</p>
+          Plan first, then run; Shikari pulls back what each step ran and checks your detections and correlations against it. No AI.</p>
         <div class="lab-caldera-bar">
           <div class="lab-caldera-status" id="caldera-status"></div>
           <div class="lab-caldera-acts">

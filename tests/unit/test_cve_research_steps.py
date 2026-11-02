@@ -1,6 +1,6 @@
 """The CVE research reports each step, for the progress page's Research card."""
 
-from archer.intelligence.cve_hunter import CVEHunter
+from shikari.intelligence.cve_hunter import CVEHunter
 
 
 def test_research_reports_each_step_in_order(monkeypatch):

@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from archer.build import llm_queries
+from shikari.build import llm_queries
 
 
 @pytest.mark.unit

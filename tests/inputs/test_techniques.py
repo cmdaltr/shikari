@@ -44,7 +44,7 @@ class TestTechniqueValidation:
     """Tests for ATT&CK technique input validation."""
 
     @pytest.mark.parametrize("technique_id", VALID_TECHNIQUES)
-    def test_valid_technique_format_accepted(self, client, ensure_archer_running, technique_id):
+    def test_valid_technique_format_accepted(self, client, ensure_shikari_running, technique_id):
         """Test that valid technique formats are accepted."""
         response = client.post(
             "/hunt/technique",
@@ -58,7 +58,7 @@ class TestTechniqueValidation:
         assert response.status_code in [200, 302, 303, 401]
 
     @pytest.mark.parametrize("technique_id", INVALID_TECHNIQUES)
-    def test_invalid_technique_format_rejected(self, client, ensure_archer_running, technique_id):
+    def test_invalid_technique_format_rejected(self, client, ensure_shikari_running, technique_id):
         """Test that invalid technique formats are rejected."""
         response = client.post(
             "/hunt/technique",
@@ -73,7 +73,7 @@ class TestTechniqueValidation:
         # A 200/302 with error message is also acceptable
         assert response.status_code in [200, 302, 400, 401, 422]
 
-    def test_empty_technique_id_rejected(self, client, ensure_archer_running):
+    def test_empty_technique_id_rejected(self, client, ensure_shikari_running):
         """Test that empty technique ID is rejected."""
         response = client.post(
             "/hunt/technique",
@@ -86,7 +86,7 @@ class TestTechniqueValidation:
 
         assert response.status_code in [200, 302, 400, 401, 422]
 
-    def test_technique_case_insensitivity(self, client, ensure_archer_running):
+    def test_technique_case_insensitivity(self, client, ensure_shikari_running):
         """Test that technique IDs are case-insensitive."""
         # Lowercase
         response_lower = client.post(
@@ -110,7 +110,7 @@ class TestMultipleTechniques:
     """Tests for multiple technique input."""
 
     @pytest.mark.parametrize("techniques", TECHNIQUE_COMBINATIONS)
-    def test_multiple_techniques_accepted(self, client, ensure_archer_running, techniques):
+    def test_multiple_techniques_accepted(self, client, ensure_shikari_running, techniques):
         """Test that multiple comma-separated techniques are accepted."""
         response = client.post(
             "/hunt/technique",
@@ -123,7 +123,7 @@ class TestMultipleTechniques:
 
         assert response.status_code in [200, 302, 303, 401]
 
-    def test_duplicate_techniques_handled(self, client, ensure_archer_running):
+    def test_duplicate_techniques_handled(self, client, ensure_shikari_running):
         """Test that duplicate techniques are handled."""
         response = client.post(
             "/hunt/technique",
@@ -136,7 +136,7 @@ class TestMultipleTechniques:
 
         assert response.status_code in [200, 302, 303, 401]
 
-    def test_mixed_valid_invalid_techniques(self, client, ensure_archer_running):
+    def test_mixed_valid_invalid_techniques(self, client, ensure_shikari_running):
         """Test handling of mixed valid and invalid techniques."""
         response = client.post(
             "/hunt/technique",
@@ -150,7 +150,7 @@ class TestMultipleTechniques:
         # Should either reject all or process valid ones
         assert response.status_code in [200, 302, 303, 400, 401]
 
-    def test_techniques_with_whitespace(self, client, ensure_archer_running):
+    def test_techniques_with_whitespace(self, client, ensure_shikari_running):
         """Test techniques with whitespace around them."""
         response = client.post(
             "/hunt/technique",
@@ -167,7 +167,7 @@ class TestMultipleTechniques:
 class TestTechniqueGeneration:
     """Tests for technique-based detection generation."""
 
-    def test_hunt_technique_initiates(self, client, ensure_archer_running):
+    def test_hunt_technique_initiates(self, client, ensure_shikari_running):
         """Test that technique hunting initiates successfully."""
         response = client.post(
             "/hunt/technique",
@@ -180,7 +180,7 @@ class TestTechniqueGeneration:
 
         assert response.status_code in [200, 302, 303, 401]
 
-    def test_hunt_with_osint_enhancement(self, client, ensure_archer_running):
+    def test_hunt_with_osint_enhancement(self, client, ensure_shikari_running):
         """Test hunting with OSINT enhancement enabled."""
         response = client.post(
             "/hunt/technique",
@@ -193,7 +193,7 @@ class TestTechniqueGeneration:
 
         assert response.status_code in [200, 302, 303, 401]
 
-    def test_hunt_with_merge_options(self, client, ensure_archer_running):
+    def test_hunt_with_merge_options(self, client, ensure_shikari_running):
         """Test hunting with merge options."""
         response = client.post(
             "/hunt/technique",
@@ -207,7 +207,7 @@ class TestTechniqueGeneration:
 
         assert response.status_code in [200, 302, 303, 401]
 
-    def test_hunt_with_ai_generators(self, client, ensure_archer_running):
+    def test_hunt_with_ai_generators(self, client, ensure_shikari_running):
         """Test hunting with AI generators enabled."""
         response = client.post(
             "/hunt/technique",
@@ -224,7 +224,7 @@ class TestTechniqueGeneration:
 class TestTechniqueNames:
     """Tests for technique name resolution."""
 
-    def test_technique_names_api(self, client, ensure_archer_running):
+    def test_technique_names_api(self, client, ensure_shikari_running):
         """Test technique names resolution API."""
         response = client.post(
             "/api/technique_names",
@@ -237,7 +237,7 @@ class TestTechniqueNames:
         # Should return name mappings
         assert len(data) > 0
 
-    def test_technique_names_for_subtechniques(self, client, ensure_archer_running):
+    def test_technique_names_for_subtechniques(self, client, ensure_shikari_running):
         """Test technique names for sub-techniques."""
         response = client.post(
             "/api/technique_names",
@@ -248,7 +248,7 @@ class TestTechniqueNames:
         data = response.json()
         assert len(data) > 0
 
-    def test_technique_names_for_invalid_ids(self, client, ensure_archer_running):
+    def test_technique_names_for_invalid_ids(self, client, ensure_shikari_running):
         """Test technique names API with invalid IDs."""
         response = client.post(
             "/api/technique_names",
@@ -262,7 +262,7 @@ class TestTechniqueNames:
 class TestTechniqueResults:
     """Tests for technique hunt results."""
 
-    def test_hunt_progress_tracking(self, client, ensure_archer_running):
+    def test_hunt_progress_tracking(self, client, ensure_shikari_running):
         """Test that hunt progress can be tracked."""
         # Initiate hunt
         client.post(
@@ -279,7 +279,7 @@ class TestTechniqueResults:
 
         assert response.status_code == 200
 
-    def test_hunt_results_page(self, client, ensure_archer_running):
+    def test_hunt_results_page(self, client, ensure_shikari_running):
         """Test hunt results page loads."""
         response = client.get(
             "/results",
@@ -292,7 +292,7 @@ class TestTechniqueResults:
 class TestTechniqueEdgeCases:
     """Edge case tests for technique input."""
 
-    def test_parent_and_subtechnique_together(self, client, ensure_archer_running):
+    def test_parent_and_subtechnique_together(self, client, ensure_shikari_running):
         """Test including both parent and sub-technique."""
         response = client.post(
             "/hunt/technique",
@@ -304,7 +304,7 @@ class TestTechniqueEdgeCases:
 
         assert response.status_code in [200, 302, 303, 401]
 
-    def test_maximum_techniques(self, client, ensure_archer_running):
+    def test_maximum_techniques(self, client, ensure_shikari_running):
         """Test with many techniques (stress test)."""
         many_techniques = ",".join([
             "T1059.001", "T1059.003", "T1566.001", "T1566.002",
@@ -322,7 +322,7 @@ class TestTechniqueEdgeCases:
 
         assert response.status_code in [200, 302, 303, 401]
 
-    def test_deprecated_technique(self, client, ensure_archer_running):
+    def test_deprecated_technique(self, client, ensure_shikari_running):
         """Test handling of deprecated/revoked techniques."""
         # T1204 was split into sub-techniques
         response = client.post(

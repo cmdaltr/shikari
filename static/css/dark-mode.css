@@ -1,4 +1,4 @@
-/* Dark Mode Styles for Archer */
+/* Dark Mode Styles for Shikari */
 
 /* CSS Variables for Light and Dark Themes */
 :root[data-theme="light"] {
@@ -82,7 +82,7 @@
 /* Buttons */
 [data-theme="dark"] .btn-action,
 [data-theme="dark"] .back-btn,
-[data-theme="dark"] .how-archer-link {
+[data-theme="dark"] .how-shikari-link {
     background: var(--bg-secondary);
     color: var(--accent);
     border-color: var(--accent);
@@ -90,7 +90,7 @@
 
 [data-theme="dark"] .btn-action:hover,
 [data-theme="dark"] .back-btn:hover,
-[data-theme="dark"] .how-archer-link:hover {
+[data-theme="dark"] .how-shikari-link:hover {
     background: var(--accent);
     color: white;
 }

@@ -47,10 +47,10 @@ class TestPageRoutes:
         r = api.get(path, allow_redirects=False)
         assert r.status_code in [200, 302, 303]
 
-    def test_home_page_contains_archer(self, api, ensure_running):
+    def test_home_page_contains_shikari(self, api, ensure_running):
         r = api.get("/")
         assert r.status_code == 200
-        assert "Archer" in r.text or "archer" in r.text.lower()
+        assert "Shikari" in r.text or "shikari" in r.text.lower()
 
     def test_home_page_has_generate_form(self, api, ensure_running):
         r = api.get("/")

@@ -1,7 +1,7 @@
 """
 VECTR Export/Import Functionality
 
-Bidirectional sync between Archer detections and VECTR test cases.
+Bidirectional sync between Shikari detections and VECTR test cases.
 """
 
 import yaml
@@ -20,7 +20,7 @@ def export_to_vectr(
     environment: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Export Archer detections to VECTR as a campaign with test cases.
+    Export Shikari detections to VECTR as a campaign with test cases.
 
     Args:
         threat_group: Threat group name (e.g., "APT29")
@@ -31,7 +31,7 @@ def export_to_vectr(
     Returns:
         Export summary with campaign and test case details
     """
-    from archer.config import VECTRConfig
+    from shikari.config import VECTRConfig
 
     if not VECTRConfig.is_configured():
         raise ValueError(
@@ -57,7 +57,7 @@ def export_to_vectr(
     campaign = campaign_mgr.create_hunt_campaign(
         name=campaign_name,
         threat_group=threat_group,
-        description=f"Archer-generated threat hunt for {threat_group}",
+        description=f"Shikari-generated threat hunt for {threat_group}",
         environment=environment,
     )
 
@@ -100,7 +100,7 @@ def import_from_vectr(
     campaign_id: str, update_yamls: bool = False, output_dir: str = "data/groups"
 ) -> Dict[str, Any]:
     """
-    Import test results from VECTR and update Archer detections.
+    Import test results from VECTR and update Shikari detections.
 
     Args:
         campaign_id: VECTR campaign ID to import
@@ -110,7 +110,7 @@ def import_from_vectr(
     Returns:
         Import summary with updated detections
     """
-    from archer.config import VECTRConfig
+    from shikari.config import VECTRConfig
 
     if not VECTRConfig.is_configured():
         raise ValueError(
@@ -224,7 +224,7 @@ def sync_with_vectr(
     bidirectional: bool = True,
 ) -> Dict[str, Any]:
     """
-    Bidirectional sync between Archer and VECTR.
+    Bidirectional sync between Shikari and VECTR.
 
     Args:
         campaign_id: VECTR campaign ID
@@ -235,7 +235,7 @@ def sync_with_vectr(
     Returns:
         Sync summary
     """
-    from archer.config import VECTRConfig
+    from shikari.config import VECTRConfig
 
     if not VECTRConfig.is_configured():
         raise ValueError(

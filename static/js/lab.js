@@ -1,4 +1,4 @@
-// Build → Emulate → Lab (templates/emulate.html, archer/lab/web.py): the host, the machines
+// Build → Emulate → Lab (templates/emulate.html, shikari/lab/web.py): the host, the machines
 // you can create on it, and the ones that exist, with their lifecycle and provisioning.
 (function () {
   const root = document.getElementById('lab');
@@ -67,7 +67,7 @@
   }
 
   // UTM can't create a VM from an image, so instead of a Create button this card tells you how:
-  // build it in UTM once, then it shows up under Your machines for Archer to drive.
+  // build it in UTM once, then it shows up under Your machines for Shikari to drive.
   function utmCard(hostData) {
     const utm = (hostData.engines || []).find(e => e.key === 'utm');
     if (!utm || !utm.supported) return '';
@@ -77,10 +77,10 @@
           <button type="button" class="ui-pill lab-win" data-win="clone">${engineIcon('utm')}<span>Clone existing</span></button>
           <button type="button" class="ui-pill lab-win" data-win="iso">${osIcon('windows')}<span>From ISO</span></button>
         </div>` : '';
-      body = `<p class="lab-template-about">Two ways to a Windows machine: clone one you've already built, or build a new one from a Microsoft ISO (you make it in UTM once, then Archer manages it).</p>${buttons}`;
+      body = `<p class="lab-template-about">Two ways to a Windows machine: clone one you've already built, or build a new one from a Microsoft ISO (you make it in UTM once, then Shikari manages it).</p>${buttons}`;
     } else {
       const note = utm.installed
-        ? "Open UTM once and allow Archer's Automation access (System Settings → Privacy & Security → Automation). Then Windows machines can be cloned or built from an ISO here."
+        ? "Open UTM once and allow Shikari's Automation access (System Settings → Privacy & Security → Automation). Then Windows machines can be cloned or built from an ISO here."
         : "Install UTM to run Windows 11 on ARM and other OSes QEMU supports.";
       const install = !utm.installed && utm.install ? `<p class="lab-template-records"><code class="lab-install">${esc(utm.install)}</code></p>` : '';
       body = `<p class="lab-template-about">${esc(note)}</p>${install}`;
@@ -109,7 +109,7 @@
     return `<img class="lab-os-icon is-${esc(os)}" src="/static/images/os/${f}" alt="${esc(os)}" width="18" height="18">`;
   }
 
-  // docker, tart and utm are the engines Archer drives; vmware/parallels are staged for if they're added
+  // docker, tart and utm are the engines Shikari drives; vmware/parallels are staged for if they're added
   const ENGINE_ICON = { docker: 'docker.png', tart: 'tart.png', utm: 'utm.svg', vmware: 'vmware.svg', parallels: 'parallels.png' };
   function engineIcon(key) {
     const f = ENGINE_ICON[key];
@@ -145,7 +145,7 @@
       : '';
     let actions = '';
     if (m.manageable) {
-      // A UTM VM Archer didn't create needs its OS set before it can be set up or recorded on
+      // A UTM VM Shikari didn't create needs its OS set before it can be set up or recorded on
       const needsOs = m.engine === 'utm' && !m.os;
       const act = (a, label, cls = 'lab-act') => `<button type="button" class="ui-pill ${cls}" data-a="${a}">${actIcon(a)}${label}</button>`;
       actions = `<div class="lab-actions">
@@ -160,7 +160,7 @@
       </div>`;
     }
     // Whether this machine is a live CALDERA agent — the same enrolled/not-enrolled cue the diagram
-    // and `archer-cli caldera list` show. Only meaningful once the machine has an OS.
+    // and `shikari-cli caldera list` show. Only meaningful once the machine has an OS.
     const enrol = m.enrolled
       ? '<span class="lab-agent-badge is-on" title="Enrolled as a CALDERA agent"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="5.5"/><path d="M8 4.5V8l2.5 1.5"/></svg>agent</span>'
       : (m.os ? '<span class="lab-agent-badge" title="Not a CALDERA agent — use Enrol in CALDERA">not enrolled</span>' : '');
@@ -224,14 +224,14 @@
       .then(r => { if (r.error) alert(r.error + (r.detail ? '\n\n' + r.detail : '')); return r; });
   }
 
-  // A clash-free name in the lab convention: achr-<OSVer> (achr-cal-<OSVer> is for CALDERA).
+  // A clash-free name in the lab convention: shi-<OSVer> (shi-cal-<OSVer> is for CALDERA).
   // The OS tags come from the backend (data.naming), shared with the CLI, with a fallback.
   const OS_TAG_FALLBACK = { linux: 'ubu24', macos: 'mac15', windows: 'win11' };
   function suggestName(id) {
     const OS_TAG = naming.os_tag || OS_TAG_FALLBACK;
     const TPL_TAG = naming.template_tag || {};  // per-template tag, so Rocky reads rky10 not ubu24
     const os = id.startsWith('macos') ? 'macos' : id.startsWith('windows') ? 'windows' : 'linux';
-    const base = `achr-${TPL_TAG[id] || OS_TAG[os] || id.replace(/-(vm|container)$/, '')}`;
+    const base = `shi-${TPL_TAG[id] || OS_TAG[os] || id.replace(/-(vm|container)$/, '')}`;
     if (!taken.has(base)) return base;
     for (let n = 2; ; n++) if (!taken.has(`${base}-${n}`)) return `${base}-${n}`;
   }
@@ -309,7 +309,7 @@
     }
   });
 
-  // A clash-free clone name from the source: achr-win11 -> achr-win11-2
+  // A clash-free clone name from the source: shi-win11 -> shi-win11-2
   function suggestCloneName(src) {
     const stem = src.replace(/-\d+$/, '');
     for (let n = 2; ; n++) {
@@ -369,7 +369,7 @@
     nameInput.addEventListener('keydown', ev => { if (ev.key === 'Enter') go(); });
   }
 
-  // Guided build from a Microsoft ISO — Archer verifies the ISO; you build the VM in UTM once
+  // Guided build from a Microsoft ISO — Shikari verifies the ISO; you build the VM in UTM once
   function isoDialog() {
     openModal('Build a Windows VM from an ISO', `<ol class="lab-iso-steps">
       <li>Download the official <strong>Windows 11 Arm64</strong> ISO from
@@ -379,7 +379,7 @@
           <input type="text" id="lab-iso-path" placeholder="~/Downloads/Win11_arm64.iso" autocomplete="off"></label>
         <div class="lab-iso-check"><button type="button" class="ui-pill" id="lab-iso-go">Verify ISO</button>
           <span id="lab-iso-result" class="lab-iso-result"></span></div></li>
-      <li>In UTM: <strong>New Virtual Machine → Virtualize → Windows</strong>, pick that ISO, 4 GB RAM, name it without spaces (e.g. <code>achr-win11</code>), and install the <strong>UTM guest tools</strong> so Archer can run commands in it.</li>
+      <li>In UTM: <strong>New Virtual Machine → Virtualize → Windows</strong>, pick that ISO, 4 GB RAM, name it without spaces (e.g. <code>shi-win11</code>), and install the <strong>UTM guest tools</strong> so Shikari can run commands in it.</li>
       <li>It appears under Your machines. <strong>Set OS → Windows</strong>, then <strong>Install tooling</strong> and <strong>Record</strong>. For more Windows VMs after this, use <strong>Clone</strong> — no reinstall.</li>
     </ol>
     <div class="lab-modal-actions"><button type="button" class="btn-primary" id="lab-iso-close">Done</button></div>`);
@@ -404,7 +404,7 @@
         <option value="linux">Linux</option>
         <option value="macos">macOS</option>
       </select></label>
-      <p class="lab-hint">So Archer knows how to turn on logging, install Atomic Red Team and record on it.</p>
+      <p class="lab-hint">So Shikari knows how to turn on logging, install Atomic Red Team and record on it.</p>
       <div class="lab-modal-actions"><button type="button" class="ui-pill" id="lab-os-cancel">Cancel</button>
       <button type="button" class="btn-primary" id="lab-os-go">Save</button></div>`);
     el('lab-os-go').addEventListener('click', () => {
@@ -456,7 +456,7 @@
     openModal(`Record on ${name}`, `
       <label class="lab-field">ATT&CK techniques
         <input type="text" id="lab-tech" placeholder="T1059.001, T1053.003" autocomplete="off"></label>
-      <p class="lab-hint">Atomic Red Team runs these in the machine and Archer imports the logs as <strong>Your lab</strong>.
+      <p class="lab-hint">Atomic Red Team runs these in the machine and Shikari imports the logs as <strong>Your lab</strong>.
         The tests change the machine — snapshot it first and revert after.</p>
       <label class="lab-field">Revert to snapshot afterwards (optional)
         <input type="text" id="lab-revert" value="clean" autocomplete="off"></label>

@@ -1,9 +1,9 @@
 """
-Headed Playwright walkthrough of the Archer UI, one captioned step per feature.
+Headed Playwright walkthrough of the Shikari UI, one captioned step per feature.
 
 Run:  .venv/bin/python tests/ui/walkthrough.py [step ...] [--headless]
 Steps: login group cve research upload upload-iocs upload-error profile ask library coverage manual how user
-Env:  ARCHER_BASE_URL, ARCHER_EMAIL, ARCHER_PASSWORD, ARCHER_GEN_TIMEOUT (seconds)
+Env:  SHIKARI_BASE_URL, SHIKARI_EMAIL, SHIKARI_PASSWORD, SHIKARI_GEN_TIMEOUT (seconds)
 """
 
 import os
@@ -15,13 +15,13 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
-BASE = os.getenv("ARCHER_BASE_URL", "http://localhost:8000").rstrip("/")
+BASE = os.getenv("SHIKARI_BASE_URL", "http://localhost:8000").rstrip("/")
 # Defaults are the documented first-run admin from GETTING_STARTED.md
-EMAIL = os.getenv("ARCHER_EMAIL", "admin@archer.app")
-PASSWORD = os.getenv("ARCHER_PASSWORD", "£missary_0f_the_G0rg0nite$")
+EMAIL = os.getenv("SHIKARI_EMAIL", "admin@shikari.app")
+PASSWORD = os.getenv("SHIKARI_PASSWORD", "BigGameHunter")
 SHOTS = Path(__file__).parent.parent / "screenshots" / "walkthrough" / datetime.now().strftime("%Y%m%d-%H%M%S")
 SHOTS.mkdir(parents=True, exist_ok=True)
-GEN_TIMEOUT = int(os.getenv("ARCHER_GEN_TIMEOUT", 15 * 60))
+GEN_TIMEOUT = int(os.getenv("SHIKARI_GEN_TIMEOUT", 15 * 60))
 
 results = []
 step_no = 0
@@ -418,7 +418,7 @@ def tour_attack_flow(page):
 @step("Login with default admin")
 def login(page):
     page.goto(f"{BASE}/login")
-    caption(page, "Logging in as admin@archer.app")
+    caption(page, "Logging in as admin@shikari.app")
     page.fill("#email", EMAIL)
     page.fill("#password", PASSWORD)
     shot(page, "login")
@@ -462,7 +462,7 @@ def hunt_cve(page):
     # exploitation indicators from the CVE's write-ups (Volexity, Unit 42), one sweep per SIEM
     body = page.content()  # collapsed query blocks are not in inner_text
     # SecOps sweeps are UDM Search: the rule name is a // comment, not a YARA-L `rule {}`
-    for siem, marker in (("SecOps", "archer_ioc_sweep_cve_2024_3400"), ("MDE", "RemoteIP in (ioc_ip)")):
+    for siem, marker in (("SecOps", "shikari_ioc_sweep_cve_2024_3400"), ("MDE", "RemoteIP in (ioc_ip)")):
         if marker not in body:
             raise AssertionError(f"no {siem} IOC sweep for CVE-2024-3400")
     if body.count("172.233.228.93") < 2:
@@ -652,17 +652,17 @@ def profile(page):
     return tour_results(page, "tesco.com")
 
 
-@step("Ask Archer — conversational Q&A")
-def ask_archer(page):
+@step("Ask Shikari — conversational Q&A")
+def ask_shikari(page):
     page.goto(f"{BASE}/")
-    caption(page, "Opening Ask Archer")
-    if not page.locator("#ask-archer-panel.open").count():  # the panel remembers being open
-        page.click("#ask-archer-btn")
+    caption(page, "Opening Ask Shikari")
+    if not page.locator("#ask-shikari-panel.open").count():  # the panel remembers being open
+        page.click("#ask-shikari-btn")
     page.fill("#aap-input", "Give me a Splunk query for T1003.001 LSASS memory dumping")
     shot(page, "ask_question")
     with page.expect_response(lambda r: "/api/ask" in r.url, timeout=180000) as resp_info:
         page.click("#aap-send")
-        caption(page, "Waiting for Ask Archer to answer…")
+        caption(page, "Waiting for Ask Shikari to answer…")
     resp = resp_info.value
     page.wait_for_timeout(2000)
     shot(page, "ask_answer")
@@ -674,7 +674,7 @@ def ask_archer(page):
 @step("Agents — detection repair (trace, MCP-shared tools)")
 def agents(page):
     page.goto(f"{BASE}/agents")
-    caption(page, "Agents: a model in a loop with Archer's tools")
+    caption(page, "Agents: a model in a loop with Shikari's tools")
     # Let any leftover generation drain so it can't starve the agent's LLM calls
     wait_for_runs_settled(page)
     page.wait_for_selector(".ag-pick")
@@ -693,9 +693,9 @@ def agents(page):
     return f"repair agent: {', '.join(tools)}; {page.inner_text('#ag-usage')}"
 
 
-@step("AI assignment — local model for Ask Archer (profile)")
+@step("AI assignment — local model for Ask Shikari (profile)")
 def ai_assignment(page):
-    """Profile → API Keys → AI Models: add a local endpoint row, assign Ask Archer to it (#10);
+    """Profile → API Keys → AI Models: add a local endpoint row, assign Ask Shikari to it (#10);
     detection generation can't take a local model yet (#9). The user's own settings are restored."""
     model = "llama3.2:3b"
     before = page.request.get(f"{BASE}/api/profile/ai-settings").json()["settings"]
@@ -725,29 +725,29 @@ def ai_assignment(page):
         raise AssertionError("a local model should not be assignable to detection generation yet (#9)")
     page.select_option("#assign-ask-provider", "local")
     page.fill("#assign-ask-model", model)
-    caption(page, f"Ask Archer → local {model}; one Save for keys and assignment")
+    caption(page, f"Ask Shikari → local {model}; one Save for keys and assignment")
     with page.expect_response(lambda r: r.url.endswith("/api/profile/ai-settings") and r.request.method == "POST") as saved:
         page.click("button[onclick='saveAiTab()']")
     if not saved.value.json().get("success"):
         raise AssertionError(f"AI settings not saved: {saved.value.json()}")
     if (saved.value.json()["settings"].get("ask") or {}).get("provider") != "local":
-        raise AssertionError("Save didn't store the Ask Archer assignment")
+        raise AssertionError("Save didn't store the Ask Shikari assignment")
     shot(page, "ai_assignment")
 
     try:
         page.goto(f"{BASE}/")
-        if not page.locator("#ask-archer-panel.open").count():  # the panel remembers being open
-            page.click("#ask-archer-btn")
+        if not page.locator("#ask-shikari-panel.open").count():  # the panel remembers being open
+            page.click("#ask-shikari-btn")
         page.fill("#aap-input", "In one sentence, what is LSASS?")
         with page.expect_response(lambda r: "/api/ask" in r.url, timeout=300000) as resp_info:
             page.click("#aap-send")
-            caption(page, f"Asking Archer: answered by the assigned {model}")
+            caption(page, f"Asking Shikari: answered by the assigned {model}")
         resp = resp_info.value
         if not resp.ok:
             raise RuntimeError(f"/api/ask returned {resp.status}: {str(resp.json().get('detail', ''))[:150]}")
         provider = resp.json().get("provider", "")
         if not provider.startswith("Local (") or model not in provider:
-            raise AssertionError(f"Ask Archer answered with {provider!r}, not the assigned local {model}")
+            raise AssertionError(f"Ask Shikari answered with {provider!r}, not the assigned local {model}")
         page.wait_for_timeout(1500)
         shot(page, "ai_ask_answer")
         page.click("#aap-close")  # the panel stays open across pages and would cover the next step
@@ -755,7 +755,7 @@ def ai_assignment(page):
         # Put back the user's own Ask assignment and local endpoint; their keys were never touched
         page.request.post(f"{BASE}/api/profile/ai-settings",
                           data={"ask": before.get("ask"), "local": before.get("local") or {"endpoint": "", "model": ""}})
-    return f"Ask Archer answered by {provider}"
+    return f"Ask Shikari answered by {provider}"
 
 
 @step("Library — saved detections")
@@ -803,7 +803,7 @@ def user_profile(page):
 
 STEPS = {
     "login": login, "group": hunt_group, "cve": hunt_cve, "research": research,
-    "upload": upload_blog, "upload-iocs": upload_iocs, "upload-error": upload_error, "profile": profile, "ask": ask_archer, "ai": ai_assignment, "agents": agents, "library": library,
+    "upload": upload_blog, "upload-iocs": upload_iocs, "upload-error": upload_error, "profile": profile, "ask": ask_shikari, "ai": ai_assignment, "agents": agents, "library": library,
     "coverage": coverage, "manual": manual, "how": how, "user": user_profile,
 }
 

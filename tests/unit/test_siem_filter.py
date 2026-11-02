@@ -1,5 +1,5 @@
 """Generating for some SIEMs skips the others, in the keys construct_yaml checks."""
-from archer.build.detections import ALL_SIEMS, excluded_for
+from shikari.build.detections import ALL_SIEMS, excluded_for
 
 
 def test_splunk_is_generated_again():

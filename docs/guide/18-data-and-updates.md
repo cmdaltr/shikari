@@ -1,32 +1,32 @@
 # Data and updates
 
-Archer downloads public data, keeps it up to date by itself, and stores everything you make under `data/` in the project folder. Your own data is never committed to git.
+Shikari downloads public data, keeps it up to date by itself, and stores everything you make under `data/` in the project folder. Your own data is never committed to git.
 
-The desktop app running Archer locally keeps the same layout in a per-user folder instead: `~/Library/Application Support/Archer/home` (macOS), `%LOCALAPPDATA%\Archer\home` (Windows) or `~/.local/share/archer/home` (Linux), or `$ARCHER_HOME`. The paths below are relative to it. Connected to an organisation's server, the app keeps nothing but its login session: see [desktop/README.md](../../desktop/README.md).
+The desktop app running Shikari locally keeps the same layout in a per-user folder instead: `~/Library/Application Support/Shikari/home` (macOS), `%LOCALAPPDATA%\Shikari\home` (Windows) or `~/.local/share/shikari/home` (Linux), or `$SHIKARI_HOME`. The paths below are relative to it. Connected to an organisation's server, the app keeps nothing but its login session: see [desktop/README.md](../../desktop/README.md).
 
-## What Archer downloads, and when
+## What Shikari downloads, and when
 
 | Data | Source | Updated | Stored in |
 |---|---|---|---|
-| MITRE ATT&CK Enterprise | `mitre-attack/attack-stix-data` on GitHub | On every start, if a new release is out | `archer/data/cache/enterprise-attack.json` |
+| MITRE ATT&CK Enterprise | `mitre-attack/attack-stix-data` on GitHub | On every start, if a new release is out | `shikari/data/cache/enterprise-attack.json` |
 | MITRESaw procedures | Built from the ATT&CK bundle | When ATT&CK changes (changed groups only), or from the [MITRESaw](12-mitresaw.md) page | `data/mitre_procedures.csv`, `.xlsx` |
 | OSINT detection rules | Public SecOps, Sentinel, Splunk and Elastic rule repositories | On every start | `data/repos/` |
 | LOLBAS, LOLDrivers, LOLRMM | lolol.farm projects | At most once a day | `data/repos/lol/`, `data/cache/lol_index.json` |
 | Recent CVEs | NVD and CISA KEV | On every start and daily: CVEs published in the last 30 days, marked when they're in KEV. A hunted CVE is kept past the 30 days for its results, but no longer listed | `data/feed/cves.json` |
 | CVE research | NVD, the CVE's references, GitHub PoCs | When a CVE is first hunted, then cached. Each daily refresh also researches up to 60 in advance: KEV CVEs first, then those naming a product in anyone's technology stack | `data/cache/cve/` |
 | Threat Feed | The feed sources' RSS and Atom feeds | On every start, on Refresh now, and when the Feed is opened six hours after the last collection | `data/feed/` |
-| Recorded attack telemetry | Splunk attack_data, OTRF Security-Datasets, EVTX-to-MITRE-Attack | Committed; changed recordings fetched from the [Emulate](19-emulate.md) page or `python -m archer.telemetry --build` | `archer/data/telemetry_*` |
-| Defender XDR alerting per technique | Microsoft GUIDE (Kaggle) | Committed; rebuilt by `python -m archer.telemetry --guide` | `archer/data/telemetry_guide.json` |
+| Recorded attack telemetry | Splunk attack_data, OTRF Security-Datasets, EVTX-to-MITRE-Attack | Committed; changed recordings fetched from the [Emulate](19-emulate.md) page or `python -m shikari.telemetry --build` | `shikari/data/telemetry_*` |
+| Defender XDR alerting per technique | Microsoft GUIDE (Kaggle) | Committed; rebuilt by `python -m shikari.telemetry --guide` | `shikari/data/telemetry_guide.json` |
 | Your lab's recordings | `scripts/telemetry/record-atomics.ps1` on your test machines | When you add a run | `data/telemetry/lab/` (never committed) |
 | World map, flags | Natural Earth; flag-icons (MIT) | Committed; rebuilt only by `scripts/data/` | `static/images/`, `static/vendor/flag-icons/` |
 
-Starting with `archer-cli start --skip-index` skips rebuilding the OSINT technique index, for a faster start.
+Starting with `shikari-cli start --skip-index` skips rebuilding the OSINT technique index, for a faster start.
 
 ## What you make
 
 | What | Where |
 |---|---|
-| Accounts, Library, settings, encrypted API keys | `data/archer.db` (SQLite) and `data/.encryption_key` |
+| Accounts, Library, settings, encrypted API keys | `data/shikari.db` (SQLite) and `data/.encryption_key` |
 | Generated detections (YAML) | `data/groups/`: `<Technique>_<table or index>.yaml`, or `<Technique>_UDM.yaml` (and `KQL`, `SPL`, `ESQL`) where there's one file per SIEM |
 | Correlations | `data/correlate/<group>.json` (the index) and one YAML per correlation in `data/correlate/<group>/`: `<A>_and_<B>[_and_<C>]_<UDM, KQL, SPL or ESQL>.yaml` (three names for a chain) |
 | Run records and progress | `data/runs/`, `data/progress/` |
@@ -37,13 +37,13 @@ Starting with `archer-cli start --skip-index` skips rebuilding the OSINT techniq
 Files made before the query-language names (`_GoogleSecOps.yaml`, `_MicrosoftThreatProtection.yaml`, `_DefenderXDR.yaml`) are renamed, along with the names the correlation indexes and run records hold, by:
 
 ```bash
-python -m archer.build.migrate_names            # --dry-run to see what it would do
+python -m shikari.build.migrate_names            # --dry-run to see what it would do
 ```
 
 ## Your organisation's own material
 
-The `bespoke/` folder holds what's specific to your organisation: AI prompt templates, query templates, index and table mappings, and reference queries. Its folders are committed empty and its files are gitignored, so none of it reaches git. Missing mapping files are filled at start-up from the generic defaults in `archer/mappings/defaults/`, which never overwrite yours. See [BESPOKE.md](../BESPOKE.md).
+The `bespoke/` folder holds what's specific to your organisation: AI prompt templates, query templates, index and table mappings, and reference queries. Its folders are committed empty and its files are gitignored, so none of it reaches git. Missing mapping files are filled at start-up from the generic defaults in `shikari/mappings/defaults/`, which never overwrite yours. See [BESPOKE.md](../BESPOKE.md).
 
 ## Backing up
 
-Copy `data/archer.db`, `data/.encryption_key` (without it, stored API keys can't be read) and `bespoke/` (for the desktop app, the same files in its folder above). Everything else is rebuilt or re-downloaded.
+Copy `data/shikari.db`, `data/.encryption_key` (without it, stored API keys can't be read) and `bespoke/` (for the desktop app, the same files in its folder above). Everything else is rebuilt or re-downloaded.

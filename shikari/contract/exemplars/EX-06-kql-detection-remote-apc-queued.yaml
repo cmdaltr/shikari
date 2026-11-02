@@ -1,0 +1,234 @@
+shikari_output:
+  contract_version: "1.0"
+  kind: rule
+  request_ref: REQ-2026-10-10-006
+  rule:
+    rule_id: 2a14f74a-d25f-4fed-8455-7757704b425c
+    name: PrivilegeEscalation_T1055.004_DeviceEvents_RemoteApcQueued
+    author: Shikari Detection Engineering
+    created: "2026-10-10"
+    modified: "2026-10-10"
+    version: "1.0.0"
+    status: draft
+    detection_type: scheduled_detection
+    siem: kql
+    target_os:
+      - windows
+    log_sources:
+      - id: LS1
+        siem_source: DeviceEvents
+        product: Microsoft Defender for Endpoint
+        udm_log_type: null
+        ingestion:
+          status: confirmed
+          profile_ref: ENVPROFILE-C-defender-xdr-advanced-hunting
+        fields:
+          - path: ActionType
+            population: known_populated
+            os:
+              - windows
+            note: QueueUserApcRemoteApiCall is emitted by the Windows sensor only.
+          - path: InitiatingProcessFileName
+            population: known_populated
+            os:
+              - windows
+          - path: InitiatingProcessFolderPath
+            population: known_populated
+            os:
+              - windows
+          - path: InitiatingProcessCommandLine
+            population: known_populated
+            os:
+              - windows
+          - path: InitiatingProcessSHA256
+            population: known_populated
+            os:
+              - windows
+          - path: InitiatingProcessParentFileName
+            population: known_populated
+            os:
+              - windows
+          - path: InitiatingProcessAccountName
+            population: known_populated
+            os:
+              - windows
+          - path: InitiatingProcessId
+            population: known_populated
+            os:
+              - windows
+          - path: FileName
+            population: unknown
+            os:
+              - windows
+            note: For remote API-call action types FileName, FolderPath and ProcessId are documented as the target process; confirm from a sample before promotion.
+          - path: FolderPath
+            population: unknown
+            os:
+              - windows
+          - path: ProcessId
+            population: unknown
+            os:
+              - windows
+          - path: ReportId
+            population: known_populated
+            os:
+              - windows
+          - path: DeviceId
+            population: known_populated
+            os:
+              - windows
+        coverage_gaps:
+          - Windows only; macOS and Linux sensors do not emit API-call action types.
+          - DeviceEvents does not carry the initiating process's parent command line; only the parent image name is available.
+    attack:
+      attack_version: "19.2"
+      bundle_ref: null
+      tactics:
+        - privilege_escalation
+        - stealth
+      technique_ids:
+        - T1055.004
+      mapping_rationale: The sensor records a QueueUserAPC call into a different process (ActionType QueueUserApcRemoteApiCall with initiator and target distinct), which is Process Injection, Asynchronous Procedure Call. T1055 has sub-techniques and the sub-technique is stated. The tactic pair follows the v19 split of Defense Evasion; stealth membership is to be confirmed against the pinned bundle (bundle_ref null). This replaces the command-line API-name matching in workbook Q039 and the identity-table matching in Q049, where the field could never carry the value.
+    lookback: 2h
+    schedule:
+      frequency: "1h"
+      grouping: DeviceId and InjectingProcess
+    confidence:
+      rating: Medium
+      rationale: Single-stage logic on a specific sensor-observed API call rather than a string indicator; precision depends on the same-image and security-tooling suppressions, and third-party endpoint agents that queue APCs are not yet enumerated.
+    severity:
+      rating: High
+      rationale: Code execution inside another process is the mechanism for credential theft, defence impairment and privilege escalation on the host; a true positive is active post-exploitation tooling.
+    false_positives:
+      - id: FP1
+        scenario: Chromium-family browsers (chrome.exe, msedge.exe) queue APCs into their own renderer and utility child processes as part of sandbox brokering.
+        population: Every workstation with a Chromium browser
+        distinguishing_fields:
+          - field: InitiatingProcessFileName
+            benign_pattern: equal to FileName with equal InitiatingProcessFolderPath and FolderPath (same image injecting into itself)
+        handled_by: suppression
+        suppression_id: S1
+      - id: FP2
+        scenario: Microsoft Defender Antivirus (MsMpEng.exe) and the MDE sensor (MsSense.exe) inject into processes for inspection.
+        population: All devices
+        distinguishing_fields:
+          - field: InitiatingProcessFolderPath
+            benign_pattern: image name in the allow-list and folder under Windows Defender or Windows Advanced Threat Protection
+        handled_by: suppression
+        suppression_id: S2
+      - id: FP3
+        scenario: Third-party EDR, DLP or application-control agents that use APC injection for hooking.
+        population: Devices with a third-party security agent
+        distinguishing_fields:
+          - field: InitiatingProcessSHA256
+            benign_pattern: a signed vendor image whose hash is stable across the estate; add to ApcInjectorAllowList with its folder pin after confirmation
+        handled_by: triage
+        suppression_id: null
+    tuning_notes:
+      baseline:
+        window_days: 7
+        before_tuning: null
+        after_tuning: null
+        alerts_per_day_after_aggregation: null
+        measured_on: null
+        measurement_procedure: Run the query with lookback set to 7d and summarize by bin(Timestamp, 1d), DeviceId, InjectingProcess; count rows per day. Production requires at most 5 per day across the estate after S1 and S2.
+      suppressions:
+        - id: S1
+          logic_ref: "// S1:"
+          reason: Same-image injection into a child is browser sandbox brokering and similar self-hosting patterns.
+          depends_on_enrichment: false
+          fails_closed_how: Compares two fields on the detecting event; no external data.
+        - id: S2
+          logic_ref: "// S2:"
+          reason: Defender AV and the MDE sensor legitimately inject for inspection; the image name is pinned to its expected folder so a renamed binary elsewhere does not benefit.
+          depends_on_enrichment: false
+          fails_closed_how: Inline allow-list; an empty list suppresses nothing, and the folder pin must also match.
+      dependencies:
+        - type: allow_list
+          name: ApcInjectorAllowList
+          declared_in: query (let ApcInjectorAllowList)
+          definition_ref: Maintained in the rule; entries require image name plus expected folder
+      first_parameter_to_adjust: ApcInjectorAllowList plus its folder pin in S2. Add confirmed third-party agents; do not relax S1 to a name-only comparison.
+      known_limitations:
+        - No parent command line on DeviceEvents; InjectingParent carries the parent image name only.
+        - Target-process field semantics for remote API-call events are assumed from Microsoft documentation and must be confirmed from a sample.
+      split_from: []
+    references:
+      - id: REF1
+        title: Microsoft Defender XDR Advanced Hunting schema, DeviceEvents table and ActionType reference (QueueUserApcRemoteApiCall)
+        locator: https://learn.microsoft.com/defender-xdr/advanced-hunting-deviceevents-table
+        accessed: "2026-10-10"
+        used_for:
+          - ActionType value
+          - field semantics for remote API-call events
+      - id: REF2
+        title: Shikari fidelity workbook rows Q039 and Q049 (API names matched in command-line and identity tables)
+        locator: shikari fable fidelity workbook (populated).xlsx, Queries tab, Q039 and Q049
+        accessed: "2026-10-10"
+        used_for:
+          - source selection rationale
+    indicators: []
+    reference_lists: []
+    entity_output:
+      timestamp_first: FirstSeen
+      timestamp_last: LastSeen
+      device: DeviceName
+      account: Account
+      process: InjectingProcess, InjectingCommandLine
+      parent_command_line: null
+      evidence_value: TargetProcesses
+      source_table: DeviceEvents
+    correlation:
+      events:
+        - var: DeviceEvents
+          source_id: LS1
+          role: single
+      join_keys: []
+      ordering: null
+      window: 2h
+    regexes: []
+    complexity:
+      lines: 16
+      event_variables_or_joins: 0
+      union_branches: 0
+      nesting_depth: 0
+    validation:
+      fidelity_basis: logic_review
+      compile:
+        status: not_run
+      field_existence:
+        schema_ref: Microsoft Defender XDR Advanced Hunting schema, 2026-10
+        status: checked
+      field_population:
+        status: unknown
+        evidence: ActionType QueueUserApcRemoteApiCall is documented; the target-process semantics of FileName, FolderPath and ProcessId for this ActionType must be confirmed with a sample query (DeviceEvents | where ActionType == "QueueUserApcRemoteApiCall" | take 20) before promotion.
+      ingestion:
+        status: confirmed
+        profile_ref: ENVPROFILE-C-defender-xdr-advanced-hunting
+      join_portability:
+        status: not_applicable
+        notes: Single table, no join.
+      regex_checks:
+        status: not_run
+      positive_control:
+        status: not_run
+        procedure: On a Windows test VM execute an APC-injection proof of concept (Atomic Red Team T1055.004 test) from a non-browser, non-security image and confirm one alert grouped by DeviceId and InjectingProcess with the injector's command line and the target process path; then launch Chrome and confirm no alert from chrome.exe.
+        evidence_ref: null
+        date: null
+    query: |
+      // PrivilegeEscalation_T1055.004_DeviceEvents_RemoteApcQueued
+      let lookback = 2h;
+      // Allow-list of security images known to queue APCs legitimately; S2 also pins each to its expected folder
+      let ApcInjectorAllowList = dynamic(["msmpeng.exe", "mssense.exe"]);
+      DeviceEvents
+      | where Timestamp > ago(lookback)
+      | where ActionType == "QueueUserApcRemoteApiCall"
+      | where isnotempty(InitiatingProcessFileName) and isnotempty(FileName)
+      // S1: same image injecting into its own child (browser sandbox brokering)
+      | where not(InitiatingProcessFileName =~ FileName and InitiatingProcessFolderPath =~ FolderPath)
+      // S2: Defender AV and MDE sensor, name pinned to folder
+      | where not(tolower(InitiatingProcessFileName) in (ApcInjectorAllowList) and InitiatingProcessFolderPath has_any (@"\Windows Defender\", @"\Windows Advanced Threat Protection\"))
+      | summarize FirstSeen = min(Timestamp), LastSeen = max(Timestamp), EventCount = count(), TargetProcesses = make_set(FolderPath, 20), TargetPids = make_set(ProcessId, 20), arg_max(Timestamp, ReportId)
+          by DeviceId, DeviceName, InitiatingProcessAccountName, InitiatingProcessFolderPath, InitiatingProcessCommandLine, InitiatingProcessSHA256, InitiatingProcessParentFileName, InitiatingProcessId
+      | project Timestamp, ReportId, DeviceId, DeviceName, Account = InitiatingProcessAccountName, InjectingProcess = InitiatingProcessFolderPath, InjectingCommandLine = InitiatingProcessCommandLine,
+                InjectingProcessSHA256 = InitiatingProcessSHA256, InjectingParent = InitiatingProcessParentFileName, InjectingPid = InitiatingProcessId, FirstSeen, LastSeen, EventCount, TargetProcesses, TargetPids

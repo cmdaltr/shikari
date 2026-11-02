@@ -1,10 +1,10 @@
-"""Research search (archer/intelligence/research_search.py): archive, ATT&CK and web matching."""
+"""Research search (shikari/intelligence/research_search.py): archive, ATT&CK and web matching."""
 
 from unittest import mock
 
 import pytest
 
-from archer.intelligence import research_search as rs
+from shikari.intelligence import research_search as rs
 
 
 @pytest.fixture(autouse=True)
@@ -63,7 +63,7 @@ def test_web_keeps_security_stories_and_dedupes():
         return google if name == "Google News" else bing
 
     resp = mock.Mock(content=b"", raise_for_status=lambda: None)
-    with mock.patch("requests.get", return_value=resp), mock.patch("archer.intelligence.feed.parse_feed", side_effect=fake):
+    with mock.patch("requests.get", return_value=resp), mock.patch("shikari.intelligence.feed.parse_feed", side_effect=fake):
         assert [(r["title"], r["outlet"]) for r in rs.search_web("ghostaction")] == [
             ("GhostAction campaign steals 3,325 secrets", "BleepingComputer")]
         assert rs.search_web("redsun") == []
@@ -82,5 +82,5 @@ def test_web_drops_non_latin_titles():
     items = [post("Два взломанных аккаунта: GhostAction вернулся на GitHub", "https://r/1"),
              post("GhostAction hits GitHub - The Hacker News", "https://t/1")]
     resp = mock.Mock(content=b"", raise_for_status=lambda: None)
-    with mock.patch("requests.get", return_value=resp), mock.patch("archer.intelligence.feed.parse_feed", return_value=items):
+    with mock.patch("requests.get", return_value=resp), mock.patch("shikari.intelligence.feed.parse_feed", return_value=items):
         assert [r["url"] for r in rs.search_web("ghostaction")] == ["https://t/1"]

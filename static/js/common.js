@@ -1,5 +1,5 @@
 /**
- * Common JavaScript utilities for Archer
+ * Common JavaScript utilities for Shikari
  */
 
 /**
@@ -284,7 +284,7 @@ document.addEventListener('mouseover', e => {
 // shrinks/reloads — it's pinned at its current height across the update so the page can't
 // collapse and clamp the scroll. Works whichever element actually scrolls (the viewport, or a
 // container with its own overflow, as on the app's body).
-window.archerPreserveScroll = function (update, hold) {
+window.shikariPreserveScroll = function (update, hold) {
   const scroller = (function (el) {
     for (; el; el = el.parentElement) {
       const s = getComputedStyle(el);

@@ -10,15 +10,15 @@ from typing import Optional, Dict, Any
 
 
 # Configuration
-DEFAULT_BASE_URL = os.getenv("ARCHER_BASE_URL", "http://127.0.0.1:8000")
+DEFAULT_BASE_URL = os.getenv("SHIKARI_BASE_URL", "http://127.0.0.1:8000")
 DEFAULT_TIMEOUT = 30
 GENERATION_TIMEOUT = 300  # 5 minutes for generation tests
 
 
 @pytest.fixture(scope="session")
 def base_url(request):
-    """Get Archer base URL from command line or environment."""
-    return request.config.getoption("--archer-url", default=DEFAULT_BASE_URL)
+    """Get Shikari base URL from command line or environment."""
+    return request.config.getoption("--shikari-url", default=DEFAULT_BASE_URL)
 
 
 @pytest.fixture(scope="session")
@@ -40,8 +40,8 @@ def authenticated_session(session, base_url):
         response = session.post(
             f"{base_url}/login",
             data={
-                "email": "admin@archer.app",
-                "password": "£missary_0f_the_G0rg0nite$"
+                "email": "admin@shikari.app",
+                "password": "BigGameHunter"
             },
             allow_redirects=False
         )
@@ -52,8 +52,8 @@ def authenticated_session(session, base_url):
     return session
 
 
-class ArcherClient:
-    """Helper client for making Archer API calls."""
+class ShikariClient:
+    """Helper client for making Shikari API calls."""
 
     def __init__(self, base_url: str, session: requests.Session):
         self.base_url = base_url
@@ -120,7 +120,7 @@ class ArcherClient:
         }
 
     def check_health(self) -> bool:
-        """Check if Archer is healthy."""
+        """Check if Shikari is healthy."""
         try:
             response = self.get("/health", timeout=10)
             return response.status_code == 200
@@ -130,8 +130,8 @@ class ArcherClient:
 
 @pytest.fixture(scope="session")
 def client(base_url, authenticated_session):
-    """Create an Archer client instance."""
-    return ArcherClient(base_url, authenticated_session)
+    """Create an Shikari client instance."""
+    return ShikariClient(base_url, authenticated_session)
 
 
 @pytest.fixture(scope="session")
@@ -141,8 +141,8 @@ def test_data_dir():
 
 
 @pytest.fixture(scope="session")
-def ensure_archer_running(client):
-    """Ensure Archer is running before tests."""
+def ensure_shikari_running(client):
+    """Ensure Shikari is running before tests."""
     if not client.check_health():
-        pytest.skip("Archer is not running. Start it with: archer-cli start")
+        pytest.skip("Shikari is not running. Start it with: shikari-cli start")
     return True

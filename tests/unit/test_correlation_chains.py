@@ -4,14 +4,14 @@ pairs. Every pair stands on its own; a chain needs A-B and B-C to be pairs, and 
 technique to bring a tactic the other two don't.
 """
 
-from archer.ai.genai import engine
-from archer.build import correlation_files
-from archer.build.udm import build_chain
-from archer.validation.static_check import check_query
+from shikari.ai.genai import engine
+from shikari.build import correlation_files
+from shikari.build.udm import build_chain
+from shikari.validation.static_check import check_query
 
 
 def _udm(tid, name, expr):
-    return f"// archer_{tid.replace('.', '_')}: {name} · ATT&CK {tid}\n{expr}"
+    return f"// shikari_{tid.replace('.', '_')}: {name} · ATT&CK {tid}\n{expr}"
 
 
 PHISH = _udm("T1566", "Phishing", 'metadata.event_type = "PROCESS_LAUNCH" and target.process.command_line = /mshta/ nocase')
@@ -23,7 +23,7 @@ VALID = _udm("T1078", "Valid Accounts", 'metadata.event_type = "USER_LOGIN" and 
 def test_udm_chain_binds_every_event_to_the_host():
     q = build_chain([PHISH, PWSH, DUMP])
 
-    assert q.startswith("// archer_chain_t1566_t1059_001_t1003_001:")
+    assert q.startswith("// shikari_chain_t1566_t1059_001_t1003_001:")
     assert "Phishing, PowerShell and LSASS Memory on the same host within 1h" in q
     for i in (1, 2, 3):
         assert f"$e{i}.principal.hostname = $host" in q
@@ -99,11 +99,11 @@ def test_chain_file_names_every_technique():
             "techniques_involved": ["LSASS Memory", "Phishing", "PowerShell"]}
     assert correlation_files.filename(corr) == "LSASSMemory_and_Phishing_and_PowerShell_UDM.yaml"
     assert correlation_files.title(corr) == "LSASS Memory, Phishing and PowerShell"
-    assert correlation_files._window("// archer_chain_x: A, B and C on the same device within 2h") == "2h"
+    assert correlation_files._window("// shikari_chain_x: A, B and C on the same device within 2h") == "2h"
 
 
 def test_a_run_keeps_a_chain_only_when_it_produced_every_part():
-    from archer.app import _run_correlations
+    from shikari.app import _run_correlations
 
     chain = {"a": "g/A_UDM.yaml", "b": ["g/B_UDM.yaml", "g/C_UDM.yaml"]}
     assert _run_correlations([chain], {"A_UDM.yaml", "B_UDM.yaml", "C_UDM.yaml"}) == [chain]

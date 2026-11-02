@@ -10,7 +10,7 @@ Every section starts collapsed: click its title to open it, and it stays open ne
 
 | Section | What it shows |
 |---|---|
-| Threat briefing | Coverage (how many of the group's techniques you detect), the weakest stage of the attack, and the gaps to close first. Gaps are ranked by how early they come in the attack, then by how many correlations they're part of. Worked out without AI. **Write a summary with AI** adds an optional written summary using the Ask Archer provider |
+| Threat briefing | Coverage (how many of the group's techniques you detect), the weakest stage of the attack, and the gaps to close first. Gaps are ranked by how early they come in the attack, then by how many correlations they're part of. Worked out without AI. **Write a summary with AI** adds an optional written summary using the Ask Shikari provider |
 | Anatomy workflow | How the attack runs: ways in, toolkit, actions, where it goes; each step marked detected or not (below) |
 | Outside your technology stack | For a technique, CVE or report hunt: what you asked for that your [technology stack](16-profile-and-settings.md#technology-stack) doesn't have. It was generated anyway |
 | Techniques that produced nothing | Each technique the run couldn't build a detection for, and why (usually "no indicators in ATT&CK", or outside your technology stack) |
@@ -51,7 +51,7 @@ A correlation joins several detections into one query that fires when the steps 
 
 Nor are two techniques from one procedure: a parent technique ATT&CK attributes to the group (Gallmaker's **T1027** Obfuscated Files or Information) has one detection holding its sub-techniques' indicators, and a sub-technique detection left over from an earlier run isn't paired with its parent or siblings unless ATT&CK attributes it to the group in its own right. A technique isn't correlated with itself: its `DeviceFileEvents` and `DeviceProcessEvents` queries on the same host aren't a chain of two techniques. Nor is a detection whose values are all bare built-in binaries (`wmic.exe` matches anything on its own) or all Windows API names (`OpenThread` never appears in a process command line).
 
-The combined query is built from its detections' queries, so the indicators OSINT Enhancement merged into them are in it too. Under the queries, a correlation also lists what its detections' enrichment found: the false positives the public Elastic and Splunk rules for those techniques document, and the LOLBAS, LOLDrivers and LOLRMM entries behind added indicators, each tagged with its technique. **View OSINT Enhancement Details** shows the public rules they were compared with. The false positives are guidance for tuning, not exclusions: the public rules describe them in prose ("administrators may legitimately use runas"), so Archer doesn't turn them into query conditions.
+The combined query is built from its detections' queries, so the indicators OSINT Enhancement merged into them are in it too. Under the queries, a correlation also lists what its detections' enrichment found: the false positives the public Elastic and Splunk rules for those techniques document, and the LOLBAS, LOLDrivers and LOLRMM entries behind added indicators, each tagged with its technique. **View OSINT Enhancement Details** shows the public rules they were compared with. The false positives are guidance for tuning, not exclusions: the public rules describe them in prose ("administrators may legitimately use runas"), so Shikari doesn't turn them into query conditions.
 
 Detection files are shared between groups and runs. When a later run rewrites one after the correlation was built, the card says so: the queries shown for each technique are current, the combined query isn't. **Regenerate** (or hunting the group again) rebuilds it.
 
@@ -65,7 +65,7 @@ A correlation joins detections within one SIEM, because across SIEMs there's no 
 
 ## Precision checks
 
-Before a detection is written, Archer removes conditions that parse but can't fire for the right reason, and keeps the rest of the query. A query left with no condition isn't written.
+Before a detection is written, Shikari removes conditions that parse but can't fire for the right reason, and keeps the rest of the query. A query left with no condition isn't written.
 
 | Check | Example | What happens |
 |---|---|---|
@@ -78,11 +78,11 @@ Before a detection is written, Archer removes conditions that parse but can't fi
 | Only a port | `RemotePort == 3389` | Kept, reported: it matches all traffic on that port |
 | A table the technique can't reach | a Windows-only technique on `CloudAppEvents` | Reported |
 
-The same checks run in the agents' `check_query` tool, reported with the static checks as `PREC-*`, and a query the [repair agent](15-agents-and-ask-archer.md) saves must pass their errors.
+The same checks run in the agents' `check_query` tool, reported with the static checks as `PREC-*`, and a query the [repair agent](15-agents-and-ask-shikari.md) saves must pass their errors.
 
 ## Quality and false-positive risk
 
-Each card carries two badges, worked out without AI (`archer/validation/quality.py`). Hover either for its reasons.
+Each card carries two badges, worked out without AI (`shikari/validation/quality.py`). Hover either for its reasons.
 
 **Quality A–F** scores the detection out of 100:
 
@@ -104,7 +104,7 @@ A is 85 and up, B 70, C 55, D 40, F below that.
 
 The risk goes down for hash matches and for exclusions of known-good activity.
 
-**Cost: medium or high** appears when the query is expensive to run, read from the query itself (`archer/validation/cost.py`). The tooltip says why and how to fix it. Causes include:
+**Cost: medium or high** appears when the query is expensive to run, read from the query itself (`shikari/validation/cost.py`). The tooltip says why and how to fix it. Causes include:
 
 - no time bound;
 - KQL `contains`, or SPL and ES|QL leading wildcards, which scan every value;
@@ -116,7 +116,7 @@ The risk goes down for hash matches and for exclusions of known-good activity.
 
 Scheduled detections run every few minutes, so a high one is worth fixing before deployment.
 
-When several queries share a card, it shows the weakest: the lowest grade, the highest risk and the highest cost. The Library shows the same badges. `/api/results/<run>` returns them as `quality`, `fp_risk` and `cost`. [Detections as code](22-detections-as-code.md#check-detections-in-ci) gates pull requests on them. `python -m archer.validation.quality <files>` prints them for detection files. Hit counts ([#16](https://github.com/cmdaltr/archer/issues/16)) will measure false positives against the SIEM itself.
+When several queries share a card, it shows the weakest: the lowest grade, the highest risk and the highest cost. The Library shows the same badges. `/api/results/<run>` returns them as `quality`, `fp_risk` and `cost`. [Detections as code](22-detections-as-code.md#check-detections-in-ci) gates pull requests on them. `python -m shikari.validation.quality <files>` prints them for detection files. Hit counts ([#16](https://github.com/cmdaltr/shikari/issues/16)) will measure false positives against the SIEM itself.
 
 ## Attack flow
 
@@ -173,4 +173,4 @@ Leaving the page before downloading or saving asks you to confirm.
 
 ## Before you deploy
 
-Archer's queries are a starting point, not production rules. The Validation section's four steps: check the logic matches the technique, run the query in your SIEM to confirm the syntax, check the field and table names match your schema, and assess false positives. Run new queries in monitoring mode before alerting on them.
+Shikari's queries are a starting point, not production rules. The Validation section's four steps: check the logic matches the technique, run the query in your SIEM to confirm the syntax, check the field and table names match your schema, and assess false positives. Run new queries in monitoring mode before alerting on them.

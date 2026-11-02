@@ -1,4 +1,4 @@
-// Results page: IOC flow (templates/partials/ioc_flow.html, archer/build/ioc_flow.py)
+// Results page: IOC flow (templates/partials/ioc_flow.html, shikari/build/ioc_flow.py)
 (function () {
   const root = document.getElementById('ioc-flow');
   const dataEl = document.getElementById('if-data');

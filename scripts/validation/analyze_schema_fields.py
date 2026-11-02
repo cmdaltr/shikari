@@ -93,7 +93,7 @@ def categorize_field(field_name: str) -> str:
 
 def analyze_schema():
     """Analyze all indexes in the production schema."""
-    schema_path = Path(__file__).parent.parent / "archer" / "mappings" / "schemaSplunk.json"
+    schema_path = Path(__file__).parent.parent / "shikari" / "mappings" / "schemaSplunk.json"
 
     print("="*100)
     print("COMPREHENSIVE SCHEMA FIELD ANALYSIS")
@@ -241,7 +241,7 @@ def analyze_schema():
     print("="*100)
 
     # Export all unique fields
-    output_dir = Path(__file__).parent.parent / "archer" / "mappings"
+    output_dir = Path(__file__).parent.parent / "shikari" / "mappings"
     fields_file = output_dir / "all_schema_fields.txt"
 
     with open(fields_file, 'w') as f:

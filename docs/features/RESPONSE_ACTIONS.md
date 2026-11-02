@@ -153,7 +153,7 @@ For techniques without specific patterns, a comprehensive generic template provi
 
 ### Core Module
 
-**File**: `archer/reports/response_actions.py`
+**File**: `shikari/reports/response_actions.py`
 
 **Key Components**:
 
@@ -182,7 +182,7 @@ For techniques without specific patterns, a comprehensive generic template provi
 
 ### Report Generator Integration
 
-**File**: `archer/reports/generator.py`
+**File**: `shikari/reports/generator.py`
 
 **Modified Sections**:
 
@@ -215,7 +215,7 @@ Response actions are automatically included when generating reports:
 
 **Via API:**
 ```python
-from archer.reports.generator import WordReportGenerator
+from shikari.reports.generator import WordReportGenerator
 
 generator = WordReportGenerator()
 
@@ -269,7 +269,7 @@ response_data = generator.response_generator.generate_response_actions(
 Response actions can be generated standalone for SOAR integration:
 
 ```python
-from archer.reports.response_actions import ResponseActionsGenerator
+from shikari.reports.response_actions import ResponseActionsGenerator
 
 generator = ResponseActionsGenerator()
 
@@ -424,6 +424,6 @@ Planned improvements for future releases:
 
 For questions or issues related to response actions:
 - Review generated reports for formatting issues
-- Check `archer/reports/response_actions.py` for template customization
+- Check `shikari/reports/response_actions.py` for template customization
 - Verify `ResponseActionsGenerator` is properly initialized
 - Submit feedback on response action quality and accuracy

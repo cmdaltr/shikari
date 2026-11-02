@@ -2,7 +2,7 @@
 
 import tomllib
 
-from archer.assessments.macat import test_cases_to_macatable as to_macatable, _tactic_slug
+from shikari.assessments.macat import test_cases_to_macatable as to_macatable, _tactic_slug
 
 
 CASES = [

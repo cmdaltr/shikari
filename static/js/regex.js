@@ -6,7 +6,7 @@
 (function () {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-  const STORE = 'archer.regex';
+  const STORE = 'shikari.regex';
   const TIME_LIMIT = 1500;  // ms
   const MAX_MATCHES = 1000;
 
@@ -575,7 +575,7 @@
   new ResizeObserver(() => { back.style.height = `${text.offsetHeight}px`; }).observe(text);
 
   // For tests and the console: the pure parts
-  window.archerRegex = { tokenise, toJs, checks: (p, f, fl) => checks(p, tokenise(p), f || '', fl || 'kql'), snippets };
+  window.shikariRegex = { tokenise, toJs, checks: (p, f, fl) => checks(p, tokenise(p), f || '', fl || 'kql'), snippets };
 
   restore();
   renderSupport();

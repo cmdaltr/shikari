@@ -4,7 +4,7 @@
 
 | Layer | What it counts |
 |---|---|
-| Reference queries | Your production-tested queries in `bespoke/llm_references/`. Archer uses them as templates and examples when it generates, so this is the coverage it has to learn from |
+| Reference queries | Your production-tested queries in `bespoke/llm_references/`. Shikari uses them as templates and examples when it generates, so this is the coverage it has to learn from |
 | My detections | Detections you've generated and saved, by the ATT&CK mapping in force. A mapping changed by hand shows with a dashed amber outline |
 
 ## The page

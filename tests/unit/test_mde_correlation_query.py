@@ -1,7 +1,7 @@
 """Defender XDR correlations: whole where clauses, weak parts left out, each let checked against its table."""
-from archer.ai.genai import engine
-from archer.build.correlation_files import errors
-from archer.validation.static_check import check_query
+from shikari.ai.genai import engine
+from shikari.build.correlation_files import errors
+from shikari.validation.static_check import check_query
 
 MULTILINE = """DeviceProcessEvents
   | where Timestamp > ago(1d)

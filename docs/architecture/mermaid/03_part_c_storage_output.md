@@ -12,7 +12,7 @@ flowchart TD
         YAMLS["Detection YAMLs<br/>data/groups/"]
         CORR_F["Correlation JSON<br/>data/correlate/"]
         CACHE["Caches<br/>data/cache/"]
-        DB["Database<br/>archer.db"]
+        DB["Database<br/>shikari.db"]
     end
 
     subgraph OUTPUTS ["OUTPUTS"]

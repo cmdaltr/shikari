@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# doctor.sh — environment health check for Archer development
+# doctor.sh — environment health check for Shikari development
 set -uo pipefail
 PASS=0
 FAIL=0
@@ -34,7 +34,7 @@ check "Chromium browser binary present" "ls \$HOME/Library/Caches/ms-playwright/
 
 echo ""
 echo "=== MITRE cache freshness ==="
-CACHE_FILE="archer/data/cache/enterprise-attack.json"
+CACHE_FILE="shikari/data/cache/enterprise-attack.json"
 if [ -f "$CACHE_FILE" ]; then
     AGE_DAYS=$(( ( $(date +%s) - $(stat -f %m "$CACHE_FILE" 2>/dev/null || stat -c %Y "$CACHE_FILE") ) / 86400 ))
     if [ "$AGE_DAYS" -gt 90 ]; then
@@ -50,7 +50,7 @@ fi
 
 echo ""
 echo "=== Local server ==="
-check "Archer server responding on :8000" "curl -sf -o /dev/null http://127.0.0.1:8000/health"
+check "Shikari server responding on :8000" "curl -sf -o /dev/null http://127.0.0.1:8000/health"
 
 echo ""
 echo "=== Summary: $PASS passed, $FAIL failed ==="

@@ -17,13 +17,13 @@ import sys
 import json
 from unittest.mock import MagicMock, patch
 
-# Add archer to path
+# Add shikari to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 
 def test_parser_initialization():
     """Test that FileIntelligenceParser initializes successfully."""
-    from archer.parsers.file_intelligence import FileIntelligenceParser
+    from shikari.parsers.file_intelligence import FileIntelligenceParser
 
     parser = FileIntelligenceParser()
     assert parser is not None
@@ -33,7 +33,7 @@ def test_parser_initialization():
 
 def test_detect_file_type_pdf():
     """Test PDF file type detection."""
-    from archer.parsers.file_intelligence import FileIntelligenceParser
+    from shikari.parsers.file_intelligence import FileIntelligenceParser
 
     parser = FileIntelligenceParser()
     assert parser._detect_file_type("report.pdf") == "pdf"
@@ -43,7 +43,7 @@ def test_detect_file_type_pdf():
 
 def test_detect_file_type_text():
     """Test text file type detection."""
-    from archer.parsers.file_intelligence import FileIntelligenceParser
+    from shikari.parsers.file_intelligence import FileIntelligenceParser
 
     parser = FileIntelligenceParser()
     assert parser._detect_file_type("notes.txt") == "text"
@@ -53,7 +53,7 @@ def test_detect_file_type_text():
 
 def test_detect_file_type_json():
     """Test JSON file type detection."""
-    from archer.parsers.file_intelligence import FileIntelligenceParser
+    from shikari.parsers.file_intelligence import FileIntelligenceParser
 
     parser = FileIntelligenceParser()
     assert parser._detect_file_type("stix_bundle.json") == "json"
@@ -62,7 +62,7 @@ def test_detect_file_type_json():
 
 def test_detect_file_type_from_content():
     """Test file type detection from content."""
-    from archer.parsers.file_intelligence import FileIntelligenceParser
+    from shikari.parsers.file_intelligence import FileIntelligenceParser
 
     parser = FileIntelligenceParser()
 
@@ -78,7 +78,7 @@ def test_detect_file_type_from_content():
 
 def test_extract_ttps_from_text():
     """Test extracting MITRE ATT&CK techniques from text."""
-    from archer.parsers.file_intelligence import FileIntelligenceParser
+    from shikari.parsers.file_intelligence import FileIntelligenceParser
 
     parser = FileIntelligenceParser()
 
@@ -98,7 +98,7 @@ def test_extract_ttps_from_text():
 
 def test_extract_ttps_case_insensitive():
     """Test that TTP extraction is case insensitive."""
-    from archer.parsers.file_intelligence import FileIntelligenceParser
+    from shikari.parsers.file_intelligence import FileIntelligenceParser
 
     parser = FileIntelligenceParser()
 
@@ -112,7 +112,7 @@ def test_extract_ttps_case_insensitive():
 
 def test_extract_ttps_deduplicates():
     """Test that duplicate TTPs are removed."""
-    from archer.parsers.file_intelligence import FileIntelligenceParser
+    from shikari.parsers.file_intelligence import FileIntelligenceParser
 
     parser = FileIntelligenceParser()
 
@@ -125,7 +125,7 @@ def test_extract_ttps_deduplicates():
 
 def test_extract_iocs_hashes():
     """Test extracting file hashes from text."""
-    from archer.parsers.file_intelligence import FileIntelligenceParser
+    from shikari.parsers.file_intelligence import FileIntelligenceParser
 
     parser = FileIntelligenceParser()
 
@@ -142,7 +142,7 @@ def test_extract_iocs_hashes():
 
 def test_extract_iocs_registry_keys():
     """Test extracting registry keys from text."""
-    from archer.parsers.file_intelligence import FileIntelligenceParser
+    from shikari.parsers.file_intelligence import FileIntelligenceParser
 
     parser = FileIntelligenceParser()
 
@@ -155,7 +155,7 @@ def test_extract_iocs_registry_keys():
 
 def test_parse_text_file():
     """Test parsing plain text file."""
-    from archer.parsers.file_intelligence import FileIntelligenceParser
+    from shikari.parsers.file_intelligence import FileIntelligenceParser
 
     parser = FileIntelligenceParser()
 
@@ -176,7 +176,7 @@ def test_parse_text_file():
 
 def test_parse_json_stix_format():
     """Test parsing STIX JSON format."""
-    from archer.parsers.file_intelligence import FileIntelligenceParser
+    from shikari.parsers.file_intelligence import FileIntelligenceParser
 
     parser = FileIntelligenceParser()
 
@@ -200,7 +200,7 @@ def test_parse_json_stix_format():
 
 def test_parse_file_returns_complete_result():
     """Test that parse_file returns complete result structure."""
-    from archer.parsers.file_intelligence import FileIntelligenceParser
+    from shikari.parsers.file_intelligence import FileIntelligenceParser
 
     parser = FileIntelligenceParser()
 

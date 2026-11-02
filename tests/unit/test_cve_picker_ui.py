@@ -43,8 +43,8 @@ def page():
                  "status": {"last_refresh": "2026-10-23T14:12:19+00:00", "refreshing": False}}))
 
         page.route("**/api/cves/recent*", api)
-        page.route("http://archer.test/", lambda r: r.fulfill(content_type="text/html", body=_page_html()))
-        page.goto("http://archer.test/")
+        page.route("http://shikari.test/", lambda r: r.fulfill(content_type="text/html", body=_page_html()))
+        page.goto("http://shikari.test/")
         page.add_script_tag(content=(ROOT / "static" / "js" / "index.js").read_text())
         page.evaluate("document.dispatchEvent(new Event('DOMContentLoaded'))")
         page.asked = asked

@@ -4,7 +4,7 @@ import types
 
 import pytest
 
-from archer.intelligence import network_enrichment as net
+from shikari.intelligence import network_enrichment as net
 
 
 class _TXT:

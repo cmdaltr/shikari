@@ -1,7 +1,7 @@
 """Country mentions in ATT&CK group descriptions: attribution vs targeting."""
 import pytest
 
-from archer.intelligence.country_context import country_matches
+from shikari.intelligence.country_context import country_matches
 
 IRAN = ["iranian", "iran", "tehran", "irgc"]
 RUSSIA = ["russian", "russia", "kremlin", "moscow", "gru", "fsb", "svr"]

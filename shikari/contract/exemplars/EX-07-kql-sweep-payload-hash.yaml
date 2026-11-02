@@ -1,0 +1,304 @@
+shikari_output:
+  contract_version: "1.0"
+  kind: rule
+  request_ref: REQ-2026-10-10-007
+  rule:
+    rule_id: 13f70d80-1c04-4b13-8a7e-290cb6dcb71a
+    name: InitialAccess_T1195.002_DeviceFileEvents_ShaiHuludPayloadHashSweep
+    author: Shikari Detection Engineering
+    created: "2026-10-10"
+    modified: "2026-10-10"
+    version: "1.0.0"
+    status: draft
+    detection_type: ioc_sweep
+    siem: kql
+    target_os:
+      - windows
+      - linux
+      - macos
+    log_sources:
+      - id: LS1
+        siem_source: DeviceFileEvents
+        product: Microsoft Defender for Endpoint
+        udm_log_type: null
+        ingestion:
+          status: confirmed
+          profile_ref: ENVPROFILE-C-defender-xdr-advanced-hunting
+        fields:
+          - path: SHA256
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+          - path: InitiatingProcessSHA256
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+          - path: FolderPath
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+            note: On DeviceFileEvents FolderPath already includes the file name.
+          - path: ActionType
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+        coverage_gaps:
+          - macOS MDE recorded no DeviceFileEvents for the script writes in the 2026-10-09 positive control.
+      - id: LS2
+        siem_source: DeviceProcessEvents
+        product: Microsoft Defender for Endpoint
+        udm_log_type: null
+        ingestion:
+          status: confirmed
+          profile_ref: ENVPROFILE-C-defender-xdr-advanced-hunting
+        fields:
+          - path: SHA256
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+            note: Hash of the launched image; a script hash can appear here only if the script is itself executed as an image, so this branch is secondary.
+          - path: InitiatingProcessSHA256
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+        coverage_gaps: []
+      - id: LS3
+        siem_source: DeviceNetworkEvents
+        product: Microsoft Defender for Endpoint
+        udm_log_type: null
+        ingestion:
+          status: confirmed
+          profile_ref: ENVPROFILE-C-defender-xdr-advanced-hunting
+        fields:
+          - path: InitiatingProcessSHA256
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+          - path: RemoteUrl
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+            note: Often empty on macOS (2026-10-09 positive control).
+        coverage_gaps:
+          - macOS network events are intermittent.
+      - id: LS4
+        siem_source: DeviceImageLoadEvents
+        product: Microsoft Defender for Endpoint
+        udm_log_type: null
+        ingestion:
+          status: confirmed
+          profile_ref: ENVPROFILE-C-defender-xdr-advanced-hunting
+        fields:
+          - path: SHA256
+            population: known_populated
+            os:
+              - windows
+          - path: InitiatingProcessSHA256
+            population: known_populated
+            os:
+              - windows
+        coverage_gaps:
+          - Windows only.
+      - id: LS5
+        siem_source: DeviceEvents
+        product: Microsoft Defender for Endpoint
+        udm_log_type: null
+        ingestion:
+          status: confirmed
+          profile_ref: ENVPROFILE-C-defender-xdr-advanced-hunting
+        fields:
+          - path: SHA256
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+          - path: InitiatingProcessSHA256
+            population: known_populated
+            os:
+              - windows
+              - linux
+              - macos
+        coverage_gaps: []
+    attack:
+      attack_version: "19.2"
+      bundle_ref: null
+      tactics:
+        - initial_access
+      technique_ids:
+        - T1195.002
+      mapping_rationale: Presence or use of a known Mini Shai-Hulud payload hash on any device table evidences delivery of the compromised npm package. The sweep matches the indicator wherever the schema carries a SHA256 (file, launched image, initiating image), so the mapping is the delivery technique; execution is attributed by the sibling process rules. T1195 has sub-techniques and the sub-technique is stated.
+    lookback: 30d
+    schedule: null
+    confidence:
+      rating: High
+      rationale: Exact SHA256 match on three campaign-attributed files with provenance; no benign collision. Every table that carries a hash is covered and the union lists every branch, correcting workbook Q031 and Q032.
+    severity:
+      rating: High
+      rationale: The payload is a credential harvester; its presence on a developer host means the compromised package was installed and the host's tokens must be treated as exposed.
+    false_positives:
+      - id: FP1
+        scenario: A security analyst downloads the sample for analysis, or an AV engine quarantines it.
+        population: Security team hosts and sandboxes
+        distinguishing_fields:
+          - field: Process
+            benign_pattern: browser, curl, an analysis tool or MsMpEng.exe as the initiating process; ActionType FileDeleted by the AV engine
+        handled_by: triage
+        suppression_id: null
+    tuning_notes:
+      baseline:
+        window_days: 30
+        before_tuning: null
+        after_tuning: null
+        alerts_per_day_after_aggregation: null
+        measured_on: null
+        measurement_procedure: Run the sweep over 30 days and record the count of distinct DeviceId per MatchedHash; a non-zero count is a finding, not a tuning problem.
+      suppressions: []
+      dependencies: []
+      first_parameter_to_adjust: The IocHashes list. Add hashes with their reference as the campaign evolves; keep the list under 50 or move it to externaldata with a declared dependency.
+      known_limitations:
+        - ParentCommandLine is available only from DeviceProcessEvents; the other branches carry the initiating process's own command line and an empty parent column.
+        - When a row matches on both SHA256 and InitiatingProcessSHA256, MatchedField reports SHA256.
+      split_from: []
+    references:
+      - id: REF1
+        title: Mini Shai-Hulud campaign payload hashes (setup.mjs, math_init.js, Math_Symbol.js), analyst notes 2026-10-09
+        locator: shikari fable fidelity workbook (populated).xlsx, Queries tab, Q050 Query Text and Notes; Q023 KnownMaliciousHashes
+        accessed: "2026-10-10"
+        used_for:
+          - IOC1
+          - IOC2
+          - IOC3
+    indicators:
+      - id: IOC1
+        type: sha256
+        value: 54dc7ea54a1317cca0e890a2770630cf7fa6c97813e0cb9d2caa93012b350668
+        reference_id: REF1
+        first_reported: "2026-10-09"
+      - id: IOC2
+        type: sha256
+        value: fd3ca4007b225fdf8de7af4345a19179d5efa8c4bb9205f88cda806e5684b1eb
+        reference_id: REF1
+        first_reported: "2026-10-09"
+      - id: IOC3
+        type: sha256
+        value: 9fc2570b7cef51c1b8df116d144d11ff4096357be7d2c4c6367cfc2509cf1bcc
+        reference_id: REF1
+        first_reported: "2026-10-09"
+    reference_lists: []
+    entity_output:
+      timestamp_first: FirstSeen
+      timestamp_last: LastSeen
+      device: DeviceName
+      account: Account
+      process: Processes, ProcessCommandLines
+      parent_command_line: ParentCommandLines
+      evidence_value: MatchedHash, EvidenceValues
+      source_table: SourceTables, MatchedFields
+    correlation:
+      events:
+        - var: FileHits
+          source_id: LS1
+          role: single
+        - var: ProcessHits
+          source_id: LS2
+          role: single
+        - var: NetworkHits
+          source_id: LS3
+          role: single
+        - var: ImageLoadHits
+          source_id: LS4
+          role: single
+        - var: GenericHits
+          source_id: LS5
+          role: single
+      join_keys:
+        - key: union (no join); aggregation by DeviceId, Account, MatchedHash
+          holds_on:
+            - windows
+            - linux
+            - macos
+          mitigation: null
+      ordering: null
+      window: 30d
+    regexes: []
+    complexity:
+      lines: 35
+      event_variables_or_joins: 0
+      union_branches: 5
+      nesting_depth: 1
+    validation:
+      fidelity_basis: logic_review
+      compile:
+        status: not_run
+      field_existence:
+        schema_ref: Microsoft Defender XDR Advanced Hunting schema, 2026-10
+        status: checked
+      field_population:
+        status: known_populated
+        evidence: SHA256 and InitiatingProcessSHA256 are standard hash columns on the five Device tables; DeviceFileEvents SHA256 is populated for files the sensor hashed, which excluded the macOS script writes on 2026-10-09 (coverage gap, not a field defect).
+      ingestion:
+        status: confirmed
+        profile_ref: ENVPROFILE-C-defender-xdr-advanced-hunting
+      join_portability:
+        status: not_applicable
+        notes: Union of independent branches; no cross-event join.
+      regex_checks:
+        status: not_run
+      positive_control:
+        status: not_run
+        procedure: On a Windows test host write setup.mjs with hash IOC1 to a repository path and execute it with node; confirm rows with SourceTables containing DeviceFileEvents and, via InitiatingProcessSHA256 if node loads it as an image, no spurious matches on other hashes. Repeat on Linux. On macOS expect the file branch to miss (coverage gap).
+        evidence_ref: null
+        date: null
+    query: |
+      // InitialAccess_T1195.002_DeviceFileEvents_ShaiHuludPayloadHashSweep
+      let lookback = 30d;
+      // REF1: Mini Shai-Hulud setup.mjs, math_init.js, Math_Symbol.js SHA256 (IOC1-IOC3), lowercase
+      let IocHashes = dynamic(["54dc7ea54a1317cca0e890a2770630cf7fa6c97813e0cb9d2caa93012b350668", "fd3ca4007b225fdf8de7af4345a19179d5efa8c4bb9205f88cda806e5684b1eb", "9fc2570b7cef51c1b8df116d144d11ff4096357be7d2c4c6367cfc2509cf1bcc"]);
+      let FileHits = DeviceFileEvents
+      | where Timestamp > ago(lookback)
+      | where SHA256 in~ (IocHashes) or InitiatingProcessSHA256 in~ (IocHashes)
+      | extend MatchedField = iff(SHA256 in~ (IocHashes), "SHA256", "InitiatingProcessSHA256"), MatchedHash = tolower(iff(SHA256 in~ (IocHashes), SHA256, InitiatingProcessSHA256))
+      | project Timestamp, ReportId, DeviceId, DeviceName, Account = InitiatingProcessAccountName, SourceTable = "DeviceFileEvents", MatchedField, MatchedHash, Process = InitiatingProcessFolderPath, ProcessCommandLine = InitiatingProcessCommandLine, ParentCommandLine = "", Evidence = strcat(ActionType, " ", FolderPath);
+      let ProcessHits = DeviceProcessEvents
+      | where Timestamp > ago(lookback)
+      | where SHA256 in~ (IocHashes) or InitiatingProcessSHA256 in~ (IocHashes)
+      | extend MatchedField = iff(SHA256 in~ (IocHashes), "SHA256", "InitiatingProcessSHA256"), MatchedHash = tolower(iff(SHA256 in~ (IocHashes), SHA256, InitiatingProcessSHA256))
+      | project Timestamp, ReportId, DeviceId, DeviceName, Account = AccountName, SourceTable = "DeviceProcessEvents", MatchedField, MatchedHash, Process = FolderPath, ProcessCommandLine, ParentCommandLine = InitiatingProcessCommandLine, Evidence = ProcessCommandLine;
+      let NetworkHits = DeviceNetworkEvents
+      | where Timestamp > ago(lookback)
+      | where InitiatingProcessSHA256 in~ (IocHashes)
+      | extend MatchedField = "InitiatingProcessSHA256", MatchedHash = tolower(InitiatingProcessSHA256)
+      | project Timestamp, ReportId, DeviceId, DeviceName, Account = InitiatingProcessAccountName, SourceTable = "DeviceNetworkEvents", MatchedField, MatchedHash, Process = InitiatingProcessFolderPath, ProcessCommandLine = InitiatingProcessCommandLine, ParentCommandLine = "", Evidence = strcat(RemoteUrl, " ", RemoteIP, ":", RemotePort);
+      let ImageLoadHits = DeviceImageLoadEvents
+      | where Timestamp > ago(lookback)
+      | where SHA256 in~ (IocHashes) or InitiatingProcessSHA256 in~ (IocHashes)
+      | extend MatchedField = iff(SHA256 in~ (IocHashes), "SHA256", "InitiatingProcessSHA256"), MatchedHash = tolower(iff(SHA256 in~ (IocHashes), SHA256, InitiatingProcessSHA256))
+      | project Timestamp, ReportId, DeviceId, DeviceName, Account = InitiatingProcessAccountName, SourceTable = "DeviceImageLoadEvents", MatchedField, MatchedHash, Process = InitiatingProcessFolderPath, ProcessCommandLine = InitiatingProcessCommandLine, ParentCommandLine = "", Evidence = FolderPath;
+      let GenericHits = DeviceEvents
+      | where Timestamp > ago(lookback)
+      | where SHA256 in~ (IocHashes) or InitiatingProcessSHA256 in~ (IocHashes)
+      | extend MatchedField = iff(SHA256 in~ (IocHashes), "SHA256", "InitiatingProcessSHA256"), MatchedHash = tolower(iff(SHA256 in~ (IocHashes), SHA256, InitiatingProcessSHA256))
+      | project Timestamp, ReportId, DeviceId, DeviceName, Account = InitiatingProcessAccountName, SourceTable = "DeviceEvents", MatchedField, MatchedHash, Process = InitiatingProcessFolderPath, ProcessCommandLine = InitiatingProcessCommandLine, ParentCommandLine = "", Evidence = strcat(ActionType, " ", FolderPath);
+      // Every branch defined above is listed here (5 of 5)
+      union FileHits, ProcessHits, NetworkHits, ImageLoadHits, GenericHits
+      | summarize FirstSeen = min(Timestamp), LastSeen = max(Timestamp), Hits = count(), SourceTables = make_set(SourceTable, 5), MatchedFields = make_set(MatchedField, 10), Processes = make_set(Process, 20), ProcessCommandLines = make_set(ProcessCommandLine, 20), ParentCommandLines = make_set(ParentCommandLine, 20), EvidenceValues = make_set(Evidence, 20), arg_max(Timestamp, ReportId)
+          by DeviceId, DeviceName, Account, MatchedHash
+      | project Timestamp, ReportId, DeviceId, DeviceName, Account, MatchedHash, FirstSeen, LastSeen, Hits, SourceTables, MatchedFields, Processes, ProcessCommandLines, ParentCommandLines, EvidenceValues
+      | order by FirstSeen asc

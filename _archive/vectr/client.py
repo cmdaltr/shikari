@@ -19,7 +19,7 @@ class VECTRClient:
             url: VECTR server URL (default: from VECTR_URL env var)
             api_token: API authentication token (default: from VECTR_API_TOKEN env var)
         """
-        from archer.config import VECTRConfig
+        from shikari.config import VECTRConfig
 
         self.url = (url or VECTRConfig.url).rstrip("/")
         self.api_token = api_token or VECTRConfig.api_token

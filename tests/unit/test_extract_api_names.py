@@ -1,10 +1,10 @@
-"""Bare PascalCase names in ATT&CK procedures (archer.mitre.extract): cloud API calls get
+"""Bare PascalCase names in ATT&CK procedures (shikari.mitre.extract): cloud API calls get
 their CLI form, Windows API functions become Defender API-call events, and the rest are
 kept as literals or left out, never guessed into an AWS command."""
 
 import pytest
 
-from archer.mitre.extract import _api_to_cli, classify_name, extract_commands
+from shikari.mitre.extract import _api_to_cli, classify_name, extract_commands
 
 
 @pytest.mark.unit

@@ -1,0 +1,1405 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cmdaltr.github.io/shikari/contract/1.0/shikari-output.schema.json",
+  "title": "Shikari output contract v1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "shikari_output"
+  ],
+  "properties": {
+    "shikari_output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "kind",
+        "request_ref"
+      ],
+      "properties": {
+        "contract_version": {
+          "const": "1.0"
+        },
+        "kind": {
+          "enum": [
+            "rule",
+            "rejection"
+          ]
+        },
+        "request_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rule": {
+          "$ref": "#/$defs/rule"
+        },
+        "rejection": {
+          "$ref": "#/$defs/rejection"
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "const": "rule"
+            }
+          },
+          "required": [
+            "rule"
+          ],
+          "not": {
+            "required": [
+              "rejection"
+            ]
+          }
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "rejection"
+            }
+          },
+          "required": [
+            "rejection"
+          ],
+          "not": {
+            "required": [
+              "rule"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "duration": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*(m|h|d)$"
+    },
+    "isoDate": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "nonEmpty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "os": {
+      "enum": [
+        "windows",
+        "macos",
+        "linux",
+        "cloud"
+      ]
+    },
+    "tactic": {
+      "enum": [
+        "initial_access",
+        "execution",
+        "persistence",
+        "privilege_escalation",
+        "stealth",
+        "defense_impairment",
+        "credential_access",
+        "discovery",
+        "lateral_movement",
+        "collection",
+        "command_and_control",
+        "exfiltration",
+        "impact"
+      ]
+    },
+    "techniqueId": {
+      "type": "string",
+      "pattern": "^T[0-9]{4}(\\.[0-9]{3})?$"
+    },
+    "population": {
+      "enum": [
+        "known_populated",
+        "unknown",
+        "known_empty"
+      ]
+    },
+    "runStatus": {
+      "enum": [
+        "not_run",
+        "pass",
+        "fail"
+      ]
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule_id",
+        "name",
+        "author",
+        "created",
+        "modified",
+        "version",
+        "status",
+        "detection_type",
+        "siem",
+        "target_os",
+        "log_sources",
+        "attack",
+        "lookback",
+        "schedule",
+        "confidence",
+        "severity",
+        "false_positives",
+        "tuning_notes",
+        "references",
+        "indicators",
+        "reference_lists",
+        "entity_output",
+        "correlation",
+        "regexes",
+        "complexity",
+        "validation",
+        "query"
+      ],
+      "properties": {
+        "rule_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "name": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "author": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "created": {
+          "$ref": "#/$defs/isoDate"
+        },
+        "modified": {
+          "$ref": "#/$defs/isoDate"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "test",
+            "production"
+          ]
+        },
+        "detection_type": {
+          "enum": [
+            "scheduled_detection",
+            "hunt",
+            "ioc_sweep"
+          ]
+        },
+        "siem": {
+          "enum": [
+            "yara_l",
+            "kql"
+          ]
+        },
+        "target_os": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/os"
+          }
+        },
+        "log_sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/logSource"
+          }
+        },
+        "attack": {
+          "$ref": "#/$defs/attack"
+        },
+        "lookback": {
+          "$ref": "#/$defs/duration"
+        },
+        "schedule": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "mode"
+              ],
+              "properties": {
+                "mode": {
+                  "const": "live"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "frequency",
+                "grouping"
+              ],
+              "properties": {
+                "frequency": {
+                  "enum": [
+                    "1h",
+                    "3h",
+                    "12h",
+                    "24h"
+                  ]
+                },
+                "grouping": {
+                  "$ref": "#/$defs/nonEmpty"
+                }
+              }
+            }
+          ]
+        },
+        "confidence": {
+          "$ref": "#/$defs/ratedConfidence"
+        },
+        "severity": {
+          "$ref": "#/$defs/ratedSeverity"
+        },
+        "false_positives": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/falsePositive"
+          }
+        },
+        "tuning_notes": {
+          "$ref": "#/$defs/tuningNotes"
+        },
+        "references": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        },
+        "indicators": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/indicator"
+          }
+        },
+        "reference_lists": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/referenceList"
+          }
+        },
+        "entity_output": {
+          "$ref": "#/$defs/entityOutput"
+        },
+        "correlation": {
+          "$ref": "#/$defs/correlation"
+        },
+        "regexes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/regex"
+          }
+        },
+        "complexity": {
+          "$ref": "#/$defs/complexity"
+        },
+        "validation": {
+          "$ref": "#/$defs/validation"
+        },
+        "query": {
+          "type": "string",
+          "minLength": 20
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "detection_type": {
+                "const": "scheduled_detection"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "schedule": {
+                "type": "object"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "schedule": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "detection_type": {
+                "const": "ioc_sweep"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "indicators": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "logSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "siem_source",
+        "product",
+        "ingestion",
+        "fields",
+        "coverage_gaps"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^LS[0-9]+$"
+        },
+        "siem_source": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "product": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "udm_log_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ingestion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "profile_ref"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "confirmed",
+                "unverified",
+                "not_ingested"
+              ]
+            },
+            "profile_ref": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "population",
+              "os"
+            ],
+            "properties": {
+              "path": {
+                "$ref": "#/$defs/nonEmpty"
+              },
+              "population": {
+                "$ref": "#/$defs/population"
+              },
+              "os": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/os"
+                }
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "coverage_gaps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmpty"
+          }
+        }
+      }
+    },
+    "attack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attack_version",
+        "bundle_ref",
+        "tactics",
+        "technique_ids",
+        "mapping_rationale"
+      ],
+      "properties": {
+        "attack_version": {
+          "const": "19.2"
+        },
+        "bundle_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tactics": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/tactic"
+          }
+        },
+        "technique_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/techniqueId"
+          }
+        },
+        "mapping_rationale": {
+          "type": "string",
+          "minLength": 40
+        }
+      }
+    },
+    "ratedConfidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rating",
+        "rationale"
+      ],
+      "properties": {
+        "rating": {
+          "enum": [
+            "High",
+            "Medium",
+            "Low"
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 40
+        }
+      }
+    },
+    "ratedSeverity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rating",
+        "rationale"
+      ],
+      "properties": {
+        "rating": {
+          "enum": [
+            "Critical",
+            "High",
+            "Medium",
+            "Low"
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 40
+        }
+      }
+    },
+    "falsePositive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "scenario",
+        "population",
+        "distinguishing_fields",
+        "handled_by",
+        "suppression_id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^FP[0-9]+$"
+        },
+        "scenario": {
+          "type": "string",
+          "minLength": 20
+        },
+        "population": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "distinguishing_fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "field",
+              "benign_pattern"
+            ],
+            "properties": {
+              "field": {
+                "$ref": "#/$defs/nonEmpty"
+              },
+              "benign_pattern": {
+                "$ref": "#/$defs/nonEmpty"
+              }
+            }
+          }
+        },
+        "handled_by": {
+          "enum": [
+            "suppression",
+            "structural",
+            "triage",
+            "accepted"
+          ]
+        },
+        "suppression_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^S[0-9]+$"
+        }
+      }
+    },
+    "tuningNotes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline",
+        "suppressions",
+        "dependencies",
+        "first_parameter_to_adjust",
+        "known_limitations",
+        "split_from"
+      ],
+      "properties": {
+        "baseline": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "window_days",
+            "before_tuning",
+            "after_tuning",
+            "alerts_per_day_after_aggregation",
+            "measured_on",
+            "measurement_procedure"
+          ],
+          "properties": {
+            "window_days": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "before_tuning": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "after_tuning": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "alerts_per_day_after_aggregation": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "measured_on": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/isoDate"
+                }
+              ]
+            },
+            "measurement_procedure": {
+              "type": "string",
+              "minLength": 40
+            }
+          }
+        },
+        "suppressions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "logic_ref",
+              "reason",
+              "depends_on_enrichment",
+              "fails_closed_how"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^S[0-9]+$"
+              },
+              "logic_ref": {
+                "$ref": "#/$defs/nonEmpty"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 20
+              },
+              "depends_on_enrichment": {
+                "type": "boolean"
+              },
+              "fails_closed_how": {
+                "type": "string",
+                "minLength": 20
+              }
+            }
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "name",
+              "declared_in",
+              "definition_ref"
+            ],
+            "properties": {
+              "type": {
+                "enum": [
+                  "reference_list",
+                  "lookup",
+                  "macro",
+                  "function",
+                  "allow_list",
+                  "enrichment",
+                  "watchlist",
+                  "externaldata"
+                ]
+              },
+              "name": {
+                "$ref": "#/$defs/nonEmpty"
+              },
+              "declared_in": {
+                "$ref": "#/$defs/nonEmpty"
+              },
+              "definition_ref": {
+                "$ref": "#/$defs/nonEmpty"
+              }
+            }
+          }
+        },
+        "first_parameter_to_adjust": {
+          "type": "string",
+          "minLength": 20
+        },
+        "known_limitations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmpty"
+          }
+        },
+        "split_from": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "rule_id",
+              "relationship"
+            ],
+            "properties": {
+              "rule_id": {
+                "$ref": "#/$defs/uuid"
+              },
+              "relationship": {
+                "enum": [
+                  "sequential",
+                  "independent",
+                  "correlation_consumer"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "locator",
+        "accessed",
+        "used_for"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^REF[0-9]+$"
+        },
+        "title": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "locator": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "accessed": {
+          "$ref": "#/$defs/isoDate"
+        },
+        "used_for": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmpty"
+          }
+        }
+      }
+    },
+    "indicator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "value",
+        "reference_id",
+        "first_reported"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^IOC[0-9]+$"
+        },
+        "type": {
+          "enum": [
+            "sha256",
+            "sha1",
+            "md5",
+            "ipv4",
+            "ipv6",
+            "domain",
+            "url",
+            "filename",
+            "path",
+            "user_agent",
+            "command_fragment",
+            "package_version"
+          ]
+        },
+        "value": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "reference_id": {
+          "type": "string",
+          "pattern": "^REF[0-9]+$"
+        },
+        "first_reported": {
+          "$ref": "#/$defs/isoDate"
+        }
+      }
+    },
+    "referenceList": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type",
+        "purpose",
+        "indicator_ids"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]+$"
+        },
+        "type": {
+          "enum": [
+            "string",
+            "regex",
+            "cidr"
+          ]
+        },
+        "purpose": {
+          "enum": [
+            "match",
+            "allow"
+          ]
+        },
+        "indicator_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^IOC[0-9]+$"
+          }
+        }
+      }
+    },
+    "entityOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "timestamp_first",
+        "timestamp_last",
+        "device",
+        "account",
+        "process",
+        "parent_command_line",
+        "evidence_value",
+        "source_table"
+      ],
+      "properties": {
+        "timestamp_first": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "timestamp_last": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "device": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "account": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "process": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "parent_command_line": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evidence_value": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "source_table": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "correlation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "events",
+        "join_keys",
+        "ordering",
+        "window"
+      ],
+      "properties": {
+        "events": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "var",
+              "source_id",
+              "role"
+            ],
+            "properties": {
+              "var": {
+                "$ref": "#/$defs/nonEmpty"
+              },
+              "source_id": {
+                "type": "string",
+                "pattern": "^LS[0-9]+$"
+              },
+              "role": {
+                "enum": [
+                  "anchor",
+                  "evidence",
+                  "single"
+                ]
+              }
+            }
+          }
+        },
+        "join_keys": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "key",
+              "holds_on",
+              "mitigation"
+            ],
+            "properties": {
+              "key": {
+                "$ref": "#/$defs/nonEmpty"
+              },
+              "holds_on": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/os"
+                }
+              },
+              "mitigation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "ordering": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "window": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/duration"
+            }
+          ]
+        }
+      }
+    },
+    "regex": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "field",
+        "pattern",
+        "engine",
+        "literal_encoding",
+        "must_match",
+        "must_not_match"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^RX[0-9]+$"
+        },
+        "field": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "pattern": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "engine": {
+          "const": "re2"
+        },
+        "literal_encoding": {
+          "enum": [
+            "yara_l_backtick",
+            "kql_verbatim"
+          ]
+        },
+        "must_match": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmpty"
+          }
+        },
+        "must_not_match": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmpty"
+          }
+        }
+      }
+    },
+    "complexity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lines",
+        "event_variables_or_joins",
+        "union_branches",
+        "nesting_depth"
+      ],
+      "properties": {
+        "lines": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 150
+        },
+        "event_variables_or_joins": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "union_branches": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "nesting_depth": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fidelity_basis",
+        "compile",
+        "field_existence",
+        "field_population",
+        "ingestion",
+        "join_portability",
+        "regex_checks",
+        "positive_control"
+      ],
+      "properties": {
+        "fidelity_basis": {
+          "enum": [
+            "logic_review",
+            "positive_control"
+          ]
+        },
+        "compile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "$ref": "#/$defs/runStatus"
+            }
+          }
+        },
+        "field_existence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema_ref",
+            "status"
+          ],
+          "properties": {
+            "schema_ref": {
+              "$ref": "#/$defs/nonEmpty"
+            },
+            "status": {
+              "enum": [
+                "checked",
+                "unchecked"
+              ]
+            }
+          }
+        },
+        "field_population": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "evidence"
+          ],
+          "properties": {
+            "status": {
+              "$ref": "#/$defs/population"
+            },
+            "evidence": {
+              "type": "string",
+              "minLength": 20
+            }
+          }
+        },
+        "ingestion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "profile_ref"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "confirmed",
+                "unverified",
+                "not_ingested"
+              ]
+            },
+            "profile_ref": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "join_portability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "notes"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "pass",
+                "fail",
+                "not_applicable"
+              ]
+            },
+            "notes": {
+              "type": "string"
+            }
+          }
+        },
+        "regex_checks": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "$ref": "#/$defs/runStatus"
+            }
+          }
+        },
+        "positive_control": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "procedure",
+            "evidence_ref",
+            "date"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "not_run",
+                "passed",
+                "failed",
+                "failed_to_observe"
+              ]
+            },
+            "procedure": {
+              "type": "string",
+              "minLength": 40
+            },
+            "evidence_ref": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "date": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/isoDate"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "rejection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason_code",
+        "secondary_codes",
+        "detection_type_requested",
+        "siem_requested",
+        "technique_ids_requested",
+        "blocking_criteria",
+        "evidence",
+        "remediation",
+        "nearest_viable_alternative"
+      ],
+      "properties": {
+        "reason_code": {
+          "$ref": "#/$defs/reasonCode"
+        },
+        "secondary_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reasonCode"
+          }
+        },
+        "detection_type_requested": {
+          "enum": [
+            "scheduled_detection",
+            "hunt",
+            "ioc_sweep"
+          ]
+        },
+        "siem_requested": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "technique_ids_requested": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/techniqueId"
+          }
+        },
+        "blocking_criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^R[0-9]{2}(\\.[0-9]+)?$"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "check",
+              "observed",
+              "expected"
+            ],
+            "properties": {
+              "check": {
+                "$ref": "#/$defs/nonEmpty"
+              },
+              "observed": {
+                "$ref": "#/$defs/nonEmpty"
+              },
+              "expected": {
+                "$ref": "#/$defs/nonEmpty"
+              }
+            }
+          }
+        },
+        "remediation": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmpty"
+          }
+        },
+        "nearest_viable_alternative": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "detection_type",
+                "siem",
+                "log_source",
+                "summary"
+              ],
+              "properties": {
+                "detection_type": {
+                  "enum": [
+                    "scheduled_detection",
+                    "hunt",
+                    "ioc_sweep"
+                  ]
+                },
+                "siem": {
+                  "enum": [
+                    "yara_l",
+                    "kql"
+                  ]
+                },
+                "log_source": {
+                  "$ref": "#/$defs/nonEmpty"
+                },
+                "summary": {
+                  "type": "string",
+                  "minLength": 20
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "reasonCode": {
+      "enum": [
+        "SOURCE_NOT_STATED",
+        "SOURCE_NOT_IN_SCHEMA",
+        "SOURCE_NOT_INGESTED",
+        "FIELD_NOT_IN_SCHEMA",
+        "FIELD_NOT_POPULATED",
+        "SINGLE_WEAK_INDICATOR",
+        "MAPPING_TOO_COARSE",
+        "TACTIC_OUT_OF_SCOPE",
+        "HARDCODED_SCOPE_REQUIRED",
+        "IOC_PLACEHOLDER",
+        "IOC_NO_PROVENANCE",
+        "INDICATORS_UNUSABLE",
+        "JOIN_NOT_PORTABLE",
+        "COMPLEXITY_EXCEEDED",
+        "TYPE_MISMATCH",
+        "SYNTAX_UNSUPPORTED",
+        "SCHEMA_VALIDATION_FAILED"
+      ]
+    }
+  }
+}

@@ -4,7 +4,7 @@ import csv
 import json
 import re
 
-from archer.visualization import anatomy
+from shikari.visualization import anatomy
 
 HEADER = ["group_sw_id", "group_sw_name", "technique_id", "technique_name", "tactic", "platforms", "framework",
           "procedure_example", "evidence", "detectable_via"]
@@ -147,7 +147,7 @@ def test_a_cves_anatomy_from_its_research(tmp_path, monkeypatch):
 
 
 def test_only_groups_in_attack_and_researched_cves_have_an_anatomy(tmp_path, monkeypatch):
-    from archer.intelligence.cve_hunter import CVEHunter
+    from shikari.intelligence.cve_hunter import CVEHunter
 
     path = _csv(tmp_path, ROWS)
     assert anatomy.has_anatomy("Test Spider", path) and anatomy.has_anatomy("Test_Spider", path)

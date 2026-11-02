@@ -1,5 +1,5 @@
 """
-Playwright UI tests for Threat Feed watchlists (#18). Needs a running Archer.
+Playwright UI tests for Threat Feed watchlists (#18). Needs a running Shikari.
 
 The watchlist API is answered here, so the account's own watchlists aren't changed.
 """

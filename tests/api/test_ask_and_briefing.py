@@ -1,10 +1,10 @@
 """
-Tests for the Ask Archer and Threat Briefing endpoints.
+Tests for the Ask Shikari and Threat Briefing endpoints.
 """
 import pytest
 
 
-class TestAskArcher:
+class TestAskShikari:
     """POST /api/ask conversational Q&A."""
 
     def test_ask_simple_question(self, api, ensure_running):

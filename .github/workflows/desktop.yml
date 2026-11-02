@@ -1,5 +1,5 @@
 # The installable desktop app (desktop/README.md): a .dmg and a Windows .msi per architecture, and a
-# Linux .deb, built from a clean checkout so nothing gitignored (bespoke/, data/archer.db) can
+# Linux .deb, built from a clean checkout so nothing gitignored (bespoke/, data/shikari.db) can
 # reach them. A v* tag attaches them to a GitHub Release; a manual run leaves them as artifacts.
 name: Desktop app
 
@@ -30,7 +30,7 @@ jobs:
     steps:
       # The runner context isn't available to job-level env
       - run: |
-          echo "ARCHER_HOME=$RUNNER_TEMP/home" >> "$GITHUB_ENV"
+          echo "SHIKARI_HOME=$RUNNER_TEMP/home" >> "$GITHUB_ENV"
           echo "MITRESAW_PYTHON=$RUNNER_TEMP/mitresaw/bin/python" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
@@ -47,8 +47,8 @@ jobs:
       - name: Download ATT&CK
         id: attack
         run: |
-          cache="$ARCHER_HOME/archer/data/cache"
-          mkdir -p "$cache" "$ARCHER_HOME/data"
+          cache="$SHIKARI_HOME/shikari/data/cache"
+          mkdir -p "$cache" "$SHIKARI_HOME/data"
           curl -fsSL -o "$cache/enterprise-attack.json" \
             https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json
           version=$(python -c "import re,sys; t=open(sys.argv[1]).read(); m=re.search(r'\"type\":\s*\"x-mitre-collection\".*?\"x_mitre_version\":\s*\"([^\"]+)\"', t, re.S); print(m.group(1) if m else 'unknown')" "$cache/enterprise-attack.json")
@@ -62,7 +62,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/home/data/mitre_procedures.*
-          key: procedures-attack${{ steps.attack.outputs.version }}-mitresaw${{ steps.attack.outputs.mitresaw }}-${{ hashFiles('archer/mitre/procedures.py') }}
+          key: procedures-attack${{ steps.attack.outputs.version }}-mitresaw${{ steps.attack.outputs.mitresaw }}-${{ hashFiles('shikari/mitre/procedures.py') }}
 
       - name: Build the procedures CSV (MITRESaw)
         if: (github.event_name == 'push' || inputs.procedures) && steps.cache.outputs.cache-hit != 'true'
@@ -73,16 +73,16 @@ jobs:
         run: |
           sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
           pip install -r requirements.txt
-          # MITRESaw pins its own pandas/stix2, so it gets its own environment (archer.mitre.procedures)
+          # MITRESaw pins its own pandas/stix2, so it gets its own environment (shikari.mitre.procedures)
           python3.12 -m venv "${{ runner.temp }}/mitresaw"
           "$MITRESAW_PYTHON" -m pip install -r MITRESaw/requirements.txt
-          python -m archer.mitre.procedures --full
+          python -m shikari.mitre.procedures --full
 
       - name: Collect
         run: |
           mkdir seed
-          cp "$ARCHER_HOME/archer/data/cache/enterprise-attack.json" seed/
-          cp "$ARCHER_HOME"/data/mitre_procedures.* seed/ 2>/dev/null || echo "No procedures CSV: the app works without it, minus threat briefings"
+          cp "$SHIKARI_HOME/shikari/data/cache/enterprise-attack.json" seed/
+          cp "$SHIKARI_HOME"/data/mitre_procedures.* seed/ 2>/dev/null || echo "No procedures CSV: the app works without it, minus threat briefings"
           ls -la seed
       - uses: actions/upload-artifact@v4
         with:
@@ -163,12 +163,12 @@ jobs:
           ls -la "$GITHUB_WORKSPACE/out"
       - uses: actions/upload-artifact@v4
         with:
-          name: archer-${{ matrix.suffix }}
+          name: shikari-${{ matrix.suffix }}
           path: out/*
           retention-days: 14
 
   smoke:
-    # Install each package on a clean runner and check it serves Archer in local mode. One platform's
+    # Install each package on a clean runner and check it serves Shikari in local mode. One platform's
     # failed build shouldn't hide whether the others work; the release still needs every build
     needs: build
     if: ${{ !cancelled() }}
@@ -189,12 +189,12 @@ jobs:
       run:
         shell: bash
     env:
-      ARCHER_SERVER: local
+      SHIKARI_SERVER: local
       PYWEBVIEW_LOG: debug
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: archer-${{ matrix.suffix }}
+          name: shikari-${{ matrix.suffix }}
           path: pkg
       # Only the install scripts, which install the package as a user would
       - uses: actions/checkout@v4
@@ -206,7 +206,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           sh src/desktop/install.sh --file pkg/*.dmg
-          echo "APP=/Applications/Archer.app/Contents/MacOS/Archer" >> "$GITHUB_ENV"
+          echo "APP=/Applications/Shikari.app/Contents/MacOS/Shikari" >> "$GITHUB_ENV"
 
       - name: Install (Windows)
         if: runner.os == 'Windows'
@@ -217,7 +217,7 @@ jobs:
           powershell -NoProfile -ExecutionPolicy Bypass -File src\desktop\install.ps1 -File (Get-ChildItem pkg\*.msi).FullName
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           # Per-user install; don't recurse all of Program Files (minutes on ARM64)
-          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Depth 4 -Filter Archer.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Depth 4 -Filter Shikari.exe -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $exe) { exit 1 }
           "APP=$($exe.FullName)" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
 
@@ -234,13 +234,13 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq xvfb
           sh src/desktop/install.sh --file pkg/*.deb
-          echo "APP=archer" >> "$GITHUB_ENV"
+          echo "APP=shikari" >> "$GITHUB_ENV"
 
       - name: Launch in local mode
         timeout-minutes: 12
         run: |
           if [ "$RUNNER_OS" = Linux ]; then
-            xvfb-run -a -s "-screen 0 1280x800x24" archer > app.out 2>&1 &
+            xvfb-run -a -s "-screen 0 1280x800x24" shikari > app.out 2>&1 &
           else
             "$APP" > app.out 2>&1 &
           fi
@@ -250,18 +250,18 @@ jobs:
             sleep 5
           done
           echo "$body"
-          [[ $body == *'"app":"archer"'* ]] || { cat app.out; exit 1; }
+          [[ $body == *'"app":"shikari"'* ]] || { cat app.out; exit 1; }
 
       - name: Logs
         if: always()
         run: |
           case "$RUNNER_OS" in
-            macOS) home="$HOME/Library/Application Support/Archer/home" ;;
-            Windows) home="$LOCALAPPDATA/Archer/home" ;;
-            Linux) home="$HOME/.local/share/archer/home" ;;
+            macOS) home="$HOME/Library/Application Support/Shikari/home" ;;
+            Windows) home="$LOCALAPPDATA/Shikari/home" ;;
+            Linux) home="$HOME/.local/share/shikari/home" ;;
           esac
-          grep -E "pywebview|Archer starting|\.NET|Edge|Traceback|Error|failed" "$home/logs/archer.log" | head -60 || true
-          tail -40 "$home/logs/archer.log" || true
+          grep -E "pywebview|Shikari starting|\.NET|Edge|Traceback|Error|failed" "$home/logs/shikari.log" | head -60 || true
+          tail -40 "$home/logs/shikari.log" || true
           cat app.out 2>/dev/null | tail -40 || true
 
   release:
@@ -273,7 +273,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: archer-*
+          pattern: shikari-*
           path: out
           merge-multiple: true
       # Experimental builds aren't released

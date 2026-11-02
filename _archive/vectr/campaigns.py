@@ -43,7 +43,7 @@ class CampaignManager:
         Returns:
             Created campaign object
         """
-        from archer.config import VECTRConfig
+        from shikari.config import VECTRConfig
 
         campaign_data = {
             "name": name,
@@ -54,7 +54,7 @@ class CampaignManager:
             "status": "active",
             "created_date": datetime.utcnow().isoformat(),
             "environment": environment or VECTRConfig.default_environment,
-            "tags": [threat_group, "archer", "threat-hunt"],
+            "tags": [threat_group, "shikari", "threat-hunt"],
         }
 
         campaign = self.client.create_campaign(campaign_data)
@@ -202,7 +202,7 @@ class CampaignManager:
             "campaign": campaign,
             "test_cases": test_cases,
             "export_date": datetime.utcnow().isoformat(),
-            "exported_by": "archer",
+            "exported_by": "shikari",
         }
 
         # Determine output file

@@ -1,6 +1,6 @@
-# Archer Test Suite
+# Shikari Test Suite
 
-Comprehensive test suite for the Archer Detection Generation Platform covering every component, endpoint, and user interaction.
+Comprehensive test suite for the Shikari Detection Generation Platform covering every component, endpoint, and user interaction.
 
 ## Test Categories
 
@@ -25,8 +25,8 @@ pip install pytest requests pytest-playwright pytest-html
 # Install Playwright browsers
 playwright install chromium
 
-# Ensure Archer is running
-uvicorn archer.app:app --host 0.0.0.0 --port 8000 --reload
+# Ensure Shikari is running
+uvicorn shikari.app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### Run Everything
@@ -105,7 +105,7 @@ pytest tests/api/test_library.py -v
 # Authentication, MFA, admin
 pytest tests/api/test_auth.py -v
 
-# Ask Archer and Threat Briefing
+# Ask Shikari and Threat Briefing
 pytest tests/api/test_ask_and_briefing.py -v
 
 # LLM provider detection
@@ -157,7 +157,7 @@ UI tests capture screenshots to `tests/screenshots/`:
 
 | Screenshot | What it shows |
 |------------|---------------|
-| `01_home_page.png` | Archer home page after login |
+| `01_home_page.png` | Shikari home page after login |
 | `02_all_tabs.png` | All five tabs visible |
 | `03_generate_tab.png` | Generate tab form elements |
 | `04_autocomplete_dropdown.png` | Threat group autocomplete in action |
@@ -196,7 +196,7 @@ UI tests capture screenshots to `tests/screenshots/`:
 | `46_manual_editor.png` | Manual YAML editor |
 | `47_how_it_works.png` | How It Works page |
 | `48_progress_page.png` | Progress tracking page |
-| `50_ask_panel.png` | Ask Archer chat panel |
+| `50_ask_panel.png` | Ask Shikari chat panel |
 | `51_ask_question_typed.png` | Question typed in Ask panel |
 | `52_threat_briefing_button.png` | Threat Briefing button |
 
@@ -210,7 +210,7 @@ Generate with the `--report` flag:
 
 ## API Endpoint Coverage
 
-The API test suite covers every endpoint in Archer:
+The API test suite covers every endpoint in Shikari:
 
 | Endpoint | Test File | Tests |
 |----------|-----------|-------|
@@ -301,9 +301,9 @@ The API test suite covers every endpoint in Archer:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ARCHER_BASE_URL` | Archer server URL | `http://127.0.0.1:8000` |
-| `ARCHER_TEST_EMAIL` | Login email for tests | `admin@archer.app` |
-| `ARCHER_TEST_PASSWORD` | Login password for tests | *(see conftest)* |
+| `SHIKARI_BASE_URL` | Shikari server URL | `http://127.0.0.1:8000` |
+| `SHIKARI_TEST_EMAIL` | Login email for tests | `admin@shikari.app` |
+| `SHIKARI_TEST_PASSWORD` | Login password for tests | *(see conftest)* |
 
 ## File Structure
 
@@ -345,7 +345,7 @@ tests/
 │   ├── test_drafts.py                 # Drafts, manual editor
 │   ├── test_library.py               # Detection Library CRUD
 │   ├── test_auth.py                   # Auth, MFA, admin
-│   ├── test_ask_and_briefing.py       # Ask Archer, Threat Briefing
+│   ├── test_ask_and_briefing.py       # Ask Shikari, Threat Briefing
 │   └── test_security.py              # XSS, SQLi, SSRF, CMDi
 │
 ├── inputs/                             # Input method validation
@@ -362,7 +362,7 @@ tests/
 │   ├── test_generation_flow.py        # Full generation user journey
 │   ├── test_results_page.py           # Results page sections
 │   ├── test_other_pages.py            # Login, library, coverage, etc.
-│   └── test_ask_panel.py             # Ask Archer chat panel
+│   └── test_ask_panel.py             # Ask Shikari chat panel
 │
 ├── features/                           # End-to-end feature tests
 │   ├── test_cve_workflow.py           # Full CVE generation pipeline

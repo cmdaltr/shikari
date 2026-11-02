@@ -1,5 +1,5 @@
 """
-Playwright UI tests for the Ask Archer conversational panel.
+Playwright UI tests for the Ask Shikari conversational panel.
 """
 import pytest
 import os
@@ -8,7 +8,7 @@ pytestmark = pytest.mark.ui
 
 
 class TestAskPanel:
-    """The Ask Archer chat/Q&A panel on the home page."""
+    """The Ask Shikari chat/Q&A panel on the home page."""
 
     def test_ask_panel_visible(self, authenticated_page, base_url, screenshot_dir):
         page = authenticated_page

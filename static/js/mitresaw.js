@@ -1,5 +1,5 @@
 // MITRESaw page (templates/mitresaw.html): the procedures CSV's state and rebuild, a search
-// of its procedures, and MITRESaw's indicator exclusions (archer/mitre/web.py).
+// of its procedures, and MITRESaw's indicator exclusions (shikari/mitre/web.py).
 (function () {
   const $ = id => document.getElementById(id);
   const signedIn = document.querySelector('.ms-page').dataset.signedIn === 'true';
@@ -71,7 +71,7 @@
     const busyElsewhere = s.busy && !running;
     let text = '';
     if (running) text = `${job.mode === 'full' ? 'Full rebuild' : 'Update'} running since ${when(job.started)}…`;
-    else if (busyElsewhere) text = 'MITRESaw is rebuilding (started by Archer at startup or by a detection run).';
+    else if (busyElsewhere) text = 'MITRESaw is rebuilding (started by Shikari at startup or by a detection run).';
     else if (job.state === 'done') text = `Finished ${when(job.finished)}.`;
     else if (job.state === 'stopped') text = `Stopped ${when(job.finished)}; the next run carries on from the last finished batch.`;
     else if (job.state === 'failed') text = `Failed: ${job.error}`;

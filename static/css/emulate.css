@@ -428,7 +428,7 @@ table.em-rows { table-layout: fixed; width: 100%; }
 /* An agent on the host itself: flagged amber — macOS belongs in a disposable Tart VM */
 .netmap-node.is-host rect { stroke: var(--lab-amber); stroke-width: 1.5; stroke-dasharray: 4 3; }
 .netmap-node.is-host .netmap-s { fill: var(--lab-amber); }
-/* Enrolled outside Archer (not a managed machine): dashed grey, so it's visible without clicking */
+/* Enrolled outside Shikari (not a managed machine): dashed grey, so it's visible without clicking */
 .netmap-node.is-external rect { stroke-dasharray: 4 3; }
 .netmap-node.is-external .netmap-s { fill: var(--text-secondary); font-style: italic; }
 .netmap-t { font: 600 12px/1 Inter, system-ui, sans-serif; fill: var(--text-primary); }

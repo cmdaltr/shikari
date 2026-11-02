@@ -2,7 +2,7 @@
 
 > **Status (2026-10-16):** some of what this document names was never built: `scripts/normalize_schema.sh`, `normalize_splunk_schema.py`, `verify_schema_duplicates.py` and the example script; schema checks are now `scripts/validation/verify_schema.py` and `analyze_schema_fields.py`, and the schemas live in `bespoke/mappings/schemas/`. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
 
-This directory contains scripts for managing Splunk schema normalization in Archer.
+This directory contains scripts for managing Splunk schema normalization in Shikari.
 
 ## Quick Reference
 
@@ -13,7 +13,7 @@ This directory contains scripts for managing Splunk schema normalization in Arch
 ./scripts/normalize_schema.sh
 
 # Or use Python directly
-python3 archer/mappings/normalize_manual.py
+python3 shikari/mappings/normalize_manual.py
 ```
 
 ### Verify Schema
@@ -81,10 +81,10 @@ python3 scripts/verify_schema_duplicates.py
 
 ### 3. `normalize_splunk_schema.py` (Legacy)
 
-Original one-time normalization script. **Replaced by** `archer/mappings/normalize_manual.py`.
+Original one-time normalization script. **Replaced by** `shikari/mappings/normalize_manual.py`.
 
 This script was used for the initial normalization. The new schema normalizer is integrated
-into Archer and provides automatic detection of unnormalized indexes.
+into Shikari and provides automatic detection of unnormalized indexes.
 
 **Migration:**
 ```bash
@@ -92,7 +92,7 @@ into Archer and provides automatic detection of unnormalized indexes.
 python3 scripts/normalize_splunk_schema.py
 
 # New way (automatic, repeatable)
-python3 archer/mappings/normalize_manual.py
+python3 shikari/mappings/normalize_manual.py
 ```
 
 ## Workflow Integration
@@ -119,7 +119,7 @@ git commit -m "Add and normalize new index"
 ### In Python Code
 
 ```python
-from archer.mappings import normalize_auto_schema
+from shikari.mappings import normalize_auto_schema
 
 # Normalize when schema is updated
 def update_schema(new_data):
@@ -149,7 +149,7 @@ jobs:
 ## File Locations
 
 ```
-archer/
+shikari/
 ├── mappings/
 │   ├── normalize_manual.py      # Main normalization engine
 │   ├── normalize_auto.py         # Integration helpers
@@ -189,7 +189,7 @@ python3 scripts/verify_schema_duplicates.py
 
 ```bash
 # 1. Edit field mappings in normalize_manual.py
-vim archer/mappings/normalize_manual.py
+vim shikari/mappings/normalize_manual.py
 
 # 2. Force re-normalization of all indexes
 ./scripts/normalize_schema.sh --force
@@ -206,7 +206,7 @@ echo "1. Verifying schema normalization..."
 python3 scripts/verify_schema_duplicates.py || exit 1
 
 echo "2. Checking for unnormalized indexes..."
-python3 -c "from archer.mappings import validate_schema; exit(0 if validate_schema() else 1)"
+python3 -c "from shikari.mappings import validate_schema; exit(0 if validate_schema() else 1)"
 
 echo "✅ Schema validation passed!"
 ```
@@ -215,7 +215,7 @@ echo "✅ Schema validation passed!"
 
 ```bash
 # Add to crontab for daily maintenance
-0 2 * * * cd /path/to/archer && ./scripts/normalize_schema.sh --silent
+0 2 * * * cd /path/to/shikari && ./scripts/normalize_schema.sh --silent
 ```
 
 ## Troubleshooting
@@ -247,13 +247,13 @@ WARNING: Multiple fields map to 'dest_host': ['dest', 'dest_name']
 1. Keeping the field that matches the target name
 2. Excluding conflicting fields
 
-To change behavior, edit `FIELD_NORMALIZATION` in `archer/mappings/normalize_manual.py`.
+To change behavior, edit `FIELD_NORMALIZATION` in `shikari/mappings/normalize_manual.py`.
 
 ### Problem: Important field excluded
 
 **Solution:** Check if field is in exclusion list
 ```python
-# In archer/mappings/normalize_manual.py
+# In shikari/mappings/normalize_manual.py
 FIELDS_TO_EXCLUDE = {
     'employee_id',  # Remove this if you need it
     # ...

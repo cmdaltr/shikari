@@ -1,7 +1,7 @@
 """
 Detection Enrichment from Emulation Data
 
-Enhances Archer detection queries with evidence from adversary emulation executions.
+Enhances Shikari detection queries with evidence from adversary emulation executions.
 """
 
 import json

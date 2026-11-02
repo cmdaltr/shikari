@@ -1,7 +1,7 @@
 """
 VECTR Test Case Management
 
-Maps Archer detections to VECTR test cases for tracking and validation.
+Maps Shikari detections to VECTR test cases for tracking and validation.
 """
 
 import yaml
@@ -32,7 +32,7 @@ class TestCaseManager:
         red_tools: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
-        Create a VECTR test case from an Archer detection YAML.
+        Create a VECTR test case from an Shikari detection YAML.
 
         Args:
             campaign_id: Parent campaign ID

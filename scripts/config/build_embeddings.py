@@ -18,7 +18,7 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from archer.ai.rag.embeddings import EmbeddingGenerator
+from shikari.ai.rag.embeddings import EmbeddingGenerator
 
 
 def main():
@@ -115,8 +115,8 @@ Models:
             print("  2. Test enhancement:")
             print(f"     python scripts/test_enhancement.py --technique T1003.001")
             print()
-            print("  3. Use in Archer:")
-            print(f"     archer-cli offline generate APT29")
+            print("  3. Use in Shikari:")
+            print(f"     shikari-cli offline generate APT29")
             print()
         else:
             print(f"✗ Failed to build embeddings: {stats.get('error')}")

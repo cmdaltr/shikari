@@ -1,16 +1,16 @@
 """
-Generator 3's KQL (archer.build.queries, archer.validation.mde_field_validator,
-archer.build.migrate_kql): one row per finding, verbatim paths, bracketed and/or, so
+Generator 3's KQL (shikari.build.queries, shikari.validation.mde_field_validator,
+shikari.build.migrate_kql): one row per finding, verbatim paths, bracketed and/or, so
 generated MDE detections pass the output contract's KQL lint.
 """
 import hashlib
 
 import pytest
 
-from archer.build import migrate_kql
-from archer.build.queries import _kql, compile_mde_queries
-from archer.contract.validator import Report, lint_kql, mixed_andor
-from archer.validation.mde_field_validator import (
+from shikari.build import migrate_kql
+from shikari.build.queries import _kql, compile_mde_queries
+from shikari.contract.validator import Report, lint_kql, mixed_andor
+from shikari.validation.mde_field_validator import (
     bracket_and_runs,
     format_mde_query,
     verbatim_backslash_literals,
@@ -68,12 +68,12 @@ def _detection(tmp_path, query, edited=False):
     if edited:
         digest = "0" * 64
     path = tmp_path / "d.yaml"
-    path.write_text(f"# archer-generator: 2 query-sha256: {digest}\n{body}")
+    path.write_text(f"# shikari-generator: 2 query-sha256: {digest}\n{body}")
     return path
 
 
 def test_migration_fixes_old_files_and_keeps_them_unedited(tmp_path):
-    from archer.build.yaml import file_state
+    from shikari.build.yaml import file_state
     old = ('DeviceEvents\n| where Timestamp > ago(1d)\n'
            '| where AdditionalFields has_all("C:\\\\Windows\\\\sethc") and AdditionalFields has_all("exe") or AdditionalFields has "y"\n'
            '| summarize by Timestamp, DeviceName, ActionType, FileName,\n  FolderPath, RegistryKey')

@@ -1,6 +1,6 @@
 """
 Playwright UI tests for the technology stack (#21): Profile's picker, the Hunt page's note and
-the Threat Feed's "Your stack" filter. Needs a running Archer.
+the Threat Feed's "Your stack" filter. Needs a running Shikari.
 
 Saving the stack is intercepted, and the Hunt page and feed are given a stack, so the
 account's own settings aren't changed.

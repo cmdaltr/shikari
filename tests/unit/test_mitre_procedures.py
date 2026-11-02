@@ -1,5 +1,5 @@
 """
-Unit tests for archer.mitre.procedures
+Unit tests for shikari.mitre.procedures
 
 Covers:
 - All three attribution paths (direct, via_software, via_campaign)
@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from archer.mitre.procedures import (
+from shikari.mitre.procedures import (
     FIELDNAMES,
     _attack_id,
     _clean,
@@ -446,7 +446,7 @@ class TestBuildProceduresCSV:
             self._write_sample_csv(output_csv or out_path)
             return (output_csv or out_path, None)
 
-        with patch("archer.mitre.procedures.run_mitresaw", side_effect=mock_run):
+        with patch("shikari.mitre.procedures.run_mitresaw", side_effect=mock_run):
             result = build_procedures_csv(output_path=out_path)
 
         with open(result, newline="", encoding="utf-8") as f:
@@ -463,7 +463,7 @@ class TestBuildProceduresCSV:
             self._write_sample_csv(output_csv or out_path)
             return (output_csv or out_path, None)
 
-        with patch("archer.mitre.procedures.run_mitresaw", side_effect=mock_run):
+        with patch("shikari.mitre.procedures.run_mitresaw", side_effect=mock_run):
             result = build_procedures_csv(output_path=out_path)
 
         with open(result, newline="", encoding="utf-8") as f:
@@ -483,7 +483,7 @@ class TestBuildProceduresCSV:
             self._write_sample_csv(output_csv or out_path)
             return (output_csv or out_path, None)
 
-        with patch("archer.mitre.procedures.run_mitresaw", side_effect=mock_run):
+        with patch("shikari.mitre.procedures.run_mitresaw", side_effect=mock_run):
             result = build_procedures_csv(output_path=out_path)
 
         assert isinstance(result, Path)
@@ -530,7 +530,7 @@ class TestWithCachedBundle:
 
     @pytest.fixture(autouse=True)
     def load_bundle(self):
-        cache_path = Path(__file__).parent.parent.parent / "archer" / "data" / "cache" / "enterprise-attack.json"
+        cache_path = Path(__file__).parent.parent.parent / "shikari" / "data" / "cache" / "enterprise-attack.json"
         if not cache_path.exists():
             pytest.skip("Cached enterprise-attack.json not found")
         with open(cache_path) as f:

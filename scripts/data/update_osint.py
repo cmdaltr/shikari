@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Clone or update the OSINT detection repositories Archer searches per technique, then
-rebuild the technique index; also fetch LOLBAS, LOLRMM and LOLDrivers (archer/build/lol.py).
+Clone or update the OSINT detection repositories Shikari searches per technique, then
+rebuild the technique index; also fetch LOLBAS, LOLRMM and LOLDrivers (shikari/build/lol.py).
 The repositories, their URLs and sparse checkouts are
-defined once, in archer/build/osint_repos.py (REPOS); Archer's start-up uses the same.
+defined once, in shikari/build/osint_repos.py (REPOS); Shikari's start-up uses the same.
 
 Usage:
     python3 scripts/data/update_osint.py                  # every repository, if due
@@ -23,17 +23,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-# Standard library only, so it runs on a machine without Archer's dependencies (the
-# air-gapped workflow): register archer and archer.build as bare packages, so importing
+# Standard library only, so it runs on a machine without Shikari's dependencies (the
+# air-gapped workflow): register shikari and shikari.build as bare packages, so importing
 # osint_repos (and the config it reads) doesn't run their __init__s, which pull in
 # everything else
-for _pkg, _dir in (("archer", ROOT / "archer"), ("archer.build", ROOT / "archer" / "build")):
+for _pkg, _dir in (("shikari", ROOT / "shikari"), ("shikari.build", ROOT / "shikari" / "build")):
     if _pkg not in sys.modules:
         _mod = types.ModuleType(_pkg)
         _mod.__path__ = [str(_dir)]
         sys.modules[_pkg] = _mod
 
-from archer.build.osint_repos import REPOS, clone_or_update_repo  # noqa: E402
+from shikari.build.osint_repos import REPOS, clone_or_update_repo  # noqa: E402
 
 
 def main() -> int:
@@ -54,7 +54,7 @@ def main() -> int:
 
     # LOLBAS / LOLRMM / LOLDrivers: JSON over HTTPS, indexed with the standard library too
     if not chosen_only:
-        from archer.build import lol
+        from shikari.build import lol
         lol_status = lol.update(force=args.force)
         for name, state in lol_status.items():
             print(f"{'✓' if state == 'ready' else '✗'} {lol.SOURCES[name]['name']}: {state}")
@@ -62,9 +62,9 @@ def main() -> int:
 
     if not args.no_index:
         try:
-            from archer.build.osint_index import build_full_index
+            from shikari.build.osint_index import build_full_index
         except ImportError as e:   # toml/yaml missing: fine for a fetch-only machine
-            print(f"Index not rebuilt ({e}); run scripts/data/build_osint_index.py where Archer is installed")
+            print(f"Index not rebuilt ({e}); run scripts/data/build_osint_index.py where Shikari is installed")
         else:
             build_full_index()
     return 1 if failed else 0

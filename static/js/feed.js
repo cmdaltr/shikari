@@ -106,7 +106,7 @@
         <a class="fd-title" href="${esc(p.url)}" target="_blank" rel="noopener" title="${esc(p.title)}">${mark(p.title, words)}</a>
         <p class="fd-desc" title="${esc(p.description || '')}">${mark(p.description || '', words)}</p>
         ${tags ? `<ul class="fd-tags">${tags}</ul>` : ''}
-        <a class="fd-analyse" href="/?report=${encodeURIComponent(p.url)}">Analyse in Archer →</a>
+        <a class="fd-analyse" href="/?report=${encodeURIComponent(p.url)}">Analyse in Shikari →</a>
       </li>`;
     }).join('');
   }
@@ -157,16 +157,16 @@
     const story = (src, p) => `<li><span class="fd-r-meta">${esc(src)}${p.published ? ` · ${esc(day(p.published))}` : ''}</span>
         <a href="${esc(p.url)}" target="_blank" rel="noopener">${mark(p.title, words)}</a>
         ${p.summary ? `<p>${mark(p.summary, words)}</p>` : ''}
-        <a class="fd-analyse" href="/?report=${encodeURIComponent(p.url)}">Analyse in Archer →</a></li>`;
+        <a class="fd-analyse" href="/?report=${encodeURIComponent(p.url)}">Analyse in Shikari →</a></li>`;
     const groups = [
-      ["Archer's sources", `${r.archive_size.toLocaleString()} posts collected so far`, r.sources.map(p => story(p.source, p))],
+      ["Shikari's sources", `${r.archive_size.toLocaleString()} posts collected so far`, r.sources.map(p => story(p.source, p))],
       ['MITRE ATT&amp;CK', '', r.attack.map(a => `<li><span class="fd-r-meta">${esc(a.kind)} · ${esc(a.id || '')}${a.named ? '' : ' · mentioned in its description'}</span>
         <a href="${esc(a.url || '#')}" target="_blank" rel="noopener">${mark(a.name, words)}</a>
         ${a.aliases.length ? `<p>Also: ${mark(a.aliases.join(', '), words)}</p>` : ''}</li>`)],
       ...(r.web ? [['Web news', 'Google News and Bing News, security stories only', r.web.map(p => story(`${p.outlet} (${p.via})`, p))]] : []),
     ];
     // Groups with results get a column each; the empty ones share one line
-    const empty = groups.filter(g => !g[2].length).map(g => g[0] + (g[0] === "Archer's sources" ? ` (${g[1]})` : ''));
+    const empty = groups.filter(g => !g[2].length).map(g => g[0] + (g[0] === "Shikari's sources" ? ` (${g[1]})` : ''));
     out.innerHTML = groups.filter(g => g[2].length).map(([title, note, items]) => `<div class="fd-r-group">
         <h3 class="ui-subtitle">${title} <span class="fd-count">${items.length}</span></h3>
         ${note ? `<p class="fd-r-note">${note}</p>` : ''}<ul>${items.join('')}</ul></div>`).join('')
@@ -201,7 +201,7 @@
         </div>
         ${w.new_count ? `<ul class="fd-watch-matches">${w.new.map(m => `<li><span class="fd-r-meta">${esc(m.source || m.via || '')}${m.published ? ` · ${esc(day(m.published))}` : ''}</span>
           <a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.title)}</a>
-          <a class="fd-analyse" href="/?report=${encodeURIComponent(m.url)}">Analyse in Archer →</a></li>`).join('')}</ul>` : ''}
+          <a class="fd-analyse" href="/?report=${encodeURIComponent(m.url)}">Analyse in Shikari →</a></li>`).join('')}</ul>` : ''}
       </li>`).join('') : '<li class="fd-empty">No watchlists yet.</li>';
   }
 
@@ -239,7 +239,7 @@
       await fetch(`/api/feed/watchlists/${encodeURIComponent(id)}`, { method: 'DELETE' });
     }
     watchLoad();
-    window.dispatchEvent(new Event('archer:watch-changed'));
+    window.dispatchEvent(new Event('shikari:watch-changed'));
   });
 
   // A research search can become a watchlist

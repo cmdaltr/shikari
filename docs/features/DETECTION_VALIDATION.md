@@ -173,7 +173,7 @@ Defines valid and invalid indicators for each technique-platform combination:
 ```
 
 #### 2. Platform Indicator Validator
-**File:** `archer/build/platform_indicator_validator.py`
+**File:** `shikari/build/platform_indicator_validator.py`
 
 Core validation functions:
 
@@ -203,7 +203,7 @@ def validate_detection_before_generation(
 ```
 
 #### 3. Platform-Aware IOC Enrichment
-**File:** `archer/build/malware_iocs.py`
+**File:** `shikari/build/malware_iocs.py`
 
 ```python
 def enrich_indicators_with_iocs(
@@ -224,7 +224,7 @@ def enrich_indicators_with_iocs(
 ```
 
 #### 4. OSINT Relevance Filtering
-**File:** `archer/build/osint_comparison.py`
+**File:** `shikari/build/osint_comparison.py`
 
 ```python
 def filter_osint_indicators_by_relevance(
@@ -552,13 +552,13 @@ This is handled automatically by `compile_search_clause()` in `queries.py`.
 
 | File | Purpose | Status |
 |------|---------|--------|
-| `archer/build/platform_indicator_validator.py` | Core validation logic | ✅ Complete |
-| `archer/build/malware_iocs.py` | Platform-aware IOC enrichment | ✅ Complete |
-| `archer/build/osint_comparison.py` | OSINT relevance filtering & extraction | ✅ Complete |
-| `archer/build/detections.py` | Main orchestrator with validation | ✅ Complete |
-| `archer/build/collate.py` | Data collation with platform extraction | ✅ Complete |
-| `archer/build/queries.py` | Query compilation with OSINT support | ✅ Complete |
-| `archer/build/yaml.py` | YAML generation with metadata | ✅ Complete |
+| `shikari/build/platform_indicator_validator.py` | Core validation logic | ✅ Complete |
+| `shikari/build/malware_iocs.py` | Platform-aware IOC enrichment | ✅ Complete |
+| `shikari/build/osint_comparison.py` | OSINT relevance filtering & extraction | ✅ Complete |
+| `shikari/build/detections.py` | Main orchestrator with validation | ✅ Complete |
+| `shikari/build/collate.py` | Data collation with platform extraction | ✅ Complete |
+| `shikari/build/queries.py` | Query compilation with OSINT support | ✅ Complete |
+| `shikari/build/yaml.py` | YAML generation with metadata | ✅ Complete |
 
 ### Mapping Files
 

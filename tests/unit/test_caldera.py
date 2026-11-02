@@ -1,8 +1,8 @@
 """
-Unit tests for archer.lab.caldera, the CALDERA operations client (#30).
+Unit tests for shikari.lab.caldera, the CALDERA operations client (#30).
 
 The CALDERA REST API is mocked with httpx.MockTransport, so nothing here talks to a live server.
-ARCHER_HOME is pointed at a tmp directory, so collect() and the manifest readers write and read
+SHIKARI_HOME is pointed at a tmp directory, so collect() and the manifest readers write and read
 only under the test's own home.
 """
 
@@ -12,8 +12,8 @@ import json
 import httpx
 import pytest
 
-from archer.lab import caldera
-from archer.lab.runner import LabError
+from shikari.lab import caldera
+from shikari.lab.runner import LabError
 
 
 # --------------------------------------------------------------------------- fixtures
@@ -23,7 +23,7 @@ def tmp_home(tmp_path, monkeypatch):
     """Point every data path (manifests, correlations) at a throwaway home."""
     home = tmp_path / "home"
     (home / "data").mkdir(parents=True)
-    monkeypatch.setenv("ARCHER_HOME", str(home))
+    monkeypatch.setenv("SHIKARI_HOME", str(home))
     monkeypatch.setattr(caldera.paths, "DATA", home / "data")
     monkeypatch.setattr(caldera.paths, "HOME", home)
     # The detection index is cached per directory; start each test with an empty cache.
@@ -45,7 +45,7 @@ def _json(obj, status=200):
 def test_settings_reads_file_block(monkeypatch):
     monkeypatch.delenv("CALDERA_URL", raising=False)
     monkeypatch.delenv("CALDERA_API_KEY", raising=False)
-    monkeypatch.setattr("archer.build.bespoke.get_config",
+    monkeypatch.setattr("shikari.build.bespoke.get_config",
                         lambda: {"caldera": {"url": "https://lab:8888/", "api_key": "filekey", "verify_tls": False}})
     s = caldera.settings()
     assert s == {"url": "https://lab:8888", "api_key": "filekey", "verify_tls": False}
@@ -53,7 +53,7 @@ def test_settings_reads_file_block(monkeypatch):
 
 
 def test_settings_env_overrides_file(monkeypatch):
-    monkeypatch.setattr("archer.build.bespoke.get_config",
+    monkeypatch.setattr("shikari.build.bespoke.get_config",
                         lambda: {"caldera": {"url": "https://file:8888", "api_key": "filekey"}})
     monkeypatch.setenv("CALDERA_URL", "https://env:9999")
     monkeypatch.setenv("CALDERA_API_KEY", "envkey")
@@ -66,7 +66,7 @@ def test_settings_env_overrides_file(monkeypatch):
 def test_not_configured_without_key(monkeypatch):
     monkeypatch.delenv("CALDERA_URL", raising=False)
     monkeypatch.delenv("CALDERA_API_KEY", raising=False)
-    monkeypatch.setattr("archer.build.bespoke.get_config", lambda: {"caldera": {"url": "https://lab:8888"}})
+    monkeypatch.setattr("shikari.build.bespoke.get_config", lambda: {"caldera": {"url": "https://lab:8888"}})
     assert caldera.configured() is False
 
 
@@ -181,19 +181,19 @@ def test_agent_nodes_resolves_environment():
     agents = [
         {"paw": "cal1", "host": "cal1", "platform": "linux", "group": "disposable",
          "last_seen": "2026-10-30T01:00:00Z"},                      # lab-script group -> OrbStack
-        {"paw": "archer-win11", "host": "DESKTOP-X", "platform": "windows", "group": "winlab",
-         "last_seen": "2026-10-30T01:00:00Z"},                      # matched to an Archer UTM machine
+        {"paw": "shikari-win11", "host": "DESKTOP-X", "platform": "windows", "group": "winlab",
+         "last_seen": "2026-10-30T01:00:00Z"},                      # matched to an Shikari UTM machine
         {"paw": "mac", "host": "studio.local", "platform": "darwin", "group": "disposable",
          "last_seen": "2026-10-30T01:00:00Z"},                      # the host itself
         {"paw": "macvm", "host": "macvm", "platform": "darwin", "group": "maclab",
          "last_seen": "2026-10-30T01:00:00Z"},                      # a Tart macOS VM (caldera-lab.sh mac)
     ]
-    machines = [{"name": "archer-win11", "engine": "utm"}]
+    machines = [{"name": "shikari-win11", "engine": "utm"}]
     nodes = {n["paw"]: n for n in caldera.agent_nodes(agents, machines, host_name="studio.local")}
     assert {p: n["env"] for p, n in nodes.items()} == {
-        "cal1": "OrbStack", "archer-win11": "UTM", "mac": "this host", "macvm": "Tart"}
-    # Only the Archer-managed match carries the engine + machine name the node menu acts on.
-    assert (nodes["archer-win11"]["engine"], nodes["archer-win11"]["machine"]) == ("utm", "archer-win11")
+        "cal1": "OrbStack", "shikari-win11": "UTM", "mac": "this host", "macvm": "Tart"}
+    # Only the Shikari-managed match carries the engine + machine name the node menu acts on.
+    assert (nodes["shikari-win11"]["engine"], nodes["shikari-win11"]["machine"]) == ("utm", "shikari-win11")
     assert (nodes["cal1"]["engine"], nodes["cal1"]["machine"]) == ("", "")
 
 
@@ -236,11 +236,11 @@ def test_provision_defaults_group_and_template_map():
 
 def test_suggested_name_follows_convention():
     assert caldera.OS_TAG == {"linux": "ubu24", "macos": "mac15", "windows": "win11"}
-    # achr- always; cal- marker only for CALDERA; -N on a clash.
-    assert caldera.suggested_name("linux", []) == "achr-cal-ubu24"
-    assert caldera.suggested_name("macos", []) == "achr-cal-mac15"
-    assert caldera.suggested_name("windows", [], for_caldera=False) == "achr-win11"
-    assert caldera.suggested_name("linux", ["achr-cal-ubu24"]) == "achr-cal-ubu24-2"
+    # shi- always; cal- marker only for CALDERA; -N on a clash.
+    assert caldera.suggested_name("linux", []) == "shi-cal-ubu24"
+    assert caldera.suggested_name("macos", []) == "shi-cal-mac15"
+    assert caldera.suggested_name("windows", [], for_caldera=False) == "shi-win11"
+    assert caldera.suggested_name("linux", ["shi-cal-ubu24"]) == "shi-cal-ubu24-2"
 
 
 def test_suggested_name_tags_distro_from_template():
@@ -248,7 +248,7 @@ def test_suggested_name_tags_distro_from_template():
     assert caldera.tag_for("rocky-container", "linux") == "rky10"
     assert caldera.tag_for("ubuntu-vm", "linux") == "ubu24"
     assert caldera.tag_for(None, "windows") == "win11"
-    assert caldera.suggested_name("linux", [], template_id="rocky-container") == "achr-cal-rky10"
+    assert caldera.suggested_name("linux", [], template_id="rocky-container") == "shi-cal-rky10"
 
 
 def test_coverage_matches_techniques_to_groups_by_os():
@@ -311,7 +311,7 @@ def test_operate_execute_creates_adversary_and_operation():
             return _json({"adversary_id": "adv-1"})
         if request.method == "POST" and request.url.path.endswith("/operations"):
             posts.append(("operation", json.loads(request.content)))
-            return _json({"id": "op-1", "name": "archer-operation"})
+            return _json({"id": "op-1", "name": "shikari-operation"})
         return _json({}, status=404)
 
     client = make_client(handler)
@@ -521,7 +521,7 @@ def _tarball(run_name, tids):
 
 
 def _c2_result(tarball_bytes):
-    """A CALDERA link result whose stdout carries the base64 tarball between Archer's markers."""
+    """A CALDERA link result whose stdout carries the base64 tarball between Shikari's markers."""
     stdout = caldera._C2_OPEN + base64.b64encode(tarball_bytes).decode() + caldera._C2_CLOSE
     return base64.b64encode(json.dumps({"stdout": stdout, "stderr": ""}).encode()).decode()
 
@@ -552,8 +552,8 @@ def test_safe_extract_rejects_traversal(tmp_path):
 def test_capture_via_agent_round_trip(tmp_home, monkeypatch):
     # LAB_DIR is a module constant fixed at import; point it (and the lab build) at the tmp home.
     lab_dir = tmp_home / "data" / "telemetry" / "lab"
-    monkeypatch.setattr("archer.telemetry.lab.LAB_DIR", str(lab_dir))
-    monkeypatch.setattr("archer.telemetry.__main__.build", lambda *a, **k: None)
+    monkeypatch.setattr("shikari.telemetry.lab.LAB_DIR", str(lab_dir))
+    monkeypatch.setattr("shikari.telemetry.__main__.build", lambda *a, **k: None)
 
     tar = _tarball("caldera-op", ["T1057"])
     seen = {"posts": {}, "deletes": []}
@@ -642,7 +642,7 @@ def test_settings_prefers_env_then_user_overrides_then_file(monkeypatch):
     monkeypatch.delenv("CALDERA_URL", raising=False)
     monkeypatch.delenv("CALDERA_API_KEY", raising=False)
     # no file config in the test environment, so overrides are the only layer
-    import archer.build.bespoke as _bespoke
+    import shikari.build.bespoke as _bespoke
     monkeypatch.setattr(_bespoke, "get_config", lambda: {})
 
     ov = {"url": "https://user.lab:8888", "api_key": "USER-KEY", "verify_tls": False}
@@ -659,7 +659,7 @@ def test_settings_prefers_env_then_user_overrides_then_file(monkeypatch):
 def test_configured_with_overrides(monkeypatch):
     monkeypatch.delenv("CALDERA_URL", raising=False)
     monkeypatch.delenv("CALDERA_API_KEY", raising=False)
-    import archer.build.bespoke as _bespoke
+    import shikari.build.bespoke as _bespoke
     monkeypatch.setattr(_bespoke, "get_config", lambda: {})
     assert caldera.configured({"url": "https://x", "api_key": "y"}) is True
     assert caldera.configured({"url": "https://x"}) is False  # no key

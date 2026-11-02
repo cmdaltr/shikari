@@ -1,4 +1,4 @@
-"""archer-cli start/stop/status (archer/service.py): crash restarts and the Ollama models folder."""
+"""shikari-cli start/stop/status (shikari/service.py): crash restarts and the Ollama models folder."""
 
 import importlib.util
 import sys
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-spec = importlib.util.spec_from_file_location("archer_service", Path(__file__).parents[2] / "archer" / "service.py")
+spec = importlib.util.spec_from_file_location("shikari_service", Path(__file__).parents[2] / "shikari" / "service.py")
 service = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(service)
 

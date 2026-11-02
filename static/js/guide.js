@@ -1,5 +1,5 @@
 /*
- * The guide, tips and tricks, and the dialog offering both when Archer starts.
+ * The guide, tips and tricks, and the dialog offering both when Shikari starts.
  *
  * Start-up means the first page of a browser session: each launch of the desktop app, or a new
  * browser window on a server. Whether each part shows then, and which tips were shown last, are
@@ -9,12 +9,12 @@
  * static/guide/guide.json; its words live in scripts/guide/pages.yaml.
  */
 (function () {
-  if (window.ArcherGuide) return;
+  if (window.ShikariGuide) return;
 
-  const KEY_GUIDE = 'archer.guide.atStartup';
-  const KEY_TIPS = 'archer.tips.atStartup';
-  const KEY_RECENT = 'archer.tips.recent';
-  const KEY_SESSION = 'archer.started';
+  const KEY_GUIDE = 'shikari.guide.atStartup';
+  const KEY_TIPS = 'shikari.tips.atStartup';
+  const KEY_RECENT = 'shikari.tips.recent';
+  const KEY_SESSION = 'shikari.started';
   const RECENT = 10;
   const NO_STARTUP = ['/login', '/register', '/forgot-password', '/reset-password', '/clear-browser-cache'];
 
@@ -146,7 +146,7 @@
         parts.push(el('div', { class: 'gd-start-card' },
           el('div', { class: 'gd-tip-label' }, 'Guide'),
           el('div', { class: 'gd-tip-body' },
-            el('h3', {}, 'New to Archer, or to a page?'),
+            el('h3', {}, 'New to Shikari, or to a page?'),
             el('p', {}, 'A picture of every page, each part highlighted in turn: what it’s for, who uses it, and when it helps most.'),
           ),
           el('div', { class: 'gd-tip-thumb-wrap' }, pick ? thumb(pick) : ''),
@@ -245,7 +245,7 @@
               el('p', {}, pg.summary)),
             pg.open !== false ? el('a', { class: 'gd-open', href: pg.href || pg.path }, 'Open this page') : null,
           );
-          const img = el('img', { src: pg.image, alt: `${pg.title}, as it appears in Archer`, width: pg.width, height: pg.height, draggable: 'false' });
+          const img = el('img', { src: pg.image, alt: `${pg.title}, as it appears in Shikari`, width: pg.width, height: pg.height, draggable: 'false' });
           const marks = pg.sections.map((x, k) => el('button', {
             type: 'button', class: 'gd-mark', 'aria-label': `${k + 1}. ${x.title}`,
             style: `left:${x.box[0] / pg.width * 100}%;top:${x.box[1] / pg.height * 100}%;width:${x.box[2] / pg.width * 100}%;height:${x.box[3] / pg.height * 100}%`,
@@ -311,5 +311,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', atStartup);
   else atStartup();
 
-  window.ArcherGuide = { open: showGuideViewer, tips: showTips, startup: () => startup(true) };
+  window.ShikariGuide = { open: showGuideViewer, tips: showTips, startup: () => startup(true) };
 })();

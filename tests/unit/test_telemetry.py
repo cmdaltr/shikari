@@ -1,8 +1,8 @@
 """Recorded attack telemetry (#22 stage 1): parsing the recordings, and detections checked against them."""
 from unittest.mock import patch
 
-from archer.build.indicator_hygiene import GAP
-from archer.telemetry import check, datasets as ds
+from shikari.build.indicator_hygiene import GAP
+from shikari.telemetry import check, datasets as ds
 
 SYSMON = (b"<Event xmlns='x'><System><EventID>1</EventID><Channel>Microsoft-Windows-Sysmon/Operational</Channel></System>"
           b"<EventData><Data Name='Image'>C:\\Windows\\System32\\rundll32.exe</Data>"
@@ -37,7 +37,7 @@ def test_parse_each_format():
     assert list(ds.parse(lower))[0][0] == "Microsoft-Windows-Sysmon/Operational 1"
 
 
-def test_describe_maps_to_what_archer_generates():
+def test_describe_maps_to_what_shikari_generates():
     info = ds.describe("Microsoft-Windows-Sysmon/Operational 1")
     assert (info["mde"], info["udm"]) == ("DeviceProcessEvents", "PROCESS_LAUNCH")
     assert ds.describe("CloudTrail iam.amazonaws.com CreateUser")["label"] == "AWS CloudTrail: iam.amazonaws.com CreateUser"
@@ -125,7 +125,7 @@ def test_technique_view_and_data_sources():
 
 
 def test_evtx_samples_are_filed_by_technique():
-    from archer.telemetry import evtx_attack
+    from shikari.telemetry import evtx_attack
 
     assert evtx_attack.technique("TA0006-Credential Access/T1003-Credential dumping/ID4662-DCsync.evtx") == "T1003"
     assert evtx_attack.technique("TA0003-Persistence/T1098.xxx-Account manipulation/ID4738-x.evtx") == "T1098"
@@ -173,7 +173,7 @@ def test_a_lab_run(tmp_path):
     """record-atomics.ps1's output, read by the lab source: native logs, eslogger, plists and Defender's rows."""
     import json
 
-    from archer.telemetry import lab
+    from shikari.telemetry import lab
 
     run = tmp_path / "mac01-20261016-1900"
     test = run / "T1543.001-1"
@@ -205,7 +205,7 @@ def test_guide_summary(tmp_path):
     import io
     import zipfile
 
-    from archer.telemetry import guide
+    from shikari.telemetry import guide
 
     cols = ["Id", "OrgId", "IncidentId", "AlertId", "Timestamp", "DetectorId", "AlertTitle", "Category",
             "MitreTechniques", "IncidentGrade", "EntityType", "EvidenceRole"]

@@ -19,7 +19,7 @@ class TestTechniqueExtraction:
 
     def test_extract_single_technique(self):
         """Test extracting a single technique ID."""
-        from archer.parsers.blog_analyzer import _extract_techniques
+        from shikari.parsers.blog_analyzer import _extract_techniques
 
         text = "The attacker used T1059.001 for execution."
         result = _extract_techniques(text)
@@ -29,7 +29,7 @@ class TestTechniqueExtraction:
 
     def test_extract_multiple_techniques(self):
         """Test extracting multiple technique IDs."""
-        from archer.parsers.blog_analyzer import _extract_techniques
+        from shikari.parsers.blog_analyzer import _extract_techniques
 
         text = """
         Initial access via T1566.001, followed by T1059.001 execution.
@@ -44,7 +44,7 @@ class TestTechniqueExtraction:
 
     def test_extract_parent_technique(self):
         """Test extracting parent technique without sub-technique."""
-        from archer.parsers.blog_analyzer import _extract_techniques
+        from shikari.parsers.blog_analyzer import _extract_techniques
 
         text = "They used T1059 for command execution."
         result = _extract_techniques(text)
@@ -53,7 +53,7 @@ class TestTechniqueExtraction:
 
     def test_extract_techniques_deduplication(self):
         """Test that duplicate techniques are deduplicated."""
-        from archer.parsers.blog_analyzer import _extract_techniques
+        from shikari.parsers.blog_analyzer import _extract_techniques
 
         text = "T1059.001 was used. Later, T1059.001 was used again."
         result = _extract_techniques(text)
@@ -62,7 +62,7 @@ class TestTechniqueExtraction:
 
     def test_extract_techniques_sorted(self):
         """Test that techniques are returned sorted."""
-        from archer.parsers.blog_analyzer import _extract_techniques
+        from shikari.parsers.blog_analyzer import _extract_techniques
 
         text = "T1566.001, T1003.001, T1059.001 were observed."
         result = _extract_techniques(text)
@@ -71,7 +71,7 @@ class TestTechniqueExtraction:
 
     def test_extract_no_techniques(self):
         """Test text with no techniques returns empty list."""
-        from archer.parsers.blog_analyzer import _extract_techniques
+        from shikari.parsers.blog_analyzer import _extract_techniques
 
         text = "This is a normal blog post with no threat intel."
         result = _extract_techniques(text)
@@ -80,7 +80,7 @@ class TestTechniqueExtraction:
 
     def test_extract_invalid_technique_format_ignored(self):
         """Test that invalid technique formats are ignored."""
-        from archer.parsers.blog_analyzer import _extract_techniques
+        from shikari.parsers.blog_analyzer import _extract_techniques
 
         text = "T999 is invalid. T12345 too. But T1059.001 is valid."
         result = _extract_techniques(text)
@@ -95,7 +95,7 @@ class TestTacticsExtraction:
 
     def test_extract_single_tactic(self):
         """Test extracting a single tactic."""
-        from archer.parsers.blog_analyzer import _extract_tactics
+        from shikari.parsers.blog_analyzer import _extract_tactics
 
         text = "The Execution phase involved running PowerShell scripts."
         result = _extract_tactics(text)
@@ -104,7 +104,7 @@ class TestTacticsExtraction:
 
     def test_extract_multiple_tactics(self):
         """Test extracting multiple tactics."""
-        from archer.parsers.blog_analyzer import _extract_tactics
+        from shikari.parsers.blog_analyzer import _extract_tactics
 
         text = """
         Initial Access was achieved through phishing.
@@ -119,7 +119,7 @@ class TestTacticsExtraction:
 
     def test_extract_tactics_case_insensitive(self):
         """Test that tactic extraction is case-insensitive."""
-        from archer.parsers.blog_analyzer import _extract_tactics
+        from shikari.parsers.blog_analyzer import _extract_tactics
 
         text = "INITIAL ACCESS and execution were observed."
         result = _extract_tactics(text)
@@ -129,7 +129,7 @@ class TestTacticsExtraction:
 
     def test_extract_no_tactics(self):
         """Test text with no tactics returns empty list."""
-        from archer.parsers.blog_analyzer import _extract_tactics
+        from shikari.parsers.blog_analyzer import _extract_tactics
 
         text = "This is a normal text without MITRE tactics."
         result = _extract_tactics(text)
@@ -142,7 +142,7 @@ class TestGroupNameExtraction:
 
     def test_extract_apt_group(self):
         """Test extracting APT group names."""
-        from archer.parsers.blog_analyzer import _extract_group_name
+        from shikari.parsers.blog_analyzer import _extract_group_name
 
         text = "This analysis covers APT29 activity."
         soup = BeautifulSoup("<html><body></body></html>", "html.parser")
@@ -153,7 +153,7 @@ class TestGroupNameExtraction:
 
     def test_extract_unc_group(self):
         """Test extracting UNC group names."""
-        from archer.parsers.blog_analyzer import _extract_group_name
+        from shikari.parsers.blog_analyzer import _extract_group_name
 
         text = "UNC2452 was observed targeting organizations."
         soup = BeautifulSoup("<html><body></body></html>", "html.parser")
@@ -164,7 +164,7 @@ class TestGroupNameExtraction:
 
     def test_extract_fin_group(self):
         """Test extracting FIN group names."""
-        from archer.parsers.blog_analyzer import _extract_group_name
+        from shikari.parsers.blog_analyzer import _extract_group_name
 
         text = "FIN7 continues to target retail organizations."
         soup = BeautifulSoup("<html><body></body></html>", "html.parser")
@@ -175,7 +175,7 @@ class TestGroupNameExtraction:
 
     def test_extract_named_group(self):
         """Test extracting named threat groups."""
-        from archer.parsers.blog_analyzer import _extract_group_name
+        from shikari.parsers.blog_analyzer import _extract_group_name
 
         text = "Lazarus Group has been active recently."
         soup = BeautifulSoup("<html><body></body></html>", "html.parser")
@@ -186,7 +186,7 @@ class TestGroupNameExtraction:
 
     def test_extract_group_from_title(self):
         """Test extracting group name from HTML title."""
-        from archer.parsers.blog_analyzer import _extract_group_name
+        from shikari.parsers.blog_analyzer import _extract_group_name
 
         text = "Some analysis content without group name."
         soup = BeautifulSoup(
@@ -200,7 +200,7 @@ class TestGroupNameExtraction:
 
     def test_no_group_name_found(self):
         """Test when no group name is found."""
-        from archer.parsers.blog_analyzer import _extract_group_name
+        from shikari.parsers.blog_analyzer import _extract_group_name
 
         text = "Generic threat activity observed."
         soup = BeautifulSoup("<html><body></body></html>", "html.parser")
@@ -215,7 +215,7 @@ class TestProcedureExtraction:
 
     def test_extract_procedure_with_keywords(self):
         """Test extracting sentences with procedure keywords."""
-        from archer.parsers.blog_analyzer import _extract_procedures
+        from shikari.parsers.blog_analyzer import _extract_procedures
 
         text = """
         The attacker executed PowerShell commands to download malware.
@@ -229,7 +229,7 @@ class TestProcedureExtraction:
 
     def test_extract_procedures_length_filter(self):
         """Test that very short sentences are filtered out."""
-        from archer.parsers.blog_analyzer import _extract_procedures
+        from shikari.parsers.blog_analyzer import _extract_procedures
 
         text = "Run it. The attacker executed a sophisticated multi-stage attack chain."
         result = _extract_procedures(text)
@@ -239,7 +239,7 @@ class TestProcedureExtraction:
 
     def test_extract_procedures_limit(self):
         """Test that procedures are limited to 10."""
-        from archer.parsers.blog_analyzer import _extract_procedures
+        from shikari.parsers.blog_analyzer import _extract_procedures
 
         # Create text with many procedure-like sentences
         sentences = [
@@ -258,7 +258,7 @@ class TestDescriptionExtraction:
 
     def test_extract_description_threat_keywords(self):
         """Test extracting description with threat keywords."""
-        from archer.parsers.blog_analyzer import _extract_description
+        from shikari.parsers.blog_analyzer import _extract_description
 
         text = """
         Short intro.
@@ -275,7 +275,7 @@ class TestDescriptionExtraction:
 
     def test_extract_description_max_length(self):
         """Test that description is limited to 500 characters."""
-        from archer.parsers.blog_analyzer import _extract_description
+        from shikari.parsers.blog_analyzer import _extract_description
 
         # Create a very long paragraph
         long_para = "The threat actor " + "performed malicious activities. " * 50
@@ -291,7 +291,7 @@ class TestIOCExtraction:
 
     def test_extract_iocs_returns_dict(self):
         """Test that IOC extraction returns a dictionary structure."""
-        from archer.parsers.blog_analyzer import _extract_iocs
+        from shikari.parsers.blog_analyzer import _extract_iocs
 
         text = "IOCs: evil.com, 192.168.1.100"
 
@@ -306,7 +306,7 @@ class TestAnalyzeBlogPost:
 
     def test_analyze_blog_post_success(self, sample_blog_html):
         """Test successful blog analysis."""
-        from archer.parsers.blog_analyzer import analyze_blog_post
+        from shikari.parsers.blog_analyzer import analyze_blog_post
         import socket as socket_module
 
         # Mock socket.gethostbyname at module level since it's imported dynamically
@@ -314,7 +314,7 @@ class TestAnalyzeBlogPost:
         socket_module.getaddrinfo = MagicMock(return_value=_addrinfo("93.184.216.34"))
 
         try:
-            with patch("archer.parsers.blog_analyzer.requests.get") as mock_get:
+            with patch("shikari.parsers.blog_analyzer.requests.get") as mock_get:
                 # Setup mocks
                 mock_response = MagicMock()
                 mock_response.is_redirect = False
@@ -343,7 +343,7 @@ class TestAnalyzeBlogPost:
 
     def test_boilerplate_filter_keeps_body_with_lookalike_classes(self):
         """CISA's <body> carries node-type-advisory; a substring 'ad' match stripped the whole page."""
-        from archer.parsers.blog_analyzer import analyze_blog_post
+        from shikari.parsers.blog_analyzer import analyze_blog_post
 
         html = """
         <html><body class="path-node node-page--node-type-advisory">
@@ -360,7 +360,7 @@ class TestAnalyzeBlogPost:
         mock_response.raise_for_status = MagicMock()
 
         with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")), \
-             patch("archer.parsers.blog_analyzer.requests.get", return_value=mock_response):
+             patch("shikari.parsers.blog_analyzer.requests.get", return_value=mock_response):
             result = analyze_blog_post("https://www.cisa.gov/advisory")
 
         assert result["success"] is True
@@ -372,7 +372,7 @@ class TestAnalyzeBlogPost:
 
     def test_publisher_domain_excluded_from_iocs(self):
         """A report's own domain (any subdomain) is not an indicator; others are kept."""
-        from archer.parsers.blog_analyzer import _drop_publisher_domains
+        from shikari.parsers.blog_analyzer import _drop_publisher_domains
 
         iocs = {"domain": ["www[.]vendor.co.uk", "intel.vendor.co.uk", "c2-vendor[.]co.uk", "evil[.]com"], "ip": ["1.2.3.4"]}
 
@@ -383,7 +383,7 @@ class TestAnalyzeBlogPost:
 
     def test_vendor_email_domains_excluded(self):
         """cisa.gov reports list SOC@mail.cisa.dhs.gov: a parent-org domain carrying the vendor's name."""
-        from archer.parsers.blog_analyzer import _drop_publisher_domains
+        from shikari.parsers.blog_analyzer import _drop_publisher_domains
 
         text = (
             "Report to SOC@mail.cisa.dhs.gov or contact[at]cisa[.]dhs[.]gov. "
@@ -400,7 +400,7 @@ class TestAnalyzeBlogPost:
     def test_vendor_identified_from_page_metadata(self):
         """Publisher isn't always the hosting domain: Mandiant posts live on cloud.google.com."""
         from bs4 import BeautifulSoup
-        from archer.parsers.blog_analyzer import _drop_publisher_domains
+        from shikari.parsers.blog_analyzer import _drop_publisher_domains
 
         soup = BeautifulSoup(
             '<html><head><meta property="og:site_name" content="Mandiant Blog"></head><body>'
@@ -419,7 +419,7 @@ class TestAnalyzeBlogPost:
 
     def test_publisher_identity_names(self):
         from bs4 import BeautifulSoup
-        from archer.parsers.blog_analyzer import publisher_identity
+        from shikari.parsers.blog_analyzer import publisher_identity
 
         soup = BeautifulSoup(
             '<html><head><link rel="canonical" href="https://unit42.paloaltonetworks.com/post">'
@@ -436,7 +436,7 @@ class TestAnalyzeBlogPost:
 
     def test_footer_contact_address_recognised(self):
         """Contact addresses usually live in the footer, which content extraction strips."""
-        from archer.parsers.blog_analyzer import analyze_blog_post
+        from shikari.parsers.blog_analyzer import analyze_blog_post
 
         html = """
         <html><body>
@@ -451,16 +451,16 @@ class TestAnalyzeBlogPost:
         mock_response.raise_for_status = MagicMock()
 
         with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")), \
-             patch("archer.parsers.blog_analyzer._extract_iocs",
+             patch("shikari.parsers.blog_analyzer._extract_iocs",
                    return_value={"domain": ["mail.vendorcorp-support.com", "cdn.vendorcorp.example"]}), \
-             patch("archer.parsers.blog_analyzer.requests.get", return_value=mock_response):
+             patch("shikari.parsers.blog_analyzer.requests.get", return_value=mock_response):
             result = analyze_blog_post("https://blog.vendorcorp.com/post")
 
         assert result["iocs"]["domain"] == ["mail.vendorcorp-support.com"]
 
     def test_analyze_blog_post_invalid_scheme(self):
         """Test that invalid URL schemes are rejected."""
-        from archer.parsers.blog_analyzer import analyze_blog_post
+        from shikari.parsers.blog_analyzer import analyze_blog_post
 
         result = analyze_blog_post("ftp://example.com/blog")
 
@@ -469,7 +469,7 @@ class TestAnalyzeBlogPost:
 
     def test_analyze_blog_post_localhost_blocked(self):
         """Test that localhost URLs are blocked (SSRF prevention)."""
-        from archer.parsers.blog_analyzer import analyze_blog_post
+        from shikari.parsers.blog_analyzer import analyze_blog_post
 
         with patch("socket.getaddrinfo") as mock_dns:
             mock_dns.return_value = _addrinfo("127.0.0.1")
@@ -481,7 +481,7 @@ class TestAnalyzeBlogPost:
 
     def test_analyze_blog_post_private_ip_blocked(self):
         """Test that private IPs are blocked (SSRF prevention)."""
-        from archer.parsers.blog_analyzer import analyze_blog_post
+        from shikari.parsers.blog_analyzer import analyze_blog_post
 
         with patch("socket.getaddrinfo") as mock_dns:
             mock_dns.return_value = _addrinfo("192.168.1.1")
@@ -493,7 +493,7 @@ class TestAnalyzeBlogPost:
 
     def test_analyze_blog_post_dns_failure(self):
         """Test handling of DNS resolution failure."""
-        from archer.parsers.blog_analyzer import analyze_blog_post
+        from shikari.parsers.blog_analyzer import analyze_blog_post
         import socket
 
         with patch("socket.getaddrinfo") as mock_dns:
@@ -506,11 +506,11 @@ class TestAnalyzeBlogPost:
 
     def test_analyze_blog_post_request_failure(self):
         """Test handling of HTTP request failure."""
-        from archer.parsers.blog_analyzer import analyze_blog_post
+        from shikari.parsers.blog_analyzer import analyze_blog_post
         import requests
 
         with patch("socket.getaddrinfo") as mock_dns, \
-             patch("archer.parsers.blog_analyzer.requests.get") as mock_get:
+             patch("shikari.parsers.blog_analyzer.requests.get") as mock_get:
 
             mock_dns.return_value = _addrinfo("93.184.216.34")
             mock_get.side_effect = requests.exceptions.Timeout("Connection timed out")
@@ -522,10 +522,10 @@ class TestAnalyzeBlogPost:
 
     def test_analyze_blog_post_response_too_large(self):
         """Test that oversized responses are rejected."""
-        from archer.parsers.blog_analyzer import analyze_blog_post
+        from shikari.parsers.blog_analyzer import analyze_blog_post
 
         with patch("socket.getaddrinfo") as mock_dns, \
-             patch("archer.parsers.blog_analyzer.requests.get") as mock_get:
+             patch("shikari.parsers.blog_analyzer.requests.get") as mock_get:
 
             mock_dns.return_value = _addrinfo("93.184.216.34")
 
@@ -547,10 +547,10 @@ class TestAutoSearchBlogs:
 
     def test_auto_search_crowdstrike_success(self):
         """Test successful Crowdstrike blog search."""
-        from archer.parsers.blog_analyzer import auto_search_blogs
+        from shikari.parsers.blog_analyzer import auto_search_blogs
 
-        with patch("archer.parsers.blog_analyzer.search_crowdstrike_blog") as mock_cs, \
-             patch("archer.parsers.blog_analyzer.analyze_blog_post") as mock_analyze:
+        with patch("shikari.parsers.blog_analyzer.search_crowdstrike_blog") as mock_cs, \
+             patch("shikari.parsers.blog_analyzer.analyze_blog_post") as mock_analyze:
 
             mock_cs.return_value = "https://crowdstrike.com/blog/apt29"
             mock_analyze.return_value = {
@@ -567,11 +567,11 @@ class TestAutoSearchBlogs:
 
     def test_auto_search_fallback_to_dfir(self):
         """Test fallback to DFIR Report when Crowdstrike has no results."""
-        from archer.parsers.blog_analyzer import auto_search_blogs
+        from shikari.parsers.blog_analyzer import auto_search_blogs
 
-        with patch("archer.parsers.blog_analyzer.search_crowdstrike_blog") as mock_cs, \
-             patch("archer.parsers.blog_analyzer.search_dfir_report") as mock_dfir, \
-             patch("archer.parsers.blog_analyzer.analyze_blog_post") as mock_analyze:
+        with patch("shikari.parsers.blog_analyzer.search_crowdstrike_blog") as mock_cs, \
+             patch("shikari.parsers.blog_analyzer.search_dfir_report") as mock_dfir, \
+             patch("shikari.parsers.blog_analyzer.analyze_blog_post") as mock_analyze:
 
             mock_cs.return_value = None  # No Crowdstrike result
             mock_dfir.return_value = "https://thedfirreport.com/apt29"
@@ -587,10 +587,10 @@ class TestAutoSearchBlogs:
 
     def test_auto_search_no_results(self):
         """Test when no blog posts are found."""
-        from archer.parsers.blog_analyzer import auto_search_blogs
+        from shikari.parsers.blog_analyzer import auto_search_blogs
 
-        with patch("archer.parsers.blog_analyzer.search_crowdstrike_blog") as mock_cs, \
-             patch("archer.parsers.blog_analyzer.search_dfir_report") as mock_dfir:
+        with patch("shikari.parsers.blog_analyzer.search_crowdstrike_blog") as mock_cs, \
+             patch("shikari.parsers.blog_analyzer.search_dfir_report") as mock_dfir:
 
             mock_cs.return_value = None
             mock_dfir.return_value = None
@@ -614,28 +614,28 @@ class TestGroupNameWholeWords:
         return BeautifulSoup(f"<html><head><title>{title}</title></head></html>", "html.parser")
 
     def test_word_inside_another_word_is_not_a_group(self):
-        from archer.parsers.blog_analyzer import _extract_group_name
+        from shikari.parsers.blog_analyzer import _extract_group_name
         assert _extract_group_name("Continuous hardening. Defender continues.", self._soup()) == ""
 
     def test_alias_resolves_to_attack_name(self):
-        from archer.parsers.blog_analyzer import _extract_group_name, attack_group_names
+        from shikari.parsers.blog_analyzer import _extract_group_name, attack_group_names
         names = attack_group_names(self.BUNDLE)
         assert "Old Group" not in names
         assert _extract_group_name("Midnight Blizzard phished staff.", self._soup(), names) == "APT29"
 
     def test_aliases_of_one_group_add_up(self):
-        from archer.parsers.blog_analyzer import _extract_group_name, attack_group_names
+        from shikari.parsers.blog_analyzer import _extract_group_name, attack_group_names
         names = attack_group_names(self.BUNDLE)
         text = "Grim Spider deployed Ryuk. UNC1878 used Cobalt Strike. Cozy Bear was mentioned once."
         assert _extract_group_name(text, self._soup(), names) == "Wizard Spider"
 
     def test_title_outweighs_passing_mentions(self):
-        from archer.parsers.blog_analyzer import _extract_group_name, attack_group_names
+        from shikari.parsers.blog_analyzer import _extract_group_name, attack_group_names
         names = attack_group_names(self.BUNDLE)
         text = "Like UNC1878 before them, the actor. Midnight Blizzard did X."
         assert _extract_group_name(text, self._soup("Midnight Blizzard targets diplomats | Vendor"), names) == "APT29"
 
     def test_article_title_drops_site_name(self):
-        from archer.parsers.blog_analyzer import _article_title
+        from shikari.parsers.blog_analyzer import _article_title
         assert _article_title("Nightmare-Eclipse Tooling Seen in Real-World Intrusion | Huntress") == \
             "Nightmare-Eclipse Tooling Seen in Real-World Intrusion"

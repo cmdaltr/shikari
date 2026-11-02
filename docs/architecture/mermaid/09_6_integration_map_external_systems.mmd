@@ -1,10 +1,10 @@
 %% 6. Integration Map — External Systems
-%% Shows the external systems Archer uses: MITRE ATT&CK (required), AI providers (opt-in: cloud or local), intelligence sources (NVD, GitHub PoCs, public detection repos, Threat Feed sources, LOLBAS and LOLDrivers), recorded attack telemetry and GUIDE, CALDERA for live chained emulation, and your SIEMs. Solid lines = required, dashed = optional, grey = coming soon or planned.
+%% Shows the external systems Shikari uses: MITRE ATT&CK (required), AI providers (opt-in: cloud or local), intelligence sources (NVD, GitHub PoCs, public detection repos, Threat Feed sources, LOLBAS and LOLDrivers), recorded attack telemetry and GUIDE, CALDERA for live chained emulation, and your SIEMs. Solid lines = required, dashed = optional, grey = coming soon or planned.
 %%
 
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
 graph LR
-    ARCHER(("<b>Archer</b>"))
+    SHIKARI(("<b>Shikari</b>"))
 
     subgraph REQ ["Required"]
         STIX["MITRE ATT&CK<br/>STIX bundle"]
@@ -52,25 +52,25 @@ graph LR
         VECTR["VECTR import/export<br/>threat library, issue 24"]
     end
 
-    STIX --> ARCHER
-    CLOUD -.-> ARCHER
-    LOCAL -.-> ARCHER
-    NVD -.-> ARCHER
-    GHPOC -.-> ARCHER
-    RULES -.-> ARCHER
-    FEEDS -.-> ARCHER
-    LOL -.-> ARCHER
-    SPL & OTRF & EVTX & MAC -.-> ARCHER
-    GUIDE -.-> ARCHER
-    ARCHER -.->|"queries"| SECOPS
-    ARCHER -.->|"queries"| MDE
-    ARCHER -.-> DOCKER
-    ARCHER -.->|"REST"| CALDERA
-    VCDB & KEV & RL -.->|"cached feeds"| ARCHER
-    LAB -.-> ARCHER
-    ARCHER -.-> VECTR
+    STIX --> SHIKARI
+    CLOUD -.-> SHIKARI
+    LOCAL -.-> SHIKARI
+    NVD -.-> SHIKARI
+    GHPOC -.-> SHIKARI
+    RULES -.-> SHIKARI
+    FEEDS -.-> SHIKARI
+    LOL -.-> SHIKARI
+    SPL & OTRF & EVTX & MAC -.-> SHIKARI
+    GUIDE -.-> SHIKARI
+    SHIKARI -.->|"queries"| SECOPS
+    SHIKARI -.->|"queries"| MDE
+    SHIKARI -.-> DOCKER
+    SHIKARI -.->|"REST"| CALDERA
+    VCDB & KEV & RL -.->|"cached feeds"| SHIKARI
+    LAB -.-> SHIKARI
+    SHIKARI -.-> VECTR
 
-    style ARCHER fill:#f5a623,stroke:#c17d10,color:#fff
+    style SHIKARI fill:#f5a623,stroke:#c17d10,color:#fff
     style STIX fill:#4a90d9,stroke:#2c5f8a,color:#fff
     style CLOUD fill:#bd10e0,stroke:#8a0ba5,color:#fff
     style LOCAL fill:#bd10e0,stroke:#8a0ba5,color:#fff

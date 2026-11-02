@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from archer.build import run_files, technique_yield as ty
+from shikari.build import run_files, technique_yield as ty
 
 
 @pytest.fixture

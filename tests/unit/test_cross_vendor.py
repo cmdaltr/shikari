@@ -1,6 +1,6 @@
 """Cross-vendor correlation playbooks (#8)."""
 
-from archer.correlation.cross_vendor import build_cross_vendor_playbooks
+from shikari.correlation.cross_vendor import build_cross_vendor_playbooks
 
 
 def _file_info(records):

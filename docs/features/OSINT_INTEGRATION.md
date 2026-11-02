@@ -1,6 +1,6 @@
 # OSINT Detection Enhancement System
 
-> **Status (2026-10-16):** some of what this document names was never built: `scripts/cleanup.py` and `test_osint.py`; the OSINT code is `archer/build/osint_*.py`, updated by `scripts/data/update_osint.py` and `build_osint_index.py`. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
+> **Status (2026-10-16):** some of what this document names was never built: `scripts/cleanup.py` and `test_osint.py`; the OSINT code is `shikari/build/osint_*.py`, updated by `scripts/data/update_osint.py` and `build_osint_index.py`. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
 
 **Last Updated:** 2025-11-14
 **Status:** ✅ Fully Operational
@@ -385,7 +385,7 @@ All OSINT sources are cloned locally for fast, offline-capable searches:
 
 ### Living-off-the-Land Datasets
 
-Three of the [lolol.farm](https://lolol.farm) projects, fetched as JSON over HTTPS at most daily into `data/repos/lol/` and compacted into `data/cache/lol_index.json` (`archer/build/lol.py`). They're used with **LOL datasets** (its own option on the Hunt and Analyse tabs, ticked by default; `lol_datasets=false` turns it off), and only for a tool the technique's own indicators or procedure already name, and (for LOLBAS) only when the project documents that binary under the same technique family. A group seen using `certutil.exe` for **T1105** gets certutil's T1105 switches; a group never seen using it gets nothing from LOLBAS.
+Three of the [lolol.farm](https://lolol.farm) projects, fetched as JSON over HTTPS at most daily into `data/repos/lol/` and compacted into `data/cache/lol_index.json` (`shikari/build/lol.py`). They're used with **LOL datasets** (its own option on the Hunt and Analyse tabs, ticked by default; `lol_datasets=false` turns it off), and only for a tool the technique's own indicators or procedure already name, and (for LOLBAS) only when the project documents that binary under the same technique family. A group seen using `certutil.exe` for **T1105** gets certutil's T1105 switches; a group never seen using it gets nothing from LOLBAS.
 
 | Dataset | Licence | Added when a procedure or indicator names… | Adds |
 |---|---|---|---|
@@ -397,7 +397,7 @@ Bare names that are ordinary words (`update`, `remote`, `replace`…) are never 
 
 ### Known False Positives (LoFP)
 
-[LoFP](https://br0k3nlab.com/LoFP) aggregates the false-positive notes from Elastic, Splunk and Sigma rules. Archer does the same from the Elastic (`false_positives`) and Splunk (`known_false_positives`) rules it already indexes, without Sigma. Boilerplate ("None identified", "False positives should be very unlikely") is dropped. With OSINT comparison or enhancement on, a detection gets up to eight `known_false_positives` from the rules covering its technique, its parent and sub-techniques; when it names binaries or tools, only rules that mention one of them count, alternating Elastic and Splunk.
+[LoFP](https://br0k3nlab.com/LoFP) aggregates the false-positive notes from Elastic, Splunk and Sigma rules. Shikari does the same from the Elastic (`false_positives`) and Splunk (`known_false_positives`) rules it already indexes, without Sigma. Boilerplate ("None identified", "False positives should be very unlikely") is dropped. With OSINT comparison or enhancement on, a detection gets up to eight `known_false_positives` from the rules covering its technique, its parent and sub-techniques; when it names binaries or tools, only rules that mention one of them count, alternating Elastic and Splunk.
 
 ---
 
@@ -467,7 +467,7 @@ python scripts/data/update_osint.py --force
 python scripts/data/build_osint_index.py --skip-clone
 
 # 2. Create archive
-cd /path/to/archer
+cd /path/to/shikari
 tar -czf osint_repos.tar.gz data/repos/ data/cache/osint_technique_index.json
 
 # 3. Transfer osint_repos.tar.gz to air-gapped machine
@@ -476,7 +476,7 @@ tar -czf osint_repos.tar.gz data/repos/ data/cache/osint_technique_index.json
 **On air-gapped machine:**
 ```bash
 # 4. Extract
-cd /path/to/archer
+cd /path/to/shikari
 tar -xzf osint_repos.tar.gz
 
 # 5. Verify
@@ -634,16 +634,16 @@ Generated reports (Word, PDF, HTML) now display OSINT enrichment information:
 ### Implementation Files
 
 **Modified Files:**
-1. **`archer/build/yaml.py`** (lines 349-371)
+1. **`shikari/build/yaml.py`** (lines 349-371)
    - Added `osint_query_snippets` section to detection YAML files
    - Parses and formats OSINT query snippets with source attribution
 
-2. **`archer/ai/genai/engine.py`** (lines 2472-2494, 2713-2803)
+2. **`shikari/ai/genai/engine.py`** (lines 2472-2494, 2713-2803)
    - Extracts OSINT metadata from detection YAMLs
    - Aggregates OSINT indicators across multiple detections in correlations
    - Includes OSINT enrichment data in correlation output JSON
 
-3. **`archer/reports/generator.py`** (lines 229-245, 351-378, 702-710)
+3. **`shikari/reports/generator.py`** (lines 229-245, 351-378, 702-710)
    - Displays OSINT enrichment status in Word reports
    - Shows OSINT sources and indicator counts in correlation sections
    - Includes color-coded OSINT indicators in HTML reports
@@ -656,7 +656,7 @@ Generated reports (Word, PDF, HTML) now display OSINT enrichment information:
 
 #### 1. Initial Loading Screen
 
-When Archer starts, a loading overlay shows real-time status of each OSINT repository:
+When Shikari starts, a loading overlay shows real-time status of each OSINT repository:
 
 ```
 Initializing OSINT Repositories
@@ -768,7 +768,7 @@ app.state.osint_user_accepted_failures = False
 OSINT enrichment runs automatically during detection generation:
 
 ```python
-# In archer/build/detections.py - compile_query()
+# In shikari/build/detections.py - compile_query()
 if not identifiers or not has_real_indicators:
     # No real MITRE indicators - try OSINT
     osint_found, osint_data = search_osint_for_technique(
@@ -788,7 +788,7 @@ if not identifiers or not has_real_indicators:
 After generating correlations for a threat group:
 
 ```bash
-python archer/parsers/correlations.py --threat-group APT29
+python shikari/parsers/correlations.py --threat-group APT29
 ```
 
 The output JSON file will include OSINT metadata for analysis:
@@ -965,15 +965,15 @@ python scripts/data/update_osint.py --force
 
 | File | Purpose | Changes |
 |------|---------|---------|
-| `archer/build/osint_query_enhancer.py` | Main OSINT search logic | Created |
-| `archer/build/osint_repos.py` | Repository cloning/updating | Created |
-| `archer/build/osint_comparison.py` | Query snippet extraction | Added `extract_operations_from_osint_snippets()` |
-| `archer/build/detections.py` | Detection generation | Added generic term filtering, OSINT integration |
-| `archer/build/collate.py` | Data collation | Added `osint_indicators` parameter |
-| `archer/build/yaml.py` | YAML generation | Added OSINT metadata handling, query snippets |
-| `archer/build/queries.py` | Query compilation | Added OSINT indicator merging |
-| `archer/ai/genai/engine.py` | Correlation engine | Added OSINT metadata extraction and aggregation |
-| `archer/reports/generator.py` | Report generation | Added OSINT display sections |
+| `shikari/build/osint_query_enhancer.py` | Main OSINT search logic | Created |
+| `shikari/build/osint_repos.py` | Repository cloning/updating | Created |
+| `shikari/build/osint_comparison.py` | Query snippet extraction | Added `extract_operations_from_osint_snippets()` |
+| `shikari/build/detections.py` | Detection generation | Added generic term filtering, OSINT integration |
+| `shikari/build/collate.py` | Data collation | Added `osint_indicators` parameter |
+| `shikari/build/yaml.py` | YAML generation | Added OSINT metadata handling, query snippets |
+| `shikari/build/queries.py` | Query compilation | Added OSINT indicator merging |
+| `shikari/ai/genai/engine.py` | Correlation engine | Added OSINT metadata extraction and aggregation |
+| `shikari/reports/generator.py` | Report generation | Added OSINT display sections |
 
 ### Mapping Files
 
@@ -986,7 +986,7 @@ python scripts/data/update_osint.py --force
 
 | File | Purpose |
 |------|---------|
-| `archer/app.py` | OSINT status API endpoints, indicator extraction |
+| `shikari/app.py` | OSINT status API endpoints, indicator extraction |
 | `templates/index.html` | Loading screen, failure prompt UI |
 | `templates/results.html` | Badge display, technique formatting |
 

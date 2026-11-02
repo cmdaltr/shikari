@@ -6,8 +6,8 @@ because location came from IP geolocation and sector from the domain string.
 """
 from unittest.mock import MagicMock, patch
 
-from archer.intelligence import company_identity
-from archer.intelligence.company_identity import resolve_identity, sector_from_labels
+from shikari.intelligence import company_identity
+from shikari.intelligence.company_identity import resolve_identity, sector_from_labels
 
 EMPTY_PAGE = {"name": None, "country": None, "country_basis": None, "text": ""}
 
@@ -87,14 +87,14 @@ def test_sector_from_labels():
 
 
 def test_hosting_geoip_never_sets_company_location():
-    from archer.intelligence.company_profiler import CompanyProfiler
+    from shikari.intelligence.company_profiler import CompanyProfiler
 
     profiler = CompanyProfiler()
     profiler.write_progress = None
     geoip = MagicMock(status_code=200)
     geoip.json.return_value = {"status": "success", "country": "Germany", "regionName": "Hesse"}
 
-    with patch("archer.intelligence.company_profiler.requests.get", return_value=geoip):
+    with patch("shikari.intelligence.company_profiler.requests.get", return_value=geoip):
         unknown = profiler._analyze_geography("example.com", {"ip_addresses": ["23.3.15.208"], "country": None}, {})
         known = profiler._analyze_geography(
             "tesco.com",
@@ -111,13 +111,13 @@ def test_hosting_geoip_never_sets_company_location():
 
 def test_tech_stack_refuses_internal_domain():
     """domain is user input; the homepage fetch must not reach internal hosts."""
-    from archer.intelligence.company_profiler import CompanyProfiler
+    from shikari.intelligence.company_profiler import CompanyProfiler
 
     profiler = CompanyProfiler()
     profiler.write_progress = None
     with patch("socket.getaddrinfo", return_value=[(2, 1, 6, "", ("169.254.169.254", 0))]), \
-         patch("archer.parsers.blog_analyzer.requests.get") as safe_http, \
-         patch("archer.intelligence.company_profiler.requests.get") as direct_http:
+         patch("shikari.parsers.blog_analyzer.requests.get") as safe_http, \
+         patch("shikari.intelligence.company_profiler.requests.get") as direct_http:
         profiler._analyze_tech_stack("metadata.internal", {"tls_config": {}, "subdomains": []})
 
     safe_http.assert_not_called()
@@ -125,7 +125,7 @@ def test_tech_stack_refuses_internal_domain():
 
 
 def test_first_label_wins_a_tie():
-    from archer.intelligence.company_identity import sectors_from_labels
+    from shikari.intelligence.company_identity import sectors_from_labels
     # Rolls-Royce on Wikidata: aerospace first, so defence, with energy behind it
     assert sectors_from_labels(["aerospace industry", "energy industry", "weapons industry",
                                 "public company"]) == ["defense", "energy"]

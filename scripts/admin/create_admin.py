@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Create initial admin account for Archer.
+Create initial admin account for Shikari.
 
 Usage:
     python create_admin.py
@@ -21,15 +21,15 @@ from pathlib import Path
 # Add project root to path (parent of scripts directory)
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from archer.database.db import init_db, get_db_session
-from archer.database.models import User, UserRole
-from archer.auth.password import hash_password, validate_password
+from shikari.database.db import init_db, get_db_session
+from shikari.database.models import User, UserRole
+from shikari.auth.password import hash_password, validate_password
 
 
 def create_admin():
     """Create admin account interactively."""
     print("=" * 60)
-    print("Archer - Create Admin Account")
+    print("Shikari - Create Admin Account")
     print("=" * 60)
     print()
 

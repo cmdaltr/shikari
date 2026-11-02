@@ -1,27 +1,27 @@
 # Deployment Scripts
 
-Scripts for deploying, managing, and maintaining Archer instances.
+Scripts for deploying, managing, and maintaining Shikari instances.
 
 ## Scripts
 
-### archer-cli start / stop / restart / status / logs
-Bare-metal process management, no Docker required. Stdlib only. `./archer-cli install` links `archer-cli` into `~/bin`; the work is in `archer/service.py`.
+### shikari-cli start / stop / restart / status / logs
+Bare-metal process management, no Docker required. Stdlib only. `./shikari-cli install` links `shikari-cli` into `~/bin`; the work is in `shikari/service.py`.
 
 **Usage**:
 ```bash
-archer-cli start [--port PORT] [--no-reload] [--no-ollama] [--ollama-models DIR] [--skip-index]
-archer-cli stop [--force]
-archer-cli restart
-archer-cli status
-archer-cli logs [archer|ollama|supervisor] [-f]
+shikari-cli start [--port PORT] [--no-reload] [--no-ollama] [--ollama-models DIR] [--skip-index]
+shikari-cli stop [--force]
+shikari-cli restart
+shikari-cli status
+shikari-cli logs [shikari|ollama|supervisor] [-f]
 ```
 
 **What they do**:
-- `archer-cli start` launches a supervisor in the background. Its pid file, state and remembered options (`supervisor.pid`, `service.json`, `settings.json`) live in `~/Library/Application Support/Archer` on macOS (`$XDG_STATE_HOME/archer/run` on Linux, or `$ARCHER_STATE_DIR/run`), and logs in `~/Library/Logs/Archer` (`archer-cli logs`). They are kept out of the repository because a synced folder such as OneDrive replaces files that are open for writing, which killed the server and the supervisor. It runs uvicorn with `.venv/bin/python`, bound to `0.0.0.0:8000` so reverse proxies (e.g. Caddy via `host.docker.internal`) reach it, and restarts it if it exits: after 1s, backing off to 60s for repeated quick failures, giving up after 6 in a row. If Ollama is installed and nothing answers on port 11434, it also runs `ollama serve` (with `--ollama-models` as `OLLAMA_MODELS`) and restarts that too. Options are remembered in `settings.json` there.
+- `shikari-cli start` launches a supervisor in the background. Its pid file, state and remembered options (`supervisor.pid`, `service.json`, `settings.json`) live in `~/Library/Application Support/Shikari` on macOS (`$XDG_STATE_HOME/shikari/run` on Linux, or `$SHIKARI_STATE_DIR/run`), and logs in `~/Library/Logs/Shikari` (`shikari-cli logs`). They are kept out of the repository because a synced folder such as OneDrive replaces files that are open for writing, which killed the server and the supervisor. It runs uvicorn with `.venv/bin/python`, bound to `0.0.0.0:8000` so reverse proxies (e.g. Caddy via `host.docker.internal`) reach it, and restarts it if it exits: after 1s, backing off to 60s for repeated quick failures, giving up after 6 in a row. If Ollama is installed and nothing answers on port 11434, it also runs `ollama serve` (with `--ollama-models` as `OLLAMA_MODELS`) and restarts that too. Options are remembered in `settings.json` there.
 - Before the first start it rebuilds the OSINT technique index (`scripts/data/build_osint_index.py --skip-clone`) if `data/cache/osint_technique_index.json` is missing or more than 24 hours old; `--skip-index` skips it. This only re-indexes what's on disk, and a failure is non-fatal.
-- `archer-cli stop` stops the supervisor, which stops what it started. `--force` also stops an Archer on the port that was started some other way (matched on `archer.app` in its command line).
-- `archer-cli status` shows what's running, uptime, crash restarts, and whether `/health` answers.
-- `start-archer.py`, `stop-archer.py`, `restart-archer.py` and `status-archer.py` remain as wrappers for older instructions: `start-archer.py -b` is `archer-cli start`, without `-b` it supervises in the foreground (`archer-cli run`).
+- `shikari-cli stop` stops the supervisor, which stops what it started. `--force` also stops an Shikari on the port that was started some other way (matched on `shikari.app` in its command line).
+- `shikari-cli status` shows what's running, uptime, crash restarts, and whether `/health` answers.
+- `start-shikari.py`, `stop-shikari.py`, `restart-shikari.py` and `status-shikari.py` remain as wrappers for older instructions: `start-shikari.py -b` is `shikari-cli start`, without `-b` it supervises in the foreground (`shikari-cli run`).
 
 **Note**: If your checkout lives inside a OneDrive/Dropbox-synced folder, build the venv with `--copies` (`python3 -m venv --copies .venv`) rather than the default symlink-based venv — cloud-sync clients can flatten venv symlinks into plain text files, breaking `.venv/bin/python3`.
 
@@ -29,7 +29,7 @@ archer-cli logs [archer|ollama|supervisor] [-f]
 
 ### Desktop clients
 
-The desktop installers (`desktop/README.md`; compared with the other ways to run Archer in `docs/architecture/deployment-comparison.svg`) connect to a central Archer as clients: a window onto this server, with its users and data. Serve it over HTTPS with a certificate the client machines trust (an internal CA works once deployed to them), then give users the address or set it centrally: an MDM profile for `com.cmdaltr.archer` with `ServerURL` on macOS, `HKLM\SOFTWARE\Policies\cmdaltr\Archer\ServerURL` by Group Policy or Intune on Windows, `/etc/archer/client.json` on Linux. The app checks `/health`, which answers `{"status": "ok", "app": "archer"}`, before opening it.
+The desktop installers (`desktop/README.md`; compared with the other ways to run Shikari in `docs/architecture/deployment-comparison.svg`) connect to a central Shikari as clients: a window onto this server, with its users and data. Serve it over HTTPS with a certificate the client machines trust (an internal CA works once deployed to them), then give users the address or set it centrally: an MDM profile for `com.cmdaltr.shikari` with `ServerURL` on macOS, `HKLM\SOFTWARE\Policies\cmdaltr\Shikari\ServerURL` by Group Policy or Intune on Windows, `/etc/shikari/client.json` on Linux. The app checks `/health`, which answers `{"status": "ok", "app": "shikari"}`, before opening it.
 
 ---
 
@@ -49,9 +49,9 @@ Docker container entry point that initializes OSINT repositories and starts the 
 **Docker Compose**:
 ```yaml
 services:
-  archer:
+  shikari:
     entrypoint: ["python", "scripts/deployment/docker_entrypoint.py"]
-    command: ["uvicorn", "archer.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["uvicorn", "shikari.app:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 **Note**: First run may take 15-20 minutes to download OSINT repositories. The Azure Sentinel clone in particular needs a long timeout — if a run is killed mid-clone, delete the partial `data/repos/azure_sentinel/` directory before retrying rather than leaving a corrupted `.git` dir in place.
@@ -59,7 +59,7 @@ services:
 ---
 
 ### start_clean.py
-Start Archer with a clean database (removes all existing data).
+Start Shikari with a clean database (removes all existing data).
 
 **Usage**:
 ```bash
@@ -78,22 +78,22 @@ python scripts/deployment/start_clean.py
 
 **Default admin account** (after clean start):
 ```
-Email: admin@archer.app
-Password: £missary_0f_the_G0rg0nite$
+Email: admin@shikari.app
+Password: BigGameHunter
 ```
 
 ---
 
-### kill-archer.py
-Forcefully stop all Archer processes.
+### kill-shikari.py
+Forcefully stop all Shikari processes.
 
 **Usage**:
 ```bash
-python scripts/deployment/kill-archer.py
+python scripts/deployment/kill-shikari.py
 ```
 
 **What it does**:
-- Finds all running Archer/Uvicorn processes
+- Finds all running Shikari/Uvicorn processes
 - Terminates them
 - Useful when graceful shutdown fails
 
@@ -103,7 +103,7 @@ python scripts/deployment/kill-archer.py
 docker-compose down
 
 # systemd
-sudo systemctl stop archer
+sudo systemctl stop shikari
 
 # Manual process kill
 ps aux | grep uvicorn
@@ -118,20 +118,20 @@ kill <pid>
 
 **Docker (Recommended)**:
 ```bash
-git clone https://github.com/cmdaltr/archer.git
-cd archer
+git clone https://github.com/cmdaltr/shikari.git
+cd shikari
 docker-compose up --build
 ```
 
 **Local Python (bare-metal)**:
 ```bash
-git clone https://github.com/cmdaltr/archer.git
-cd archer
+git clone https://github.com/cmdaltr/shikari.git
+cd shikari
 python3 -m venv .venv          # add --copies if this checkout is inside a synced (OneDrive/Dropbox) folder
 source .venv/bin/activate
 pip install -r requirements.txt
 python scripts/validation/setup_mappings.py
-archer-cli start
+shikari-cli start
 ```
 
 Requires Python 3.11 or 3.12. `requirements.txt` pins `torch==2.2.2` for macOS x86_64 (Intel) wheel compatibility — PyTorch dropped Intel Mac wheel builds after that release, and none of the newer releases have a matching wheel for Python 3.13+ on Intel Macs either.
@@ -148,14 +148,14 @@ docker-compose up --build
 git pull
 source .venv/bin/activate
 pip install -r requirements.txt --upgrade
-archer-cli restart
+shikari-cli restart
 ```
 
 ### Clean Restart
 
 ```bash
-# Stop Archer
-python scripts/deployment/kill-archer.py  # or docker-compose down
+# Stop Shikari
+python scripts/deployment/kill-shikari.py  # or docker-compose down
 
 # Clean start
 python scripts/deployment/start_clean.py
@@ -164,16 +164,16 @@ python scripts/deployment/start_clean.py
 python scripts/validation/setup_mappings.py
 
 # Start
-docker-compose up --build  # or archer-cli start
+docker-compose up --build  # or shikari-cli start
 ```
 
 ## Troubleshooting
 
-**Reachable at `127.0.0.1:8000` but not via a reverse proxy / hostname (e.g. FlightDeck's `archer.lab`)**: `archer-cli start` binds to `0.0.0.0` by default so this shouldn't happen on current versions — but if you're running uvicorn manually, make sure you pass `--host 0.0.0.0`, not `--host 127.0.0.1`. Reverse proxies running in Docker (Caddy via `host.docker.internal`, etc.) connect via a gateway interface, not literal loopback, so a loopback-only bind rejects the connection even though direct `127.0.0.1` access works fine.
+**Reachable at `127.0.0.1:8000` but not via a reverse proxy / hostname (e.g. FlightDeck's `shikari.lab`)**: `shikari-cli start` binds to `0.0.0.0` by default so this shouldn't happen on current versions — but if you're running uvicorn manually, make sure you pass `--host 0.0.0.0`, not `--host 127.0.0.1`. Reverse proxies running in Docker (Caddy via `host.docker.internal`, etc.) connect via a gateway interface, not literal loopback, so a loopback-only bind rejects the connection even though direct `127.0.0.1` access works fine.
 
 **`pip install -r requirements.txt` fails with a `torch` dependency conflict on macOS**: you're likely on an Intel Mac with a Python version newer than 3.12. Install Python 3.11 or 3.12 (`brew install python@3.11`) and rebuild the venv with that interpreter — `torch==2.2.2` (the last Intel-mac-compatible release, pinned in `requirements.txt`) doesn't have wheels for Python 3.13+.
 
-**`.venv/bin/python3` exists but `archer-cli start` fails with `Exec format error`**: the venv's interpreter binary/symlink got corrupted, typically by a cloud-sync client (OneDrive, Dropbox) rewriting it. Rebuild with `python3 -m venv --copies .venv` to avoid symlinks entirely.
+**`.venv/bin/python3` exists but `shikari-cli start` fails with `Exec format error`**: the venv's interpreter binary/symlink got corrupted, typically by a cloud-sync client (OneDrive, Dropbox) rewriting it. Rebuild with `python3 -m venv --copies .venv` to avoid symlinks entirely.
 
 ## Related Documentation
 

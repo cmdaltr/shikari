@@ -79,11 +79,11 @@ def get_list_input(prompt):
 
 
 def main():
-    print_header("Archer Mapping Files Setup Wizard")
+    print_header("Shikari Mapping Files Setup Wizard")
 
     print("""
 This wizard adds your Splunk indexes and Microsoft Defender tables to
-Archer's schema overrides in bespoke/mappings/schemas/. Anything already
+Shikari's schema overrides in bespoke/mappings/schemas/. Anything already
 configured there is kept; entries you enter here are added or replaced.
 """)
 
@@ -120,12 +120,12 @@ Example:
   Index: windows_events
   Sourcetype: WinEventLog:Security
 
-Archer adds the index clause itself and generates queries like:
+Shikari adds the index clause itself and generates queries like:
   index=windows_events earliest=-1d
   | fields _time device user process_command_line
   | search process_command_line="*whoami*"
 
-Each index gets a starter pipeline with Archer's standard field names. If your
+Each index gets a starter pipeline with Shikari's standard field names. If your
 fields are named differently, add `| rename yourfield AS standardfield` lines
 to the saved pipeline afterwards.
 """)
@@ -192,12 +192,12 @@ Next Steps:
 
 1. REVIEW bespoke/mappings/schemas/schemaSplunk_custom.json and
    schemaMDE_custom.json, and add `| rename` lines where your field names
-   differ from Archer's standard ones.
+   differ from Shikari's standard ones.
 
 2. CHECK all required mapping files are present (see bespoke/README.md):
-   python -c "from archer.build.bespoke import validate_bespoke_components as v; print(v(verbose=False)['missing_critical'])"
+   python -c "from shikari.build.bespoke import validate_bespoke_components as v; print(v(verbose=False)['missing_critical'])"
 
-3. RESTART Archer and generate a test hunt; verify the queries run in your SIEM.
+3. RESTART Shikari and generate a test hunt; verify the queries run in your SIEM.
 
 Happy hunting! 🎯
 """)

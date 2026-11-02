@@ -143,10 +143,10 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // Description popup
-  var popup = document.getElementById('archer-desc-popup');
+  var popup = document.getElementById('shikari-desc-popup');
   var hideCheckbox = document.getElementById('hide-desc-popup-checkbox');
   var dontShowCheckbox = document.getElementById('dont-show-desc-popup-checkbox');
-  var dontShow = localStorage.getItem('archerDontShowDescPopup');
+  var dontShow = localStorage.getItem('shikariDontShowDescPopup');
   if (popup) {
     if (dontShow === 'true') {
       popup.style.display = 'none';
@@ -168,10 +168,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (dontShowCheckbox) {
       dontShowCheckbox.addEventListener('change', function () {
         if (this.checked) {
-          localStorage.setItem('archerDontShowDescPopup', 'true');
+          localStorage.setItem('shikariDontShowDescPopup', 'true');
           popup.style.display = 'none';
         } else {
-          localStorage.setItem('archerDontShowDescPopup', 'false');
+          localStorage.setItem('shikariDontShowDescPopup', 'false');
           if (!hideCheckbox || !hideCheckbox.checked) popup.style.display = 'block';
         }
       });
@@ -632,7 +632,7 @@ document.addEventListener('DOMContentLoaded', function () {
     blogUrlInput.addEventListener('input', validateUpload);
   }
 
-  // /?report=<url> (the Threat Feed's "Analyse in Archer"): open the Analyse tab with the URL filled in
+  // /?report=<url> (the Threat Feed's "Analyse in Shikari"): open the Analyse tab with the URL filled in
   var reportParam = new URLSearchParams(window.location.search).get('report');
   if (blogUrlInput && reportParam && /^https?:\/\//.test(reportParam)) {
     var uploadTab = document.querySelector('.tab-button[data-tab="upload"]');
@@ -775,8 +775,8 @@ document.addEventListener('DOMContentLoaded', function () {
           showUploadError('Request failed: ' + err.message);
         });
       }
-      if (!window.archerAskAi) return run();
-      window.archerAskAi({ title: 'Use AI for this report?', purpose: 'read the report and generate detections alongside the standard pipeline', run: 'process it' },
+      if (!window.shikariAskAi) return run();
+      window.shikariAskAi({ title: 'Use AI for this report?', purpose: 'read the report and generate detections alongside the standard pipeline', run: 'process it' },
         function (providerId, modelId) {
           document.getElementById('upload_ai_provider').value = providerId;
           document.getElementById('upload_ai_model').value = modelId;
@@ -1185,7 +1185,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 
-// Recent CVEs picker: the last 30 days (archer.intelligence.cve_feed, /api/cves/recent).
+// Recent CVEs picker: the last 30 days (shikari.intelligence.cve_feed, /api/cves/recent).
 // Picking a CVE adds it to the CVE field; picking it again takes it out.
 document.addEventListener('DOMContentLoaded', function () {
   var dialog = document.getElementById('cve-picker');
@@ -1289,7 +1289,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!data.total && !st.last_refresh) {
         list.replaceChildren(el('li', 'cvp-empty', st.refreshing
           ? 'Collecting the last 30 days from the NVD. The first collection takes about 20 minutes.'
-          : 'No CVEs collected yet: they are collected when Archer starts.'));
+          : 'No CVEs collected yet: they are collected when Shikari starts.'));
         count.textContent = '';
         return;
       }

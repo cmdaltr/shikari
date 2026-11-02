@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Archer Training Data Collection Script
+Shikari Training Data Collection Script
 
 Unified script for collecting training data from multiple sources:
 - CVE enrichment (NVD + blog posts + exploits)
@@ -35,11 +35,11 @@ from datetime import datetime
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from archer.ai.training.pipelines.cve_enrichment import (
+from shikari.ai.training.pipelines.cve_enrichment import (
     CVEEnrichmentPipeline,
     enrich_cve_batch,
 )
-from archer.ai.training.config import (
+from shikari.ai.training.config import (
     CVE_DATA_DIR,
     THREAT_REPORTS_DIR,
     OSINT_SAMPLES_DIR,
@@ -514,7 +514,7 @@ def handle_osint_extraction(args):
     output_dir = args.output or OSINT_SAMPLES_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    temp_dir = Path("/tmp/archer_osint_repos")
+    temp_dir = Path("/tmp/shikari_osint_repos")
     temp_dir.mkdir(parents=True, exist_ok=True)
 
     sources = {
@@ -573,7 +573,7 @@ def handle_osint_extraction(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Archer Training Data Collection",
+        description="Shikari Training Data Collection",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )

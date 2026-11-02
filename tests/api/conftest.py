@@ -1,18 +1,18 @@
 """
 Shared fixtures for API tests.
 
-These tests hit a running Archer instance and validate every API endpoint.
+These tests hit a running Shikari instance and validate every API endpoint.
 """
 import pytest
 import requests
 import os
 
-BASE_URL = os.getenv("ARCHER_BASE_URL", "http://127.0.0.1:8000")
+BASE_URL = os.getenv("SHIKARI_BASE_URL", "http://127.0.0.1:8000")
 
 
 @pytest.fixture(scope="session")
 def base_url(request):
-    return request.config.getoption("--archer-url", default=BASE_URL)
+    return request.config.getoption("--shikari-url", default=BASE_URL)
 
 
 @pytest.fixture(scope="session")
@@ -29,8 +29,8 @@ def auth_session(session, base_url):
         session.post(
             f"{base_url}/login",
             data={
-                "email": os.getenv("ARCHER_TEST_EMAIL", "admin@archer.app"),
-                "password": os.getenv("ARCHER_TEST_PASSWORD", "£missary_0f_the_G0rg0nite$"),
+                "email": os.getenv("SHIKARI_TEST_EMAIL", "admin@shikari.app"),
+                "password": os.getenv("SHIKARI_TEST_PASSWORD", "BigGameHunter"),
             },
             allow_redirects=False,
         )
@@ -68,10 +68,10 @@ def api(base_url, auth_session):
 
 @pytest.fixture(scope="session")
 def ensure_running(api):
-    """Skip all tests if Archer is not reachable."""
+    """Skip all tests if Shikari is not reachable."""
     try:
         r = api.get("/health", timeout=10)
         if r.status_code != 200:
-            pytest.skip("Archer not healthy")
+            pytest.skip("Shikari not healthy")
     except Exception:
-        pytest.skip("Archer not running")
+        pytest.skip("Shikari not running")

@@ -2,8 +2,8 @@
 
 import json
 
-from archer.parsers.misp_export import run_to_misp
-from archer.parsers.misp_import import parse_misp_event
+from shikari.parsers.misp_export import run_to_misp
+from shikari.parsers.misp_import import parse_misp_event
 
 DETS = [
     {"name": "PowerShell download cradle", "technique_id": "T1059.001", "technique_name": "PowerShell",

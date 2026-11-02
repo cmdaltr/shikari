@@ -1,15 +1,15 @@
 """
-Make the Archer walkthrough video from scripts/video/script.yaml: a narrated screen recording with
+Make the Shikari walkthrough video from scripts/video/script.yaml: a narrated screen recording with
 subtitles and YouTube chapters.
 
 Each scene's narration is spoken by Piper (a local neural voice: no account, no API, nothing leaves the
 machine), the browser plays the scene's actions across that time, and ffmpeg joins it all up. Run it
 against a throwaway instance with sample data, never a real one:
 
-    python scripts/video/make_video.py --base http://127.0.0.1:8010 --out ~/Movies/Archer
+    python scripts/video/make_video.py --base http://127.0.0.1:8010 --out ~/Movies/Shikari
 
 Needs ffmpeg, Playwright's Chromium, and Piper with a voice (--piper, --voice); a voice is an .onnx
-file from https://huggingface.co/rhasspy/piper-voices. Writes archer-walkthrough.mp4, its .srt and
+file from https://huggingface.co/rhasspy/piper-voices. Writes shikari-walkthrough.mp4, its .srt and
 youtube.txt (a description with chapters).
 """
 import argparse
@@ -138,7 +138,7 @@ def act(page, base, action):
             page.wait_for_load_state("networkidle", timeout=15000)
         except Exception:
             pass
-        page.evaluate("() => { document.querySelectorAll('#ask-archer-btn').forEach(e => e.remove()); }")
+        page.evaluate("() => { document.querySelectorAll('#ask-shikari-btn').forEach(e => e.remove()); }")
     elif kind == "click":
         page.locator(arg).first.click(timeout=5000)
     elif kind == "type":
@@ -155,25 +155,25 @@ def act(page, base, action):
     elif kind == "key":
         page.keyboard.press(arg)
     elif kind == "guide":
-        page.evaluate("id => ArcherGuide.open(id)", arg)
+        page.evaluate("id => ShikariGuide.open(id)", arg)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--base", default="http://127.0.0.1:8010")
-    parser.add_argument("--out", type=Path, default=Path.home() / "Movies" / "Archer")
-    parser.add_argument("--piper", default=str(Path.home() / ".cache/archer/piper/venv/bin/piper"))
-    parser.add_argument("--voice", default=str(Path.home() / ".cache/archer/piper/voices/en_GB-cori-high.onnx"))
+    parser.add_argument("--out", type=Path, default=Path.home() / "Movies" / "Shikari")
+    parser.add_argument("--piper", default=str(Path.home() / ".cache/shikari/piper/venv/bin/piper"))
+    parser.add_argument("--voice", default=str(Path.home() / ".cache/shikari/piper/voices/en_GB-cori-high.onnx"))
     parser.add_argument("--only", nargs="*", help="scene ids to include (a quick draft)")
     args = parser.parse_args()
-    email = os.environ.get("ARCHER_GUIDE_EMAIL", "admin@archer.app")
-    password = os.environ.get("ARCHER_GUIDE_PASSWORD", "£missary_0f_the_G0rg0nite$")
+    email = os.environ.get("SHIKARI_GUIDE_EMAIL", "admin@shikari.app")
+    password = os.environ.get("SHIKARI_GUIDE_PASSWORD", "BigGameHunter")
 
     spec = yaml.safe_load(SCRIPT.read_text())
     scenes = [s for s in spec["scenes"] if not args.only or s["id"] in args.only]
     out = args.out.expanduser()
     out.mkdir(parents=True, exist_ok=True)
-    work = Path(tempfile.mkdtemp(prefix="archer-video-"))
+    work = Path(tempfile.mkdtemp(prefix="shikari-video-"))
     (work / "frames").mkdir()
 
     print("Narration:")
@@ -229,10 +229,10 @@ def main():
             k += 1
         (seq / f"{n:06}.jpg").symlink_to(frames[k][1])
 
-    logo = ROOT / "static" / "images" / "archer_banner.png"
+    logo = ROOT / "static" / "images" / "shikari" / "shikari-wordmark-light.png"
     card(work / "title.png", [("Threat hunting and detection engineering, walked through", 54, (240, 240, 240)),
                               ("Every page, who it's for, and when it helps", 38, (170, 176, 186))], logo)
-    card(work / "end.png", [("github.com/cmdaltr/archer", 54, (240, 240, 240)),
+    card(work / "end.png", [("github.com/cmdaltr/shikari", 54, (240, 240, 240)),
                             ("@cmdaltr", 38, (170, 176, 186))], logo)
 
     print("Encoding:")
@@ -272,7 +272,7 @@ def main():
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *inputs, "-filter_complex", ";".join(filters),
                     "-map", "[a]", "-c:a", "aac", "-b:a", "192k", str(narration)], check=True)
 
-    final = out / "archer-walkthrough.mp4"
+    final = out / "shikari-walkthrough.mp4"
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error",
                     "-loop", "1", "-t", str(TITLE_SECONDS), "-i", str(work / "title.png"),
                     "-i", str(main_mp4),
@@ -296,14 +296,14 @@ def main():
             d = s["seconds"] * wgt / sum(weights)
             cues.append((t, t + d, sentence))
             t += d
-    (out / "archer-walkthrough.srt").write_text("".join(
+    (out / "shikari-walkthrough.srt").write_text("".join(
         f"{i}\n{srt_time(a)} --> {srt_time(b)}\n{text}\n\n" for i, (a, b, text) in enumerate(cues, 1)))
 
     chapters = [("0:00", "Introduction")] + [(chapter_time(TITLE_SECONDS + s["start"]), s.get("chapter", s["id"])) for s in scenes[1:]]
     (out / "youtube.txt").write_text(
-        "Archer turns MITRE ATT&CK into detections for Google SecOps, Defender XDR, Splunk and Elastic. "
+        "Shikari turns MITRE ATT&CK into detections for Google SecOps, Defender XDR, Splunk and Elastic. "
         "This walkthrough covers every page: what it's for, who uses it, and when it helps most.\n\n"
-        "https://github.com/cmdaltr/archer\n\nChapters\n" + "".join(f"{t} {name}\n" for t, name in chapters) +
+        "https://github.com/cmdaltr/shikari\n\nChapters\n" + "".join(f"{t} {name}\n" for t, name in chapters) +
         "\nNarrated with Piper, a local text-to-speech voice.\n")
     print(f"Wrote {final} ({length / 60:.1f} min), its .srt and youtube.txt")
     return 0

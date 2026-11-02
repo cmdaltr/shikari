@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Archer - Agents{% endblock %}
+{% block title %}Shikari - Agents{% endblock %}
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/agents.css') }}?v={{ request.app.state.asset_version }}">
@@ -11,13 +11,13 @@
 <div class="results-container ag-page">
   <div class="page-header">
     <h1>Agents</h1>
-    <p>Models that use Archer's tools step by step to repair queries, answer questions and triage reports</p>
+    <p>Models that use Shikari's tools step by step to repair queries, answer questions and triage reports</p>
   </div>
 
   <section class="ag-intro">
     <p>An agent is a model in a loop with tools. You give it a task; it decides which tool to call, reads the result,
       and decides again, until it has an answer. Each agent here is the same loop with different instructions and a
-      different set of Archer's tools. The trace shows every step. Anything that changes something, such as a hunt or
+      different set of Shikari's tools. The trace shows every step. Anything that changes something, such as a hunt or
       a saved query, waits for you to allow it unless you turn approval off.</p>
     <p class="ag-meta">
       {% if providers %}
@@ -30,8 +30,8 @@
       {% else %}
       <strong>Agents need a model that can call tools</strong>: add an API key or a local endpoint in
       <a href="/profile">Profile → API Keys</a>.{% endif %}
-      The same tools are available to any MCP client (<code>archer-cli mcp</code>) and in the console (<code>agent/*</code>).
-      <a href="https://github.com/cmdaltr/archer/blob/main/docs/agents/README.md" target="_blank" rel="noopener">How these are built</a>
+      The same tools are available to any MCP client (<code>shikari-cli mcp</code>) and in the console (<code>agent/*</code>).
+      <a href="https://github.com/cmdaltr/shikari/blob/main/docs/agents/README.md" target="_blank" rel="noopener">How these are built</a>
     </p>
   </section>
 

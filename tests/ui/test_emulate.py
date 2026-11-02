@@ -1,5 +1,5 @@
 """
-Playwright UI tests for Build → Emulate (#22). Needs a running Archer with the recorded
+Playwright UI tests for Build → Emulate (#22). Needs a running Shikari with the recorded
 telemetry built. The page only reads; Update isn't pressed.
 """
 import os

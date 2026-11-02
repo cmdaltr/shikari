@@ -52,7 +52,7 @@ The current detection generation uses **heuristic-based** correlation rather tha
 
 ## Current Architecture
 
-### Location: [archer/ai/genai/engine.py](../../archer/ai/genai/engine.py)
+### Location: [shikari/ai/genai/engine.py](../../shikari/ai/genai/engine.py)
 
 Current system:
 ```python
@@ -87,7 +87,7 @@ replaced with a true GenAI integration later (e.g., OpenAI, local LLM).
 
 ### New Tables
 
-Add these models to [archer/database/models.py](../../archer/database/models.py):
+Add these models to [shikari/database/models.py](../../shikari/database/models.py):
 
 ```python
 from datetime import datetime
@@ -221,16 +221,16 @@ class QueryGenerationLog(Base):
 
 ### Migration Script
 
-Create archer/database/migrations/add_ai_training_tables.py:
+Create shikari/database/migrations/add_ai_training_tables.py:
 
 ```python
 """
 Add AI training tables for query feedback and training examples.
 """
 from sqlalchemy import create_engine
-from archer.database.models import Base, QueryFeedback, QueryTrainingExample, QueryGenerationLog
+from shikari.database.models import Base, QueryFeedback, QueryTrainingExample, QueryGenerationLog
 
-def upgrade(db_path: str = "data/archer.db"):
+def upgrade(db_path: str = "data/shikari.db"):
     """Create new tables for AI training."""
     engine = create_engine(f"sqlite:///{db_path}")
 
@@ -249,10 +249,10 @@ if __name__ == "__main__":
 
 ## Backend APIs
 
-### Add to [archer/app.py](../../archer/app.py)
+### Add to [shikari/app.py](../../shikari/app.py)
 
 ```python
-from archer.database.models import QueryFeedback, QueryTrainingExample, QueryGenerationLog, QueryPlatform
+from shikari.database.models import QueryFeedback, QueryTrainingExample, QueryGenerationLog, QueryPlatform
 
 # ============================================================================
 # Query Feedback APIs
@@ -1083,7 +1083,7 @@ Test that the AI system detects available backends:
 ```bash
 # Run detection test
 python3 << 'EOF'
-from archer.ai.genai.engine import _HAS_LLAMA, _HAS_TRANSFORMERS
+from shikari.ai.genai.engine import _HAS_LLAMA, _HAS_TRANSFORMERS
 import os
 
 print("=== AI Backend Detection ===")
@@ -1200,7 +1200,7 @@ wget https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/
 export OPENAI_API_KEY="sk-your-key"
 
 # 2. Start server
-uvicorn archer.app:app --reload
+uvicorn shikari.app:app --reload
 
 # 3. Test refinement
 curl -X POST http://localhost:8000/api/query-refine \

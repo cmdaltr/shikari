@@ -16,7 +16,7 @@ import os
 import sys
 from unittest.mock import MagicMock, patch
 
-# Add archer to path
+# Add shikari to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 
@@ -28,7 +28,7 @@ def _addrinfo(ip):
 
 def test_blog_analysis_ssrf_localhost():
     """Test that SSRF to localhost is blocked."""
-    from archer.parsers.blog_analyzer import analyze_blog_post
+    from shikari.parsers.blog_analyzer import analyze_blog_post
 
     with patch("socket.getaddrinfo", return_value=_addrinfo("127.0.0.1")):
         result = analyze_blog_post("http://localhost/admin")
@@ -41,7 +41,7 @@ def test_blog_analysis_ssrf_localhost():
 
 def test_blog_analysis_ssrf_private_ip():
     """Test that SSRF to private IPs is blocked."""
-    from archer.parsers.blog_analyzer import analyze_blog_post
+    from shikari.parsers.blog_analyzer import analyze_blog_post
 
     with patch("socket.getaddrinfo", return_value=_addrinfo("192.168.1.1")):
         result = analyze_blog_post("http://internal.corp/data")
@@ -54,7 +54,7 @@ def test_blog_analysis_ssrf_private_ip():
 
 def test_blog_analysis_invalid_scheme():
     """Test that non-HTTP(S) schemes are rejected."""
-    from archer.parsers.blog_analyzer import analyze_blog_post
+    from shikari.parsers.blog_analyzer import analyze_blog_post
 
     result = analyze_blog_post("ftp://example.com/file")
 
@@ -66,7 +66,7 @@ def test_blog_analysis_invalid_scheme():
 
 def test_blog_analysis_empty_url():
     """Test handling of empty URL."""
-    from archer.parsers.blog_analyzer import analyze_blog_post
+    from shikari.parsers.blog_analyzer import analyze_blog_post
 
     result = analyze_blog_post("")
 
@@ -76,7 +76,7 @@ def test_blog_analysis_empty_url():
 
 def test_blog_analysis_extracts_techniques():
     """Test that blog analysis extracts MITRE techniques from content."""
-    from archer.parsers.blog_analyzer import analyze_blog_post
+    from shikari.parsers.blog_analyzer import analyze_blog_post
 
     mock_html = """
     <html>
@@ -95,7 +95,7 @@ def test_blog_analysis_extracts_techniques():
     mock_response.raise_for_status = MagicMock()
     mock_response.headers = {"content-type": "text/html"}
 
-    with patch("archer.parsers.blog_analyzer.requests.get", return_value=mock_response), \
+    with patch("shikari.parsers.blog_analyzer.requests.get", return_value=mock_response), \
          patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")):
         result = analyze_blog_post("https://example.com/threat-report")
 

@@ -1,4 +1,4 @@
-// Organisation exposure map (templates/partials/exposure.html, archer.visualization.exposure).
+// Organisation exposure map (templates/partials/exposure.html, shikari.visualization.exposure).
 // Selecting a component lights its links and shows what's behind it; the breach node also carries
 // a link-out and any recorded breach metadata.
 (function () {

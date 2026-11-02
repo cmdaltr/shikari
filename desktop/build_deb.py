@@ -8,16 +8,16 @@ Build the Linux .deb from a tree desktop/stage.py staged, with its own Python.
 Briefcase's Linux system package always runs on the distro's python3, so the app's
 dependencies were compiled for whatever Python that distro shipped. This bundles a
 standalone CPython (python-build-standalone, the same 3.11 the macOS and Windows builds
-carry) under /usr/lib/archer/python instead. GTK and WebKit still come from the distro:
+carry) under /usr/lib/shikari/python instead. GTK and WebKit still come from the distro:
 they have to match its display stack, and they're dependencies apt installs.
 
 Runs on Linux, with dpkg-deb and the headers PyGObject and pycairo build against
 (libgirepository1.0-dev, libcairo2-dev, pkg-config). Build on the oldest distro the
 package should support: the compiled modules link against its glibc and GTK.
 
-    /usr/lib/archer/python     standalone CPython, with the dependencies in its site-packages
-    /usr/lib/archer/app        archer/ templates/ static/ seed/ (archer.paths.ROOT)
-    /usr/bin/archer            launcher
+    /usr/lib/shikari/python     standalone CPython, with the dependencies in its site-packages
+    /usr/lib/shikari/app        shikari/ templates/ static/ seed/ (shikari.paths.ROOT)
+    /usr/bin/shikari            launcher
 """
 
 import argparse
@@ -32,7 +32,7 @@ import tomllib
 import urllib.request
 from pathlib import Path
 
-PREFIX = "usr/lib/archer"
+PREFIX = "usr/lib/shikari"
 # Pinned to the release's published SHA-256s. Keyed by platform.machine().
 PYTHON_RELEASE = "https://github.com/astral-sh/python-build-standalone/releases/download/20261009"
 PYTHON = {
@@ -41,21 +41,21 @@ PYTHON = {
     "aarch64": ("cpython-3.11.17+20261009-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz",
                 "7e7e24eee3467dd666aff379c34c4ef3e6bc7142aec7d5ba783765df7da999a6", "arm64"),
 }
-SOURCES = ("archer", "templates", "static", "seed")
+SOURCES = ("shikari", "templates", "static", "seed")
 RUNTIME_DEPENDS = ["libgirepository-1.0-1", "libcairo-gobject2", "gir1.2-gtk-3.0", "gir1.2-webkit2-4.1"]
 
 LAUNCHER = """#!/bin/sh
-exec /usr/lib/archer/python/bin/python3 -m archer "$@"
+exec /usr/lib/shikari/python/bin/python3 -m shikari "$@"
 """
 
 DESKTOP_ENTRY = """[Desktop Entry]
 Type=Application
-Name=Archer
+Name=Shikari
 Comment={comment}
-Exec=archer
-Icon=archer
+Exec=shikari
+Icon=shikari
 Categories=Development;Security;
-StartupWMClass=archer
+StartupWMClass=shikari
 """
 
 
@@ -83,7 +83,7 @@ def main():
     stage = args.stage.resolve()
     staged = tomllib.loads((stage / "pyproject.toml").read_text())
     project = staged["project"]
-    app = staged["tool"]["briefcase"]["app"]["archer"]
+    app = staged["tool"]["briefcase"]["app"]["shikari"]
     arch = PYTHON[machine][2]
 
     root = args.out.resolve() / "deb-root"
@@ -99,30 +99,30 @@ def main():
 
     for name in SOURCES:
         shutil.copytree(stage / name, prefix / "app" / name)
-    # The app's folder on the bundled Python's path, so the launcher is a plain "-m archer"
+    # The app's folder on the bundled Python's path, so the launcher is a plain "-m shikari"
     site = Path(subprocess.run([str(python), "-c", "import sysconfig; print(sysconfig.get_path('purelib'))"],
                                capture_output=True, text=True, check=True).stdout.strip())
-    (site / "archer-app.pth").write_text(f"/{PREFIX}/app\n")
+    (site / "shikari-app.pth").write_text(f"/{PREFIX}/app\n")
     # /usr/lib is read-only to the user, so compile now rather than on every start
     subprocess.run([str(python), "-m", "compileall", "-q", "-j", "0", str(prefix / "app")], check=True)
 
     (root / "usr/bin").mkdir(parents=True)
-    (root / "usr/bin/archer").write_text(LAUNCHER)
-    (root / "usr/bin/archer").chmod(0o755)
+    (root / "usr/bin/shikari").write_text(LAUNCHER)
+    (root / "usr/bin/shikari").chmod(0o755)
     (root / "usr/share/applications").mkdir(parents=True)
-    (root / "usr/share/applications/archer.desktop").write_text(DESKTOP_ENTRY.format(comment=app["description"]))
+    (root / "usr/share/applications/shikari.desktop").write_text(DESKTOP_ENTRY.format(comment=app["description"]))
     for size in (16, 32, 64, 128, 256, 512):
-        icon = root / f"usr/share/icons/hicolor/{size}x{size}/apps/archer.png"
+        icon = root / f"usr/share/icons/hicolor/{size}x{size}/apps/shikari.png"
         icon.parent.mkdir(parents=True)
-        shutil.copy2(stage / "icons" / f"archer-{size}.png", icon)
-    doc = root / "usr/share/doc/archer"
+        shutil.copy2(stage / "icons" / f"shikari-{size}.png", icon)
+    doc = root / "usr/share/doc/shikari"
     doc.mkdir(parents=True)
     shutil.copy2(stage / "LICENSE", doc / "copyright")
 
     installed_kb = sum(f.stat().st_size for f in root.rglob("*") if f.is_file()) // 1024
     (root / "DEBIAN").mkdir()
     (root / "DEBIAN/control").write_text(
-        f"Package: archer\n"
+        f"Package: shikari\n"
         f"Version: {project['version']}-1\n"
         f"Architecture: {arch}\n"
         f"Maintainer: {staged['tool']['briefcase']['author']} <{staged['tool']['briefcase']['url']}>\n"
@@ -141,7 +141,7 @@ def main():
             continue
         p.chmod(0o755 if p.is_dir() or p.stat().st_mode & 0o111 else 0o644)
 
-    deb = args.out.resolve() / f"archer_{project['version']}-1_{arch}.deb"
+    deb = args.out.resolve() / f"shikari_{project['version']}-1_{arch}.deb"
     subprocess.run(["dpkg-deb", "--root-owner-group", "-Zxz", "--build", str(root), str(deb)], check=True)
     shutil.rmtree(root)
     print(f"Built {deb}")

@@ -41,7 +41,7 @@ class TestCVEGenerationWorkflow:
     def test_full_cve_workflow(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
         wait_for_completion,
         check_generated_files,
     ):
@@ -94,7 +94,7 @@ class TestCVEGenerationWorkflow:
     def test_cve_with_correlation(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
         wait_for_completion,
     ):
         """Test CVE generation with correlation enabled."""
@@ -128,7 +128,7 @@ class TestCVELookup:
     def test_cve_info_retrieval(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
     ):
         """Test retrieving CVE information."""
         cve_id = TEST_CVES["log4shell"]
@@ -157,7 +157,7 @@ class TestCVEProgress:
     def test_cve_progress_tracking(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
     ):
         """Test that progress is tracked during CVE generation."""
         cve_id = TEST_CVES["http2_rapid_reset"]
@@ -190,7 +190,7 @@ class TestCVEResults:
     def test_cve_results_page(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
     ):
         """Test that results page loads for a CVE."""
         cve_id = TEST_CVES["http2_rapid_reset"]
@@ -209,7 +209,7 @@ class TestCVEEdgeCases:
     def test_nonexistent_cve(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
     ):
         """Test handling of a CVE that doesn't exist in NVD."""
         response = client.post(
@@ -224,7 +224,7 @@ class TestCVEEdgeCases:
     def test_cve_various_formats(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
     ):
         """Test CVE ID format handling."""
         # Standard format
@@ -256,7 +256,7 @@ class TestCVEEdgeCases:
     def test_multiple_cves_sequentially(
         self,
         client,
-        ensure_archer_running,
+        ensure_shikari_running,
         wait_for_completion,
     ):
         """Test generating detections for multiple CVEs sequentially."""

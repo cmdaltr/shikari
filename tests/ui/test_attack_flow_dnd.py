@@ -1,7 +1,7 @@
 """
 Playwright UI tests for the results page's attack flow drag and drop (#4): moving a
 technique to another tactic, reordering tactics, drawing links, the keyboard, and the
-edits reaching the STIX export. Needs a running Archer with UNC3944's results.
+edits reaching the STIX export. Needs a running Shikari with UNC3944's results.
 
 Saving layouts and exporting are intercepted, so nothing reaches the Library.
 """

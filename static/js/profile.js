@@ -310,7 +310,7 @@ async function downloadResults(id) {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `archer-results-${id}.zip`;
+      a.download = `shikari-results-${id}.zip`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -995,7 +995,7 @@ document.head.appendChild(style);
     const chosen = new Set(data.siems || []);
     const logo = c => `<img class="siem-logo siem-pick-logo" src="/static/images/siem/${c.id}.png" alt="">`;
     grid.innerHTML = (data.choices || []).map(c => c.soon
-      ? `<label class="industry-option is-soon" title="Archer doesn't generate ${c.label.replace(/</g, '&lt;')} queries yet"><input type="checkbox" disabled> ${logo(c)}<span>${c.label.replace(/</g, '&lt;')}</span><span class="siem-soon">Coming soon</span></label>`
+      ? `<label class="industry-option is-soon" title="Shikari doesn't generate ${c.label.replace(/</g, '&lt;')} queries yet"><input type="checkbox" disabled> ${logo(c)}<span>${c.label.replace(/</g, '&lt;')}</span><span class="siem-soon">Coming soon</span></label>`
       : `<label class="industry-option"><input type="checkbox" value="${c.id}"${chosen.has(c.id) ? ' checked' : ''}> ${logo(c)}<span>${c.label.replace(/</g, '&lt;')}</span></label>`).join('');
   });
   document.getElementById('siems-save').addEventListener('click', async () => {

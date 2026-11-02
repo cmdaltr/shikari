@@ -280,8 +280,8 @@ The query generation logic in `detections.py` or `yaml.py` should already handle
 
 ```python
 #!/usr/bin/env python3
-from archer.mitre.enterprise import get_stix_data
-from archer.mitre.retrieve import retrieve_group, retrieve_techniques, retrieve_procedures
+from shikari.mitre.enterprise import get_stix_data
+from shikari.mitre.retrieve import retrieve_group, retrieve_techniques, retrieve_procedures
 
 url = 'https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json'
 bundle = get_stix_data(url)
@@ -353,7 +353,7 @@ After:
 
 ## Files to Modify
 
-1. **archer/mitre/retrieve.py** (Primary changes)
+1. **shikari/mitre/retrieve.py** (Primary changes)
    - Add 5 new helper functions
    - Modify `retrieve_procedures()` function
 

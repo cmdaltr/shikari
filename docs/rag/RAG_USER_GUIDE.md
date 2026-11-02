@@ -21,7 +21,7 @@ Instead of relying only on templates, your queries now benefit from proven, vali
 Run this once to prepare all the detection examples:
 
 ```bash
-cd /path/to/archer
+cd /path/to/shikari
 python3 scripts/config/build_embeddings.py
 ```
 
@@ -69,7 +69,7 @@ The system is ready. Now when you generate detections, they'll automatically be 
 
 The RAG system can automatically enhance your queries. Add this to your detection generation code:
 
-**In `archer/build/detections.py`**, add these lines near the top:
+**In `shikari/build/detections.py`**, add these lines near the top:
 
 ```python
 from .rag_enhancer import is_rag_enabled, enhance_query_with_rag
@@ -97,7 +97,7 @@ if is_rag_enabled():
 Test enhancement on a specific query:
 
 ```python
-from archer.build.rag_enhancer import enhance_query_with_rag
+from shikari.build.rag_enhancer import enhance_query_with_rag
 
 original = "index=windows EventCode=10 TargetImage=lsass.exe"
 
@@ -314,7 +314,7 @@ python3 scripts/config/search_similar_detections.py --technique T1003.001
 
 **Check if enabled:**
 ```bash
-python3 -c "from archer.build.rag_enhancer import is_rag_enabled; print(is_rag_enabled())"
+python3 -c "from shikari.build.rag_enhancer import is_rag_enabled; print(is_rag_enabled())"
 ```
 
 **If False, check:**
@@ -355,7 +355,7 @@ pip install sentence-transformers faiss-cpu toml pyyaml
 ### Custom Enhancement Parameters
 
 ```python
-from archer.build.rag_enhancer import enhance_query_with_rag
+from shikari.build.rag_enhancer import enhance_query_with_rag
 
 enhanced, metadata = enhance_query_with_rag(
     original_query=query,
@@ -370,7 +370,7 @@ enhanced, metadata = enhance_query_with_rag(
 ### Get Detection Statistics
 
 ```python
-from archer.ai.rag import DetectionKnowledgeBase
+from shikari.ai.rag import DetectionKnowledgeBase
 
 kb = DetectionKnowledgeBase()
 stats = kb.get_statistics()
@@ -383,7 +383,7 @@ print(f"Average fidelity: {stats['avg_fidelity']:.2f}")
 ### Direct Retrieval (No LLM)
 
 ```python
-from archer.ai.rag import DetectionKnowledgeBase
+from shikari.ai.rag import DetectionKnowledgeBase
 
 kb = DetectionKnowledgeBase()
 

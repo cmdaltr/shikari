@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "shared_macros.html" import render_vendor_logo, render_correlation_techniques, render_quality_badges %}
-{% block title %}Archer - Results{% endblock %}
+{% block title %}Shikari - Results{% endblock %}
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
@@ -32,7 +32,7 @@
 .key-panel-close { border: 0; background: none; font-size: 1.4em; line-height: 1; cursor: pointer; color: var(--text-secondary, #666); }
 .key-panel-body { padding: 16px; overflow-wrap: break-word; }
 @media (max-width: 600px) { .key-fab { right: 16px; bottom: 16px; } .key-panel { right: 16px; left: 16px; width: auto; bottom: 68px; } }
-/* Threat briefing (archer/build/briefing.py): no AI unless someone asks for a summary */
+/* Threat briefing (shikari/build/briefing.py): no AI unless someone asks for a summary */
 #briefing h3 { margin: 20px 0 8px; }
 .briefing-lead { margin: 0 0 16px; color: var(--text-primary, #1a1a1a); line-height: 1.55; }
 .briefing-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 0 8px; }
@@ -124,8 +124,8 @@
     {# Calculate time-related metrics once for use across both Statistics and Metrics sections #}
     {% set total_detections_calc = total_detections %}
     {% set manual_hours = (total_detections * 2)|round(1) %}
-    {% set archer_hours = ((duration / 3600) if duration else (total_detections * 0.1))|round(2) %}
-    {% set hours_saved = (manual_hours - archer_hours)|round(1) %}
+    {% set shikari_hours = ((duration / 3600) if duration else (total_detections * 0.1))|round(2) %}
+    {% set hours_saved = (manual_hours - shikari_hours)|round(1) %}
 
     {% if run_view %}
     <!-- The group's detections accumulate across runs: the latest run, or all of them -->
@@ -178,7 +178,7 @@
     </details>
     {% endif %}
     {% if kept_edited %}
-    <!-- Detections the last run left alone because their query was edited by hand (archer.build.yaml.detection_action) -->
+    <!-- Detections the last run left alone because their query was edited by hand (shikari.build.yaml.detection_action) -->
     <details class="no-detection" id="kept-edited">
       <summary>{{ kept_edited|length }} detection{{ 's' if kept_edited|length != 1 }} kept as edited, not regenerated</summary>
       <p class="no-detection-hint">Their queries were changed by hand or by the repair agent, so this run left them as they were.
@@ -214,7 +214,7 @@
     {% endset %}
 
     {% if briefing %}
-    <!-- Threat briefing (archer/build/briefing.py): coverage, the weakest tactic and the gaps to close first; AI only on request -->
+    <!-- Threat briefing (shikari/build/briefing.py): coverage, the weakest tactic and the gaps to close first; AI only on request -->
     <section class="detection-section briefing" id="briefing">
       <div class="detection-header">
         <h2>
@@ -290,7 +290,7 @@
         <button type="button" id="briefing-ai-btn">Rewrite with AI</button>
         {% else %}
         <p id="briefing-ai-text" hidden></p>
-        <p class="by" id="briefing-ai-by">Everything above is worked out without AI. An AI summary is optional and uses the provider assigned to Ask Archer.</p>
+        <p class="by" id="briefing-ai-by">Everything above is worked out without AI. An AI summary is optional and uses the provider assigned to Ask Shikari.</p>
         <button type="button" id="briefing-ai-btn">Write a summary with AI</button>
         {% endif %}
         <span class="err" id="briefing-ai-err" role="alert"></span>
@@ -454,7 +454,7 @@
             <div style="margin-bottom: 32px;">
               <h3 class="ui-subtitle">How Detections are Generated</h3>
               <p style="margin: 0 0 12px 0; color: #475569; font-size: 0.9em; line-height: 1.6;">
-                Archer generates detections through an automated pipeline that transforms threat intelligence into actionable security rules:
+                Shikari generates detections through an automated pipeline that transforms threat intelligence into actionable security rules:
               </p>
               <ol style="margin: 0; padding-left: 24px; margin-left: 20px; color: #475569; font-size: 0.9em; line-height: 1.8;">
                 <li><strong>MITRE ATT&CK Extraction</strong> - Retrieves technique descriptions, procedure examples, and software/malware behaviors from the MITRE ATT&CK framework</li>
@@ -482,7 +482,7 @@
               </ol>
               <div style="margin-top: 12px; padding: 12px; background: #f8fafc; border-left: 4px solid #3b82f6; border-radius: 4px;">
                 <p style="margin: 0; color: #475569; font-size: 0.85em; line-height: 1.6;">
-                  <strong>Example:</strong> If an actor uses a specific malware family, but that malware's MITRE page shows technique implementations without direct indicators, Archer will search the malware's software page for indicators, then construct detections that link back to the actor through the software relationship.
+                  <strong>Example:</strong> If an actor uses a specific malware family, but that malware's MITRE page shows technique implementations without direct indicators, Shikari will search the malware's software page for indicators, then construct detections that link back to the actor through the software relationship.
                 </p>
               </div>
             </div>
@@ -1028,7 +1028,7 @@
 
 
               {% if correlation.stale_parts %}
-              <!-- A detection was rewritten after the correlation was built (archer.build.correlation_osint) -->
+              <!-- A detection was rewritten after the correlation was built (shikari.build.correlation_osint) -->
               <p class="corr-stale" role="note">The combined query was built from an older version of {{ correlation.stale_parts|join(', ') }}: the queries above are current, the combined one isn't.{% if can_regenerate %} <strong>Regenerate</strong> rebuilds it.{% else %} Hunt the group again to rebuild it.{% endif %}</p>
               {% endif %}
 
@@ -1404,7 +1404,7 @@
         </svg>
         <span><strong>Download All</strong>, <strong>Save to Library</strong> and <strong>Generate Report</strong> unlock once every step in
           <a href="#validation-checklist" onclick="var c = document.getElementById('validation-content'); if (c && c.style.display === 'none') toggleValidationChecklist();" style="color: inherit; font-weight: 600;">Validation</a>
-          is ticked. Archer writes these queries automatically, so check them against your own estate before they're deployed or shared.</span>
+          is ticked. Shikari writes these queries automatically, so check them against your own estate before they're deployed or shared.</span>
       </div>
 
     </div>
@@ -1424,19 +1424,13 @@
         </a>
       </div>
 
-      <!-- Quote -->
-      <div class="quote">
-        <p>
-          "Even if you can't see something, it doesn't mean it isn't there"<br>
-          <span>— Archer, Small Soldiers</span>
-        </p>
-      </div>
 
       <!-- Spacer for balance -->
       <div class="spacer"></div>
     </div>
 
     <!-- Timestamp and Attribution -->
+    <div class="footer-gloss"><span class="fg-word">shi·ka·ri</span><span class="fg-ipa">\shi-ˈkär-ē\</span><span class="fg-def">a professional big-game hunter or guide</span></div>
     <div class="timestamp">
       {{ generated_time }}<br>
       <span style="font-size: 0.85em; opacity: 0.7; margin-top: 8px; display: block;">
@@ -2289,7 +2283,7 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
     console.log(`Save complete: ${savedCount} saved, ${errorCount} errors`);
     if (savedCount > 0) {
       // The ATT&CK Flow starts keeping its edits once the results are in the library
-      document.dispatchEvent(new CustomEvent('archer:library-saved'));
+      document.dispatchEvent(new CustomEvent('shikari:library-saved'));
       let errorMsg = '';
       if (errorCount > 0 && failedDetections.length > 0) {
         const failedList = failedDetections.map(f =>
@@ -2480,7 +2474,7 @@ document.getElementById('generate-report-btn').addEventListener('click', async f
       correlation_count: {{ correlation_count | default(0) }},
       total_hours: {{ total_hours | default(0) }},
       manual_hours: {{ manual_hours | default(0) }},
-      archer_hours: {{ archer_hours | default(0) }},
+      shikari_hours: {{ shikari_hours | default(0) }},
       hours_saved: {{ hours_saved | default(0) }},
       cost_savings: {{ (hours_saved * 25)|round(0)|int | default(0) }},
       osint_count: {{ osint_count.count | default(0) }}

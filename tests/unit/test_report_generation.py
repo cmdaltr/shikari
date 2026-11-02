@@ -9,10 +9,10 @@ lookup found 0 procedures. The report's 43 techniques were ignored.
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from archer.build import orchestrator
-from archer.build.ioc_sweep import clean_report_iocs, mde_sweep, secops_sweep, write_ioc_sweeps
-from archer.mitre.retrieve import retrieve_group
-from archer.parsers.blog_analyzer import _drop_citation_links
+from shikari.build import orchestrator
+from shikari.build.ioc_sweep import clean_report_iocs, mde_sweep, secops_sweep, write_ioc_sweeps
+from shikari.mitre.retrieve import retrieve_group
+from shikari.parsers.blog_analyzer import _drop_citation_links
 
 SPIDER = {"type": "intrusion-set", "id": "intrusion-set--spider", "name": "Scattered Spider",
           "aliases": ["Scattered Spider", "Roasted 0ktapus", "UNC3944"]}
@@ -62,7 +62,7 @@ def test_report_iocs_are_refanged_validated_and_patterned():
     assert r'matches regex @"(?i)(^|[./])[a-z0-9-]+-sso\.com($|[/:])"' in kql
     assert "MD5 in (ioc_md5)" in kql and kql.startswith("let ioc_domain")
     rule = secops_sweep(clean, "UNC3944")
-    assert rule.startswith("// archer_ioc_sweep_unc3944:")
+    assert rule.startswith("// shikari_ioc_sweep_unc3944:")
     assert r"network.dns.questions.name = /(^|\.)fleetdeck\.io$/ nocase" in rule
     assert 'target.ip = "45.153.240.1"' in rule
     assert len(rule.splitlines()) == 2  # the header, then one expression of alternatives

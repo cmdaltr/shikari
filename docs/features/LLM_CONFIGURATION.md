@@ -1,6 +1,6 @@
 # LLM Configuration Guide
 
-Archer's `--llm` mode generates high-fidelity detection queries by sending technique data and bespoke prompt templates to an LLM. This guide covers how to configure each supported provider.
+Shikari's `--llm` mode generates high-fidelity detection queries by sending technique data and bespoke prompt templates to an LLM. This guide covers how to configure each supported provider.
 
 ## Supported Providers
 
@@ -22,11 +22,11 @@ Set the variables for your provider and run:
 ```bash
 # Anthropic Claude
 export ANTHROPIC_API_KEY="sk-ant-..."
-archer-cli console
-archer-cli > use generate
-archer-cli (generate) > set GROUP APT29
-archer-cli (generate) > set MODE llm
-archer-cli (generate) > run
+shikari-cli console
+shikari-cli > use generate
+shikari-cli (generate) > set GROUP APT29
+shikari-cli (generate) > set MODE llm
+shikari-cli (generate) > run
 
 # OpenAI / ChatGPT
 export OPENAI_API_KEY="sk-..."
@@ -159,20 +159,20 @@ llm:
 ollama pull llama3
 ollama serve
 
-# Configure Archer
+# Configure Shikari
 export LLM_ENDPOINT="http://localhost:11434"
-archer-cli console
-archer-cli > use generate
-archer-cli (generate) > set MODE llm
-archer-cli (generate) > set GROUP APT29
-archer-cli (generate) > run
+shikari-cli console
+shikari-cli > use generate
+shikari-cli (generate) > set MODE llm
+shikari-cli (generate) > set GROUP APT29
+shikari-cli (generate) > run
 ```
 
 ## Resolution Order
 
-When `--llm` mode is used, Archer resolves the LLM provider in this order:
+When `--llm` mode is used, Shikari resolves the LLM provider in this order:
 
-1. **Explicit config** passed via code (API/archer-cli console)
+1. **Explicit config** passed via code (API/shikari-cli console)
 2. **`bespoke/config.yaml`** → `llm:` section
 3. **Environment variables** (auto-detected by provider)
 
