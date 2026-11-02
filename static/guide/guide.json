@@ -9,7 +9,7 @@
    "href": null,
    "image": "/static/guide/img/home-hunt.jpg",
    "width": 1440,
-   "height": 1447,
+   "height": 1531,
    "sections": [
     {
      "title": "Four ways to start",
@@ -18,7 +18,7 @@
      "when": "Choosing the tab is choosing your starting point. Pick the one that matches what you've been handed.",
      "box": [
       87,
-      380,
+      538,
       1252,
       77
      ]
@@ -30,7 +30,7 @@
      "when": "A group is named in a briefing, an incident or a sector advisory and you need coverage for its whole playbook, not one indicator.",
      "box": [
       119,
-      477,
+      635,
       1189,
       84
      ]
@@ -42,7 +42,7 @@
      "when": "A CVE is being exploited before you can patch, or a red-team report or gap analysis gives you a list of techniques.",
      "box": [
       119,
-      549,
+      708,
       1189,
       153
      ]
@@ -54,7 +54,7 @@
      "when": "The defaults suit most hunts. Turn on OSINT Comparison when a group's techniques have few indicators in ATT&CK.",
      "box": [
       119,
-      705,
+      864,
       1189,
       198
      ]
@@ -66,7 +66,7 @@
      "when": "You have a hunch from an alert, an incident or the news, but not yet a group or technique ID.",
      "box": [
       119,
-      985,
+      1144,
       1189,
       80
      ]
@@ -82,7 +82,7 @@
    "href": null,
    "image": "/static/guide/img/home-analyse.jpg",
    "width": 1440,
-   "height": 1354,
+   "height": 1436,
    "sections": [
     {
      "title": "A report's URL",
@@ -91,7 +91,7 @@
      "when": "A vendor publishes an intrusion write-up relevant to you. Feed cards open here with the URL filled in.",
      "box": [
       119,
-      477,
+      635,
       570,
       205
      ]
@@ -103,7 +103,7 @@
      "when": "The report is a paid or shared PDF, or the site blocks automated fetches.",
      "box": [
       738,
-      477,
+      635,
       570,
       205
      ]
@@ -115,7 +115,7 @@
      "when": "Turn off OSINT Enhancement when you want detections built only from what the report says.",
      "box": [
       119,
-      685,
+      844,
       1189,
       218
      ]
@@ -131,7 +131,7 @@
    "href": null,
    "image": "/static/guide/img/home-profile.jpg",
    "width": 1440,
-   "height": 1354,
+   "height": 1436,
    "sections": [
     {
      "title": "The company's domain",
@@ -140,7 +140,7 @@
      "when": "Onboarding a new client or business unit, or answering \"who is likely to come after us?\".",
      "box": [
       119,
-      477,
+      635,
       1189,
       84
      ]
@@ -152,7 +152,7 @@
      "when": "Profiles look thin. A key adds sources; a toggle switches one off without deleting the key.",
      "box": [
       119,
-      626,
+      785,
       1189,
       277
      ]
@@ -168,7 +168,7 @@
    "href": null,
    "image": "/static/guide/img/home-research.jpg",
    "width": 1440,
-   "height": 1354,
+   "height": 1436,
    "sections": [
     {
      "title": "Keywords",
@@ -177,7 +177,7 @@
      "when": "The question is \"who targets finance in Europe?\" rather than \"detect APT29\".",
      "box": [
       119,
-      477,
+      635,
       1189,
       84
      ]
@@ -189,7 +189,7 @@
      "when": "Your intelligence names groups the keywords don't find.",
      "box": [
       119,
-      549,
+      708,
       1189,
       131
      ]
@@ -201,7 +201,7 @@
      "when": "You have a shortlist of groups and limited time. Shaded rows (used by more than one group) are the best value.",
      "box": [
       119,
-      906,
+      1065,
       1189,
       74
      ]
@@ -217,7 +217,7 @@
    "href": "/library",
    "image": "/static/guide/img/results.jpg",
    "width": 1440,
-   "height": 2600,
+   "height": 2352,
    "sections": [
     {
      "title": "Threat briefing",
@@ -228,7 +228,7 @@
       86,
       189,
       1252,
-      800
+      761
      ]
     },
     {
@@ -238,9 +238,9 @@
      "when": "Reviewing what to deploy. Copy a query straight into your SIEM to test it.",
      "box": [
       86,
-      1123,
+      1084,
       1252,
-      507
+      229
      ]
     },
     {
@@ -250,9 +250,21 @@
      "when": "Single-technique alerts are too noisy. A correlation fires far less often and means more when it does.",
      "box": [
       86,
-      1641,
+      1324,
       1252,
       102
+     ]
+    },
+    {
+     "title": "Cross-vendor playbooks",
+     "what": "Chains that span two or more of your SIEMs, laid out stage by stage with each SIEM's query and the fields to join them on.",
+     "who": "SOC analysts and SOAR engineers.",
+     "when": "Your endpoint and network telemetry live in different SIEMs.",
+     "box": [
+      86,
+      1437,
+      1252,
+      106
      ]
     },
     {
@@ -262,19 +274,7 @@
      "when": "Briefing a team on how an attack unfolds and where you're blind.",
      "box": [
       86,
-      1754,
-      1252,
-      106
-     ]
-    },
-    {
-     "title": "Validation",
-     "what": "Four checks before deployment, logic, syntax, schema and false positives. Download All needs them ticked.",
-     "who": "Detection engineers.",
-     "when": "Every time. Generated queries are a starting point, not production rules.",
-     "box": [
-      86,
-      1887,
+      1570,
       1252,
       101
      ]
@@ -290,7 +290,7 @@
    "href": null,
    "image": "/static/guide/img/library.jpg",
    "width": 1440,
-   "height": 2337,
+   "height": 2304,
    "sections": [
     {
      "title": "Metrics",
@@ -351,7 +351,7 @@
    "href": null,
    "image": "/static/guide/img/detections-code.jpg",
    "width": 1440,
-   "height": 1002,
+   "height": 1062,
    "sections": [
     {
      "title": "Export a run to git",
@@ -473,7 +473,7 @@
    "href": null,
    "image": "/static/guide/img/flows.jpg",
    "width": 1440,
-   "height": 1634,
+   "height": 1695,
    "sections": [
     {
      "title": "Choose a flow",
@@ -522,7 +522,7 @@
    "href": null,
    "image": "/static/guide/img/anatomy.jpg",
    "width": 1440,
-   "height": 1161,
+   "height": 1222,
    "sections": [
     {
      "title": "Choose a group or CVE",
@@ -559,7 +559,7 @@
    "href": null,
    "image": "/static/guide/img/feed.jpg",
    "width": 1440,
-   "height": 1712,
+   "height": 2182,
    "sections": [
     {
      "title": "Filters",
@@ -594,7 +594,19 @@
       86,
       745,
       1252,
-      597
+      967
+     ]
+    },
+    {
+     "title": "Sources",
+     "what": "Each source and its last collection. Administrators can add RSS or Atom feeds.",
+     "who": "Administrators.",
+     "when": "A source you rely on isn't there, or one has stopped.",
+     "box": [
+      106,
+      1799,
+      1212,
+      202
      ]
     }
    ]
@@ -608,7 +620,7 @@
    "href": null,
    "image": "/static/guide/img/cyber-powers.jpg",
    "width": 1440,
-   "height": 1495,
+   "height": 1556,
    "sections": [
     {
      "title": "The map",
@@ -645,7 +657,7 @@
    "href": null,
    "image": "/static/guide/img/stix.jpg",
    "width": 1440,
-   "height": 1035,
+   "height": 1407,
    "sections": [
     {
      "title": "Import intelligence",
@@ -653,9 +665,9 @@
      "who": "Threat intelligence analysts.",
      "when": "Intelligence arrives from an ISAC, a sharing community or a TIP rather than a blog post.",
      "box": [
-      86,
-      189,
-      1252,
+      104,
+      436,
+      1216,
       413
      ]
     },
@@ -665,9 +677,9 @@
      "who": "Threat intelligence analysts.",
      "when": "Sharing what you built back to your community or into a TIP.",
      "box": [
-      86,
-      609,
-      1252,
+      104,
+      856,
+      1216,
       198
      ]
     }
@@ -682,7 +694,7 @@
    "href": "/catalogue",
    "image": "/static/guide/img/catalogue.jpg",
    "width": 1440,
-   "height": 1393,
+   "height": 2600,
    "sections": [
     {
      "title": "Profile summary",
@@ -715,9 +727,9 @@
      "when": "Turning a profile into coverage for the threats that matter to that company.",
      "box": [
       216,
-      863,
+      2529,
       993,
-      263
+      71
      ]
     }
    ]
@@ -812,10 +824,10 @@
      "who": "Purple teams and administrators.",
      "when": "Recording your own telemetry rather than relying on public labs.",
      "box": [
-      106,
-      1303,
-      1212,
-      716
+      86,
+      1301,
+      1252,
+      1135
      ]
     },
     {
@@ -825,9 +837,9 @@
      "when": "Deciding which log source a detection should be built on.",
      "box": [
       86,
-      2042,
+      2443,
       1252,
-      558
+      157
      ]
     }
    ]
@@ -878,7 +890,7 @@
    "href": null,
    "image": "/static/guide/img/manual.jpg",
    "width": 1440,
-   "height": 1203,
+   "height": 1264,
    "sections": [
     {
      "title": "Group description",
@@ -915,7 +927,7 @@
    "href": null,
    "image": "/static/guide/img/regex.jpg",
    "width": 1440,
-   "height": 1878,
+   "height": 1938,
    "sections": [
     {
      "title": "Expression and flavour",
@@ -976,7 +988,7 @@
    "href": null,
    "image": "/static/guide/img/agents.jpg",
    "width": 1440,
-   "height": 997,
+   "height": 1253,
    "sections": [
     {
      "title": "The agents",
@@ -984,10 +996,10 @@
      "who": "Detection engineers.",
      "when": "Repetitive review work that follows clear rules.",
      "box": [
-      58,
-      122,
-      1310,
-      110
+      86,
+      189,
+      1252,
+      173
      ]
     },
     {
@@ -996,10 +1008,10 @@
      "who": "Detection engineers.",
      "when": "After a big run, let the repair agent fix only what the checks flag.",
      "box": [
-      58,
-      422,
-      1310,
-      301
+      86,
+      692,
+      1252,
+      275
      ]
     }
    ]
@@ -1013,7 +1025,7 @@
    "href": null,
    "image": "/static/guide/img/profile-environment.jpg",
    "width": 1440,
-   "height": 1982,
+   "height": 1889,
    "sections": [
     {
      "title": "SIEMs, industries and technology stack",
@@ -1038,7 +1050,7 @@
    "href": null,
    "image": "/static/guide/img/profile-apikeys.jpg",
    "width": 1440,
-   "height": 1377,
+   "height": 1284,
    "sections": [
     {
      "title": "Keys and assignments",
@@ -1086,7 +1098,7 @@
       119,
       1151,
       1189,
-      418
+      360
      ]
     }
    ]

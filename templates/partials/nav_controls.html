@@ -51,9 +51,9 @@
   ('Build', 'build', [
     ('/emulate', 'Emulate', true, 'emulate', 'Validate which logs record which technique'),
     ('/assessments', 'Assessments', true, 'campaign', 'Test cases and red/blue outcomes, VECTR-style'),
+    ('/agents', 'Agents', true, 'agents', 'Models that repair queries and triage reports'),
     ('/manual', 'Manual', true, 'manual', 'Write detections one technique at a time'),
     ('/regex', 'Regex', false, 'regex', 'Test a regex and check it for each SIEM'),
-    ('/agents', 'Agents', true, 'agents', 'Models that repair queries and triage reports'),
   ]),
 ] %}
 {% macro svg(name) %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ ICON[name] | safe }}</svg>{% endmacro %}

@@ -8208,7 +8208,7 @@ async def register_page(request: Request, response: Response):
 @app.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_page(request: Request):
     """
-    Render the forgot password page (coming soon).
+    Render the forgot-password page (request a reset link).
     """
     return templates.TemplateResponse("forgot_password.html", {"request": request})
 

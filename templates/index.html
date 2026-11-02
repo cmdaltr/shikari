@@ -2295,7 +2295,7 @@
     <style>
       #ask-shikari-btn {
         position: fixed;
-        bottom: 48px;
+        bottom: 66px;
         right: 28px;
         z-index: 9000;
         border-radius: 45px;
@@ -2316,10 +2316,14 @@
         transition: background .2s, transform .15s;
       }
       #ask-shikari-btn:hover { background: #4f46e5; transform: scale(1.04); }
+      #ask-shikari-btn.is-locked { background: #9ca3af; box-shadow: none; cursor: not-allowed; opacity: .72; }
+      #ask-shikari-btn.is-locked:hover { background: #9ca3af; transform: none; }
+      #ask-shikari-btn .asb-ico { width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
+        background: rgba(255,255,255,.18); flex-shrink: 0; }
 
       #ask-shikari-panel {
         position: fixed;
-        bottom: 160px;
+        bottom: 176px;
         right: 28px;
         z-index: 8999;
         width: 638px;
@@ -2371,11 +2375,9 @@
       .aap-provider { font-size: .68em; color: #6c7086; padding: 0 14px 8px; background: #181825; text-align: right; flex-shrink: 0; }
     </style>
 
-    <button id="ask-shikari-btn" title="Ask Shikari" aria-label="Ask Shikari">
-      <svg width="29" height="29" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
+    <button id="ask-shikari-btn"
+            {% if user %}title="Ask Shikari" aria-label="Ask Shikari"{% else %}class="is-locked" disabled aria-disabled="true" title="Log in to use Ask Shikari" aria-label="Ask Shikari (log in to use)"{% endif %}>
+      <img class="asb-ico" src="{{ url_for('static', path='images/bateleur/bateleur-sixview1.png') }}" alt="" aria-hidden="true">
       <span>Ask Shikari</span>
     </button>
 
@@ -2411,6 +2413,9 @@
       const input  = document.getElementById('aap-input');
       const send   = document.getElementById('aap-send');
       const provEl = document.getElementById('aap-provider');
+
+      // Ask Shikari is for authenticated users only — leave the locked button inert.
+      if (!btn || btn.classList.contains('is-locked')) { if (panel) panel.style.display = 'none'; return; }
 
       function setOpen(open) {
         panel.classList.toggle('open', open);
