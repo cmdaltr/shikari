@@ -1,3 +1,15 @@
+# Load a repo/CWD .env (if present) before any submodule reads os.getenv() at import time
+# (e.g. shikari.auth.email's SMTP_* constants). python-dotenv is a dependency; a no-op when
+# no .env exists. override=False, so an explicit shell export always wins over the file.
+try:
+    from dotenv import find_dotenv as _find_dotenv, load_dotenv as _load_dotenv
+
+    # usecwd=True searches up from the working directory (where a deployer keeps .env and
+    # runs shikari-cli), not the installed package dir, so it works for a site-packages install.
+    _load_dotenv(_find_dotenv(usecwd=True))
+except Exception:
+    pass
+
 # Loaded on first use, so importing a light module (shikari.service, which stops and checks a
 # broken app) doesn't load the whole pipeline
 _EXPORTS = {
