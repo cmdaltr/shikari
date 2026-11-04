@@ -979,6 +979,16 @@ python -m shikari.ai.training.pipelines.training \
 | **Anthropic** | Claude Opus | $15.00 | $75.00 | $90.00 |
 | **Ollama** | Any model | $0.00 | $0.00 | $0.00 |
 
+### What a group hunt actually costs
+
+The per-million figures look alarming next to a 250-technique group, but a real cloud hunt is far cheaper than that sum implies — cloud LLM generation is more affordable than it first appears, for three reasons:
+
+- **One call per technique, not per query.** A single ~29k-token prompt produces a technique's queries across every SIEM at once; answers run 3–5k tokens. On Claude Sonnet that is roughly **$0.15 a technique** (~$0.09 in, ~$0.06 out) — and far less on Gemini Flash.
+- **Most techniques never reach the LLM.** Pre-compromise techniques (Reconnaissance, Resource Development) are intel-only and skipped, techniques with no indicators are skipped, and ones the model has returned empty on are skipped. The bespoke-mapping pipeline (Mode 2) builds the rest for free.
+- **It is a one-off.** Generated detections are saved as YAML; you pay once per group, not per view or per regeneration.
+
+Measured (Sonnet, `max_calls=8`): hunting APT29 (250 techniques) and Lazarus Group (168) cost **~$2–3 in total** — eight LLM-authored techniques each, with the remaining ~1,100 detections per group built by the free bespoke pipeline. A full, uncapped hunt of a large group lands in the low tens of dollars at most, paid once. Two levers cut it further: cap a run with `llm_config`'s `max_calls` (a profile setting), and rely on prompt caching, since the bulk of each prompt (master prompt plus reference queries) is static and caches across a run.
+
 ### Hybrid Configuration
 
 For optimal cost/quality balance:

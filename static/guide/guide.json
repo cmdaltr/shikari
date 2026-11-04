@@ -217,7 +217,7 @@
    "href": "/library",
    "image": "/static/guide/img/results.jpg",
    "width": 1440,
-   "height": 2352,
+   "height": 2600,
    "sections": [
     {
      "title": "Threat briefing",
@@ -240,7 +240,7 @@
       86,
       1084,
       1252,
-      229
+      504
      ]
     },
     {
@@ -250,21 +250,9 @@
      "when": "Single-technique alerts are too noisy. A correlation fires far less often and means more when it does.",
      "box": [
       86,
-      1324,
+      1599,
       1252,
       102
-     ]
-    },
-    {
-     "title": "Cross-vendor playbooks",
-     "what": "Chains that span two or more of your SIEMs, laid out stage by stage with each SIEM's query and the fields to join them on.",
-     "who": "SOC analysts and SOAR engineers.",
-     "when": "Your endpoint and network telemetry live in different SIEMs.",
-     "box": [
-      86,
-      1437,
-      1252,
-      106
      ]
     },
     {
@@ -274,7 +262,19 @@
      "when": "Briefing a team on how an attack unfolds and where you're blind.",
      "box": [
       86,
-      1570,
+      1712,
+      1252,
+      106
+     ]
+    },
+    {
+     "title": "Validation",
+     "what": "Four checks before deployment, logic, syntax, schema and false positives. Download All needs them ticked.",
+     "who": "Detection engineers.",
+     "when": "Every time. Generated queries are a starting point, not production rules.",
+     "box": [
+      86,
+      1845,
       1252,
       101
      ]
