@@ -7,7 +7,8 @@ Installation (Docker or local Python, mapping files, bespoke settings) is in [GE
 Install the `shikari-cli` command once, then use it for everything:
 
 ```bash
-./shikari-cli install  # once: puts `shikari-cli` on your PATH (~/bin)
+./shikari-cli install  # once: puts `shikari-cli` on your PATH (~/bin or ~/.local/bin)
+# sudo ./shikari-cli install --system   # instead: /usr/local/bin, for all users
 shikari-cli start      # start in the background
 shikari-cli status     # what's running, and on which port
 shikari-cli logs -f    # follow the log

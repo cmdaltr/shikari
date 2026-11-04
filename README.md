@@ -21,7 +21,8 @@ Shikari automates threat hunting and detection engineering from MITRE ATT&CK. Gi
 ### Running Shikari
 
 ```bash
-./shikari-cli install  # once: links `shikari-cli` into ~/bin
+./shikari-cli install           # once: links `shikari-cli` into ~/bin (or ~/.local/bin)
+# sudo ./shikari-cli install --system   # instead: link into /usr/local/bin for all users
 shikari-cli start      # background; restarts Shikari (and Ollama) if they crash
 shikari-cli status
 shikari-cli logs -f
@@ -29,7 +30,7 @@ shikari-cli restart
 shikari-cli stop
 ```
 
-`shikari-cli start` runs a small supervisor (`shikari/service.py`) that starts uvicorn and, if Ollama is installed but not running, `ollama serve`. If either dies, it's started again (1s, then backing off to 60s; it gives up after 6 failed starts in a row, e.g. a port clash). Options are remembered: `--port`, `--no-reload`, `--no-ollama`, `--ollama-models DIR` (an external volume that isn't mounted falls back to Ollama's default folder rather than creating an empty one). `shikari-cli serve` runs the server in the foreground without the supervisor; `shikari-cli docker ...` is `docker compose` with the project's compose file. The same command has the console (`shikari-cli console`), a dry-run preview (`shikari-cli preview <group>`), the MCP server (`shikari-cli mcp`) and the pipeline without the server (`shikari-cli offline generate|correlate|hunt`).
+`shikari-cli start` runs a small supervisor (`shikari/service.py`) that starts uvicorn and, if Ollama is installed but not running, `ollama serve`. If either dies, it's started again (1s, then backing off to 60s; it gives up after 6 failed starts in a row, e.g. a port clash). Options are remembered: `--port`, `--no-reload`, `--no-ollama`, `--ollama-models DIR` (an external volume that isn't mounted falls back to Ollama's default folder rather than creating an empty one). `shikari-cli install` symlinks the launcher onto your PATH — a per-user bin dir by default (`~/bin`, or `~/.local/bin`, whichever is already on PATH), or `/usr/local/bin` for all users with `sudo ./shikari-cli install --system`. `shikari-cli serve` runs the server in the foreground without the supervisor; `shikari-cli docker ...` is `docker compose` with the project's compose file. The same command has the console (`shikari-cli console`), a dry-run preview (`shikari-cli preview <group>`), the MCP server (`shikari-cli mcp`) and the pipeline without the server (`shikari-cli offline generate|correlate|hunt`).
 
 ### Desktop App
 

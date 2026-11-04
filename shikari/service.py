@@ -20,7 +20,7 @@ or as shikari.service (the pip-installed shikari-cli).
     shikari-cli preview <group> [...]  a group's queries on stdout, no files written
     shikari-cli mcp                    Shikari's tools for an MCP client, over stdio
     shikari-cli offline <command>      generate | correlate | hunt | emulate without the server
-    shikari-cli install                put `shikari-cli` on your PATH (~/bin, or ~/.local/bin)
+    shikari-cli install [--system]     put `shikari-cli` on your PATH (~/bin or ~/.local/bin; --system: /usr/local/bin)
     shikari-cli app install [--dock]   Shikari as a desktop app (Dock, Start menu, app menu); see shikari/desktop.py
     shikari-cli docker <args>          docker compose with the project's docker-compose.yml
 
@@ -535,27 +535,38 @@ def cmd_logs(args):
 
 
 def cmd_install(args):
-    target_dir = next((Path.home() / d for d in ("bin", ".local/bin")
-                       if str(Path.home() / d) in os.environ.get("PATH", "").split(os.pathsep)), None)
-    if target_dir is None:
-        target_dir = Path.home() / ".local" / "bin"
-        print(f"Add {target_dir} to your PATH (e.g. in ~/.zshrc): export PATH=\"$HOME/.local/bin:$PATH\"")
-    target_dir.mkdir(parents=True, exist_ok=True)
+    # --system installs to a shared dir on everyone's PATH (needs root); otherwise a per-user bin dir.
+    if args.system:
+        target_dir = Path("/usr/local/bin")
+    else:
+        target_dir = next((Path.home() / d for d in ("bin", ".local/bin")
+                           if str(Path.home() / d) in os.environ.get("PATH", "").split(os.pathsep)), None)
+        if target_dir is None:
+            target_dir = Path.home() / ".local" / "bin"
+            print(f"Add {target_dir} to your PATH (e.g. in ~/.zshrc): export PATH=\"$HOME/.local/bin:$PATH\"")
     link = target_dir / "shikari-cli"
     source = ROOT / "shikari-cli"
     old = target_dir / "shikari"  # the name before 2026-10-17
-    if old.is_symlink() and old.resolve() == source.resolve():
-        old.unlink()
-        print(f"Removed the old name: {old}")
-    if link.is_symlink() or link.exists():
-        if link.is_symlink() and link.resolve() == source.resolve():
-            print(f"Already installed: {link} -> {source}")
-            return 0
-        if not args.force:
-            print(f"{link} already exists. Replace it with: shikari-cli install --force")
-            return 1
-        link.unlink()
-    link.symlink_to(source)
+    retry = "shikari-cli install" + (" --system" if args.system else "")
+    try:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        if old.is_symlink() and old.resolve() == source.resolve():
+            old.unlink()
+            print(f"Removed the old name: {old}")
+        if link.is_symlink() or link.exists():
+            if link.is_symlink() and link.resolve() == source.resolve():
+                print(f"Already installed: {link} -> {source}")
+                return 0
+            if not args.force:
+                print(f"{link} already exists. Replace it with: {retry} --force")
+                return 1
+            link.unlink()
+        link.symlink_to(source)
+    except PermissionError:
+        # /usr/local/bin and other shared dirs need root; point the user at the one sudo command.
+        print(f"Permission denied writing {link} — {target_dir} needs elevated rights.")
+        print(f"Re-run with sudo:\n  sudo ln -sf \"{source}\" \"{link}\"")
+        return 1
     print(f"Installed: {link} -> {source}")
     found = shutil.which("shikari-cli")
     if found and Path(found) != link:
@@ -616,7 +627,10 @@ def main(argv=None):
     logs.add_argument("name", nargs="?", default="shikari", choices=["shikari", "ollama", "supervisor"])
     logs.add_argument("-f", "--follow", action="store_true")
     logs.add_argument("-n", "--lines", type=int, default=100)
-    sub.add_parser("install", help="put `shikari-cli` on your PATH").add_argument("--force", action="store_true")
+    install = sub.add_parser("install", help="put `shikari-cli` on your PATH")
+    install.add_argument("--force", action="store_true")
+    install.add_argument("--system", action="store_true",
+                         help="install to /usr/local/bin for all users (needs sudo) instead of a per-user bin dir")
     docker = sub.add_parser("docker", help="docker compose with the project's compose file")
     docker.add_argument("args", nargs=argparse.REMAINDER)
     parser.epilog = ("Also: serve [--port N] (foreground, no supervisor) · clear-cache · console (interactive) · "
