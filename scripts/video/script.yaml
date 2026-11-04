@@ -4,6 +4,9 @@
 #
 # chapter: the scene's YouTube chapter title. Actions: goto <path> · click <selector> · type [<selector>, <text>] · show <selector> (scroll to it and
 # pulse a highlight round it) · scroll <pixels> · guide (open the in-app guide) · key <key>
+# at: <0..1> on an action fires it at that fraction of the scene's narration, so a highlight lands on the
+# beat the words describe it (without it, actions are spread evenly across the scene). The leading goto
+# stays unpinned and fires at 0; pin the show/type/click beats where their subject is spoken.
 # Record against a throwaway instance with sample data (see scripts/guide/capture.py), never a real one.
 #
 # Each scene is a self-contained section: it fades in from black and out to black, so adding a feature is
@@ -12,6 +15,8 @@
 
 # How the voice should say what the subtitles spell
 say:
+  Shikari: shih-car-ee
+  APT29: eigh P T twenty-nine
   ATT&CK: Attack
   MITRE: Miter
   MITRESaw: Miter Saw
@@ -36,11 +41,9 @@ say:
   LOLRMM: lol R M M
   KEV: kev
   NVD: N V D
-  APT29: A P T 29
   DFIR: D F I R
   CSV: C S V
   MDM: M D M
-  AI: A I
   e.g.: for example
 
 scenes:
@@ -48,52 +51,62 @@ scenes:
   - id: intro
     chapter: What Shikari is
     narration: >
-      This is Shikari. It turns MITRE ATT&CK into detections for Google SecOps, Defender XDR, Splunk and
-      Elastic. Give it a threat group, a CVE, a threat report or a company, and it builds the queries,
-      chains them into correlations, and shows you where you're blind. Almost all of it works without AI.
-      Over the next few minutes we'll go through every part of it, and who each part is for.
+      Welcome to Shikari. An automated, multi-vendor threat hunting and detection suite. Provide a threat
+      group, a CVE, a threat report or a company domain, and Shikari will map the respective adversary
+      groups or proof-of-concept exploits, and build the detection queries and correlations tailored to
+      your SIEM and technology stack. Over the next few minutes, we will explore Shikari and explain its
+      various features, and who in the security team is best placed to utilise each one.
     actions:
       - goto: /
-      - show: .header
-      - show: .home-tabs .tabs-header
 
   - id: environment
     chapter: Your environment
     narration: >
       Start with your environment. Under Profile, Environment, tick the SIEMs you run, the industries
-      you care about, and the products in your estate. Every hunt then generates only for your SIEMs,
-      and leaves out techniques that can't happen in your technology stack. The Threat Feed uses it too.
+      you care about, and the products in your estate. Every hunt then generates only for those SIEMs,
+      and drops techniques that can't happen in your technology stack. The Threat Feed honours it too.
     actions:
       - goto: /profile
       - click: 'button.tab-button[data-tab="environment"]'
-      - show: '#tab-environment'
-      - scroll: 500
+        at: 0.05
+      - show: '#siems'
+        at: 0.22
+      - show: '#industries'
+        at: 0.34
+      - show: '#tech-stack'
+        at: 0.5
 
   - id: hunt
     chapter: Hunting a threat group
     narration: >
-      Hunt is where most work starts. Type a threat group by any of its names. APT29, Cozy Bear and
-      Midnight Blizzard all find the same group. Shikari collects every technique the group uses,
-      directly, through its campaigns, and through the software it uses, and builds a detection for each.
+      Hunt is where most work starts. Type a threat group by any of its names — APT29, Cozy Bear and
+      Midnight Blizzard all resolve to the same group. Shikari collects every technique that group uses:
+      directly, through its campaigns, and through the software it runs, and builds a detection for each.
     actions:
       - goto: /
       - click: 'button.tab-button[data-tab="generate"]'
+        at: 0.03
       - show: '#generate-form .hp-primary'
+        at: 0.06
       - type: ['#group_name_input', 'Midnight Blizzard']
+        at: 0.28
 
   - id: hunt-cves
     chapter: CVEs and techniques
     narration: >
       Or enter CVEs. Shikari reads the NVD record, the advisories and public proof-of-concept exploits,
       and builds four kinds of query: the exploit request in your HTTP logs, the behaviour of
-      exploitation, the shell an exploited server starts, and a sweep for the published indicators.
-      Browse the last 30 days lists new CVEs, with CISA's known exploited ones marked. You can also
-      hunt a list of ATT&CK techniques across every group that uses them.
+      exploitation, the shell an exploited server spawns, and a sweep for the published indicators.
+      Browse lists the last thirty days of new CVEs, with CISA's known-exploited ones marked. You can
+      also hunt a list of ATT&CK techniques across every group that uses them.
     actions:
       - goto: /
       - show: '#generate-form .hp-secondary'
+        at: 0.04
       - click: '#cve-browse'
+        at: 0.62
       - key: Escape
+        at: 0.82
 
   - id: options
     chapter: Enrichment options
@@ -101,186 +114,233 @@ scenes:
       The options add enrichment. LOL datasets add the real command lines, hashes and paths of the
       living-off-the-land binaries, drivers and remote tools a group uses. OSINT Enhancement merges
       indicators and known false positives from public detection rules. OSINT Comparison scores your
-      detections against those rules, and builds detections from them where ATT&CK gives a technique
-      no indicators at all, which is more than three hundred techniques.
+      detections against those rules, and builds fresh ones where ATT&CK gives a technique no
+      indicators at all — more than three hundred techniques.
     actions:
       - goto: /
       - show: '#tab-generate details.options-section'
+        at: 0.06
 
   - id: results
     chapter: Results and the threat briefing
     narration: >
       Every run ends on a Results page. The threat briefing comes first: how much of the group you
-      detect, its weakest stage, and the gaps to close first, ranked by how early they come in the
-      attack. It's worked out without AI. Below it, the anatomy of the attack in plain words, then the
-      detections themselves, one card per detection, grouped by SIEM.
+      detect, its weakest stage, and the gaps to close first, ranked by how early they land in the
+      attack. Below it, the anatomy of the attack in plain words, then the detections themselves —
+      one card each, grouped by SIEM.
     actions:
       - goto: /results?group_name=APT29
       - click: '#briefing h2'
+        at: 0.05
       - show: '#briefing'
+        at: 0.12
       - show: '.detection-section:has(h2:text-is("Detections"))'
+        at: 0.82
 
   - id: correlations
     chapter: Correlations and attack flows
     narration: >
-      Correlations chain detections into one query that fires when several steps of an attack happen
-      on the same host or account within a time window. A chain of three techniques fires far less
-      often than a single detection, so treat it as a high-confidence lead. The attack flow lays the
-      group's techniques out by tactic, marked with the SIEMs that detect each one, or no detection.
-      Before you deploy anything, work through the validation checklist. Generated queries are a
+      Correlations chain detections into a single query that fires only when several steps of an attack
+      land on the same host or account inside a time window. A chain of three techniques fires far less
+      often than any one detection, so treat it as a high-confidence lead. The attack flow lays the
+      group's techniques out by tactic, each marked with the SIEMs that detect it, or with nothing.
+      Before you deploy anything, work through the validation checklist — generated queries are a
       starting point, not production rules.
     actions:
       - goto: /results?group_name=APT29
       - show: '#correlations'
+        at: 0.04
       - show: '#attack-flow'
+        at: 0.48
       - show: '#validation-checklist'
+        at: 0.76
 
   - id: analyse
     chapter: Analysing a report
     narration: >
-      Analyse builds detections from a threat report. Paste a URL or upload a PDF. Shikari pulls out the
-      techniques, the commands and the indicators, defanged ones included, and shows you every one
+      Analyse builds detections from a threat report. Paste a URL or upload a PDF, and Shikari pulls out
+      the techniques, the commands and the indicators — defanged ones included — and shows you every one
       before it generates anything. Untick the vendor's own domains and anything mentioned only in
       passing.
     actions:
       - goto: /
       - click: 'button.tab-button[data-tab="upload"]'
+        at: 0.03
       - show: '#upload-form .hp-primary'
+        at: 0.08
       - show: '#upload-form .hp-secondary'
+        at: 0.62
 
   - id: profile-company
     chapter: Profiling a company
     narration: >
       Profile starts from a company instead of a threat. Enter a domain and Shikari works out the sector,
       geography and hosting from public sources, then recommends the groups most likely to target it.
-      The review shows an exposure map: what an attacker can see before they act, including whether
-      the domain can be spoofed, its exposed services and its breach history.
+      The review opens with an exposure map: what an attacker sees before they act — whether the domain
+      can be spoofed, its exposed services, and its breach history.
     actions:
       - goto: /
       - click: 'button.tab-button[data-tab="profile"]'
+        at: 0.03
       - show: '#profile-form .hp-primary'
+        at: 0.08
       - goto: /review?domain=sample-corp.example
+        at: 0.48
       - show: '#exposure'
+        at: 0.58
       - show: section.rv-groups
+        at: 0.82
 
   - id: research
     chapter: Researching groups
     narration: >
-      Research answers a different question: who targets finance in Europe? Enter keywords, and
-      Shikari finds the matching groups and builds a table of the techniques they share. A technique
-      several of your groups use is the best value for a detection.
+      Research answers a different question: who targets finance in Europe? Enter a few keywords and
+      Shikari finds the matching groups, then builds a table of the techniques they share. A technique
+      several of your groups use is the best value a detection can buy.
     actions:
       - goto: /
       - click: 'button.tab-button[data-tab="research"]'
+        at: 0.03
       - show: '#actor-consolidation-section .hp-primary'
+        at: 0.12
       - show: '#actor-consolidation-section .hp-actions'
+        at: 0.6
 
   - id: library
     chapter: Library and coverage
     narration: >
-      Save a run and it goes into your Library: your working set of detections and correlations. Search
-      it, filter it, tag detections in bulk and export them. Coverage shows which ATT&CK techniques you
-      have queries for, by tactic and on the full matrix, and where one SIEM covers what another
-      doesn't.
+      Save a run and it lands in your Library — your working set of detections and correlations. Search
+      it, filter it, tag detections in bulk, and export them. Coverage shows which ATT&CK techniques you
+      have queries for, by tactic and across the full matrix, and where one SIEM covers what another
+      misses.
     actions:
       - goto: /library
       - click: 'h2:text-is("Metrics")'
+        at: 0.05
       - show: '.ui-card:has(h2:text-is("Metrics"))'
+        at: 0.1
       - goto: /coverage
+        at: 0.5
       - show: .summary-cards
+        at: 0.6
 
   - id: flows
     chapter: Flows and anatomy
     narration: >
-      Flows and Anatomy are for people who don't read queries. A flow shows every technique of an
+      Flows and Anatomy are for the people who don't read queries. A flow shows every technique in an
       attack by tactic, with what you detect and what you don't. Anatomy tells the same story the way
-      the DFIR Report draws it: how they get in, what they run, what they do, and where they go.
+      the DFIR Report draws it: how they get in, what they run, what they do, and where they go next.
     actions:
       - goto: /flows
       - show: '#af-canvas'
+        at: 0.3
       - goto: /anatomy
+        at: 0.58
       - show: '#an-svg'
+        at: 0.68
 
   - id: detections-code
     chapter: Detections as code
     narration: >
-      Detections as code commits a run to git, one stable file per detection, so a regenerate after a
-      new ATT&CK release shows exactly which queries moved.
+      Detections as code commits a run to git — one stable file per detection — so regenerating after a
+      new ATT&CK release shows you exactly which queries moved.
     actions:
       - goto: /detections/code
       - show: 'section.ms-card:has(h2:has-text("History"))'
+        at: 0.2
 
   - id: feed
     chapter: The Threat Feed
     narration: >
       The Threat Feed is the last seven days of technical research from vendors and governments,
       tagged with the industries, nations and products involved. By default it keeps what's relevant
-      to your industries and your stack. Save a watchlist, and Shikari collects every six hours and
-      flags anything new. Analyse in Shikari turns a post into detections.
+      to your industries and your stack. Save a watchlist and Shikari collects every six hours,
+      flagging anything new. Analyse in Shikari turns a post straight into detections.
     actions:
       - goto: /feed
       - show: section.fd-intro
+        at: 0.05
       - show: '#fd-watch'
+        at: 0.58
       - show: '#fd-wall'
+        at: 0.85
 
   - id: intel
     chapter: Cyber Powers, STIX and MITRESaw
     narration: >
-      Cyber Powers puts national capability on a map, from the IISS tiers and from how firmly ATT&CK
+      Cyber Powers puts national capability on a map — from the IISS tiers, and from how firmly ATT&CK
       attributes groups to each country. STIX, TAXII and MISP take intelligence from your sharing
       communities as a hunt input, and export a finished run back. MITRESaw is the procedure data
-      underneath it all, with the evidence for every link between a group and a technique.
+      underneath all of it, with the evidence for every link between a group and a technique.
     actions:
       - goto: /cyber-powers
       - show: '#cp-map'
+        at: 0.05
       - goto: /intel/stix
+        at: 0.38
       - show: 'section.ms-card:has(h2:has-text("Import"))'
+        at: 0.46
       - goto: /mitresaw
+        at: 0.70
       - show: 'section.ms-card:has(h2:text-is("Procedures"))'
+        at: 0.78
 
   - id: emulate
     chapter: Emulation and assessments
     narration: >
-      Emulate shows which logs record each technique, from attacks recorded in public labs, and checks
-      your detections' indicators against those recordings. Plan an emulation for a group or CVE and
-      export it for MACAT. In the Lab you can run a CALDERA operation against an agent group — each
-      step's facts feed the next and the sandcat agent behaves like a real implant — then check your
-      detections and correlations against what actually ran, capturing each step's endpoint logs over
-      the agent's own C2. Assessments record what each test did and what the defence saw, and export
-      an ATT&CK Navigator layer.
+      Emulate shows which logs record each technique, drawn from attacks captured in public labs, and
+      checks your detections' indicators against those recordings. Plan an emulation for a group or CVE
+      and export it for MACAT. In the Lab, run a CALDERA operation against an agent group — each step's
+      facts feed the next, and the sandcat agent behaves like a real implant — then test your detections
+      and correlations against what actually ran, capturing each step's endpoint logs over the agent's
+      own C2. Assessments record what each test did and what the defence saw, and export an ATT&CK
+      Navigator layer.
     actions:
       - goto: /emulate
       - show: '#emulate-planner'
+        at: 0.04
       - show: '#em-telemetry'
+        at: 0.18
       - show: '#lab'
+        at: 0.42
       - goto: /assessments
+        at: 0.80
       - show: 'section.ms-card:has(h2:has-text("Campaigns"))'
+        at: 0.88
 
   - id: build
     chapter: Manual, Regex and Agents
     narration: >
       Manual writes detections from your own intelligence, one technique at a time. Regex tests a
-      pattern in the engine your SIEM actually uses, and catches the mistakes that only show up there.
-      And Agents put a model to work with Shikari's tools, repairing queries that fail the checks,
-      triaging reports and sweeping coverage gaps, with every step shown and every change waiting for
+      pattern in the engine your SIEM actually uses, and catches the mistakes that only surface there.
+      And Agents put a model to work with Shikari's tools — repairing queries that fail the checks,
+      triaging reports, sweeping coverage gaps — with every step shown and every change waiting on
       your approval.
     actions:
       - goto: /manual
       - show: section.mn-entry
+        at: 0.05
       - goto: /regex
+        at: 0.28
       - show: 'section.rx-card:has(h2:has-text("Checks"))'
+        at: 0.38
       - goto: /agents
+        at: 0.58
       - show: section.ag-intro
+        at: 0.68
 
   - id: guide
     chapter: The guide and tips
     narration: >
-      You don't need to remember all of this. The Help menu has a guide to every page, each part
-      highlighted with what it's for, who uses it, and when it helps most, and tips for the things
+      You don't need to remember all of this. The Help menu has a guide to every page — each part
+      highlighted with what it's for, who uses it, and when it helps most — plus tips for the things
       that are easy to miss. Shikari runs in a browser from a central server for the whole team, or as
       an app on your own machine. It's on GitHub. Happy hunting.
     actions:
       - goto: /library
       - guide: results
+        at: 0.2
       - key: ArrowRight
+        at: 0.45
       - key: ArrowRight
+        at: 0.62

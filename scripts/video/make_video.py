@@ -30,8 +30,10 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = Path(__file__).with_name("script.yaml")
 W, H = 1920, 1080
-# The browser window: 1280x720 drawn at 1.5x, so the frames are 1080p with text large enough to read
-VIEW, SCALE = {"width": 1280, "height": 720}, 1.5
+# The browser window: a full 1920x1080 CSS viewport so each page sits in frame at desktop width without
+# feeling cramped or zoomed in. Captured 1:1 as lossless PNG (see Recorder) — JPEG frames put visible
+# grain/mosquito noise around text, PNG does not.
+VIEW, SCALE = {"width": 1920, "height": 1080}, 1.0
 # Each scene fades in from black and out to black, so a scene is a self-contained section: add,
 # remove or reorder scenes in script.yaml and every join stays clean. GAP is the quiet tail after
 # a scene's narration, long enough to hold black between sections; FADE is each dip's length.
@@ -42,24 +44,32 @@ HIGHLIGHT = r"""
 (el) => {
   if (!document.getElementById('vhl-style')) {
     const st = document.createElement('style'); st.id = 'vhl-style';
-    st.textContent = `#vhl { position: fixed; z-index: 2147483000; pointer-events: none; border: 4px solid #C53030;
-      border-radius: 10px; box-shadow: 0 0 0 9999px rgba(10,14,20,.38); transition: all .45s ease; animation: vhl 1.6s ease-in-out infinite; }
+    st.textContent = `#vhl { position: fixed; box-sizing: border-box; z-index: 2147483000; pointer-events: none;
+      border: 4px solid #C53030; border-radius: 10px; box-shadow: 0 0 0 9999px rgba(10,14,20,.38);
+      animation: vhl 1.6s ease-in-out infinite; }
       @keyframes vhl { 0%,100% { outline: 0 solid rgba(197,48,48,.6); outline-offset: 0 } 50% { outline: 10px solid rgba(197,48,48,0); outline-offset: 8px } }`;
     document.head.append(st);
   }
   let box = document.getElementById('vhl');
   if (!box) { box = document.createElement('div'); box.id = 'vhl'; document.body.append(box); }
+  // The app sets `html { zoom: .95 }` (common.css). getBoundingClientRect returns post-zoom (visual)
+  // coordinates, but #vhl is itself inside that zoom, so every value we assign is scaled by .95 a
+  // second time — which drops the frame high and short of its target. Divide the zoom back out.
+  // (box-sizing:border-box keeps the 4px border inside the measured size; no `transition` so the box
+  // tracks the element exactly each frame instead of trailing a smooth scroll.)
+  const z = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
   // Clear of the fixed nav bar
   const nav = document.querySelector('.global-nav-controls');
   const pinned = nav && ['fixed', 'sticky'].includes(getComputedStyle(nav).position);
   const top = pinned ? nav.getBoundingClientRect().bottom + 6 : 6;
   el.style.scrollMarginTop = top + 14 + 'px';
-  el.scrollIntoView({ behavior: 'smooth', block: el.getBoundingClientRect().height > (innerHeight - top) * 0.8 ? 'start' : 'center' });
+  el.scrollIntoView({ behavior: 'smooth', block: el.getBoundingClientRect().height > (innerHeight - top) * 0.82 ? 'start' : 'center' });
   cancelAnimationFrame(window.__vhlRaf);
   const follow = () => {
     const r = el.getBoundingClientRect(), pad = 8, y = Math.max(r.top - pad, top);
-    Object.assign(box.style, { left: r.left - pad + 'px', top: y + 'px', width: r.width + 2 * pad + 'px',
-      height: Math.max(0, Math.min(r.bottom + pad, innerHeight - 6) - y) + 'px' });
+    const bottom = Math.min(r.bottom + pad, innerHeight - 6);
+    Object.assign(box.style, { left: (r.left - pad) / z + 'px', top: y / z + 'px',
+      width: (r.width + 2 * pad) / z + 'px', height: Math.max(0, bottom - y) / z + 'px' });
     window.__vhlRaf = requestAnimationFrame(follow);
   };
   follow();
@@ -73,27 +83,104 @@ def spoken(text, say):
     return text
 
 
-def speak(piper, voice, text, out):
-    subprocess.run([piper, "-m", voice, "-f", str(out)], input=text.encode(), check=True, capture_output=True)
+def _wav_seconds(out):
     with wave.open(str(out)) as w:
         return w.getnframes() / w.getframerate()
 
 
-def card(path, lines, logo):
-    img = Image.new("RGB", (W, H), (13, 17, 23))
-    d = ImageDraw.Draw(img)
-    banner = Image.open(logo).convert("RGBA")
-    banner = banner.resize((int(banner.width * 300 / banner.height), 300))
-    img.paste(banner, ((W - banner.width) // 2, 250), banner)
-    y = 620
-    for text, size, colour in lines:
+def speak_piper(piper, voice, text, out, length_scale=1.0, sentence_silence=0.35, noise_w=0.7, noise_scale=0.5):
+    # Confident, un-breathy delivery: a lower noise_scale de-breathes the voice (the "sultry" quality),
+    # a lower phoneme-width noise keeps prosody steady rather than wobbly, with a short inter-sentence
+    # silence for breathing room. Pair with a clear voice (en_GB-alan-medium) rather than a soft one.
+    subprocess.run(
+        [piper, "-m", voice, "-f", str(out),
+         "--length-scale", str(length_scale),
+         "--sentence-silence", str(sentence_silence),
+         "--noise-w-scale", str(noise_w),
+         "--noise-scale", str(noise_scale)],
+        input=text.encode(), check=True, capture_output=True)
+    return _wav_seconds(out)
+
+
+def speak_kokoro(kpython, helper, model, voices, voice, text, out, lang="en-gb", speed=1.0, pause=0.45):
+    # Kokoro is noticeably more natural than Piper, still local and free. It runs in its own venv
+    # (kokoro_onnx isn't in the project venv), so shell out to scripts/video/kokoro_tts.py. `pause` is
+    # the silence spliced between sentences for an unhurried read.
+    subprocess.run(
+        [kpython, str(helper), str(model), str(voices), voice, lang, str(speed), str(pause), str(out)],
+        input=text.encode(), check=True, capture_output=True)
+    return _wav_seconds(out)
+
+
+TAGLINE = "Automated Multi-vendor Threat Hunting and Detection Suite"
+CARD_BG = (234, 236, 238)  # light, so the black-text / gold-A lockup reads
+# The lockup is [bateleur]  SHIKARI; the tagline and footer sit under the SHIKARI wordmark only, sized
+# to fit its width and anchored to its baseline. Measured from the asset's alpha (eagle ends ~0.30):
+# wordmark runs x 0.31..0.92 of the image width, and its bottom (baseline) is y 0.63 of the height.
+WORDMARK_L, WORDMARK_R, WORDMARK_BOTTOM = 0.314, 0.920, 0.631
+
+
+def _font(size, bold=True):
+    for name in (["Arial Bold.ttf"] if bold else []) + ["Arial.ttf"]:
         try:
-            font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", size)
+            return ImageFont.truetype(f"/System/Library/Fonts/Supplemental/{name}", size)
         except OSError:
-            font = ImageFont.load_default()
-        w = d.textlength(text, font=font)
-        d.text(((W - w) / 2, y), text, font=font, fill=colour)
-        y += size + 28
+            pass
+    return ImageFont.load_default()
+
+
+def _tracked_width(d, text, font, track):
+    return sum(d.textlength(c, font=font) for c in text) + track * max(0, len(text) - 1)
+
+
+def _draw_tracked(d, cx, y, text, font, fill, track):
+    # Letter-spaced centred text — PIL has no tracking, so place each glyph by hand.
+    x = cx - _tracked_width(d, text, font, track) / 2
+    for c in text:
+        d.text((x, y), c, font=font, fill=fill)
+        x += d.textlength(c, font=font) + track
+
+
+def card(path, lines, logo):
+    # The brand lockup (bateleur + SHIKARI, black text / gold A) over a light ground, the tagline
+    # tracked out beneath it, then any extra lines (repo + handle on the end card). The whole stack is
+    # vertically centred so title and end sit the same on screen.
+    img = Image.new("RGB", (W, H), CARD_BG)
+    d = ImageDraw.Draw(img)
+    # Scale the lockup so its *visible* content (the mark, ignoring the transparent padding around it)
+    # fills the frame width bar a small margin, and centre that content — the widest a 3:1 mark goes
+    # without running the eagle off the left or the final letter off the right.
+    src = Image.open(logo).convert("RGBA")
+    l, _u, r, _lo = src.split()[-1].getbbox()
+    target_cw = 1656  # visible mark width, centred in the frame
+    scale = target_cw / (r - l)
+    banner = src.resize((round(src.width * scale), round(src.height * scale)))
+    bw, bh = banner.size
+    bx = round(W / 2 - ((l + r) / 2 / src.width) * bw)  # centre the visible content, not the padding
+    by = (H - bh) // 2
+    wm_l, wm_r = bx + WORDMARK_L * bw, bx + WORDMARK_R * bw
+    cx = int((wm_l + wm_r) / 2)   # centre under the SHIKARI wordmark
+    avail = (wm_r - wm_l) * 0.99  # roughly the wordmark's width; the footer fits within it
+    tag = TAGLINE.upper()
+
+    def fit(s, size, bold, cap=avail):
+        f = _font(size, bold)
+        while size > 10 and _tracked_width(d, s, f, 2 if bold else 0) > cap:
+            size -= 1
+            f = _font(size, bold)
+        return f, size
+
+    img.paste(banner, (bx, by), banner)
+    # Tagline just beneath the wordmark baseline, almost underlining SHIKARI. Pinned to a point size
+    # (near the wordmark's own width) rather than auto-fit, and only shrunk if it would hit the frame.
+    tag_font, tag_size = fit(tag, 29.2, True, W - 80)
+    y = by + WORDMARK_BOTTOM * bh + 20
+    _draw_tracked(d, cx, y, tag, tag_font, (96, 104, 117), 2)
+    y += tag_size + 40
+    for line, size, colour in lines:
+        f, s = fit(line, size, False)
+        _draw_tracked(d, cx, y, line, f, colour, 0)
+        y += s + 28
     img.save(path)
 
 
@@ -117,14 +204,15 @@ class Recorder:
 
     def frame(self, e):
         n = len(self.frames)
-        path = self.folder / f"{n:06}.jpg"
+        path = self.folder / f"{n:06}.png"
         path.write_bytes(base64.b64decode(e["data"]))
         # Chrome's own time for the frame: frames can reach us late, and timing them on arrival drifts
         self.frames.append((e["metadata"].get("timestamp") or time.time(), path))
         self.cdp.send("Page.screencastFrameAck", {"sessionId": e["sessionId"]})
 
     def start(self):
-        self.cdp.send("Page.startScreencast", {"format": "jpeg", "quality": 92, "maxWidth": W, "maxHeight": H, "everyNthFrame": 1})
+        # Lossless PNG frames, captured at the full viewport size — no JPEG grain around text.
+        self.cdp.send("Page.startScreencast", {"format": "png", "maxWidth": W, "maxHeight": H, "everyNthFrame": 1})
 
     def stop(self):
         self.cdp.send("Page.stopScreencast")
@@ -133,9 +221,13 @@ class Recorder:
 def act(page, base, action):
     kind, arg = next(iter(action.items()))
     if kind == "goto":
-        page.goto(base + arg)
+        # These pages hold a live SSE connection open (role-watch), so 'networkidle' never fires —
+        # waiting on it burned the full timeout on every scene, delaying the tab-click and highlights
+        # to the end while the narration played over the default tab. Wait for the DOM instead, then a
+        # short settle for layout (server-rendered Jinja, so the HTML is all there at domcontentloaded).
+        page.goto(base + arg, wait_until="domcontentloaded")
         try:
-            page.wait_for_load_state("networkidle", timeout=15000)
+            page.wait_for_load_state("networkidle", timeout=1500)
         except Exception:
             pass
         page.evaluate("() => { document.querySelectorAll('#ask-shikari-btn').forEach(e => e.remove()); }")
@@ -163,8 +255,26 @@ def main():
     parser.add_argument("--base", default="http://127.0.0.1:8010")
     parser.add_argument("--out", type=Path, default=Path.home() / "Movies" / "Shikari")
     parser.add_argument("--piper", default=str(Path.home() / ".cache/shikari/piper/venv/bin/piper"))
-    parser.add_argument("--voice", default=str(Path.home() / ".cache/shikari/piper/voices/en_GB-cori-high.onnx"))
+    parser.add_argument("--voice", default=str(Path.home() / ".cache/shikari/piper/voices/en_GB-alan-medium.onnx"))
     parser.add_argument("--only", nargs="*", help="scene ids to include (a quick draft)")
+    parser.add_argument("--length-scale", type=float, default=1.0,
+                        help="Piper phoneme length; >1 slows delivery (default 1.0)")
+    parser.add_argument("--sentence-silence", type=float, default=0.35,
+                        help="seconds of silence after each sentence (default 0.35)")
+    parser.add_argument("--noise-w", type=float, default=0.7,
+                        help="Piper phoneme-width noise; higher = more prosodic variation (default 0.7)")
+    parser.add_argument("--noise-scale", type=float, default=0.5,
+                        help="Piper generator noise; lower = less breathy/more confident (default 0.5)")
+    parser.add_argument("--tts", choices=["kokoro", "piper"], default="kokoro",
+                        help="text-to-speech backend (default kokoro: more natural, local)")
+    kcache = Path.home() / ".cache/shikari/kokoro"
+    parser.add_argument("--kokoro-python", default=str(kcache / "venv/bin/python"))
+    parser.add_argument("--kokoro-model", default=str(kcache / "kokoro-v1.0.onnx"))
+    parser.add_argument("--kokoro-voices", default=str(kcache / "voices-v1.0.bin"))
+    parser.add_argument("--kokoro-voice", default="bm_george", help="Kokoro voice id (default bm_george)")
+    parser.add_argument("--lang", default="en-gb", help="Kokoro phonemisation language (default en-gb)")
+    parser.add_argument("--speed", type=float, default=0.9, help="Kokoro speaking speed (default 0.9: measured but not sluggish)")
+    parser.add_argument("--kokoro-pause", type=float, default=0.3, help="silence spliced between sentences, seconds (default 0.3)")
     args = parser.parse_args()
     email = os.environ.get("SHIKARI_GUIDE_EMAIL", "admin@shikari.app")
     password = os.environ.get("SHIKARI_GUIDE_PASSWORD", "BigGameHunter")
@@ -176,11 +286,20 @@ def main():
     work = Path(tempfile.mkdtemp(prefix="shikari-video-"))
     (work / "frames").mkdir()
 
-    print("Narration:")
+    kokoro_helper = Path(__file__).with_name("kokoro_tts.py")
+    print(f"Narration ({args.tts}):")
     for s in scenes:
         s["text"] = " ".join(s["narration"].split())
         s["audio"] = work / f"{s['id']}.wav"
-        s["seconds"] = speak(args.piper, args.voice, spoken(s["text"], spec.get("say", {})), s["audio"])
+        spoken_text = spoken(s["text"], spec.get("say", {}))
+        if args.tts == "kokoro":
+            s["seconds"] = speak_kokoro(args.kokoro_python, kokoro_helper, args.kokoro_model,
+                                        args.kokoro_voices, args.kokoro_voice, spoken_text, s["audio"],
+                                        lang=args.lang, speed=args.speed, pause=args.kokoro_pause)
+        else:
+            s["seconds"] = speak_piper(args.piper, args.voice, spoken_text, s["audio"],
+                                       length_scale=args.length_scale, sentence_silence=args.sentence_silence,
+                                       noise_w=args.noise_w, noise_scale=args.noise_scale)
         print(f"  {s['id']:<18} {s['seconds']:5.1f}s")
 
     print("Recording:")
@@ -200,13 +319,18 @@ def main():
         for s in scenes:
             s["start"] = time.time() - t0
             actions = s.get("actions", [])
+            # Each action fires at `at` (a 0..1 fraction of the scene) when given, so a highlight lands
+            # on the beat the narration describes it; otherwise it keeps the old even split across the
+            # scene. Authored order is preserved — `at` only retimes, it doesn't reorder.
             slot = s["seconds"] / max(1, len(actions))
             for i, a in enumerate(actions):
-                wait = t0 + s["start"] + i * slot - time.time()
+                at = a.get("at")
+                off = max(0.0, min(1.0, float(at))) * s["seconds"] if at is not None else i * slot
+                wait = t0 + s["start"] + off - time.time()
                 if wait > 0:
                     page.wait_for_timeout(wait * 1000)
                 try:
-                    act(page, args.base, a)
+                    act(page, args.base, {k: v for k, v in a.items() if k != "at"})
                 except Exception as e:
                     print(f"    {s['id']}: {a} failed: {str(e).splitlines()[0]}")
             end = t0 + s["start"] + s["seconds"] + GAP
@@ -227,13 +351,12 @@ def main():
     for n in range(int(total * FPS)):
         while k + 1 < len(frames) and frames[k + 1][0] <= n / FPS:
             k += 1
-        (seq / f"{n:06}.jpg").symlink_to(frames[k][1])
+        (seq / f"{n:06}.png").symlink_to(frames[k][1])
 
-    logo = ROOT / "static" / "images" / "shikari" / "shikari-wordmark-light.png"
-    card(work / "title.png", [("Threat hunting and detection engineering, walked through", 54, (240, 240, 240)),
-                              ("Every page, who it's for, and when it helps", 38, (170, 176, 186))], logo)
-    card(work / "end.png", [("github.com/cmdaltr/shikari", 54, (240, 240, 240)),
-                            ("@cmdaltr", 38, (170, 176, 186))], logo)
+    logo = ROOT / "static" / "images" / "shikari" / "shikari-lockup.png"
+    card(work / "title.png", [], logo)
+    card(work / "end.png", [("github.com/cmdaltr/shikari", 55, (60, 68, 80)),
+                            ("@cmdaltr", 41, (120, 128, 140))], logo)
 
     print("Encoding:")
     main_mp4 = work / "main.mp4"
@@ -252,7 +375,7 @@ def main():
         clips.append(clip)
         vf = f"{scale_pad},fade=t=in:st=0:d={FADE}:color=black,fade=t=out:st={max(0, dur - FADE):.3f}:d={FADE}:color=black"
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS),
-                        "-start_number", str(first), "-i", str(seq / "%06d.jpg"), "-frames:v", str(count),
+                        "-start_number", str(first), "-i", str(seq / "%06d.png"), "-frames:v", str(count),
                         "-vf", vf, "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p",
                         str(clip)], check=True)
     concat_list.write_text("".join(f"file '{c}'\n" for c in clips))
@@ -304,7 +427,7 @@ def main():
         "Shikari turns MITRE ATT&CK into detections for Google SecOps, Defender XDR, Splunk and Elastic. "
         "This walkthrough covers every page: what it's for, who uses it, and when it helps most.\n\n"
         "https://github.com/cmdaltr/shikari\n\nChapters\n" + "".join(f"{t} {name}\n" for t, name in chapters) +
-        "\nNarrated with Piper, a local text-to-speech voice.\n")
+        "\nNarrated with a local text-to-speech voice.\n")
     print(f"Wrote {final} ({length / 60:.1f} min), its .srt and youtube.txt")
     return 0
 
