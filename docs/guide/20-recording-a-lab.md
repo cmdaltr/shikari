@@ -160,6 +160,8 @@ sudo SHIKARI_LAB_HOST=1 pwsh ./record-custom.ps1 -Command 'rundll32 .\payload.dl
 
 Each execution lands in `shikari-lab/<run>/custom-<n>/`; call it again with the same `-Run` to add more to one run. The manifest entry is marked `custom`, carries your mapping (or `novel`), the command and your notes, and round-trips through **Update** like any other recording. After Update it appears in the **Custom & novel recordings** panel on the Emulate page — mapped ones also feed the technique views, novel/unmapped ones only the panel, since they have no technique to file under.
 
+Each panel row has **Generate detection**, which builds SIEM queries grounded in that recording's *observed* telemetry — the fields its events actually held — rather than MITRESaw evidence, with no AI. That's how you get a detection for a behaviour no public corpus describes. It uses the no-LLM bespoke tier, so it produces Splunk and Defender XDR queries (the SecOps and Elastic builders are the LLM/main-generator path).
+
 ## 7. Into Shikari
 
 1. Copy the run folder from the VM to Shikari's `data/telemetry/lab/` (scp, a shared folder, or `tart` file sharing):

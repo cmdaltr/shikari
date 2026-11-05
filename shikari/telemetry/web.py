@@ -131,6 +131,28 @@ def custom_recordings():
     return {"recordings": ds.custom_recordings()}
 
 
+@router.get("/custom/generate")
+def custom_generate(id: str):
+    """Generate detection queries grounded in a custom recording's own telemetry (#27) — no AI, no
+    MITRESaw evidence. For a novel behaviour with no public procedure example."""
+    from shikari.build import bespoke_queries
+
+    rec = next((d for d in ds.custom_recordings() if d["id"] == id), None)
+    if rec is None:
+        return JSONResponse({"error": "No such custom recording"}, status_code=404)
+    vals = ds.values()
+    if vals is None:
+        return JSONResponse({"error": "The recordings' field values aren't on this machine",
+                             "detail": "Run a build here first (Update)."}, status_code=503)
+    rec_values = vals.get(id)
+    if not rec_values:
+        return JSONResponse({"error": "This recording captured no searchable field values"}, status_code=422)
+    technique = (rec.get("techniques") or [""])[0]
+    queries = bespoke_queries.generate_from_telemetry(rec_values, technique, rec.get("title", ""), "")
+    return {"id": id, "title": rec.get("title", ""), "technique": technique, "novel": rec.get("novel", False),
+            "queries": queries}
+
+
 @router.get("/groups")
 def groups(shikari_session: Optional[str] = Cookie(None)):
     """Groups with a finished run, newest first (data/runs)."""

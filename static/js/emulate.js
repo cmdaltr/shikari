@@ -607,15 +607,42 @@
         ? '<span class="em-tag is-noisy">novel</span>'
         : d.techniques.map(t => `<span class="em-tag is-seen">${esc(t)}</span>`).join(' ');
       const events = Object.entries(d.events || {}).map(([k, n]) => `${esc(k)} ${n}`).join(', ');
-      return `<li class="em-custom-row">
+      return `<li class="em-custom-row" data-id="${esc(d.id)}">
         <div class="em-custom-head">${badge}<strong>${esc(d.title)}</strong>
           <span class="em-custom-meta">${esc((d.platform || []).join(', '))}${d.date ? ` · ${esc(d.date)}` : ''}</span></div>
         ${d.command ? `<code class="em-custom-cmd">${esc(d.command)}</code>` : ''}
         ${d.notes ? `<p class="em-custom-notes">${esc(d.notes)}</p>` : ''}
-        ${events ? `<p class="ms-note em-custom-events">${esc(events)}</p>` : ''}</li>`;
+        ${events ? `<p class="ms-note em-custom-events">${esc(events)}</p>` : ''}
+        <div class="em-custom-acts"><button type="button" class="ui-pill em-custom-gen" title="Generate SIEM queries grounded in this recording's telemetry — no AI">Generate detection</button></div>
+        <div class="em-custom-queries" hidden></div></li>`;
     }).join('');
     $('em-custom').hidden = false;
   }
+
+  // Generate detection queries from a recording's own telemetry (#27). No AI, no MITRESaw evidence.
+  $('em-custom-list').addEventListener('click', async e => {
+    const btn = e.target.closest('.em-custom-gen');
+    if (!btn) return;
+    const row = btn.closest('.em-custom-row');
+    const out = row.querySelector('.em-custom-queries');
+    btn.disabled = true; btn.textContent = 'Generating…';
+    try {
+      const r = await json(`/api/telemetry/custom/generate?id=${encodeURIComponent(row.dataset.id)}`);
+      if (!r.queries.length) {
+        out.innerHTML = '<p class="ms-note">No query could be grounded from this recording’s fields.</p>';
+      } else {
+        out.innerHTML = r.queries.map(q => `<div class="em-custom-q">
+          <div class="em-custom-q-head"><strong>${esc(q.platform)}</strong> · <code>${esc(q.data_source)}</code>
+            <span class="em-custom-meta">${esc(q.indicator_type)}</span></div>
+          <pre class="ms-log">${esc(q.query)}</pre></div>`).join('');
+      }
+      out.hidden = false;
+    } catch (err) {
+      out.innerHTML = `<p class="ms-note">${esc(err.message)}</p>`; out.hidden = false;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Generate detection';
+    }
+  });
 
   // ?technique=T1003.001, ?group=APT29 or ?view=source open the page there
   const params = new URLSearchParams(location.search);
@@ -627,7 +654,6 @@
   render();
   status();
   reload();
-  loadCustom();
 
   // Reveal/remove the operator-only Update button live when a temporary elevation starts or ends.
   if (signedIn && window.onRoleChange) {

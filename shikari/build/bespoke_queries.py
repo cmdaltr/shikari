@@ -268,62 +268,85 @@ def generate_fallback_queries(
     indicators = parse_evidence(evidence_json)
     if not indicators:
         return []
+    return _queries_from_indicators(indicators, technique_id, technique_name, tactic)
 
-    # Load mappings
+
+def _queries_from_indicators(
+    indicators: Dict[str, List[str]],
+    technique_id: str,
+    technique_name: str,
+    tactic: str,
+) -> List[Dict]:
+    """Build Splunk + MDE queries from an {indicator type → values} mapping, via the bespoke
+    indicator→schema mapping. Shared by the MITRESaw-evidence path and the telemetry-grounded path (#27)."""
     indicator_mapping = load_indicator_mapping()
     mde_schema = load_mde_schema()
 
     queries = []
-
     for ind_type, ind_values in indicators.items():
         if not ind_values or ind_type not in indicator_mapping:
             continue
-
         mapping = indicator_mapping[ind_type]
+        if not isinstance(mapping, dict):
+            continue
 
-        # --- Splunk queries ---
-        splunk_sources = mapping.get("Splunk", {})
-        for index_name, fields in splunk_sources.items():
-            # Build field → values mapping
-            field_values = {}
-            for field in fields:
-                field_values[field] = ind_values
-
-            query = build_splunk_query(
-                index_name, field_values, technique_name, technique_id
-            )
+        for index_name, fields in (mapping.get("Splunk") or {}).items():
+            field_values = {field: ind_values for field in fields}
+            query = build_splunk_query(index_name, field_values, technique_name, technique_id)
             if query:
-                queries.append({
-                    "platform": "Splunk",
-                    "data_source": index_name,
-                    "query": query,
-                    "indicator_type": ind_type,
-                    "indicators_used": ind_values[:10],
-                    "technique_id": technique_id,
-                    "technique_name": technique_name,
-                    "tactic": tactic,
-                })
+                queries.append({"platform": "Splunk", "data_source": index_name, "query": query,
+                                "indicator_type": ind_type, "indicators_used": ind_values[:10],
+                                "technique_id": technique_id, "technique_name": technique_name, "tactic": tactic})
 
-        # --- MDE queries ---
-        mde_sources = mapping.get("MDE", {})
-        for table_name, fields in mde_sources.items():
-            field_values = {}
-            for field in fields:
-                field_values[field] = ind_values
-
-            query = build_mde_query(
-                table_name, field_values, mde_schema, technique_name
-            )
+        for table_name, fields in (mapping.get("MDE") or {}).items():
+            field_values = {field: ind_values for field in fields}
+            query = build_mde_query(table_name, field_values, mde_schema, technique_name)
             if query:
-                queries.append({
-                    "platform": "MDE",
-                    "data_source": table_name,
-                    "query": query,
-                    "indicator_type": ind_type,
-                    "indicators_used": ind_values[:10],
-                    "technique_id": technique_id,
-                    "technique_name": technique_name,
-                    "tactic": tactic,
-                })
+                queries.append({"platform": "MDE", "data_source": table_name, "query": query,
+                                "indicator_type": ind_type, "indicators_used": ind_values[:10],
+                                "technique_id": technique_id, "technique_name": technique_name, "tactic": tactic})
 
     return queries
+
+
+# ---------------------------------------------------------------------------
+# Telemetry-grounded generation (#27): queries from a recording's observed events
+# ---------------------------------------------------------------------------
+
+# A recorded event field (shikari.telemetry.datasets.FIELDS group) → the bespoke indicator type whose
+# schema mapping fits it. "file" images map to the software (sw) indicators; "other" (service, account,
+# task names) to generic events (evt).
+_GROUP_TO_INDICATOR = {"cmd": "cmd", "file": "sw", "reg": "reg", "network": "network", "other": "evt"}
+
+
+def generate_from_telemetry(
+    values: Dict[str, Dict[str, List[str]]],
+    technique_id: str = "",
+    technique_name: str = "",
+    tactic: str = "",
+    max_per_type: int = 40,
+) -> List[Dict]:
+    """Generate detection queries grounded in a recording's own telemetry, not MITRESaw evidence (#27).
+
+    `values` is a recording's summarised events: {event type: {field: [distinct values]}} (as
+    shikari.telemetry.datasets.values() stores them). Each field is bucketed to a bespoke indicator type
+    by the same field groups the recordings use, then the shared builder produces Splunk + MDE queries.
+    This lets Shikari detect a novel/undocumented behaviour that has no public procedure example.
+    """
+    from shikari.telemetry.datasets import FIELDS
+
+    field_group = {field: group for group, fields in FIELDS.items() for field in fields}
+    indicators: Dict[str, List[str]] = {}
+    for _etype, fields in (values or {}).items():
+        for field, vals in (fields or {}).items():
+            ind_type = _GROUP_TO_INDICATOR.get(field_group.get(field, "other"), "evt")
+            bucket = indicators.setdefault(ind_type, [])
+            for v in vals:
+                v = (v or "").strip()
+                if len(v) >= 3 and v not in bucket and len(bucket) < max_per_type:
+                    bucket.append(v)
+
+    indicators = {k: v for k, v in indicators.items() if v}
+    if not indicators:
+        return []
+    return _queries_from_indicators(indicators, technique_id, technique_name, tactic)

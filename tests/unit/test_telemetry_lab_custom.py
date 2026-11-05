@@ -101,6 +101,40 @@ def test_custom_recordings_filters_and_sorts(monkeypatch):
     assert [d["id"] for d in out] == ["lab:r/custom-2", "lab:r/custom-1"]   # custom only, newest first
 
 
+# ── Telemetry-grounded generation (#27) ─────────────────────────────────────────────────────────
+from shikari.build import bespoke_queries as bq
+
+
+def test_generate_from_telemetry_buckets_fields_by_indicator_type(monkeypatch):
+    captured = {}
+
+    def fake(indicators, *a, **k):
+        captured["ind"] = indicators
+        return [{"ok": 1}]
+
+    monkeypatch.setattr(bq, "_queries_from_indicators", fake)
+    values = {
+        "Sysmon 1": {"CommandLine": ["powershell -enc AAA"], "Image": ["/tmp/evil.bin"]},
+        "Sysmon 13": {"TargetObject": ["HKLM/Run/x"]},
+        "Sysmon 3": {"DestinationIp": ["10.0.0.9"]},
+        "Service": {"ServiceName": ["evilsvc"]},
+    }
+    out = bq.generate_from_telemetry(values, "T1059.001", "enc ps")
+    ind = captured["ind"]
+    assert ind["cmd"] == ["powershell -enc AAA"]        # CommandLine -> cmd
+    assert ind["sw"] == ["/tmp/evil.bin"]                # Image -> sw (software/file)
+    assert ind["reg"] == ["HKLM/Run/x"]                  # TargetObject -> reg
+    assert ind["network"] == ["10.0.0.9"]                # DestinationIp -> network
+    assert ind["evt"] == ["evilsvc"]                     # ServiceName (other) -> evt
+    assert out == [{"ok": 1}]
+
+
+def test_generate_from_telemetry_empty_when_no_values(monkeypatch):
+    monkeypatch.setattr(bq, "_queries_from_indicators", lambda *a, **k: [{"should": "not reach"}])
+    assert bq.generate_from_telemetry({}) == []
+    assert bq.generate_from_telemetry({"e": {"CommandLine": ["ab"]}}) == []   # <3 chars dropped -> empty
+
+
 # ── Lab-host designation gate ────────────────────────────────────────────────────────────────────
 from shikari.lab import designation
 from shikari.lab.runner import LabError
