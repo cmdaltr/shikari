@@ -12,7 +12,7 @@ import time
 from collections import deque
 from typing import Dict, Optional
 
-from fastapi import APIRouter, Cookie, Request
+from fastapi import APIRouter, Cookie, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 
 from shikari.auth import get_user_from_session_id
@@ -734,3 +734,97 @@ def caldera_check(name: str, shikari_session: Optional[str] = Cookie(None)):
         return JSONResponse({"error": "No such operation collected here"}, status_code=404)
     return {**caldera.check_operation(manifest, GENERATE_DIR),
             "correlations": caldera.check_correlations(manifest, GENERATE_DIR)}
+
+
+@router.websocket("/console")
+async def console_ws(websocket: WebSocket):
+    """An interactive shell on a lab machine, bridged over the WebSocket (#28).
+
+    Gated exactly like every other lab action: an operational analyst (or admin) who owns the machine.
+    engine and name come as query params; a `{"type":"resize","rows","cols"}` text frame resizes the PTY,
+    any other frame is keystrokes. Output is sent as binary frames.
+    """
+    import asyncio
+    import json
+
+    from shikari.lab.console import ConsoleSession, console_argv, valid_name
+    from shikari.lab.engines import engine_for
+
+    engine = websocket.query_params.get("engine", "")
+    name = websocket.query_params.get("name", "")
+    user = _user(websocket.cookies.get("shikari_session"))
+    if not user or not _can_lab(user):
+        await websocket.close(code=4401)
+        return
+    if engine not in ("docker", "tart", "utm") or not valid_name(name) or not _owns(user, engine, name):
+        await websocket.close(code=4403)
+        return
+
+    windows = "win" in name.lower()
+    try:
+        windows = windows or engine_for(engine).status(name).get("os") == "windows"
+    except Exception:  # noqa: BLE001 — status is best-effort; the name heuristic still stands
+        pass
+
+    await websocket.accept()
+    try:
+        sess = ConsoleSession(console_argv(engine, name, windows))
+    except Exception as e:  # noqa: BLE001 — surface the reason, then close
+        await websocket.send_text(f"\r\n[console failed: {e}]\r\n")
+        await websocket.close()
+        return
+
+    loop = asyncio.get_event_loop()
+    outq: "asyncio.Queue" = asyncio.Queue()
+
+    def on_readable():
+        data = sess.read()
+        if data:
+            outq.put_nowait(data)
+        elif not sess.alive():
+            outq.put_nowait(None)  # the shell exited
+
+    async def sender():
+        while True:
+            data = await outq.get()
+            if data is None:
+                break
+            await websocket.send_bytes(data)
+        try:
+            await websocket.close()
+        except Exception:  # noqa: BLE001
+            pass
+
+    loop.add_reader(sess.fd, on_readable)
+    send_task = asyncio.ensure_future(sender())
+    try:
+        while True:
+            msg = await websocket.receive()
+            if msg.get("type") == "websocket.disconnect":
+                break
+            if msg.get("bytes") is not None:
+                sess.write(msg["bytes"])
+            elif msg.get("text"):
+                text = msg["text"]
+                if text.startswith("{"):
+                    try:
+                        obj = json.loads(text)
+                        if obj.get("type") == "resize":
+                            sess.resize(obj.get("rows", 24), obj.get("cols", 80))
+                            continue
+                    except ValueError:
+                        pass
+                sess.write(text.encode())
+    except WebSocketDisconnect:
+        pass
+    finally:
+        try:
+            loop.remove_reader(sess.fd)
+        except Exception:  # noqa: BLE001
+            pass
+        sess.close()
+        outq.put_nowait(None)
+        try:
+            await send_task
+        except Exception:  # noqa: BLE001
+            pass

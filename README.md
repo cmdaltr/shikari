@@ -88,6 +88,7 @@ Shikari closes the loop between red and blue: it runs a real adversary and then 
 - **Static detection and correlation checks** - saved detections and correlations are checked against what ran — per technique (matched / missed / no detection) and per correlation (every part on one host, inside its window) — with no AI and no SIEM.
 - **Provision agents in Shikari** - an agent-topology diagram, and **+ Add agent** to provision a disposable VM or container (Ubuntu on Tart or Docker, Rocky Linux on Docker, macOS on Tart, Windows on UTM) and enrol it, or enrol one you already manage — the machine pulls the architecture-correct sandcat itself. Names follow a convention (`shi-` always, a `cal-` marker for CALDERA machines, then an OS+version tag: `shi-cal-ubu24`, `shi-cal-rky10`, `shi-cal-mac15`, `shi-win11`), and every view shows which machines are enrolled.
 - **Wherever you work** - run, check and provision from the web UI, the desktop app, the `shikari-cli caldera` command, or the `lab/caldera` console module — one shared backend, so they can't drift.
+- **In-browser consoles** - open an interactive shell on a running lab machine from the browser (Emulate → Lab → **Console**), gated to the machine's owner — no SSH client or jump box. Text consoles today (Docker fully interactive); a graphical Windows console (noVNC) is planned ([#28](https://github.com/cmdaltr/shikari/issues/28), [design](docs/implementation-plans/28-vm-consoles.md)).
 
 ### Additional Features
 

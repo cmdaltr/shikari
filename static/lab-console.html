@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shikari — lab console</title>
+<link rel="stylesheet" href="/static/vendor/xterm/xterm.css">
+<style>
+  :root{ --navy:#0D1B2A; --teal:#00D4AA; --amber:#F59E0B; --red:#EF4444;
+         --mono:'JetBrains Mono','SFMono-Regular',ui-monospace,'Courier New',monospace; }
+  html,body{margin:0;height:100%;background:var(--navy);color:#cfe;font-family:var(--mono)}
+  #bar{display:flex;align-items:center;gap:12px;padding:8px 14px;font-size:12px;
+       border-bottom:1px solid rgba(0,212,170,.3);background:#0a1620}
+  #bar .name{color:var(--teal);font-weight:700}
+  #bar .state{margin-left:auto;padding:2px 8px;border-radius:3px;font-size:11px}
+  .s-conn{color:var(--amber);border:1px solid rgba(245,158,11,.5)}
+  .s-open{color:var(--teal);border:1px solid rgba(0,212,170,.5)}
+  .s-shut{color:var(--red);border:1px solid rgba(239,68,68,.5)}
+  #term{position:absolute;top:39px;left:0;right:0;bottom:0;padding:6px 8px}
+</style>
+</head>
+<body>
+<div id="bar">
+  <span>Shikari lab console</span>
+  <span class="name" id="who">—</span>
+  <span class="state s-conn" id="state">connecting…</span>
+</div>
+<div id="term"></div>
+<script src="/static/vendor/xterm/xterm.js"></script>
+<script src="/static/vendor/xterm/xterm-addon-fit.js"></script>
+<script>
+(function(){
+  var q = new URLSearchParams(location.search);
+  var engine = q.get('engine') || '', name = q.get('name') || '';
+  document.getElementById('who').textContent = name ? (engine + ' · ' + name) : '(no machine)';
+  document.title = 'Shikari console — ' + (name || '');
+
+  var stateEl = document.getElementById('state');
+  function setState(cls, text){ stateEl.className = 'state ' + cls; stateEl.textContent = text; }
+
+  var term = new Terminal({ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 13,
+                            cursorBlink: true, theme: { background: '#0D1B2A', foreground: '#cfe' } });
+  var fit = new FitAddon.FitAddon();
+  term.loadAddon(fit);
+  term.open(document.getElementById('term'));
+  fit.fit();
+
+  if (!engine || !name){ term.write('\r\nNo engine/name in the URL. Open as ?engine=docker&name=<machine>\r\n'); setState('s-shut','no machine'); return; }
+
+  var proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  var ws = new WebSocket(proto + '://' + location.host + '/api/lab/console?engine=' +
+                         encodeURIComponent(engine) + '&name=' + encodeURIComponent(name));
+  ws.binaryType = 'arraybuffer';
+
+  function sendResize(){
+    fit.fit();
+    if (ws.readyState === 1) ws.send(JSON.stringify({ type:'resize', rows: term.rows, cols: term.cols }));
+  }
+
+  ws.onopen = function(){ setState('s-open','connected'); term.focus(); sendResize(); };
+  ws.onmessage = function(ev){
+    if (typeof ev.data === 'string') term.write(ev.data);
+    else term.write(new Uint8Array(ev.data));
+  };
+  ws.onclose = function(ev){
+    setState('s-shut', 'closed' + (ev.code === 4403 ? ' (not your machine)' : ev.code === 4401 ? ' (please log in)' : ''));
+    term.write('\r\n\x1b[2m[session closed]\x1b[0m\r\n');
+  };
+  ws.onerror = function(){ setState('s-shut','error'); };
+
+  term.onData(function(d){ if (ws.readyState === 1) ws.send(d); });
+  window.addEventListener('resize', sendResize);
+})();
+</script>
+</body>
+</html>
