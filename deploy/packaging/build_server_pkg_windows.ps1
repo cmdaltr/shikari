@@ -75,6 +75,17 @@ try {
     Copy-Item (Join-Path $PSScriptRoot 'windows\uninstall.ps1') $stage
     Copy-Item (Join-Path $repo 'deploy\linux\shikari.env.example') (Join-Path $stage 'shikari.env.example')
 
+    # Ship the ATT&CK STIX bundle so the service starts without network on first boot (install.ps1 seeds
+    # it into SHIKARI_HOME). Non-fatal: a build host with no egress still produces a usable bundle.
+    try {
+        Write-Host "Fetching the ATT&CK STIX bundle (seeds the offline cache)"
+        Invoke-WebRequest -UseBasicParsing `
+            "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json" `
+            -OutFile (Join-Path $stage 'enterprise-attack.json')
+    } catch {
+        Write-Warning "couldn't fetch ATT&CK ($_); the bundle won't seed a cache and the server will need network on first start"
+    }
+
     # --- zip --------------------------------------------------------------------------------------
     $suffix = if ($Arch -eq 'aarch64') { 'arm64' } else { 'x64' }
     $zip = Join-Path (Resolve-Path $Out) "shikari-server_${version}_windows-$suffix.zip"

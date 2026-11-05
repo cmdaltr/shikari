@@ -186,10 +186,17 @@ sudo apt install ./dist/shikari-server_2.0.0-1_amd64.deb      # Debian/Ubuntu
 sudo dnf install ./dist/shikari-server-2.0.0-1.*.rpm          # Rocky/RHEL
 ```
 
-Upgrade by installing the newer package; `/etc/shikari/shikari.env` is a conffile and `/var/lib/shikari`
-is untouched. A full purge (`apt purge shikari-server` / `dnf remove` then manual cleanup) removes the data
-and the user. TLS, firewall and monitoring are exactly as above — the package only changes how the code and
-Python get onto the box.
+Upgrade by installing the newer package; `/etc/shikari/shikari.env` is generated on first install and left
+alone afterwards, and `/var/lib/shikari` is untouched. A full purge (`apt purge shikari-server` / `dnf remove`
+then manual cleanup) removes the data and the user. TLS, firewall and monitoring are exactly as above — the
+package only changes how the code and Python get onto the box.
+
+The package ships the ATT&CK STIX bundle and seeds it into `SHIKARI_HOME` on install, so the server **starts
+without network** on first boot and refreshes when it can reach MITRE. On a host with no egress (air-gapped,
+or SELinux denying the service outbound), the server still starts on the seeded data; the parts that need
+the internet (threat-feed enrichment, periodic ATT&CK refresh, cloud LLM) stay unavailable until egress is
+allowed. Under SELinux enforcing, permit the service's outbound with `setsebool -P nis_enabled 1` (or a
+dedicated policy module) if you want live refresh — startup does not require it.
 
 ### Self-contained Windows bundle (first-class service)
 

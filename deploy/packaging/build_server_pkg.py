@@ -73,6 +73,15 @@ if [ ! -f /etc/shikari/shikari.env ]; then
     cp /usr/share/shikari/shikari.env.example /etc/shikari/shikari.env
     chmod 640 /etc/shikari/shikari.env
 fi
+# Seed the ATT&CK STIX cache so the server starts without network on first boot (it refreshes when
+# online). Without a cache, startup hard-fails offline or where egress is blocked (e.g. SELinux).
+SHIKARI_HOME=$(. /etc/shikari/shikari.env 2>/dev/null; echo "${SHIKARI_HOME:-/var/lib/shikari}")
+CACHE="$SHIKARI_HOME/shikari/data/cache"
+mkdir -p "$CACHE"
+if [ ! -f "$CACHE/enterprise-attack.json" ] && [ -f /usr/share/shikari/enterprise-attack.json ]; then
+    cp /usr/share/shikari/enterprise-attack.json "$CACHE/enterprise-attack.json"
+fi
+chown -R shikari:shikari "$SHIKARI_HOME"
 # SELinux: label the port if enforcing (Rocky/RHEL).
 if command -v getenforce >/dev/null 2>&1 && [ "$(getenforce)" = "Enforcing" ] && command -v semanage >/dev/null 2>&1; then
     PORT=$(. /etc/shikari/shikari.env; echo "${SHIKARI_PORT:-8000}")
@@ -104,6 +113,22 @@ def fetch_python(machine, dest):
         sys.exit(f"{name} doesn't match its pinned SHA-256: refusing to bundle it")
     with tarfile.open(fileobj=io.BytesIO(body), mode="r:gz") as tar:
         tar.extractall(dest, filter="tar")   # archive's top folder is python/
+
+
+ATTACK_URL = ("https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/"
+              "enterprise-attack/enterprise-attack.json")
+
+
+def fetch_attack(dest):
+    """Download the ATT&CK STIX bundle to ship in the package, so the server starts without network on
+    first boot. Non-fatal: a build host with no egress still produces a package (just not offline-ready)."""
+    print("Fetching the ATT&CK STIX bundle (seeds the offline cache)")
+    try:
+        with urllib.request.urlopen(ATTACK_URL, timeout=120) as r:
+            dest.write_bytes(r.read())
+    except Exception as exc:  # noqa: BLE001
+        print(f"  warning: couldn't fetch ATT&CK ({exc}); the package won't seed a cache and the "
+              f"server will need network on first start")
 
 
 def read_project(python):
@@ -144,9 +169,13 @@ def stage_payload(machine, root):
 
     unit_dir = root / "lib/systemd/system"
     unit_dir.mkdir(parents=True)
-    # The packaged unit runs the bundled Python directly; no /opt checkout.
+    # The packaged unit runs the bundled Python directly; no /opt checkout. Working directory is the
+    # writable data home (SHIKARI_HOME), not the read-only code: the app writes several paths relative
+    # to the cwd (data/shikari.db, data/groups, bespoke/…), so cwd must be the one dir the hardened unit
+    # allows writes to. Imports come from the .pth (absolute) and templates/static from paths.ROOT, so
+    # the cwd doesn't affect code loading.
     unit = (HERE.parent / "linux" / "shikari.service").read_text()
-    unit = unit.replace("WorkingDirectory=/opt/shikari", f"WorkingDirectory=/{PREFIX}/app")
+    unit = unit.replace("WorkingDirectory=/opt/shikari", "WorkingDirectory=/var/lib/shikari")
     unit = unit.replace("/opt/shikari/.venv/bin/python",
                         f"/{PREFIX}/python/bin/python3")
     (unit_dir / "shikari.service").write_text(unit)
@@ -154,6 +183,7 @@ def stage_payload(machine, root):
     share = root / "usr/share/shikari"
     share.mkdir(parents=True)
     shutil.copy2(HERE.parent / "linux" / "shikari.env.example", share / "shikari.env.example")
+    fetch_attack(share / "enterprise-attack.json")
     doc = root / "usr/share/doc/shikari-server"
     doc.mkdir(parents=True)
     shutil.copy2(REPO / "LICENSE", doc / "copyright")
@@ -189,7 +219,9 @@ def build_deb(machine, out):
         f"Description: Shikari team server (systemd service)\n"
         f" The central Shikari instance browsers and desktop clients connect to, with its own\n"
         f" bundled Python, run as a systemd service under a dedicated user.\n")
-    (debian / "conffiles").write_text("/etc/shikari/shikari.env\n")
+    # /etc/shikari/shikari.env is NOT a dpkg conffile: it isn't shipped in the package, postinst
+    # generates it on first install (and leaves it alone on upgrade). Listing an unshipped file in
+    # conffiles makes dpkg-deb refuse to build. The rpm side marks it %ghost for the same reason.
     (debian / "postinst").write_text("#!/bin/sh\n" + POSTINST)
     (debian / "prerm").write_text("#!/bin/sh\n" + PRERM)
     # Debian passes "purge" to postrm; only then remove data.
@@ -225,6 +257,10 @@ License:        AGPL-3.0
 URL:            https://github.com/cmdaltr/shikari
 BuildArch:      {arch}
 Requires:       shadow-utils, systemd
+# Everything is bundled (its own CPython + the wheels' private .so files). Stop rpmbuild auto-scanning
+# those ELFs and emitting Requires/Provides the distro can't satisfy (libgfortran, libjpeg, the bundled
+# python3 by its build path, ...). The explicit Requires above are all this package genuinely needs.
+AutoReqProv:    no
 %global __os_install_post %{{nil}}
 %global debug_package %{{nil}}
 

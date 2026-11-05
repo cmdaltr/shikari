@@ -98,9 +98,13 @@ if sys.platform == "win32":
             config = load_env(data / "shikari.env")
 
             env = dict(os.environ)
-            env["SHIKARI_HOME"] = config.get("SHIKARI_HOME", str(data))
+            home = config.get("SHIKARI_HOME", str(data))
+            env["SHIKARI_HOME"] = home
 
-            self._proc = subprocess.Popen(uvicorn_argv(config), cwd=str(app_dir()), env=env)
+            # Run from the data home, not the code: the app writes several paths relative to the cwd
+            # (data\shikari.db, data\groups, bespoke\…), so the cwd must be the writable SHIKARI_HOME.
+            # Imports resolve via the .pth (absolute) and templates/static via paths.ROOT.
+            self._proc = subprocess.Popen(uvicorn_argv(config), cwd=home, env=env)
 
             # Run until SCM asks us to stop, or the child exits on its own (SCM recovery then restarts us).
             while True:

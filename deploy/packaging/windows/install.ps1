@@ -64,6 +64,13 @@ if (-not (Test-Path $envFile)) {
     Write-Host "Wrote $envFile (edit host/port there, then restart the service)"
 }
 
+# Seed the ATT&CK STIX cache so the service starts without network on first boot (it refreshes online).
+$cacheDir = Join-Path $DataDir 'shikari\data\cache'
+New-Item -ItemType Directory -Force -Path $cacheDir | Out-Null
+$cacheFile = Join-Path $cacheDir 'enterprise-attack.json'
+$seed = Join-Path $bundle 'enterprise-attack.json'
+if ((-not (Test-Path $cacheFile)) -and (Test-Path $seed)) { Copy-Item $seed $cacheFile }
+
 # --- register / refresh the service --------------------------------------------------------------
 $svcModule = @('-m', 'shikari.win_service')
 if ($svc) {
