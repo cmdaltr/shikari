@@ -30,16 +30,26 @@ It writes `static/guide/img/*.jpg` and `static/guide/guide.json`, and writes not
 
 ## The Video
 
-`scripts/video/script.yaml` is the narration and what happens on screen, scene by scene, with each scene's YouTube chapter title. `scripts/video/make_video.py` speaks each scene with [Piper](https://github.com/OHF-Voice/piper1-gpl), a neural voice that runs locally, plays the scene's actions in a browser over that time, and joins it all with ffmpeg.
+`scripts/video/script.yaml` is the narration and what happens on screen, scene by scene, with each scene's YouTube chapter title. `scripts/video/make_video.py` speaks each scene (default: [Kokoro](https://github.com/hexgrad/kokoro), a local neural voice), plays the scene's actions in a browser over that time, and joins it all with ffmpeg.
 
 Each scene is its own section: it fades in from black and out to black, so you add a new feature by adding a scene to `script.yaml` (its own `id`, `chapter`, `narration` and `actions`), drop one, or reorder them, and every join stays clean. A scene begins on its own page (`goto: <path>`) so it doesn't depend on the scene before it.
 
 ```bash
-python3.11 -m venv ~/.cache/shikari/piper/venv && ~/.cache/shikari/piper/venv/bin/pip install piper-tts
-mkdir -p ~/.cache/shikari/piper/voices && cd ~/.cache/shikari/piper/voices
-curl -LO https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/cori/high/en_GB-cori-high.onnx
-curl -LO https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/cori/high/en_GB-cori-high.onnx.json
-cd - && .venv/bin/python scripts/video/make_video.py --base http://127.0.0.1:8010 --out ~/Movies/Shikari
+.venv/bin/python scripts/video/make_video.py --base http://127.0.0.1:8010 --out ~/Movies/Shikari
 ```
 
-It writes `shikari-walkthrough.mp4` (1080p), `shikari-walkthrough.srt` (upload it to YouTube as the subtitles) and `youtube.txt` (a description with chapter times). `--only intro hunt` makes a quick draft of some scenes; `--voice` takes any other Piper voice, such as `en_GB-alan-medium`. The `say` list at the top of the script is how the voice pronounces what the subtitles spell (ATT&CK as "Attack", SIEM as "sim").
+It writes `shikari-walkthrough.mp4` (1080p), `shikari-walkthrough.srt` (upload it to YouTube as the subtitles) and `youtube.txt` (a description with chapter times). `--only intro hunt` makes a quick draft of some scenes. The `say` list at the top of the script is how the voice pronounces what the subtitles spell (ATT&CK as "Attack", SIEM as "sim", Shikari as "shih-car-ee").
+
+### Voices
+
+Three `--tts` backends, all behind the same timing and subtitle logic:
+
+- `--tts kokoro` (default) — local, free, no account. `--kokoro-voice` takes any of the 54 Kokoro voice ids; the British ones are `bm_george` (default), `bm_daniel`, `bm_fable`, `bm_lewis`, `bf_emma`, `bf_alice`, `bf_isabella`, `bf_lily`. `--speed` sets the pace.
+- `--tts piper` — local, free. `--piper` and `--voice` point at the Piper binary and an `.onnx` voice from [piper-voices](https://huggingface.co/rhasspy/piper-voices).
+- `--tts google` — Google Cloud Chirp 3: HD, the highest quality but a cloud call: it sends the narration to Google and needs an API key (`GOOGLE_TTS_API_KEY`, or `--google-key`). At ~7k characters a render it stays inside the free monthly tier, with commercial use permitted. `--google-voice` defaults to `en-GB-Chirp3-HD-Charon`; `--speed` maps to the speaking rate. Kokoro stays the committed default so the repo always builds a video with no account.
+
+```bash
+GOOGLE_TTS_API_KEY=... .venv/bin/python scripts/video/make_video.py \
+  --base http://127.0.0.1:8010 --out ~/Movies/Shikari \
+  --tts google --google-voice en-GB-Chirp3-HD-Charon
+```

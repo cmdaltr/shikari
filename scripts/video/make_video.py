@@ -2,24 +2,28 @@
 Make the Shikari walkthrough video from scripts/video/script.yaml: a narrated screen recording with
 subtitles and YouTube chapters.
 
-Each scene's narration is spoken by Piper (a local neural voice: no account, no API, nothing leaves the
-machine), the browser plays the scene's actions across that time, and ffmpeg joins it all up. Run it
-against a throwaway instance with sample data, never a real one:
+Each scene's narration is spoken by a text-to-speech backend (--tts), the browser plays the scene's
+actions across that time, and ffmpeg joins it all up. Run it against a throwaway instance with sample
+data, never a real one:
 
     python scripts/video/make_video.py --base http://127.0.0.1:8010 --out ~/Movies/Shikari
 
-Needs ffmpeg, Playwright's Chromium, and Piper with a voice (--piper, --voice); a voice is an .onnx
-file from https://huggingface.co/rhasspy/piper-voices. Writes shikari-walkthrough.mp4, its .srt and
-youtube.txt (a description with chapters).
+Three backends: kokoro (default, local, free, more natural than piper), piper (local), and google
+(Google Cloud Chirp 3: HD — higher quality but a cloud call needing GOOGLE_TTS_API_KEY; ~7k characters a
+render sits well inside the free monthly tier). Needs ffmpeg and Playwright's Chromium. Writes
+shikari-walkthrough.mp4, its .srt and youtube.txt (a description with chapters).
 """
 import argparse
 import base64
+import json
 import os
 import re
 import subprocess
 import sys
 import tempfile
 import time
+import urllib.error
+import urllib.request
 import wave
 from pathlib import Path
 
@@ -109,6 +113,29 @@ def speak_kokoro(kpython, helper, model, voices, voice, text, out, lang="en-gb",
     subprocess.run(
         [kpython, str(helper), str(model), str(voices), voice, lang, str(speed), str(pause), str(out)],
         input=text.encode(), check=True, capture_output=True)
+    return _wav_seconds(out)
+
+
+def speak_google(text, out, voice, api_key, language="en-GB", speaking_rate=0.9):
+    # Google Cloud Text-to-Speech (Chirp 3: HD). Opt-in and NOT local: the scene text is sent to Google
+    # over the REST API and an API key is required (GOOGLE_TTS_API_KEY, or --google-key). At ~7k
+    # characters a render it stays well inside the free monthly tier. LINEAR16 comes back as a WAV with a
+    # header, so _wav_seconds reads it straight. Chirp 3: HD takes no SSML, so there's no inter-sentence
+    # pause knob — --speed maps to speakingRate for overall pacing instead.
+    body = {
+        "input": {"text": text},
+        "voice": {"languageCode": language, "name": voice},
+        "audioConfig": {"audioEncoding": "LINEAR16", "sampleRateHertz": 24000, "speakingRate": speaking_rate},
+    }
+    req = urllib.request.Request(
+        "https://texttospeech.googleapis.com/v1/text:synthesize?key=" + api_key,
+        data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req) as r:
+            payload = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        raise SystemExit(f"Google TTS request failed ({e.code}): {e.read().decode(errors='replace')}")
+    Path(out).write_bytes(base64.b64decode(payload["audioContent"]))
     return _wav_seconds(out)
 
 
@@ -269,8 +296,9 @@ def main():
                         help="Piper phoneme-width noise; higher = more prosodic variation (default 0.7)")
     parser.add_argument("--noise-scale", type=float, default=0.5,
                         help="Piper generator noise; lower = less breathy/more confident (default 0.5)")
-    parser.add_argument("--tts", choices=["kokoro", "piper"], default="kokoro",
-                        help="text-to-speech backend (default kokoro: more natural, local)")
+    parser.add_argument("--tts", choices=["kokoro", "piper", "google"], default="kokoro",
+                        help="text-to-speech backend (default kokoro: natural, local, free). google uses "
+                             "Google Cloud Chirp 3: HD — higher quality but a cloud call needing an API key")
     kcache = Path.home() / ".cache/shikari/kokoro"
     parser.add_argument("--kokoro-python", default=str(kcache / "venv/bin/python"))
     parser.add_argument("--kokoro-model", default=str(kcache / "kokoro-v1.0.onnx"))
@@ -279,7 +307,14 @@ def main():
     parser.add_argument("--lang", default="en-gb", help="Kokoro phonemisation language (default en-gb)")
     parser.add_argument("--speed", type=float, default=0.9, help="Kokoro speaking speed (default 0.9: measured but not sluggish)")
     parser.add_argument("--kokoro-pause", type=float, default=0.3, help="silence spliced between sentences, seconds (default 0.3)")
+    parser.add_argument("--google-voice", default="en-GB-Chirp3-HD-Charon",
+                        help="Google Chirp 3: HD voice (default en-GB-Chirp3-HD-Charon, male British)")
+    parser.add_argument("--google-language", default="en-GB", help="Google TTS BCP-47 language code (default en-GB)")
+    parser.add_argument("--google-key", default=os.environ.get("GOOGLE_TTS_API_KEY", ""),
+                        help="Google Cloud API key (defaults to the GOOGLE_TTS_API_KEY env var)")
     args = parser.parse_args()
+    if args.tts == "google" and not args.google_key:
+        parser.error("--tts google needs a key: set GOOGLE_TTS_API_KEY or pass --google-key")
     email = os.environ.get("SHIKARI_GUIDE_EMAIL", "admin@shikari.app")
     password = os.environ.get("SHIKARI_GUIDE_PASSWORD", "BigGameHunter")
 
@@ -300,6 +335,9 @@ def main():
             s["seconds"] = speak_kokoro(args.kokoro_python, kokoro_helper, args.kokoro_model,
                                         args.kokoro_voices, args.kokoro_voice, spoken_text, s["audio"],
                                         lang=args.lang, speed=args.speed, pause=args.kokoro_pause)
+        elif args.tts == "google":
+            s["seconds"] = speak_google(spoken_text, s["audio"], args.google_voice, args.google_key,
+                                        language=args.google_language, speaking_rate=args.speed)
         else:
             s["seconds"] = speak_piper(args.piper, args.voice, spoken_text, s["audio"],
                                        length_scale=args.length_scale, sentence_silence=args.sentence_silence,
@@ -470,7 +508,8 @@ def main():
         "Shikari turns MITRE ATT&CK into detections for Google SecOps, Defender XDR, Splunk and Elastic. "
         "This walkthrough covers every page: what it's for, who uses it, and when it helps most.\n\n"
         "https://github.com/cmdaltr/shikari\n\nChapters\n" + "".join(f"{t} {name}\n" for t, name in chapters) +
-        "\nNarrated with a local text-to-speech voice.\n")
+        ("\nNarrated with Google Chirp 3: HD text-to-speech.\n" if args.tts == "google"
+         else "\nNarrated with a local text-to-speech voice.\n"))
     print(f"Wrote {final} ({length / 60:.1f} min), its .srt and youtube.txt")
     print(f"Per-scene clips: {scenes_dir} ({len(clips)} clips)")
     return 0
