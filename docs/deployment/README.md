@@ -20,6 +20,11 @@ For a single-user machine, `shikari start` or the desktop app is enough — you 
 Both run a single uvicorn worker. Shikari keeps session, lab-job and in-browser-console state
 in-process, so **more than one worker breaks reconnect and job polling** — don't raise it.
 
+The table shows the checkout + `install.sh`/`install-service.ps1` route. Both platforms also have a
+self-contained native package that bundles its own Python and installs a real service — see
+[Native packages](#native-packages-deb--rpm) (Linux) and
+[Self-contained Windows bundle](#self-contained-windows-bundle-first-class-service).
+
 ## Linux (Ubuntu / Debian / Rocky / RHEL 9)
 
 From a Shikari checkout on the server, as root:
@@ -186,9 +191,40 @@ is untouched. A full purge (`apt purge shikari-server` / `dnf remove` then manua
 and the user. TLS, firewall and monitoring are exactly as above — the package only changes how the code and
 Python get onto the box.
 
-## Windows service
+### Self-contained Windows bundle (first-class service)
 
-The NSSM route under [Windows Server](#windows-server-2022) registers a genuine Windows service (SCM-managed,
-auto-start, crash-restart) rather than the Scheduled Task — that is the supported first-class service today.
-A self-contained installer that bundles its own Python and NSSM, mirroring the Linux native package, is the
-remaining packaging nicety.
+`deploy/packaging/build_server_pkg_windows.ps1` is the Windows counterpart of the Linux native package: it
+builds a zip carrying its **own** Python (the same SHA-256-verified standalone CPython) with the server's
+dependencies and pywin32, the app, and an installer. No system Python, no venv, no checkout — and it
+registers a genuine SCM service (`shikari.win_service`), not the Scheduled Task.
+
+Build on Windows (matching the target architecture), then copy the zip to the server:
+
+```powershell
+pwsh -File deploy\packaging\build_server_pkg_windows.ps1 -Arch x86_64   # or aarch64
+```
+
+On the server, unpack and install in an elevated PowerShell:
+
+```powershell
+Expand-Archive shikari-server_2.0.0_windows-x64.zip -DestinationPath C:\Temp\shikari
+cd C:\Temp\shikari
+.\install.ps1          # -> C:\Program Files\Shikari, data in %ProgramData%\Shikari, service "Shikari"
+```
+
+It lays the code and Python under `C:\Program Files\Shikari`, seeds `%ProgramData%\Shikari\shikari.env`,
+registers the boot-start `Shikari` service with crash-restart recovery, starts it, and waits for `/health`.
+Re-running upgrades in place (data and `shikari.env` untouched); `uninstall.ps1` removes the service and
+files, keeping the data unless you pass `-Purge`. Put a reverse proxy on 443 in front of `127.0.0.1:8000`
+and open the firewall exactly as on Linux.
+
+ARM64 is best-effort: pywin32 ARM64 wheels are newer and may be missing for the bundled interpreter, in
+which case the build stops at the pip step — use the x64 bundle (it runs under emulation) or the NSSM route
+below until that lands.
+
+### Checkout route (system Python)
+
+If you'd rather not bundle Python, `deploy\windows\install-service.ps1` installs from a checkout into a
+venv and registers a boot-start Scheduled Task. For a genuine service from that layout, point
+[NSSM](https://nssm.cc) at the wrapper under `%ProgramData%\Shikari` as shown under
+[Windows Server](#windows-server-2022).

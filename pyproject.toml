@@ -195,6 +195,12 @@ desktop = [
     "truststore>=0.9",
 ]
 
+# Running the team server as a first-class Windows service (shikari.win_service); Windows only.
+# Installed by deploy/packaging/build_server_pkg_windows.ps1 into the bundled interpreter.
+service = [
+    "pywin32==306; sys_platform == 'win32'",
+]
+
 # Data analysis and visualization tools
 analysis = [
     "jupyter>=1.0.0",
