@@ -112,7 +112,12 @@ def fetch_python(machine, dest):
     if hashlib.sha256(body).hexdigest() != sha256:
         sys.exit(f"{name} doesn't match its pinned SHA-256: refusing to bundle it")
     with tarfile.open(fileobj=io.BytesIO(body), mode="r:gz") as tar:
-        tar.extractall(dest, filter="tar")   # archive's top folder is python/
+        # filter="tar" is only on 3.12+ (and 3.x.late backports); Debian 12 ships 3.11.2 without it.
+        # The tarball is SHA-256-pinned above, so extracting without the safety filter is fine here.
+        try:
+            tar.extractall(dest, filter="tar")   # archive's top folder is python/
+        except TypeError:
+            tar.extractall(dest)
 
 
 ATTACK_URL = ("https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/"
