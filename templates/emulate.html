@@ -284,6 +284,15 @@
       </div>
     </div>
   </section>
+
+  <!-- Custom & novel recordings (#27): executions you recorded yourself, including ones with no
+       technique to file under, so they don't appear in the technique-organised views above. -->
+  <section class="ui-card ms-card" id="em-custom" hidden>
+    <h2>Custom &amp; novel recordings</h2>
+    <p class="ms-note">Executions you recorded with <code>scripts/telemetry/record-custom.ps1</code> — a novel or undocumented technique, or a variant no public corpus covers.
+      Novel/unmapped ones have no technique, so they only show here; each still grounds a detection you target at it.</p>
+    <ul class="em-custom-list" id="em-custom-list"></ul>
+  </section>
 </div>
 
 <!-- One dialog, reused: create, snapshot, revert, provision, logs -->

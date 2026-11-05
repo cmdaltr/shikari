@@ -562,3 +562,10 @@ def covered() -> Dict[str, int]:
     for d in load()["datasets"]:
         out.update(t for t in d["techniques"] if t != "T0000")  # Security-Datasets' "no technique"
     return dict(out)
+
+
+def custom_recordings() -> List[Dict]:
+    """Custom-execution recordings (#27), newest first. Includes novel/unmapped ones, which the
+    technique-organised views can't show because they have no technique to file under."""
+    out = [d for d in load()["datasets"] if d.get("custom")]
+    return sorted(out, key=lambda d: (d.get("date") or "", d["id"]), reverse=True)

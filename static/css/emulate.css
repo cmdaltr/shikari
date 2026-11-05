@@ -135,6 +135,16 @@ table.em-rows { table-layout: fixed; width: 100%; }
 .em-tag-logo svg { width: 11px; height: 11px; }
 .ms-pager[hidden] { display: none; }
 
+/* Custom & novel recordings (#27) */
+#em-custom[hidden] { display: none; }
+.em-custom-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.em-custom-row { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.em-custom-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.em-custom-meta { margin-left: auto; font-size: .82em; color: var(--text-secondary); }
+.em-custom-cmd { display: block; margin-top: 6px; font-size: .82em; overflow-x: auto; white-space: pre; }
+.em-custom-notes { margin: 6px 0 0; font-size: .88em; }
+.em-custom-events { margin: 6px 0 0; }
+
 @media (max-width: 1100px) { .em-sources { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .em-sources { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .em-tiles { grid-template-columns: 1fr; } .em-filters-body { padding: 8px 0 12px; } }

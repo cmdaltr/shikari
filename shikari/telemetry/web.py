@@ -124,6 +124,13 @@ def data_sources(collections: str = "", platforms: str = ""):
     return check.by_data_source(_collections(collections), _platforms(platforms))
 
 
+@router.get("/custom")
+def custom_recordings():
+    """Your custom-execution recordings (#27), including novel/unmapped ones that the technique views
+    can't show. Each carries its mapping (or novel), command, notes and event counts."""
+    return {"recordings": ds.custom_recordings()}
+
+
 @router.get("/groups")
 def groups(shikari_session: Optional[str] = Cookie(None)):
     """Groups with a finished run, newest first (data/runs)."""

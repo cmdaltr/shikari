@@ -595,6 +595,28 @@
     data.groupsLoaded = true;
   }
 
+  // Custom & novel recordings (#27): executions recorded with record-custom.ps1. Novel/unmapped ones
+  // have no technique, so they appear only here. Self-contained: hidden unless there are any.
+  async function loadCustom() {
+    let r;
+    try { r = await json('/api/telemetry/custom'); } catch (e) { return; }
+    const list = r.recordings || [];
+    if (!list.length) { $('em-custom').hidden = true; return; }
+    $('em-custom-list').innerHTML = list.map(d => {
+      const badge = d.novel
+        ? '<span class="em-tag is-noisy">novel</span>'
+        : d.techniques.map(t => `<span class="em-tag is-seen">${esc(t)}</span>`).join(' ');
+      const events = Object.entries(d.events || {}).map(([k, n]) => `${esc(k)} ${n}`).join(', ');
+      return `<li class="em-custom-row">
+        <div class="em-custom-head">${badge}<strong>${esc(d.title)}</strong>
+          <span class="em-custom-meta">${esc((d.platform || []).join(', '))}${d.date ? ` · ${esc(d.date)}` : ''}</span></div>
+        ${d.command ? `<code class="em-custom-cmd">${esc(d.command)}</code>` : ''}
+        ${d.notes ? `<p class="em-custom-notes">${esc(d.notes)}</p>` : ''}
+        ${events ? `<p class="ms-note em-custom-events">${esc(events)}</p>` : ''}</li>`;
+    }).join('');
+    $('em-custom').hidden = false;
+  }
+
   // ?technique=T1003.001, ?group=APT29 or ?view=source open the page there
   const params = new URLSearchParams(location.search);
   if (params.get('technique')) { const t = params.get('technique').toUpperCase(); state.sel.technique.add(t); state.open.add(t); multis.technique.label(); }
@@ -605,6 +627,7 @@
   render();
   status();
   reload();
+  loadCustom();
 
   // Reveal/remove the operator-only Update button live when a temporary elevation starts or ends.
   if (signedIn && window.onRoleChange) {

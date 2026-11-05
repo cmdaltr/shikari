@@ -86,6 +86,21 @@ def test_entry_without_technique_or_custom_is_skipped(lab_dir):
     assert _collect(lab_dir) == {}
 
 
+# ── Catalogue surface: custom_recordings() filters and orders ────────────────────────────────────
+from shikari.telemetry import datasets as ds
+
+
+def test_custom_recordings_filters_and_sorts(monkeypatch):
+    monkeypatch.setitem(ds._cache, "summary", {"sources": {}, "datasets": [
+        {"id": "lab:r/custom-1", "source": "lab", "custom": True, "novel": True, "date": "2026-11-01", "techniques": []},
+        {"id": "lab:r/custom-2", "source": "lab", "custom": True, "novel": False, "date": "2026-11-05", "techniques": ["T1053.003"]},
+        {"id": "otrf:x", "source": "otrf", "techniques": ["T1059.001"]},                 # not custom
+        {"id": "lab:r/T1059.001-1", "source": "lab", "techniques": ["T1059.001"]},        # ART lab run, not custom
+    ]})
+    out = ds.custom_recordings()
+    assert [d["id"] for d in out] == ["lab:r/custom-2", "lab:r/custom-1"]   # custom only, newest first
+
+
 # ── Lab-host designation gate ────────────────────────────────────────────────────────────────────
 from shikari.lab import designation
 from shikari.lab.runner import LabError

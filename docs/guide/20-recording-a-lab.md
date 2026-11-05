@@ -158,7 +158,7 @@ sudo pwsh ./record-custom.ps1 -ScriptPath ./variant.sh -Name 'per-second cron' -
 sudo SHIKARI_LAB_HOST=1 pwsh ./record-custom.ps1 -Command 'rundll32 .\payload.dll,Start' -Name 'novel dll persistence' -MappingKind novel
 ```
 
-Each execution lands in `shikari-lab/<run>/custom-<n>/`; call it again with the same `-Run` to add more to one run. The manifest entry is marked `custom`, carries your mapping (or `novel`), the command and your notes, and round-trips through **Update** like any other recording. A novel/unmapped recording has no technique to file under, so it won't show in the technique-organised views — it still grounds a detection you target at it directly.
+Each execution lands in `shikari-lab/<run>/custom-<n>/`; call it again with the same `-Run` to add more to one run. The manifest entry is marked `custom`, carries your mapping (or `novel`), the command and your notes, and round-trips through **Update** like any other recording. After Update it appears in the **Custom & novel recordings** panel on the Emulate page — mapped ones also feed the technique views, novel/unmapped ones only the panel, since they have no technique to file under.
 
 ## 7. Into Shikari
 
