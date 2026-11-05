@@ -27,13 +27,13 @@ Layout installed:
 import argparse
 import hashlib
 import io
+import json
 import os
 import platform
 import shutil
 import subprocess
 import sys
 import tarfile
-import tomllib
 import urllib.request
 from pathlib import Path
 
@@ -106,14 +106,27 @@ def fetch_python(machine, dest):
         tar.extractall(dest, filter="tar")   # archive's top folder is python/
 
 
+def read_project(python):
+    """Read version + dependencies from pyproject.toml using the *bundled* interpreter, so the host's
+    Python version doesn't matter (tomllib is 3.11+; the oldest supported build hosts ship 3.9/3.10)."""
+    snippet = ("import tomllib, json, sys;"
+               "d = tomllib.load(open(sys.argv[1], 'rb'))['project'];"
+               "print(json.dumps([d['version'], d['dependencies']]))")
+    out = subprocess.run([str(python), "-c", snippet, str(REPO / "pyproject.toml")],
+                         capture_output=True, text=True, check=True).stdout
+    version, deps = json.loads(out)
+    return version, deps
+
+
 def stage_payload(machine, root):
-    """Fill `root` with the full install tree (everything except the packaging metadata)."""
+    """Fill `root` with the full install tree (everything except the packaging metadata). Returns the
+    project version read via the bundled interpreter."""
     prefix = root / PREFIX
     prefix.mkdir(parents=True)
     fetch_python(machine, prefix)
     python = prefix / "python" / "bin" / "python3"
 
-    deps = tomllib.loads((REPO / "pyproject.toml").read_text())["project"]["dependencies"]
+    version, deps = read_project(python)
     print(f"Installing {len(deps)} dependencies into the bundled Python")
     subprocess.run([str(python), "-m", "pip", "install", "-q", "--no-cache-dir",
                     "--no-warn-script-location", *deps], check=True)
@@ -144,6 +157,7 @@ def stage_payload(machine, root):
     doc = root / "usr/share/doc/shikari-server"
     doc.mkdir(parents=True)
     shutil.copy2(REPO / "LICENSE", doc / "copyright")
+    return version
 
 
 def normalise_modes(root):
@@ -153,11 +167,11 @@ def normalise_modes(root):
         p.chmod(0o755 if p.is_dir() or p.stat().st_mode & 0o111 else 0o644)
 
 
-def build_deb(machine, version, out):
+def build_deb(machine, out):
     arch = PYTHON[machine][2]
     root = out / "deb-root"
     shutil.rmtree(root, ignore_errors=True)
-    stage_payload(machine, root)
+    version = stage_payload(machine, root)
 
     installed_kb = sum(f.stat().st_size for f in root.rglob("*") if f.is_file()) // 1024
     debian = root / "DEBIAN"
@@ -190,11 +204,11 @@ def build_deb(machine, version, out):
     print(f"Built {deb}")
 
 
-def build_rpm(machine, version, out):
+def build_rpm(machine, out):
     arch = PYTHON[machine][3]
     payload = out / "rpm-payload"
     shutil.rmtree(payload, ignore_errors=True)
-    stage_payload(machine, payload)
+    version = stage_payload(machine, payload)
     normalise_modes(payload)
 
     top = out / "rpmbuild"
@@ -256,16 +270,15 @@ def main():
     if sys.platform != "linux" or machine not in PYTHON:
         sys.exit(f"Builds on Linux x86_64 or aarch64, not {sys.platform} {machine}")
     args.out.mkdir(parents=True, exist_ok=True)
-    version = tomllib.loads((REPO / "pyproject.toml").read_text())["project"]["version"]
 
     if args.format == "deb":
         if not shutil.which("dpkg-deb"):
             sys.exit("dpkg-deb not found — run this on Debian/Ubuntu (apt install dpkg-dev).")
-        build_deb(machine, version, args.out)
+        build_deb(machine, args.out)
     else:
         if not shutil.which("rpmbuild"):
             sys.exit("rpmbuild not found — run this on Rocky/RHEL (dnf install rpm-build).")
-        build_rpm(machine, version, args.out)
+        build_rpm(machine, args.out)
 
 
 if __name__ == "__main__":
