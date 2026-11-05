@@ -1,24 +1,24 @@
-"""Tests for the graphical (VNC) console: endpoint validation + per-machine endpoint storage (#28).
+"""Tests for the graphical console: endpoint validation + per-machine endpoint storage (VNC/SPICE) (#28).
 
-Pure/isolated — the WS↔TCP bridge needs a real VNC target and is exercised manually (see
+Pure/isolated — the WS↔TCP bridge needs a real VNC/SPICE target and is exercised manually (see
 docs/implementation-plans/28-vm-consoles.md).
 """
 import pytest
 
-from shikari.lab import vnc
+from shikari.lab import desktop
 
 
 @pytest.mark.parametrize("host,port", [
     ("127.0.0.1", 5900),
     ("localhost", 5901),
-    ("192.168.64.3", 5900),   # private
+    ("192.168.64.3", 5930),   # private (SPICE port)
     ("10.0.0.5", 5900),       # private
     ("169.254.1.2", 5900),    # link-local
     ("::1", 5900),            # loopback v6
     ("127.0.0.1", "5900"),    # string port coerces
 ])
 def test_valid_endpoints_accepted(host, port):
-    assert vnc.valid_endpoint(host, port)
+    assert desktop.valid_endpoint(host, port)
 
 
 @pytest.mark.parametrize("host,port", [
@@ -31,26 +31,30 @@ def test_valid_endpoints_accepted(host, port):
     ("", 5900),               # empty host
 ])
 def test_invalid_endpoints_refused(host, port):
-    assert not vnc.valid_endpoint(host, port)
+    assert not desktop.valid_endpoint(host, port)
 
 
-def test_registry_vnc_round_trip(tmp_path, monkeypatch):
+def test_registry_desktop_round_trip(tmp_path, monkeypatch):
     from shikari.lab import registry
 
     monkeypatch.setattr(registry, "LAB_DIR", str(tmp_path))
     monkeypatch.setattr(registry, "_PATH", str(tmp_path / "machines.json"))
 
-    assert registry.get_vnc("utm", "shi-win11") is None       # nothing configured yet
-    registry.set_vnc("utm", "shi-win11", "127.0.0.1", 5900)
-    assert registry.get_vnc("utm", "shi-win11") == ("127.0.0.1", 5900)
+    assert registry.get_desktop("utm", "shi-win11") is None          # nothing configured yet
+    registry.set_desktop("utm", "shi-win11", "127.0.0.1", 5930, "spice")
+    assert registry.get_desktop("utm", "shi-win11") == ("127.0.0.1", 5930, "spice")
+
+    # Default kind is vnc when not given.
+    registry.set_desktop("utm", "shi-win11", "127.0.0.1", 5900)
+    assert registry.get_desktop("utm", "shi-win11") == ("127.0.0.1", 5900, "vnc")
 
     # Upsert onto an existing Shikari-made record keeps the rest of the entry.
     registry.record("docker", "shi-x", "tmpl", "linux", "img", owner=3)
-    registry.set_vnc("docker", "shi-x", "10.0.0.2", 5901)
+    registry.set_desktop("docker", "shi-x", "10.0.0.2", 5901, "vnc")
     entry = registry.get("docker", "shi-x")
     assert entry["owner"] == 3 and entry["template"] == "tmpl"
-    assert registry.get_vnc("docker", "shi-x") == ("10.0.0.2", 5901)
+    assert registry.get_desktop("docker", "shi-x") == ("10.0.0.2", 5901, "vnc")
 
-    registry.clear_vnc("docker", "shi-x")
-    assert registry.get_vnc("docker", "shi-x") is None
-    assert registry.get("docker", "shi-x")["owner"] == 3       # only the vnc field went
+    registry.clear_desktop("docker", "shi-x")
+    assert registry.get_desktop("docker", "shi-x") is None
+    assert registry.get("docker", "shi-x")["owner"] == 3             # only the desktop field went

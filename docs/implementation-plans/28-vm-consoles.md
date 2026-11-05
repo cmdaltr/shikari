@@ -57,35 +57,39 @@ A session registry (`shikari.lab.console.REGISTRY`) decouples the shell from the
 
 Covered by `tests/unit/test_lab_console.py` (ring trimming, reconnect identity check, expiry rules, reap).
 
-## Graphical Windows / GUI console — path 1 (user-provided VNC endpoint, done)
+## Graphical Windows / GUI console — VNC + SPICE (done)
 
-A text PTY can't drive a Windows desktop; that needs a pixel protocol (VNC via noVNC, or SPICE via
-spice-html5). The snag is **getting an endpoint out of UTM**:
+A text PTY can't drive a Windows desktop; that needs a pixel protocol. Shikari supports both — **VNC**
+(noVNC) and **SPICE** (spice-html5) — chosen per machine. The snag is **getting an endpoint out of UTM**:
 
 - `utmctl` exposes `list/status/start/stop/exec/ip-address/clone/snapshot` — **no display/VNC/port
-  command**. UTM's own viewer uses **SPICE**, not VNC/RFB, so noVNC (which speaks RFB) can't connect to a
-  stock UTM VM, and Shikari has no API to discover a SPICE/VNC port either.
-- So a graphical console can't be *auto-wired* to a UTM VM the way the text console is. The shipped path is
-  **path 1 — a user-provided VNC endpoint**: the machine exposes a VNC/RFB display (a QEMU `-vnc` target, a
-  Tart VM, any VNC server the Shikari host can reach) and its `host:port` is saved as trusted per-machine
-  config; Shikari bridges a WebSocket↔TCP to *that* endpoint and serves noVNC. (Path 2 — bridging UTM's
-  SPICE socket to spice-html5 — matches UTM's default but is more work and stays a follow-up.)
+  command**. UTM's own viewer uses **SPICE** over an internal socket, so neither protocol can be
+  *auto-wired* to a stock UTM VM, and Shikari has no API to discover the port.
+- So the owner stands up the endpoint out-of-band and records it: a QEMU `-vnc` or `-spice port=` display,
+  a Tart VM, or any VNC/SPICE server the Shikari host can reach. Its `host:port` + `kind` (vnc|spice) is
+  saved as trusted per-machine config; Shikari bridges a WebSocket↔TCP to *that* endpoint and serves the
+  matching client. The transport is a raw byte pump, identical for both protocols — only the client lib
+  and the stored kind differ. (SPICE must be **single-port**: spice-html5 opens one WebSocket per channel
+  to the same URL, so all SPICE channels must multiplex over the one port, e.g. QEMU `-spice port=N`.)
 
 ### Pieces (shipped)
 
-- **`shikari/lab/vnc.py`** — `valid_endpoint(host, port)` (pure, tested: port 1-65535 and a
-  loopback/private/link-local host or `localhost`; public addresses refused) and an async
-  `bridge(websocket, host, port)` (WS↔TCP byte pump via `asyncio.open_connection`).
-- **`shikari/lab/registry.py`** — `set_vnc`/`get_vnc`/`clear_vnc` store the endpoint on the machine's
-  entry in `data/lab/machines.json` (upsert; survives re-record). `machines._decorate` surfaces
-  `vnc: bool` so the UI knows whether it's configured.
-- **`WS /api/lab/vnc`** + **`GET`/`POST /api/lab/vnc-endpoint`** (`shikari/lab/web.py`) — same `_can_lab` +
-  `_owns` gate as the text console (4401/4403 before `accept`; 4404 when no endpoint is set). The bridge
-  resolves `host:port` from the registry by engine+name and **ignores any address in the request** — the
-  SSRF guarantee. noVNC's `binary` subprotocol is echoed back so RFB frames pass through.
-- **`static/lab-vnc.html`** + vendored **`static/vendor/novnc/`** (noVNC 1.4.0, MPL-2.0) — a standalone
-  page opened from the machine row ("Desktop", shown when running). If no endpoint is configured it shows
-  a small form to set one (POST), then connects; a trailing `*` on the link flags "not yet configured".
+- **`shikari/lab/desktop.py`** — `valid_endpoint(host, port)` (pure, tested: port 1-65535 and a
+  loopback/private/link-local host or `localhost`; public addresses refused), `KINDS = ("vnc","spice")`,
+  and an async protocol-agnostic `bridge(websocket, host, port)` (WS↔TCP byte pump via
+  `asyncio.open_connection`).
+- **`shikari/lab/registry.py`** — `set_desktop`/`get_desktop`/`clear_desktop` store `{host, port, kind}`
+  on the machine's entry in `data/lab/machines.json` (upsert; survives re-record). `machines._decorate`
+  surfaces `desktop: bool` and `desktop_kind` so the UI knows what's configured.
+- **`WS /api/lab/desktop`** + **`GET`/`POST /api/lab/desktop-endpoint`** (`shikari/lab/web.py`) — same
+  `_can_lab` + `_owns` gate as the text console (4401/4403 before `accept`; 4404 when no endpoint is set).
+  The bridge resolves `host:port` from the registry by engine+name and **ignores any address in the
+  request** — the SSRF guarantee. The accepted subprotocol is echoed back (noVNC asks for `binary`).
+- **`static/lab-desktop.html`** + vendored **`static/vendor/novnc/`** (noVNC 1.4.0, MPL-2.0) and
+  **`static/vendor/spice-html5/`** (spice-html5, LGPL-3.0+) — one standalone page opened from the machine
+  row ("Desktop", shown when running). It reads the endpoint's kind and loads noVNC or spice-html5
+  accordingly. If nothing is configured it shows a form (protocol + host + port; SPICE suggested for UTM),
+  then connects; a trailing `*` on the link flags "not yet configured".
 - **Lab UI** — a Desktop link per running machine in `static/js/lab.js`.
 
 ### Security
@@ -97,14 +101,16 @@ validation, allow-listed engine.
 
 ### Testing
 
-`tests/unit/test_lab_vnc.py` covers `valid_endpoint` (accept/refuse table) and the registry round-trip
-(set/get/clear, upsert preserves the rest of the entry). The live bridge needs a real VNC target: stand
-one up (e.g. `x11vnc`/`Xvnc` on the host, or a QEMU `-vnc 127.0.0.1:0` VM), set it via the Desktop panel,
-and confirm the desktop renders. Do live VM/VNC work inside `sbx`.
+`tests/unit/test_lab_desktop.py` covers `valid_endpoint` (accept/refuse table) and the registry round-trip
+(set/get/clear with kind, upsert preserves the rest of the entry). The live bridge needs a real target:
+stand one up (VNC: `x11vnc`/`Xvnc` or a QEMU `-vnc 127.0.0.1:0` VM; SPICE: QEMU `-spice port=5930,addr=127.0.0.1,disable-ticketing=on`),
+set it via the Desktop panel, and confirm the desktop renders. Do live VM work inside `sbx`.
 
 ## Other follow-ups
 
 - **Read-only / audited sessions** for shared review.
+- **Auto-discovering a UTM SPICE port** — UTM keeps SPICE on an internal socket with no `utmctl` way to
+  surface it; if a future UTM/utmctl exposes one, the manual endpoint step could be skipped for UTM VMs.
 
 ## Testing
 

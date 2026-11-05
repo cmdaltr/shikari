@@ -11,17 +11,18 @@
   #bar{display:flex;align-items:center;gap:12px;padding:8px 14px;font-size:12px;
        border-bottom:1px solid rgba(0,212,170,.3);background:#0a1620}
   #bar .name{color:var(--teal);font-weight:700}
+  #bar .kind{padding:1px 7px;border-radius:3px;font-size:10px;border:1px solid rgba(0,212,170,.4);color:var(--teal)}
   #bar .state{margin-left:auto;padding:2px 8px;border-radius:3px;font-size:11px}
   .s-conn{color:var(--amber);border:1px solid rgba(245,158,11,.5)}
   .s-open{color:var(--teal);border:1px solid rgba(0,212,170,.5)}
   .s-shut{color:var(--red);border:1px solid rgba(239,68,68,.5)}
-  #screen{position:absolute;top:39px;left:0;right:0;bottom:0;background:#000}
-  #panel{max-width:520px;margin:48px auto;padding:22px 26px;border:1px solid rgba(0,212,170,.3);
+  #screen{position:absolute;top:39px;left:0;right:0;bottom:0;background:#000;overflow:auto}
+  #panel{max-width:540px;margin:48px auto;padding:22px 26px;border:1px solid rgba(0,212,170,.3);
           border-radius:6px;background:#0a1620}
   #panel h2{margin:0 0 6px;color:var(--teal);font-size:15px}
   #panel p{font-size:12px;line-height:1.6;color:#9fb6c4}
   #panel label{display:block;margin:12px 0 4px;font-size:12px;color:#cfe}
-  #panel input{width:100%;box-sizing:border-box;padding:7px 9px;background:var(--navy);color:#cfe;
+  #panel input,#panel select{width:100%;box-sizing:border-box;padding:7px 9px;background:var(--navy);color:#cfe;
                 border:1px solid rgba(0,212,170,.3);border-radius:4px;font-family:var(--mono)}
   #panel button{margin-top:14px;padding:8px 16px;background:var(--teal);color:var(--navy);border:0;
                  border-radius:4px;font-family:var(--mono);font-weight:700;cursor:pointer}
@@ -33,6 +34,7 @@
 <div id="bar">
   <span>Shikari lab desktop</span>
   <span class="name" id="who">—</span>
+  <span class="kind" id="kind" hidden></span>
   <span class="state s-conn" id="state">loading…</span>
 </div>
 <div id="screen"></div>
@@ -40,14 +42,19 @@
 <template id="setup-tpl">
   <div id="panel">
     <h2>No graphical endpoint configured</h2>
-    <p>A graphical console bridges to a VNC (RFB) display the machine exposes — a QEMU <code>-vnc</code>
-       target, a Tart VM, or any VNC server reachable from the Shikari host. UTM's own display is SPICE,
-       not VNC, so point this at a VNC endpoint you've stood up. The address is saved as trusted
-       per-machine config and must be loopback or private (never the public internet).</p>
+    <p>A graphical console bridges to a display the machine exposes — a QEMU <code>-vnc</code> or
+       <code>-spice port=</code> target, a Tart VM, or any VNC/SPICE server reachable from the Shikari
+       host. UTM's own display is SPICE; stand up a single-port SPICE (or a VNC) endpoint and give it
+       here. The address is saved as trusted per-machine config and must be loopback or private.</p>
+    <label for="kindsel">Protocol</label>
+    <select id="kindsel">
+      <option value="vnc">VNC (noVNC)</option>
+      <option value="spice">SPICE (spice-html5)</option>
+    </select>
     <label for="host">Host</label>
     <input id="host" placeholder="127.0.0.1" value="127.0.0.1">
     <label for="port">Port</label>
-    <input id="port" placeholder="5900" value="5900">
+    <input id="port" placeholder="5900">
     <div class="err" id="err"></div>
     <button id="save">Save &amp; connect</button>
   </div>
@@ -57,52 +64,72 @@
   const q = new URLSearchParams(location.search);
   const engine = q.get('engine') || '', name = q.get('name') || '';
   const whoEl = document.getElementById('who'), stateEl = document.getElementById('state');
-  const screen = document.getElementById('screen');
+  const kindEl = document.getElementById('kind'), screen = document.getElementById('screen');
   whoEl.textContent = name ? (engine + ' · ' + name) : '(no machine)';
   document.title = 'Shikari desktop — ' + (name || '');
   const setState = (cls, text) => { stateEl.className = 'state ' + cls; stateEl.textContent = text; };
+  const wsBase = (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host +
+                 '/api/lab/desktop?engine=' + encodeURIComponent(engine) + '&name=' + encodeURIComponent(name);
 
-  if (!engine || !name) { setState('s-shut', 'no machine'); screen.innerHTML = ''; throw new Error('no machine'); }
+  if (!engine || !name) { setState('s-shut', 'no machine'); throw new Error('no machine'); }
 
-  const api = '/api/lab/vnc-endpoint?engine=' + encodeURIComponent(engine) + '&name=' + encodeURIComponent(name);
+  const api = '/api/lab/desktop-endpoint?engine=' + encodeURIComponent(engine) + '&name=' + encodeURIComponent(name);
 
   function showSetup(msg) {
     setState('s-shut', 'not configured');
     screen.style.position = 'static';
     screen.appendChild(document.getElementById('setup-tpl').content.cloneNode(true));
     const err = document.getElementById('err');
+    const kindsel = document.getElementById('kindsel'), port = document.getElementById('port');
+    // UTM is SPICE-native, so suggest SPICE for it; default ports follow the protocol.
+    kindsel.value = engine === 'utm' ? 'spice' : 'vnc';
+    const setPort = () => { port.value = kindsel.value === 'spice' ? '5930' : '5900'; };
+    setPort(); kindsel.addEventListener('change', setPort);
     if (msg) err.textContent = msg;
     document.getElementById('save').addEventListener('click', async () => {
       err.textContent = '';
-      const host = document.getElementById('host').value.trim();
-      const port = document.getElementById('port').value.trim();
-      const r = await fetch('/api/lab/vnc-endpoint', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ engine, name, host, port: Number(port) }) });
+      const body = { engine, name, kind: kindsel.value, host: document.getElementById('host').value.trim(),
+                     port: Number(port.value.trim()) };
+      const r = await fetch('/api/lab/desktop-endpoint', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(body) });
       if (r.ok) { location.reload(); }
       else { const b = await r.json().catch(() => ({})); err.textContent = b.error || 'Could not save endpoint'; }
     });
   }
 
-  async function connect() {
+  async function connectVNC() {
     setState('s-conn', 'connecting…');
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const url = proto + '://' + location.host + '/api/lab/vnc?engine=' +
-                encodeURIComponent(engine) + '&name=' + encodeURIComponent(name);
     const RFB = (await import('/static/vendor/novnc/core/rfb.js')).default;
-    const rfb = new RFB(screen, url, {});
+    const rfb = new RFB(screen, wsBase, {});
     rfb.scaleViewport = true;
     rfb.addEventListener('connect', () => setState('s-open', 'connected'));
-    rfb.addEventListener('disconnect', (e) => {
-      setState('s-shut', e.detail && e.detail.clean ? 'disconnected' : 'connection lost');
-    });
+    rfb.addEventListener('disconnect', e => setState('s-shut', e.detail && e.detail.clean ? 'disconnected' : 'connection lost'));
     rfb.addEventListener('securityfailure', () => setState('s-shut', 'auth failed'));
+  }
+
+  async function connectSPICE() {
+    setState('s-conn', 'connecting…');
+    const { SpiceMainConn } = await import('/static/vendor/spice-html5/main.js');
+    screen.id = 'screen';  // spice-html5 attaches its canvases to this element by id
+    try {
+      const sc = new SpiceMainConn({
+        uri: wsBase, screen_id: 'screen',
+        onsuccess: () => setState('s-open', 'connected'),
+        onerror: e => setState('s-shut', (e && e.message) ? e.message : 'connection lost'),
+      });
+      window.addEventListener('beforeunload', () => { try { sc.stop(); } catch (_) {} });
+    } catch (e) {
+      setState('s-shut', 'spice error');
+    }
   }
 
   (async () => {
     let cfg;
     try { cfg = await (await fetch(api)).json(); }
     catch { setState('s-shut', 'error'); return; }
-    if (cfg && cfg.configured) connect(); else showSetup();
+    if (!cfg || !cfg.configured) { showSetup(); return; }
+    kindEl.textContent = (cfg.kind || 'vnc').toUpperCase(); kindEl.hidden = false;
+    if (cfg.kind === 'spice') connectSPICE(); else connectVNC();
   })();
 </script>
 </body>

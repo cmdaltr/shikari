@@ -167,7 +167,7 @@
       <p class="ms-note">Install, create and manage the containers and VMs an emulation records on, without leaving Shikari.
         Shikari drives Docker and Tart to create Linux and macOS machines, and UTM for Windows (and other OSes QEMU runs) — you build the UTM VM once, then Shikari manages it.
         The machines are disposable — snapshot one before you turn logging on or run atomics, and revert when you're done.
-        A running machine has <strong>Console</strong> (an interactive shell in the browser) and <strong>Desktop</strong> (a graphical VNC console) — the Desktop panel asks for the machine's VNC endpoint the first time, since UTM's own display is SPICE, not VNC.</p>
+        A running machine has <strong>Console</strong> (an interactive shell in the browser) and <strong>Desktop</strong> (a graphical console — VNC or SPICE) — the Desktop panel asks for the machine's endpoint and protocol the first time, since UTM's display can't be auto-discovered.</p>
 
       <div class="lab-host" id="lab-host"></div>
 

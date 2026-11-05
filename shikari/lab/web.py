@@ -860,9 +860,9 @@ async def console_ws(websocket: WebSocket):
             managed.detach()
 
 
-@router.get("/vnc-endpoint")
-def vnc_endpoint_get(engine: str, name: str, shikari_session: Optional[str] = Cookie(None)):
-    """Report whether a machine has a VNC (graphical console) endpoint configured, for the UI (#28)."""
+@router.get("/desktop-endpoint")
+def desktop_endpoint_get(engine: str, name: str, shikari_session: Optional[str] = Cookie(None)):
+    """Report a machine's graphical-console endpoint (VNC or SPICE) for the UI (#28)."""
     from shikari.lab import registry
     from shikari.lab.console import valid_name
 
@@ -871,15 +871,16 @@ def vnc_endpoint_get(engine: str, name: str, shikari_session: Optional[str] = Co
         return JSONResponse({"error": "Please log in"}, status_code=401)
     if engine not in ("docker", "tart", "utm") or not valid_name(name) or not _owns(user, engine, name):
         return _not_yours()
-    ep = registry.get_vnc(engine, name)
-    return {"configured": bool(ep), "host": ep[0] if ep else "", "port": ep[1] if ep else None}
+    ep = registry.get_desktop(engine, name)
+    return {"configured": bool(ep), "host": ep[0] if ep else "", "port": ep[1] if ep else None,
+            "kind": ep[2] if ep else "vnc"}
 
 
-@router.post("/vnc-endpoint")
-async def vnc_endpoint_set(request: Request, shikari_session: Optional[str] = Cookie(None)):
-    """Set (or clear) a machine's trusted VNC endpoint. Owner/admin only; the host must be
-    loopback/private — a lab console never bridges to the public internet (#28)."""
-    from shikari.lab import registry, vnc
+@router.post("/desktop-endpoint")
+async def desktop_endpoint_set(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """Set (or clear) a machine's trusted graphical-console endpoint and kind (vnc|spice). Owner/admin
+    only; the host must be loopback/private — a lab console never bridges to the public internet (#28)."""
+    from shikari.lab import desktop, registry
     from shikari.lab.console import valid_name
 
     user = _user(shikari_session)
@@ -891,27 +892,30 @@ async def vnc_endpoint_set(request: Request, shikari_session: Optional[str] = Co
     if engine not in ("docker", "tart", "utm") or not valid_name(name) or not _owns(user, engine, name):
         return _not_yours()
     if body.get("clear"):
-        registry.clear_vnc(engine, name)
+        registry.clear_desktop(engine, name)
         return {"configured": False}
     host = (body.get("host") or "").strip()
     port = body.get("port")
-    if not vnc.valid_endpoint(host, port):
+    kind = body.get("kind") or "vnc"
+    if kind not in desktop.KINDS:
+        return JSONResponse({"error": "kind must be vnc or spice"}, status_code=400)
+    if not desktop.valid_endpoint(host, port):
         return JSONResponse({"error": "Endpoint must be a loopback/private host and a port 1-65535",
-                             "detail": "e.g. 127.0.0.1:5900 or 192.168.64.3:5900"}, status_code=400)
-    registry.set_vnc(engine, name, host, int(port))
-    return {"configured": True, "host": host, "port": int(port)}
+                             "detail": "e.g. 127.0.0.1:5900 (VNC) or 127.0.0.1:5930 (SPICE)"}, status_code=400)
+    registry.set_desktop(engine, name, host, int(port), kind)
+    return {"configured": True, "host": host, "port": int(port), "kind": kind}
 
 
-@router.websocket("/vnc")
-async def vnc_ws(websocket: WebSocket):
-    """Bridge the browser to a machine's graphical (VNC/RFB) console for noVNC (#28).
+@router.websocket("/desktop")
+async def desktop_ws(websocket: WebSocket):
+    """Bridge the browser to a machine's graphical console — VNC (noVNC) or SPICE (spice-html5) (#28).
 
     Gated like the text console: an operational analyst (or admin) who owns the machine. The target
-    host:port is resolved from trusted per-machine config (registry.get_vnc) by engine+name — never from
-    the request — so a caller can't aim the bridge anywhere (SSRF). noVNC asks for the 'binary'
-    subprotocol; we echo it back so RFB frames pass through untouched.
+    host:port is resolved from trusted per-machine config (registry.get_desktop) by engine+name — never
+    from the request — so a caller can't aim the bridge anywhere (SSRF). The byte pump is protocol-
+    agnostic; noVNC asks for the 'binary' subprotocol, so we echo any requested subprotocol back.
     """
-    from shikari.lab import registry, vnc
+    from shikari.lab import desktop, registry
     from shikari.lab.console import valid_name
 
     engine = websocket.query_params.get("engine", "")
@@ -923,11 +927,12 @@ async def vnc_ws(websocket: WebSocket):
     if engine not in ("docker", "tart", "utm") or not valid_name(name) or not _owns(user, engine, name):
         await websocket.close(code=4403)
         return
-    ep = registry.get_vnc(engine, name)
+    ep = registry.get_desktop(engine, name)
     if not ep:
         await websocket.close(code=4404)  # no graphical endpoint configured for this machine
         return
 
-    sub = "binary" if "binary" in (websocket.scope.get("subprotocols") or []) else None
+    requested = websocket.scope.get("subprotocols") or []
+    sub = requested[0] if requested else None
     await websocket.accept(subprotocol=sub)
-    await vnc.bridge(websocket, ep[0], ep[1])
+    await desktop.bridge(websocket, ep[0], ep[1])

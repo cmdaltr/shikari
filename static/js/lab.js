@@ -160,7 +160,7 @@
         ${m.os && on && !m.enrolled ? act('enrol', 'Enrol in CALDERA') : ''}
         ${act('logs', 'Logs')}
         ${on ? `<a class="ui-pill lab-act" href="/static/lab-console.html?engine=${encodeURIComponent(m.engine)}&name=${encodeURIComponent(m.name)}" target="_blank" rel="noopener" title="Open an interactive console in a new tab">${actIcon('console')}Console</a>` : ''}
-        ${on ? `<a class="ui-pill lab-act" href="/static/lab-vnc.html?engine=${encodeURIComponent(m.engine)}&name=${encodeURIComponent(m.name)}" target="_blank" rel="noopener" title="Open the graphical (VNC) desktop in a new tab${m.vnc ? '' : ' — endpoint not yet configured'}">${actIcon('desktop')}Desktop${m.vnc ? '' : ' *'}</a>` : ''}
+        ${on ? `<a class="ui-pill lab-act" href="/static/lab-desktop.html?engine=${encodeURIComponent(m.engine)}&name=${encodeURIComponent(m.name)}" target="_blank" rel="noopener" title="Open the graphical desktop (VNC or SPICE) in a new tab${m.desktop ? ` — ${m.desktop_kind || 'vnc'}` : ' — endpoint not yet configured'}">${actIcon('desktop')}Desktop${m.desktop ? '' : ' *'}</a>` : ''}
       </div>`;
     }
     // Whether this machine is a live CALDERA agent — the same enrolled/not-enrolled cue the diagram
