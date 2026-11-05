@@ -1,0 +1,2 @@
+index=main sourcetype="shikari:test" process_name=powershell.exe (CommandLine="*-enc*" OR CommandLine="*-EncodedCommand*")
+| stats count by host, user, CommandLine

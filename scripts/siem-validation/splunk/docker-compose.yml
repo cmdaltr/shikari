@@ -1,0 +1,40 @@
+# Local Splunk for validating generated SPL detections and measuring hit counts (#16).
+#
+# Single-node Splunk Enterprise on the free dev licence (personal use). Brings up the web UI, the
+# management/REST API that shikari/query/splunk.py drives, and the HTTP Event Collector that
+# validate.py pushes sample events into. ~2GB image on first pull; first boot takes a minute or two.
+#
+#   SPLUNK_PASSWORD=Shikari!23 docker compose up -d        # from this directory
+#   docker compose down -v                                  # stop and wipe volumes
+#
+# Then, from the repo root:
+#   SPLUNK_HOST=localhost SPLUNK_USERNAME=admin SPLUNK_PASSWORD=Shikari!23 \
+#   SPLUNK_HEC_TOKEN=shikari-hec-token-0000 \
+#     .venv/bin/python scripts/siem-validation/splunk/validate.py --events sample_events.jsonl --spl rule.spl
+
+services:
+  splunk:
+    image: splunk/splunk:latest
+    container_name: shikari-splunk
+    hostname: shikari-splunk
+    environment:
+      SPLUNK_START_ARGS: "--accept-license"
+      SPLUNK_PASSWORD: "${SPLUNK_PASSWORD:-Shikari!23}"
+      # Setting a HEC token makes the image enable the HTTP Event Collector on boot.
+      SPLUNK_HEC_TOKEN: "${SPLUNK_HEC_TOKEN:-shikari-hec-token-0000}"
+    ports:
+      - "8000:8000"   # web UI (https)
+      - "8088:8088"   # HTTP Event Collector
+      - "8089:8089"   # management / REST API (SplunkClient)
+    volumes:
+      - splunk-var:/opt/splunk/var
+      - splunk-etc:/opt/splunk/etc
+    healthcheck:
+      test: ["CMD", "curl", "-skf", "https://localhost:8089/services/server/info"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+
+volumes:
+  splunk-var:
+  splunk-etc:

@@ -1,0 +1,4 @@
+{"_time": "2026-11-05T09:00:00", "host": "WKSTN-01", "user": "alice", "process_name": "powershell.exe", "parent_process_name": "winword.exe", "CommandLine": "powershell.exe -nop -w hidden -enc SQBFAFgA"}
+{"_time": "2026-11-05T09:01:00", "host": "WKSTN-02", "user": "bob", "process_name": "powershell.exe", "parent_process_name": "explorer.exe", "CommandLine": "powershell.exe Get-Process"}
+{"_time": "2026-11-05T09:02:00", "host": "WKSTN-03", "user": "carol", "process_name": "cmd.exe", "parent_process_name": "explorer.exe", "CommandLine": "cmd.exe /c whoami"}
+{"_time": "2026-11-05T09:03:00", "host": "SRV-01", "user": "svc_admin", "process_name": "powershell.exe", "parent_process_name": "services.exe", "CommandLine": "powershell.exe -EncodedCommand dABlAHMAdAA="}
