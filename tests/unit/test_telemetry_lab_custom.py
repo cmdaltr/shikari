@@ -135,6 +135,25 @@ def test_generate_from_telemetry_empty_when_no_values(monkeypatch):
     assert bq.generate_from_telemetry({"e": {"CommandLine": ["ab"]}}) == []   # <3 chars dropped -> empty
 
 
+def test_queries_from_indicators_emits_all_four_siems(monkeypatch):
+    # A self-contained mapping (no dependency on gitignored bespoke files), one cmd indicator with a
+    # source per SIEM, so we assert each builder fires and the priority order holds.
+    monkeypatch.setattr(bq, "load_indicator_mapping", lambda: {"cmd": {
+        "GoogleSecOps": {"WINDOWS_SYSMON": ["target.process.command_line"]},
+        "MDE": {"DeviceProcessEvents": ["ProcessCommandLine"]},
+        "Splunk": {"win_idx": ["command_line"]},
+        "Elastic": {"logs-endpoint.events.process-*": ["process.command_line"]},
+    }})
+    monkeypatch.setattr(bq, "load_mde_schema", lambda: {"DeviceProcessEvents": "| summarize by Timestamp"})
+    out = bq._queries_from_indicators({"cmd": ["whoami /priv"]}, "T1033", "sys owner", "discovery")
+    assert [q["platform"] for q in out] == ["SecOps", "MDE", "Splunk", "Elastic"]   # priority order
+    byp = {q["platform"]: q["query"] for q in out}
+    assert "rule shikari_t1033" in byp["SecOps"] and "re.regex" in byp["SecOps"]
+    assert byp["MDE"].startswith("DeviceProcessEvents") and "contains \"whoami /priv\"" in byp["MDE"]
+    assert byp["Splunk"].startswith('index="win_idx"') and "*whoami /priv*" in byp["Splunk"]
+    assert byp["Elastic"].startswith("FROM logs-endpoint.events.process-*") and 'LIKE "*whoami /priv*"' in byp["Elastic"]
+
+
 # ── Lab-host designation gate ────────────────────────────────────────────────────────────────────
 from shikari.lab import designation
 from shikari.lab.runner import LabError

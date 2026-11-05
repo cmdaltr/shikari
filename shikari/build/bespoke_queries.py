@@ -3,7 +3,8 @@ Mode 2 — Fallback query generation without LLM.
 
 Extracts indicators from MITRESaw evidence data and inserts them into
 SIEM query templates using the bespoke mapping files. Produces structured
-Splunk SPL and MDE KQL queries directly from indicator values.
+queries for all four SIEMs directly from indicator values: Google SecOps
+(YARA-L), Defender XDR (KQL), Splunk (SPL) and Elastic (ES|QL).
 """
 
 import json
@@ -231,6 +232,97 @@ def build_mde_query(
 
 
 # ---------------------------------------------------------------------------
+# Google SecOps (YARA-L) query builder (Mode 2)
+# ---------------------------------------------------------------------------
+
+def _rule_name(technique_id: str) -> str:
+    """A valid YARA-L rule identifier from a technique id (or a generic fallback)."""
+    ident = re.sub(r"[^A-Za-z0-9_]", "_", technique_id or "").strip("_").lower()
+    return f"shikari_{ident}" if ident else "shikari_detection"
+
+
+def build_secops_query(
+    log_type: str,
+    field_values: Dict[str, List[str]],
+    technique_name: str = "",
+    technique_id: str = "",
+) -> str:
+    """Build a Google SecOps YARA-L rule from field-value mappings over UDM fields.
+
+    One event variable ($e), a log_type filter, and the indicator values as case-insensitive
+    substring regexes ORed together — the shape apply_exclusions_to_yaral expects.
+    """
+    if not field_values:
+        return ""
+
+    preds = []
+    for field, values in field_values.items():
+        if not values:
+            continue
+        for v in values[:20]:
+            # re.escape makes the value a literal substring regex (matching bespoke.py's YARA-L
+            # exclusions); drop backticks, which would close the `...` regex literal.
+            pattern = re.escape(v).replace("`", "")
+            preds.append(f"re.regex($e.{field}, `{pattern}`) nocase")
+    if not preds:
+        return ""
+
+    joined = (preds[0] if len(preds) == 1
+              else "(\n      " + " or\n      ".join(preds) + "\n    )")
+    clean_name = (technique_name or technique_id or "custom").replace('"', '\\"')
+    return "\n".join([
+        f"rule {_rule_name(technique_id)} {{",
+        "  meta:",
+        '    author = "Shikari"',
+        f'    technique = "{clean_name}"' + (f'  // {technique_id}' if technique_id else ""),
+        "  events:",
+        f'    $e.metadata.log_type = "{log_type}"',
+        f"    {joined}",
+        "  condition:",
+        "    $e",
+        "}",
+    ])
+
+
+# ---------------------------------------------------------------------------
+# Elastic (ES|QL) query builder (Mode 2)
+# ---------------------------------------------------------------------------
+
+def _escape_esql(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def build_elastic_query(
+    index_pattern: str,
+    field_values: Dict[str, List[str]],
+    technique_name: str = "",
+) -> str:
+    """Build an Elastic ES|QL query from field-value mappings over ECS fields.
+
+    Piped like SPL/KQL: FROM <index> | WHERE (<field LIKE "*value*" OR ...>). A trailing filter, so
+    apply_exclusions_to_esql can append its own `| WHERE` after it.
+    """
+    if not field_values:
+        return ""
+
+    where_parts = []
+    for field, values in field_values.items():
+        if not values:
+            continue
+        ors = " OR ".join(f'{field} LIKE "*{_escape_esql(v)}*"' for v in values[:20])
+        where_parts.append(f"({ors})")
+    if not where_parts:
+        return ""
+
+    lines = [f"FROM {index_pattern}", f"| WHERE {' OR '.join(where_parts)}"]
+    if technique_name:
+        clean_name = technique_name.replace('"', '\\"')
+        lines.append(f'| EVAL technique = "{clean_name}"')
+    lines.append("| LIMIT 100")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Main Mode 2 entry point
 # ---------------------------------------------------------------------------
 
@@ -258,8 +350,8 @@ def generate_fallback_queries(
 
     Returns:
         List of dicts, each with keys:
-        - platform: "Splunk" or "MDE"
-        - data_source: index or table name
+        - platform: "SecOps", "MDE", "Splunk" or "Elastic"
+        - data_source: log type, table, index or index pattern
         - query: the generated query string
         - indicator_type: which evidence type drove this query
         - indicators_used: list of indicator values used
@@ -277,12 +369,19 @@ def _queries_from_indicators(
     technique_name: str,
     tactic: str,
 ) -> List[Dict]:
-    """Build Splunk + MDE queries from an {indicator type → values} mapping, via the bespoke
-    indicator→schema mapping. Shared by the MITRESaw-evidence path and the telemetry-grounded path (#27)."""
+    """Build detection queries for all four SIEMs from an {indicator type → values} mapping, via the
+    bespoke indicator→schema mapping. Shared by the MITRESaw-evidence path and the telemetry-grounded
+    path (#27). Emitted in Shikari's SIEM priority order: SecOps, MDE, Splunk, Elastic."""
     indicator_mapping = load_indicator_mapping()
     mde_schema = load_mde_schema()
 
-    queries = []
+    def _emit(queries, platform, ind_type, ind_values, source, query):
+        if query:
+            queries.append({"platform": platform, "data_source": source, "query": query,
+                            "indicator_type": ind_type, "indicators_used": ind_values[:10],
+                            "technique_id": technique_id, "technique_name": technique_name, "tactic": tactic})
+
+    queries: List[Dict] = []
     for ind_type, ind_values in indicators.items():
         if not ind_values or ind_type not in indicator_mapping:
             continue
@@ -290,21 +389,25 @@ def _queries_from_indicators(
         if not isinstance(mapping, dict):
             continue
 
-        for index_name, fields in (mapping.get("Splunk") or {}).items():
-            field_values = {field: ind_values for field in fields}
-            query = build_splunk_query(index_name, field_values, technique_name, technique_id)
-            if query:
-                queries.append({"platform": "Splunk", "data_source": index_name, "query": query,
-                                "indicator_type": ind_type, "indicators_used": ind_values[:10],
-                                "technique_id": technique_id, "technique_name": technique_name, "tactic": tactic})
+        for log_type, fields in (mapping.get("GoogleSecOps") or {}).items():
+            fv = {field: ind_values for field in fields}
+            _emit(queries, "SecOps", ind_type, ind_values, log_type,
+                  build_secops_query(log_type, fv, technique_name, technique_id))
 
         for table_name, fields in (mapping.get("MDE") or {}).items():
-            field_values = {field: ind_values for field in fields}
-            query = build_mde_query(table_name, field_values, mde_schema, technique_name)
-            if query:
-                queries.append({"platform": "MDE", "data_source": table_name, "query": query,
-                                "indicator_type": ind_type, "indicators_used": ind_values[:10],
-                                "technique_id": technique_id, "technique_name": technique_name, "tactic": tactic})
+            fv = {field: ind_values for field in fields}
+            _emit(queries, "MDE", ind_type, ind_values, table_name,
+                  build_mde_query(table_name, fv, mde_schema, technique_name))
+
+        for index_name, fields in (mapping.get("Splunk") or {}).items():
+            fv = {field: ind_values for field in fields}
+            _emit(queries, "Splunk", ind_type, ind_values, index_name,
+                  build_splunk_query(index_name, fv, technique_name, technique_id))
+
+        for index_pattern, fields in (mapping.get("Elastic") or {}).items():
+            fv = {field: ind_values for field in fields}
+            _emit(queries, "Elastic", ind_type, ind_values, index_pattern,
+                  build_elastic_query(index_pattern, fv, technique_name))
 
     return queries
 
