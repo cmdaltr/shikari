@@ -283,7 +283,7 @@ def _seed_db(manifest, email):
                 user_id=user.id, title=f"{LABEL} {name} ({tid})", detection_type=DetectionType.DETECTION,
                 visibility=VisibilityType.PRIVATE,
                 content=json.dumps({"technique_id": tid, "query": "sample", "platform": "mde"}),
-                platform="mde", tags=json.dumps([LABEL, GROUP]))
+                platform="mde", tags=json.dumps([LABEL, f"Group:{GROUP}"]))
             db.add(lib); db.flush(); lib_ids.append(lib.id)
 
         db.commit()

@@ -9,7 +9,7 @@
    "href": null,
    "image": "/static/guide/img/home-hunt.jpg",
    "width": 1440,
-   "height": 1531,
+   "height": 1495,
    "sections": [
     {
      "title": "Four ways to start",
@@ -18,7 +18,7 @@
      "when": "Choosing the tab is choosing your starting point. Pick the one that matches what you've been handed.",
      "box": [
       87,
-      538,
+      506,
       1252,
       77
      ]
@@ -30,7 +30,7 @@
      "when": "A group is named in a briefing, an incident or a sector advisory and you need coverage for its whole playbook, not one indicator.",
      "box": [
       119,
-      635,
+      603,
       1189,
       84
      ]
@@ -42,7 +42,7 @@
      "when": "A CVE is being exploited before you can patch, or a red-team report or gap analysis gives you a list of techniques.",
      "box": [
       119,
-      708,
+      676,
       1189,
       153
      ]
@@ -54,7 +54,7 @@
      "when": "The defaults suit most hunts. Turn on OSINT Comparison when a group's techniques have few indicators in ATT&CK.",
      "box": [
       119,
-      864,
+      832,
       1189,
       198
      ]
@@ -66,7 +66,7 @@
      "when": "You have a hunch from an alert, an incident or the news, but not yet a group or technique ID.",
      "box": [
       119,
-      1144,
+      1112,
       1189,
       80
      ]
@@ -82,7 +82,7 @@
    "href": null,
    "image": "/static/guide/img/home-analyse.jpg",
    "width": 1440,
-   "height": 1436,
+   "height": 1401,
    "sections": [
     {
      "title": "A report's URL",
@@ -91,7 +91,7 @@
      "when": "A vendor publishes an intrusion write-up relevant to you. Feed cards open here with the URL filled in.",
      "box": [
       119,
-      635,
+      603,
       570,
       205
      ]
@@ -103,7 +103,7 @@
      "when": "The report is a paid or shared PDF, or the site blocks automated fetches.",
      "box": [
       738,
-      635,
+      603,
       570,
       205
      ]
@@ -115,7 +115,7 @@
      "when": "Turn off OSINT Enhancement when you want detections built only from what the report says.",
      "box": [
       119,
-      844,
+      812,
       1189,
       218
      ]
@@ -131,7 +131,7 @@
    "href": null,
    "image": "/static/guide/img/home-profile.jpg",
    "width": 1440,
-   "height": 1436,
+   "height": 1401,
    "sections": [
     {
      "title": "The company's domain",
@@ -140,7 +140,7 @@
      "when": "Onboarding a new client or business unit, or answering \"who is likely to come after us?\".",
      "box": [
       119,
-      635,
+      603,
       1189,
       84
      ]
@@ -152,7 +152,7 @@
      "when": "Profiles look thin. A key adds sources; a toggle switches one off without deleting the key.",
      "box": [
       119,
-      785,
+      753,
       1189,
       277
      ]
@@ -168,7 +168,7 @@
    "href": null,
    "image": "/static/guide/img/home-research.jpg",
    "width": 1440,
-   "height": 1436,
+   "height": 1401,
    "sections": [
     {
      "title": "Keywords",
@@ -177,7 +177,7 @@
      "when": "The question is \"who targets finance in Europe?\" rather than \"detect APT29\".",
      "box": [
       119,
-      635,
+      603,
       1189,
       84
      ]
@@ -189,7 +189,7 @@
      "when": "Your intelligence names groups the keywords don't find.",
      "box": [
       119,
-      708,
+      676,
       1189,
       131
      ]
@@ -201,7 +201,7 @@
      "when": "You have a shortlist of groups and limited time. Shaded rows (used by more than one group) are the best value.",
      "box": [
       119,
-      1065,
+      1033,
       1189,
       74
      ]
@@ -217,7 +217,7 @@
    "href": "/library",
    "image": "/static/guide/img/results.jpg",
    "width": 1440,
-   "height": 2600,
+   "height": 2317,
    "sections": [
     {
      "title": "Threat briefing",
@@ -228,7 +228,7 @@
       86,
       189,
       1252,
-      761
+      363
      ]
     },
     {
@@ -238,9 +238,9 @@
      "when": "Reviewing what to deploy. Copy a query straight into your SIEM to test it.",
      "box": [
       86,
-      1084,
+      579,
       1252,
-      504
+      438
      ]
     },
     {
@@ -250,9 +250,21 @@
      "when": "Single-technique alerts are too noisy. A correlation fires far less often and means more when it does.",
      "box": [
       86,
-      1599,
+      1028,
       1252,
       102
+     ]
+    },
+    {
+     "title": "Cross-vendor playbooks",
+     "what": "Chains that span two or more of your SIEMs, laid out stage by stage with each SIEM's query and the fields to join them on.",
+     "who": "SOC analysts and SOAR engineers.",
+     "when": "Your endpoint and network telemetry live in different SIEMs.",
+     "box": [
+      86,
+      1141,
+      1252,
+      253
      ]
     },
     {
@@ -262,7 +274,7 @@
      "when": "Briefing a team on how an attack unfolds and where you're blind.",
      "box": [
       86,
-      1712,
+      1405,
       1252,
       106
      ]
@@ -274,7 +286,7 @@
      "when": "Every time. Generated queries are a starting point, not production rules.",
      "box": [
       86,
-      1845,
+      1538,
       1252,
       101
      ]
@@ -290,7 +302,7 @@
    "href": null,
    "image": "/static/guide/img/library.jpg",
    "width": 1440,
-   "height": 2304,
+   "height": 2305,
    "sections": [
     {
      "title": "Metrics",
@@ -559,7 +571,7 @@
    "href": null,
    "image": "/static/guide/img/feed.jpg",
    "width": 1440,
-   "height": 2182,
+   "height": 2540,
    "sections": [
     {
      "title": "Filters",
@@ -594,19 +606,7 @@
       86,
       745,
       1252,
-      967
-     ]
-    },
-    {
-     "title": "Sources",
-     "what": "Each source and its last collection. Administrators can add RSS or Atom feeds.",
-     "who": "Administrators.",
-     "when": "A source you rely on isn't there, or one has stopped.",
-     "box": [
-      106,
-      1799,
-      1212,
-      202
+      1290
      ]
     }
    ]

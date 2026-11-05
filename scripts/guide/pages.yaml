@@ -109,7 +109,7 @@ pages:
   - id: results
     menu: Home
     title: Results
-    path: /results?group_name=APT29
+    path: /results?group_name=SampleSpider
     href: /library
     before:
       - {click: '#briefing h2'}
