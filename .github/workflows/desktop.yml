@@ -8,6 +8,11 @@ on:
     tags: ["v*"]
   workflow_dispatch:
     inputs:
+      platforms:
+        description: "Which platforms to build on a manual run (a v* tag always builds all)"
+        type: choice
+        default: linux
+        options: [linux, macos, windows, windows-arm64, all]
       procedures:
         description: "Bundle MITRESaw's procedures CSV (up to ~90 min when ATT&CK changed and it isn't cached)"
         type: boolean
@@ -21,6 +26,43 @@ env:
   BRIEFCASE: "0.4.7"
 
 jobs:
+  setup:
+    # Pick the build/smoke matrix from the manual input; a tag always builds every platform. This keeps
+    # an iteration run from spinning up all six runners (macOS bills at 10x, Windows 2x) when you only
+    # need one. Default is linux-only (1x).
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.m.outputs.build }}
+      smoke: ${{ steps.m.outputs.smoke }}
+    steps:
+      - id: m
+        env:
+          SEL: ${{ github.event_name == 'push' && 'all' || inputs.platforms }}
+        run: |
+          build_all='[
+            {"os":"macos-15","target":"macOS","sign":"--adhoc-sign","suffix":"macos-arm64"},
+            {"os":"macos-15-intel","target":"macOS","sign":"--adhoc-sign","suffix":"macos-x86_64"},
+            {"os":"windows-latest","target":"windows","sign":"--adhoc-sign","suffix":"windows-x64"},
+            {"os":"windows-11-arm","target":"windows","sign":"--adhoc-sign","suffix":"windows-arm64","experimental":true},
+            {"os":"ubuntu-22.04","target":"linux","sign":"","suffix":"linux-amd64"},
+            {"os":"ubuntu-22.04-arm","target":"linux","sign":"","suffix":"linux-arm64"}]'
+          smoke_all='[
+            {"os":"macos-15","suffix":"macos-arm64"},
+            {"os":"windows-latest","suffix":"windows-x64"},
+            {"os":"windows-11-arm","suffix":"windows-arm64","experimental":true},
+            {"os":"ubuntu-24.04","suffix":"linux-amd64"},
+            {"os":"ubuntu-24.04-arm","suffix":"linux-arm64"}]'
+          case "$SEL" in
+            all)           sel="macos-arm64 macos-x86_64 windows-x64 windows-arm64 linux-amd64 linux-arm64" ;;
+            macos)         sel="macos-arm64 macos-x86_64" ;;
+            windows)       sel="windows-x64" ;;
+            windows-arm64) sel="windows-arm64" ;;
+            *)             sel="linux-amd64 linux-arm64" ;;   # linux (and the default)
+          esac
+          keep=$(jq -cn --arg s "$sel" '$s | split(" ")')
+          echo "build=$(jq -c --argjson k "$keep" 'map(select(.suffix as $x | $k|index($x)))' <<<"$build_all")" >> "$GITHUB_OUTPUT"
+          echo "smoke=$(jq -c --argjson k "$keep" 'map(select(.suffix as $x | $k|index($x)))' <<<"$smoke_all")" >> "$GITHUB_OUTPUT"
+
   seed:
     # The reference data every build bundles: the ATT&CK bundle and the procedures CSV built from it
     runs-on: ubuntu-latest
@@ -91,20 +133,14 @@ jobs:
           retention-days: 7
 
   build:
-    needs: seed
+    needs: [setup, seed]
+    # Legs chosen by the setup job. Build on the oldest Ubuntu it supports (the compiled GTK bindings
+    # link against its libraries) and smoke-test on the newest; Briefcase builds for the machine it runs
+    # on, so Windows ARM64 needs its own ARM64 runner.
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { os: macos-15, target: macOS, sign: --adhoc-sign, suffix: macos-arm64 }
-          - { os: macos-15-intel, target: macOS, sign: --adhoc-sign, suffix: macos-x86_64 }
-          - { os: windows-latest, target: windows, sign: --adhoc-sign, suffix: windows-x64 }
-          # Briefcase builds for the machine it runs on, so ARM64 needs an ARM64 runner and Python
-          - { os: windows-11-arm, target: windows, sign: --adhoc-sign, suffix: windows-arm64, experimental: true }
-          # Built on the oldest Ubuntu it supports (the compiled GTK bindings link against its libraries)
-          # and smoke-tested on the newest
-          - { os: ubuntu-22.04, target: linux, sign: "", suffix: linux-amd64 }
-          - { os: ubuntu-22.04-arm, target: linux, sign: "", suffix: linux-arm64 }
+        include: ${{ fromJSON(needs.setup.outputs.build) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     defaults:
@@ -170,18 +206,13 @@ jobs:
   smoke:
     # Install each package on a clean runner and check it serves Shikari in local mode. One platform's
     # failed build shouldn't hide whether the others work; the release still needs every build
-    needs: build
+    needs: [setup, build]
     if: ${{ !cancelled() }}
+    # Experimental legs (Windows ARM64) stay best-effort — pythonnet's .NET Framework loader has no ARM64 build.
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { os: macos-15, suffix: macos-arm64 }
-          - { os: windows-latest, suffix: windows-x64 }
-          # Experimental until the window opens: pythonnet's .NET Framework loader has no ARM64 build
-          - { os: windows-11-arm, suffix: windows-arm64, experimental: true }
-          - { os: ubuntu-24.04, suffix: linux-amd64 }
-          - { os: ubuntu-24.04-arm, suffix: linux-arm64 }
+        include: ${{ fromJSON(needs.setup.outputs.smoke) }}
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.experimental == true }}
     timeout-minutes: 30
