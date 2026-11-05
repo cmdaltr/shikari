@@ -132,7 +132,7 @@ a.nav-auth:hover { background: var(--accent); }
    moves the menus or the bar's height. Transparent, with a faint light edge so the dark
    shikari doesn't vanish into the navy */
 .nav-brand { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: block; line-height: 0; }
-.nav-brand img { height: 41px; width: auto; filter: drop-shadow(0 0 1px rgba(255,255,255,.7)) drop-shadow(0 0 5px rgba(255,255,255,.2)); }
+.nav-brand img { height: 41px; width: auto; filter: drop-shadow(0 0 2px rgba(255,255,255,.95)) drop-shadow(0 0 7px rgba(255,255,255,.6)) drop-shadow(0 0 15px rgba(255,255,255,.35)); }
 /* Brand wordmark swaps with the theme: light art by default, dark art in dark mode */
 .brand-dark { display: none; }
 :root[data-theme="dark"] .brand-light { display: none; }

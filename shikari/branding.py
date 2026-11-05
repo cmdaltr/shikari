@@ -7,8 +7,8 @@ name: they read ``brand.name``, ``brand.banner`` and so on. The edition is still
 from the ``SHIKARI_EDITION`` environment variable, leaving room for a future paid tier;
 for now there is a single edition and anything unset/unknown resolves to it.
 
-Assets: a compact head + wordmark lockup (``banner``, used in the top nav on every page),
-the bateleur flying over the word (``hero``, used on the home page and the auth splashes),
+Assets: a compact perched-eagle + wordmark lockup (``banner``, used in the top nav on every
+page), the perched-eagle lockup card (``hero``, used on the home page and the auth splashes),
 and a hexagon favicon/app-icon set. Each wordmark has a light and a dark variant, swapped
 by theme in the markup.
 """
@@ -43,12 +43,12 @@ _SHIKARI = Brand(
     key="shikari",
     name="Shikari",
     tagline="Automated multi-SIEM detection generation",
-    # Nav banner = compact head + word lockup. Hero = bateleur flying over the word (home + auth).
-    # Light = black letters, gold "A"; dark = gold letters, black "A".
+    # Nav banner = compact perched eagle + two-tone-K word lockup. Hero = the perched-eagle lockup
+    # card (home + auth); profile and screech variants live beside it (shikari-lockup-{profile,screech}).
     banner="images/shikari/shikari-wordmark-light.png",
     banner_dark="images/shikari/shikari-wordmark-dark.png",
-    hero="images/shikari/shikari-hero-light.png",
-    hero_dark="images/shikari/shikari-hero-dark.png",
+    hero="images/shikari/shikari-lockup-perched-light.png",
+    hero_dark="images/shikari/shikari-lockup-perched-dark.png",
     favicon="images/shikari/shikari-favicon.ico",
     icon_32="images/shikari/shikari-favicon-32.png",
     apple_icon="images/shikari/shikari-apple-touch-icon.png",
