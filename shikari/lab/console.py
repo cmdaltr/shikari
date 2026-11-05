@@ -135,6 +135,12 @@ class _Managed:
         self.attached = True
         self.last_activity = time.time()
         self.detached_at: Optional[float] = None
+        # Fan-out: one PTY, several sockets — a read-write owner plus read-only viewers (#28). Each
+        # connection subscribes a queue; one reader per session records to the ring and feeds them all.
+        self.subscribers: set = set()
+        self.exited = False
+        self._loop = None
+        self._fd_registered = False
 
     def record(self, data: bytes) -> None:
         """Append output to the scrollback ring (trimmed to RING_BYTES) and mark activity."""
@@ -142,6 +148,52 @@ class _Managed:
         if len(self.buf) > RING_BYTES:
             del self.buf[:len(self.buf) - RING_BYTES]
         self.last_activity = time.time()
+
+    # ── fan-out: one reader per session, many subscriber queues ────────────────────────────────
+    def subscribe(self, q) -> bytes:
+        """Register a subscriber queue; returns the current scrollback to replay before streaming `q`.
+        Snapshot and registration are synchronous and adjacent, so no output is missed or duplicated."""
+        snapshot = bytes(self.buf)
+        self.subscribers.add(q)
+        return snapshot
+
+    def unsubscribe(self, q) -> None:
+        self.subscribers.discard(q)
+        if not self.subscribers:
+            self.stop_pump()
+
+    def start_pump(self, loop) -> None:
+        """Begin reading the PTY into the ring and out to subscribers (idempotent)."""
+        if not self._fd_registered and self.session.alive():
+            self._loop = loop
+            loop.add_reader(self.session.fd, self._on_readable)
+            self._fd_registered = True
+
+    def stop_pump(self) -> None:
+        if self._fd_registered and self._loop is not None:
+            try:
+                self._loop.remove_reader(self.session.fd)
+            except Exception:  # noqa: BLE001
+                pass
+            self._fd_registered = False
+
+    def _on_readable(self) -> None:
+        data = self.session.read()
+        if data:
+            self.record(data)
+            for q in list(self.subscribers):
+                try:
+                    q.put_nowait(data)
+                except Exception:  # noqa: BLE001 — a slow/closed subscriber mustn't stall the others
+                    pass
+        elif not self.session.alive():
+            self.exited = True
+            for q in list(self.subscribers):
+                try:
+                    q.put_nowait(None)  # sentinel: the shell itself ended
+                except Exception:  # noqa: BLE001
+                    pass
+            self.stop_pump()
 
     def touch(self) -> None:
         self.last_activity = time.time()

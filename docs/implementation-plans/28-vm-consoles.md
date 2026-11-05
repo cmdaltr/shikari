@@ -57,6 +57,20 @@ A session registry (`shikari.lab.console.REGISTRY`) decouples the shell from the
 
 Covered by `tests/unit/test_lab_console.py` (ring trimming, reconnect identity check, expiry rules, reap).
 
+## Read-only / shared sessions (done)
+
+One PTY now fans out to several sockets: a read-write owner plus any number of read-only viewers, for
+shared review. `_Managed` keeps a set of subscriber queues; a single reader per session records to the
+ring and feeds every subscriber (`subscribe`/`unsubscribe`/`start_pump`/`_on_readable`). A viewer connects
+with `view=1` and an existing `sid` (4404 if the session isn't there): it gets the scrollback and live
+output, its keystrokes/resizes are ignored, and leaving never tears the shell down. The owner's console
+page offers a **Copy read-only link** (the same URL with `sid` + `view=1`); the viewer page shows a
+VIEW-ONLY badge and runs xterm with `disableStdin`. Same `_owns`/`_can_lab` gate as the read-write console.
+
+Covered by `test_lab_console.py` (subscribe snapshot, fan-out to every subscriber, exit sentinel, unsubscribe).
+A persistent audit transcript (disk-logging a session for later review, beyond the in-memory ring) is a
+possible follow-up; the fan-out makes it a matter of adding one more "subscriber" that writes to a file.
+
 ## Graphical Windows / GUI console — VNC + SPICE (done)
 
 A text PTY can't drive a Windows desktop; that needs a pixel protocol. Shikari supports both — **VNC**
@@ -108,9 +122,26 @@ set it via the Desktop panel, and confirm the desktop renders. Do live VM work i
 
 ## Other follow-ups
 
-- **Read-only / audited sessions** for shared review.
-- **Auto-discovering a UTM SPICE port** — UTM keeps SPICE on an internal socket with no `utmctl` way to
-  surface it; if a future UTM/utmctl exposes one, the manual endpoint step could be skipped for UTM VMs.
+- **Persistent audit transcript** — disk-log a session for later review (see "Read-only / shared
+  sessions" above); the fan-out reduces this to one more file-writing subscriber.
+
+### Auto-discovering a UTM SPICE port — blocked externally, not by us
+
+A stock UTM VM can't be auto-wired to the graphical console: UTM runs its SPICE display on an internal
+socket and **`utmctl` exposes no command to read a SPICE/VNC host:port** (its verbs are
+`list/status/start/stop/exec/ip-address/clone/snapshot`). There is no read API, so Shikari cannot
+*discover* the endpoint — the block is UTM's, not ours. Today the owner supplies the endpoint once (the
+manual path, already shipped), which fully delivers the console; only the zero-config convenience is missing.
+
+**Can we write our own API?** Partly — by *control* rather than *discovery*. UTM lets a VM carry extra QEMU
+arguments, stored in its `.utm/config.plist`. Shikari could **write** a deterministic SPICE line into that
+config (e.g. `-spice port=<fixed>,addr=127.0.0.1,disable-ticketing=on`, a port derived per machine), then it
+*knows* the endpoint because it set it — effectively our own discovery layer via config injection, no
+`utmctl` read needed. This is feasible but deliberately not built yet because it is fragile: it writes into
+UTM's private bundle format (which can change between UTM versions), the VM must be stopped for the edit to
+take effect, and the bundle lives under UTM's sandboxed container path. So it's a real option for a future
+"auto-configure UTM SPICE" button, with those caveats — not a hard blocker, but more invasive than the
+one-time manual endpoint it would replace. The underlying UTM limitation (no read API) remains theirs.
 
 ## Testing
 

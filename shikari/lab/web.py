@@ -746,6 +746,10 @@ async def console_ws(websocket: WebSocket):
     keystrokes; output is binary. On connect the server sends `{"type":"session","sid":...}`, and
     `{"type":"exit"}` when the shell itself ends (so the client knows not to reconnect). The PTY survives
     a dropped socket for a grace window and is reaped if idle or abandoned (shikari.lab.console.REGISTRY).
+
+    Pass `view=1` with an existing `sid` for a read-only session: the viewer gets the scrollback and live
+    output but its keystrokes/resizes are ignored, and leaving doesn't tear the shell down. One owner can
+    be joined by several viewers for shared review; one PTY reader fans out to them all.
     """
     import asyncio
     import json
@@ -756,6 +760,7 @@ async def console_ws(websocket: WebSocket):
     engine = websocket.query_params.get("engine", "")
     name = websocket.query_params.get("name", "")
     sid = websocket.query_params.get("sid", "") or ""
+    view = websocket.query_params.get("view", "") in ("1", "true", "yes")
     user = _user(websocket.cookies.get("shikari_session"))
     if not user or not _can_lab(user):
         await websocket.close(code=4401)
@@ -765,6 +770,10 @@ async def console_ws(websocket: WebSocket):
         return
 
     managed = REGISTRY.get(sid, user.id, engine, name) if sid else None
+    if view and managed is None:
+        await websocket.close(code=4404)  # nothing to watch — the session must already exist
+        return
+
     await websocket.accept()
     if managed is None:
         windows = "win" in name.lower()
@@ -780,26 +789,19 @@ async def console_ws(websocket: WebSocket):
             return
         sid = REGISTRY.create(user.id, engine, name, session)
         managed = REGISTRY.get(sid, user.id, engine, name)
-    else:
-        managed.attach()
+    elif not view:
+        managed.attach()  # a read-write (re)connect owns input; a viewer doesn't touch liveness
 
     sess = managed.session
-    await websocket.send_text(json.dumps({"type": "session", "sid": sid}))
-    if managed.buf:  # replay scrollback to a reconnecting (or any) client
-        await websocket.send_bytes(bytes(managed.buf))
-
     loop = asyncio.get_event_loop()
     outq: "asyncio.Queue" = asyncio.Queue()
-    state = {"exited": False}
+    # Subscribe (and snapshot the scrollback) synchronously so the live stream can't race the replay.
+    snapshot = managed.subscribe(outq)
+    managed.start_pump(loop)
 
-    def on_readable():
-        data = sess.read()
-        if data:
-            managed.record(data)
-            outq.put_nowait(data)
-        elif not sess.alive():
-            state["exited"] = True
-            outq.put_nowait(None)  # the shell itself ended
+    await websocket.send_text(json.dumps({"type": "session", "sid": sid, "view": view}))
+    if snapshot:
+        await websocket.send_bytes(snapshot)
 
     async def sender():
         while True:
@@ -807,7 +809,7 @@ async def console_ws(websocket: WebSocket):
             if data is None:
                 break
             await websocket.send_bytes(data)
-        if state["exited"]:
+        if managed.exited:
             try:
                 await websocket.send_text(json.dumps({"type": "exit"}))
             except Exception:  # noqa: BLE001
@@ -817,13 +819,14 @@ async def console_ws(websocket: WebSocket):
         except Exception:  # noqa: BLE001
             pass
 
-    loop.add_reader(sess.fd, on_readable)
     send_task = asyncio.ensure_future(sender())
     try:
         while True:
             msg = await websocket.receive()
             if msg.get("type") == "websocket.disconnect":
                 break
+            if view:
+                continue  # read-only: ignore all input from a viewer
             if msg.get("bytes") is not None:
                 sess.write(msg["bytes"])
                 managed.touch()
@@ -843,21 +846,18 @@ async def console_ws(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
     finally:
-        try:
-            loop.remove_reader(sess.fd)
-        except Exception:  # noqa: BLE001
-            pass
+        managed.unsubscribe(outq)  # also stops the PTY reader when the last subscriber leaves
         outq.put_nowait(None)
         try:
             await send_task
         except Exception:  # noqa: BLE001
             pass
-        # Keep the shell for a reconnect if it's still alive; the reaper closes it after the grace
-        # window (or sooner if idle). If it already exited, drop it now.
-        if state["exited"] or not sess.alive():
+        if view:
+            pass  # a viewer leaving never affects the shell
+        elif managed.exited or not sess.alive():
             REGISTRY.drop(sid)
         else:
-            managed.detach()
+            managed.detach()  # keep the shell for a reconnect; the reaper handles the grace window
 
 
 @router.get("/desktop-endpoint")

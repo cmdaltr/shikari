@@ -12,6 +12,9 @@
   #bar{display:flex;align-items:center;gap:12px;padding:8px 14px;font-size:12px;
        border-bottom:1px solid rgba(0,212,170,.3);background:#0a1620}
   #bar .name{color:var(--teal);font-weight:700}
+  #bar button{font-family:var(--mono);font-size:11px;background:transparent;color:var(--teal);
+              border:1px solid rgba(0,212,170,.5);border-radius:3px;padding:2px 8px;cursor:pointer}
+  #bar .ro{color:var(--amber);border:1px solid rgba(245,158,11,.5);padding:2px 8px;border-radius:3px;font-size:11px}
   #bar .state{margin-left:auto;padding:2px 8px;border-radius:3px;font-size:11px}
   .s-conn{color:var(--amber);border:1px solid rgba(245,158,11,.5)}
   .s-open{color:var(--teal);border:1px solid rgba(0,212,170,.5)}
@@ -23,6 +26,8 @@
 <div id="bar">
   <span>Shikari lab console</span>
   <span class="name" id="who">—</span>
+  <span class="ro" id="ro" hidden>VIEW-ONLY</span>
+  <button id="share" hidden title="Copy a read-only link others can watch this session with">Copy read-only link</button>
   <span class="state s-conn" id="state">connecting…</span>
 </div>
 <div id="term"></div>
@@ -32,14 +37,17 @@
 (function(){
   var q = new URLSearchParams(location.search);
   var engine = q.get('engine') || '', name = q.get('name') || '', sid = q.get('sid') || '';
+  var view = ['1','true','yes'].indexOf(q.get('view') || '') !== -1;   // read-only viewer
   document.getElementById('who').textContent = name ? (engine + ' · ' + name) : '(no machine)';
-  document.title = 'Shikari console — ' + (name || '');
+  document.title = (view ? 'Shikari console (view) — ' : 'Shikari console — ') + (name || '');
+  if (view) document.getElementById('ro').hidden = false;
 
   var stateEl = document.getElementById('state');
   function setState(cls, text){ stateEl.className = 'state ' + cls; stateEl.textContent = text; }
 
   var term = new Terminal({ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 13,
-                            cursorBlink: true, theme: { background: '#0D1B2A', foreground: '#cfe' } });
+                            disableStdin: view, cursorBlink: !view,
+                            theme: { background: '#0D1B2A', foreground: '#cfe' } });
   var fit = new FitAddon.FitAddon();
   term.loadAddon(fit);
   term.open(document.getElementById('term'));
@@ -54,12 +62,27 @@
     var u = proto + '://' + location.host + '/api/lab/console?engine=' +
             encodeURIComponent(engine) + '&name=' + encodeURIComponent(name);
     if (sid) u += '&sid=' + encodeURIComponent(sid);
+    if (view) u += '&view=1';
     return u;
   }
 
   function sendResize(){
     fit.fit();
+    if (view) return;   // a viewer never resizes the shared PTY
     if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type:'resize', rows: term.rows, cols: term.cols }));
+  }
+
+  // Once we have a session id (read-write owner only), offer a read-only link to share.
+  function offerShare(){
+    if (view || !sid) return;
+    var btn = document.getElementById('share');
+    btn.hidden = false;
+    btn.onclick = function(){
+      var nu = new URL(location); nu.searchParams.set('sid', sid); nu.searchParams.set('view', '1');
+      navigator.clipboard.writeText(nu.toString()).then(function(){
+        var t = btn.textContent; btn.textContent = 'Copied'; setTimeout(function(){ btn.textContent = t; }, 1500);
+      }, function(){ prompt('Read-only link:', nu.toString()); });
+    };
   }
 
   function connect(){
@@ -75,6 +98,7 @@
         if (m && m.type === 'session'){                 // remember the id so a reconnect reattaches
           sid = m.sid;
           var nu = new URL(location); nu.searchParams.set('sid', sid); history.replaceState(null, '', nu);
+          offerShare();
           return;
         }
         if (m && m.type === 'exit'){ ended = true; return; }   // the shell itself closed
@@ -95,7 +119,7 @@
     ws.onerror = function(){ /* onclose handles the retry */ };
   }
 
-  term.onData(function(d){ if (ws && ws.readyState === 1) ws.send(d); });
+  term.onData(function(d){ if (!view && ws && ws.readyState === 1) ws.send(d); });
   window.addEventListener('resize', sendResize);
   connect();
 })();

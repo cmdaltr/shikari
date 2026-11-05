@@ -118,3 +118,61 @@ def test_drop_closes_session():
     reg.drop(sid)
     assert s.closed
     assert reg.count() == 0
+
+
+# ── Read-only / shared sessions: fan-out to many subscribers (#28) ───────────────────────────────
+class ScriptedSession(FakeSession):
+    """A FakeSession whose read() replays a script, then EOFs once not alive."""
+    def __init__(self, chunks):
+        super().__init__()
+        self._chunks = list(chunks)
+
+    def read(self, size=65536):
+        if self._chunks:
+            return self._chunks.pop(0)
+        self._alive = False
+        return b""
+
+
+class FakeQueue:
+    def __init__(self):
+        self.items = []
+
+    def put_nowait(self, x):
+        self.items.append(x)
+
+
+def test_subscribe_returns_scrollback_and_registers():
+    m = _Managed("s", 1, "docker", "shi-x", FakeSession())
+    m.record(b"history")
+    q = FakeQueue()
+    snapshot = m.subscribe(q)
+    assert snapshot == b"history"            # replay what's already there
+    assert q in m.subscribers
+
+
+def test_fanout_feeds_every_subscriber_and_records():
+    m = _Managed("s", 1, "docker", "shi-x", ScriptedSession([b"hello"]))
+    a, b = FakeQueue(), FakeQueue()
+    m.subscribe(a)
+    m.subscribe(b)
+    m._on_readable()                          # one chunk of output
+    assert a.items == [b"hello"] and b.items == [b"hello"]
+    assert bytes(m.buf) == b"hello"           # also appended to the ring for late joiners
+
+
+def test_fanout_sends_exit_sentinel_when_shell_ends():
+    m = _Managed("s", 1, "docker", "shi-x", ScriptedSession([]))   # no output, not alive on read
+    q = FakeQueue()
+    m.subscribe(q)
+    m._on_readable()                          # read() -> b"" and alive() False
+    assert m.exited is True
+    assert q.items == [None]                  # sentinel tells the sender the shell ended
+
+
+def test_unsubscribe_discards():
+    m = _Managed("s", 1, "docker", "shi-x", FakeSession())
+    q = FakeQueue()
+    m.subscribe(q)
+    m.unsubscribe(q)
+    assert q not in m.subscribers             # viewer left; others (none here) unaffected
