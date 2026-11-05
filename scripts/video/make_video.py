@@ -34,9 +34,9 @@ W, H = 1920, 1080
 # feeling cramped or zoomed in. Captured 1:1 as lossless PNG (see Recorder) — JPEG frames put visible
 # grain/mosquito noise around text, PNG does not.
 VIEW, SCALE = {"width": 1920, "height": 1080}, 1.0
-# Each scene fades in from black and out to black, so a scene is a self-contained section: add,
-# remove or reorder scenes in script.yaml and every join stays clean. GAP is the quiet tail after
-# a scene's narration, long enough to hold black between sections; FADE is each dip's length.
+# A scene fades in from black and out to black unless it's marked `continues` in script.yaml, in which
+# case it joins the one before it with no black between — a pause and a scroll down the same page. GAP is
+# the quiet tail after a scene's narration (the pause, held on the page or on black); FADE is each dip.
 TITLE_SECONDS, END_SECONDS, GAP, FADE, FPS = 4.0, 5.0, 1.2, 0.5, 30
 
 # A pulsing outline that follows an element as the page scrolls, over a dimmed page
@@ -112,12 +112,12 @@ def speak_kokoro(kpython, helper, model, voices, voice, text, out, lang="en-gb",
     return _wav_seconds(out)
 
 
-TAGLINE = "Automated Multi-vendor Threat Hunting and Detection Suite"
-CARD_BG = (234, 236, 238)  # light, so the black-text / gold-A lockup reads
-# The lockup is [bateleur]  SHIKARI; the tagline and footer sit under the SHIKARI wordmark only, sized
-# to fit its width and anchored to its baseline. Measured from the asset's alpha (eagle ends ~0.30):
-# wordmark runs x 0.31..0.92 of the image width, and its bottom (baseline) is y 0.63 of the height.
-WORDMARK_L, WORDMARK_R, WORDMARK_BOTTOM = 0.314, 0.920, 0.631
+TAGLINE = "Automated Multi-vendor Threat Hunting & Detection Suite"
+CARD_BG = (234, 236, 238)  # light, so the dark-text / two-tone-K lockup reads
+# The lockup is [perched bateleur]  SHIKARI; the tagline and footer sit under the SHIKARI wordmark only,
+# sized to fit its width and anchored to its baseline. Measured from the asset's alpha (eagle ends ~0.25):
+# wordmark runs x 0.29..0.98 of the image width, and its bottom (baseline) is y 0.688 of the height.
+WORDMARK_L, WORDMARK_R, WORDMARK_BOTTOM = 0.291, 0.982, 0.688
 
 
 def _font(size, bold=True):
@@ -236,6 +236,10 @@ def act(page, base, action):
     elif kind == "type":
         page.locator(arg[0]).first.click()
         page.locator(arg[0]).first.press_sequentially(arg[1], delay=85)
+    elif kind == "clear":
+        # Empty a field and fire its input event — e.g. a continuing scene clearing the group box so the
+        # CVE path (mutually exclusive with it) re-enables before the CVE actions run.
+        page.locator(arg).first.fill("")
     elif kind == "show":
         loc = page.locator(arg).first
         if loc.count():
@@ -365,15 +369,33 @@ def main():
     # per clip, which (unlike a chain of fades on one stream) actually dips to black at each join.
     # Concatenating them reproduces the full timeline, so the narration track still lines up. A scene
     # is now a self-contained section: reorder or drop scenes in script.yaml and every join stays clean.
+    # Keep each scene's clip as its own file under <out>/scenes, named by order and scene id, so the
+    # per-scene segments survive the render (the joined walkthrough is built from these). Cleared at the
+    # start of each run so the directory always mirrors the scenes this render produced.
+    scenes_dir = out / "scenes"
+    scenes_dir.mkdir(exist_ok=True)
+    for stale in scenes_dir.glob("scene_*.mp4"):
+        stale.unlink()
     clips, concat_list = [], work / "clips.txt"
     for i, s in enumerate(scenes):
         nxt_start = scenes[i + 1]["start"] if i + 1 < len(scenes) else total
         first = int(round(s["start"] * FPS))
         count = max(1, int(round(nxt_start * FPS)) - first)
         dur = count / FPS
-        clip = work / f"clip_{i:03}.mp4"
+        clip = scenes_dir / f"scene_{i:02}_{s['id']}.mp4"
         clips.append(clip)
-        vf = f"{scale_pad},fade=t=in:st=0:d={FADE}:color=black,fade=t=out:st={max(0, dur - FADE):.3f}:d={FADE}:color=black"
+        # Fade only at the edges of a same-page group: a scene marked `continues` joins the one before it
+        # with no black between (a pause and a scroll, not a cut), so consecutive beats on one page read
+        # as a single shot. A group fades in on its first scene and out on its last; scenes inside it get
+        # neither fade and simply concatenate.
+        starts_group = not s.get("continues")
+        ends_group = i + 1 >= len(scenes) or not scenes[i + 1].get("continues")
+        parts = [scale_pad]
+        if starts_group:
+            parts.append(f"fade=t=in:st=0:d={FADE}:color=black")
+        if ends_group:
+            parts.append(f"fade=t=out:st={max(0, dur - FADE):.3f}:d={FADE}:color=black")
+        vf = ",".join(parts)
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS),
                         "-start_number", str(first), "-i", str(seq / "%06d.png"), "-frames:v", str(count),
                         "-vf", vf, "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p",
@@ -409,15 +431,36 @@ def main():
                     "-map", "[v]", "-map", "3:a", "-c:v", "libx264", "-preset", "slow", "-crf", "18",
                     "-c:a", "copy", "-movflags", "+faststart", "-shortest", str(final)], check=True)
 
-    # Subtitles: each scene's sentences, timed by their share of its narration
+    # Subtitles: at most two lines a cue (~42 chars a line), broken at sentence then word boundaries so
+    # a long sentence becomes a run of short cues rather than a four-line wall, each timed by its share of
+    # the scene's narration.
+    def caption_cues(text, max_line=42):
+        chunks = []
+        for sentence in re.split(r"(?<=[.!?])\s+", text.strip()):
+            line, lines = "", []
+            for word in sentence.split():
+                if line and len(line) + 1 + len(word) > max_line:
+                    lines.append(line)
+                    line = word
+                else:
+                    line = f"{line} {word}".strip()
+                if len(lines) == 2:
+                    chunks.append(lines)
+                    lines = []
+            if line:
+                lines.append(line)
+            if lines:
+                chunks.append(lines)
+        return ["\n".join(c) for c in chunks]
+
     cues = []
     for s in scenes:
-        sentences = re.split(r"(?<=[.!?])\s+", s["text"])
-        weights = [len(x) for x in sentences]
+        chunks = caption_cues(s["text"])
+        weights = [len(c) for c in chunks]
         t = TITLE_SECONDS + s["start"]
-        for sentence, wgt in zip(sentences, weights):
+        for chunk, wgt in zip(chunks, weights):
             d = s["seconds"] * wgt / sum(weights)
-            cues.append((t, t + d, sentence))
+            cues.append((t, t + d, chunk))
             t += d
     (out / "shikari-walkthrough.srt").write_text("".join(
         f"{i}\n{srt_time(a)} --> {srt_time(b)}\n{text}\n\n" for i, (a, b, text) in enumerate(cues, 1)))
@@ -429,6 +472,7 @@ def main():
         "https://github.com/cmdaltr/shikari\n\nChapters\n" + "".join(f"{t} {name}\n" for t, name in chapters) +
         "\nNarrated with a local text-to-speech voice.\n")
     print(f"Wrote {final} ({length / 60:.1f} min), its .srt and youtube.txt")
+    print(f"Per-scene clips: {scenes_dir} ({len(clips)} clips)")
     return 0
 
 

@@ -9,9 +9,11 @@
 # stays unpinned and fires at 0; pin the show/type/click beats where their subject is spoken.
 # Record against a throwaway instance with sample data (see scripts/guide/capture.py), never a real one.
 #
-# Each scene is a self-contained section: it fades in from black and out to black, so adding a feature is
-# adding a scene here, and scenes can be reordered or dropped. Start every scene on its own page with a
-# `goto` so it doesn't rely on the scene before it.
+# Fades: a scene normally fades in from black and out to black, so it's a self-contained section — start
+# it on its own page with a `goto`. `continues: true` instead joins a scene to the one before it with NO
+# black between them: a pause and a scroll down the SAME page, not a cut. Use it for consecutive beats on
+# one page (scrolling a form, or a results page) and drop the leading `goto` so the page isn't reloaded.
+# A run of continuing scenes fades in on the first and out on the last; everything inside is one shot.
 
 # How the voice should say what the subtitles spell
 say:
@@ -59,22 +61,24 @@ scenes:
     actions:
       - goto: /
 
-  - id: environment
-    chapter: Your environment
+  - id: overview
+    chapter: The sections at the top
     narration: >
-      Start with your environment. Under Profile, Environment, tick the SIEMs you run, the industries
-      you care about, and the products in your estate. Every hunt then generates only for those SIEMs,
-      and drops techniques that can't happen in your technology stack. The Threat Feed honours it too.
+      Everything starts from the tabs at the top. Hunt turns a threat group or a CVE into detections, so a
+      named adversary is covered in minutes. Analyse turns a threat report into detections — a new write-up
+      becomes queries, not a reading task. Profile starts from a company instead of a threat, and tells you
+      who is most likely to target it. Research finds the groups that hit a sector and region, and the
+      techniques they share, so you spend detection effort where it covers the most.
     actions:
-      - goto: /profile
-      - click: 'button.tab-button[data-tab="environment"]'
-        at: 0.05
-      - show: '#siems'
-        at: 0.22
-      - show: '#industries'
-        at: 0.34
-      - show: '#tech-stack'
-        at: 0.5
+      - goto: /
+      - show: 'button.tab-button[data-tab="generate"]'
+        at: 0.12
+      - show: 'button.tab-button[data-tab="upload"]'
+        at: 0.42
+      - show: 'button.tab-button[data-tab="profile"]'
+        at: 0.64
+      - show: 'button.tab-button[data-tab="research"]'
+        at: 0.84
 
   - id: hunt
     chapter: Hunting a threat group
@@ -93,33 +97,38 @@ scenes:
 
   - id: hunt-cves
     chapter: CVEs and techniques
+    continues: true
     narration: >
-      Or enter CVEs. Shikari reads the NVD record, the advisories and public proof-of-concept exploits,
-      and builds four kinds of query: the exploit request in your HTTP logs, the behaviour of
-      exploitation, the shell an exploited server spawns, and a sweep for the published indicators.
-      Browse lists the last thirty days of new CVEs, with CISA's known-exploited ones marked. You can
+      Or hunt a CVE. Shikari reads its NVD record, the advisories and any public proof-of-concept, then
+      generates detections for the exploit attempt and for the activity that follows a successful one.
+      Browse lists new CVEs from the last thirty days, with CISA's known-exploited ones marked. You can
       also hunt a list of ATT&CK techniques across every group that uses them.
     actions:
-      - goto: /
-      - show: '#generate-form .hp-secondary'
+      # Clear the group box the previous (continuing) scene typed into: group and CVE are mutually
+      # exclusive, so the CVE field and its Browse button stay disabled until the group box is empty.
+      - clear: '#group_name_input'
         at: 0.04
+      - click: '#cve_input'
+        at: 0.1
+      - show: '#generate-form .hp-secondary'
+        at: 0.16
       - click: '#cve-browse'
-        at: 0.62
+        at: 0.58
       - key: Escape
         at: 0.82
 
   - id: options
     chapter: Enrichment options
+    continues: true
     narration: >
       The options add enrichment. LOL datasets add the real command lines, hashes and paths of the
       living-off-the-land binaries, drivers and remote tools a group uses. OSINT Enhancement merges
       indicators and known false positives from public detection rules. OSINT Comparison scores your
-      detections against those rules, and builds fresh ones where ATT&CK gives a technique no
-      indicators at all — more than three hundred techniques.
+      detections against those public rules, and writes new detections for the techniques no public rule
+      covers — over three hundred of them.
     actions:
-      - goto: /
       - show: '#tab-generate details.options-section'
-        at: 0.06
+        at: 0.08
 
   - id: results
     chapter: Results and the threat briefing
@@ -139,6 +148,7 @@ scenes:
 
   - id: correlations
     chapter: Correlations and attack flows
+    continues: true
     narration: >
       Correlations chain detections into a single query that fires only when several steps of an attack
       land on the same host or account inside a time window. A chain of three techniques fires far less
@@ -147,7 +157,6 @@ scenes:
       Before you deploy anything, work through the validation checklist — generated queries are a
       starting point, not production rules.
     actions:
-      - goto: /results?group_name=APT29
       - show: '#correlations'
         at: 0.04
       - show: '#attack-flow'
@@ -205,6 +214,24 @@ scenes:
         at: 0.12
       - show: '#actor-consolidation-section .hp-actions'
         at: 0.6
+
+  - id: environment
+    chapter: Your environment
+    narration: >
+      Narrow all of this to your estate. Under Profile, Environment, tick the SIEMs you run, the
+      industries you care about, and the products you have. Every hunt then generates only for those
+      SIEMs, and drops techniques that can't happen in your technology stack. The Threat Feed honours it
+      too.
+    actions:
+      - goto: /profile
+      - click: 'button.tab-button[data-tab="environment"]'
+        at: 0.05
+      - show: '#siems'
+        at: 0.3
+      - show: '#industries'
+        at: 0.52
+      - show: '#tech-stack'
+        at: 0.74
 
   - id: library
     chapter: Library and coverage

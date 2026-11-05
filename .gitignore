@@ -50,6 +50,8 @@ data/mitre_procedures.building.csv
 data/mitre_procedures.building.json
 data/*.sqlite
 data/*.sqlite3
+# Runtime caches (IOC lookups etc.)
+data/cache/
 
 # Attack flows (dynamically generated)
 data/attack_flows/*
