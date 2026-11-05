@@ -20,7 +20,7 @@ Setup, step by step: [Recording a lab](../guide/20-recording-a-lab.md).
 
 - The script parses in PowerShell 7 and its macOS plist functions were exercised; no atomic has been run with it
 - `--mde-export` matches devices by the manifest's host name (`DeviceName startswith`), and takes up to 5,000 rows per table per test
-- Running atomics from Shikari itself (`shikari-cli offline emulate`, the console's `emulate`, **Run Emulation** on Results) depended on an `shikari.emulation` package that has been removed; those entry points say Coming soon
+- Running atomics from Shikari itself (`shikari offline emulate`, the console's `emulate`, **Run Emulation** on Results) depended on an `shikari.emulation` package that has been removed; those entry points say Coming soon
 
 ## Query Execution
 

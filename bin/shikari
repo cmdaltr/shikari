@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# shikari: Shikari's one command: the server (and Ollama), the console, preview, MCP and the offline
+# pipeline. `./bin/shikari install` links this file onto your PATH as `shikari`. It lives in bin/ (not the
+# repo root) because a file can't share the name of the shikari/ package directory. Work is in service.py.
+set -euo pipefail
+
+self="${BASH_SOURCE[0]}"
+while [[ -L "$self" ]]; do
+  target="$(readlink "$self")"
+  [[ "$target" == /* ]] && self="$target" || self="$(dirname "$self")/$target"
+done
+# This file is <repo>/bin/shikari, so the repo root is its parent's parent.
+ROOT="$(cd "$(dirname "$self")/.." && pwd)"
+
+PY="$ROOT/.venv/bin/python"
+[[ -x "$PY" ]] || PY="$(command -v python3)"
+exec "$PY" "$ROOT/shikari/service.py" "$@"

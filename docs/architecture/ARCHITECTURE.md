@@ -11,7 +11,7 @@ Complete architecture and design documentation for Shikari.
 
 ### System Diagrams
 
-The component architecture (web UI and `shikari-cli`) is now a single
+The component architecture (web UI and `shikari`) is now a single
 theme-aware inline HTML/SVG diagram at `static/diagrams/architecture.html`,
 rendered on the Help page. The old Graphviz `cli_diagram`/`web_diagram`
 DOT pipeline has been retired.
@@ -40,7 +40,7 @@ python update.py
 
 ### For Architects
 - [System Flow Diagram](diagrams/flow/shikari_flow.pdf) - Overall system flow
-- [Component Architecture](../../static/diagrams/architecture.html) - Web UI and `shikari-cli` (inline, on the Help page)
+- [Component Architecture](../../static/diagrams/architecture.html) - Web UI and `shikari` (inline, on the Help page)
 - [Generation Flow](../../static/diagrams/pipeline.html) - Step-by-step input → MITRESaw → queries → correlation → artefacts (light)
 - [The Shikari Machine](../../static/diagrams/machine.html) - Interactive 3D isometric view of the runtime (three.js; drag/zoom/click)
 
@@ -60,7 +60,7 @@ docs/architecture/
         └── update.py
 ```
 
-The component architecture (web UI and `shikari-cli`) lives at
+The component architecture (web UI and `shikari`) lives at
 `static/diagrams/architecture.html`. Two companion views sit beside it:
 `static/diagrams/pipeline.html` (a light, top-to-bottom generation flow) and
 `static/diagrams/machine.html` (an interactive 3D isometric runtime scene). All

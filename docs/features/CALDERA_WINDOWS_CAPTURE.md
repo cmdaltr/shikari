@@ -45,13 +45,13 @@ Point Shikari at your CALDERA server first — **Profile → API Keys → Emulat
 **Console** —
 
 ```
-shikari-cli > use lab/caldera
-shikari-cli (lab/caldera) > set ACTION run
-shikari-cli (lab/caldera) > set TARGET T1033
-shikari-cli (lab/caldera) > set GROUP disposable
-shikari-cli (lab/caldera) > set CAPTURE caldera
-shikari-cli (lab/caldera) > set EXECUTE true
-shikari-cli (lab/caldera) > run
+shikari > use lab/caldera
+shikari (lab/caldera) > set ACTION run
+shikari (lab/caldera) > set TARGET T1033
+shikari (lab/caldera) > set GROUP disposable
+shikari (lab/caldera) > set CAPTURE caldera
+shikari (lab/caldera) > set EXECUTE true
+shikari (lab/caldera) > run
 ```
 
 `EXECUTE false` (the default) plans only and creates nothing. `CAPTURE caldera` is the zero-touch path validated here.
@@ -65,7 +65,7 @@ shikari-cli (lab/caldera) > run
 | CALDERA operations list | Emulate → Lab → **CALDERA operations** (`GET /api/lab/caldera/operations`) | One row per collected operation: state, group, step count, the hosts it ran on, and a **captured** flag |
 | The check | the operation's **Check** on that card (`GET /api/lab/caldera/check?name=<operation>`) | Per technique: **matched / missed / no detection** (evidence shown as *captured logs* once captured); per correlation: **fired / half-fired / missed**, every part on one host inside its window |
 | Your lab (platform view) | Emulate → **Platforms** → the captured run | The captured logs as an ordinary **Your lab** run: what your Windows logging records of each technique |
-| Console | `shikari-cli` → `use lab/caldera` → `set ACTION check` (then `set NAME <operation>`) → `run` | The same per-technique and per-correlation check at the command line; `ACTION check` with no `NAME` lists the collected operations |
+| Console | `shikari` → `use lab/caldera` → `set ACTION check` (then `set NAME <operation>`) → `run` | The same per-technique and per-correlation check at the command line; `ACTION check` with no `NAME` lists the collected operations |
 
 `data/telemetry/` is gitignored — the captures carry your VM's and tenant's names and never leave the machine.
 

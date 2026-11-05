@@ -5,7 +5,7 @@ try:
     from dotenv import find_dotenv as _find_dotenv, load_dotenv as _load_dotenv
 
     # usecwd=True searches up from the working directory (where a deployer keeps .env and
-    # runs shikari-cli), not the installed package dir, so it works for a site-packages install.
+    # runs shikari), not the installed package dir, so it works for a site-packages install.
     _load_dotenv(_find_dotenv(usecwd=True))
 except Exception:
     pass

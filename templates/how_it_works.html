@@ -803,8 +803,8 @@
                     <h4>Four ways in</h4>
                     <ul>
                         <li>The web UI (server-rendered, no JS framework)</li>
-                        <li><code>shikari-cli</code> supervisor and console</li>
-                        <li><code>shikari-cli offline</code> — no server needed</li>
+                        <li><code>shikari</code> supervisor and console</li>
+                        <li><code>shikari offline</code> — no server needed</li>
                         <li>MCP, for any MCP client</li>
                         <li>Accounts, roles and MFA throughout</li>
                     </ul>
@@ -1381,7 +1381,7 @@
             <h3 id="arch-how-it-fits-together">How it fits together</h3>
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
                 Shikari turns MITRE ATT&amp;CK threat intelligence into detections for Microsoft Defender XDR, Google SecOps,
-                Splunk and Elastic. The same pipeline runs behind every interface — the web UI, the <code>shikari-cli</code>
+                Splunk and Elastic. The same pipeline runs behind every interface — the web UI, the <code>shikari</code>
                 supervisor, the console and the MCP server — and it works without AI by default. A model is optional, and off
                 unless you turn it on.
             </p>
@@ -1393,7 +1393,7 @@
                             <a class="diagram-overlay" href="{{ url_for('static', path='diagrams/architecture.html') }}" target="_blank" rel="noopener" aria-label="Open the architecture diagram full size"></a>
                             <span class="diagram-badge">&#8599; full size</span>
                             <iframe id="arch-frame" src="{{ url_for('static', path='diagrams/architecture.html') }}?v={{ request.app.state.asset_version }}"
-                                    title="Shikari architecture — web UI and shikari-cli" loading="lazy" scrolling="no"
+                                    title="Shikari architecture — web UI and shikari" loading="lazy" scrolling="no"
                                     style="width:100%;border:1px solid var(--border-color);border-radius:10px;background:transparent;display:block;pointer-events:none"></iframe>
                         </div>
                     </div>
@@ -1417,7 +1417,7 @@
                     </div>
                 </div>
                 <div class="diagram-caption" style="text-align:center; margin-top:14px">
-                    The web UI (top) and <code>shikari-cli</code> (bottom) — the same pipeline. Click the diagram to open it
+                    The web UI (top) and <code>shikari</code> (bottom) — the same pipeline. Click the diagram to open it
                     <a href="{{ url_for('static', path='diagrams/architecture.html') }}" target="_blank" rel="noopener">full size</a>.
                 </div>
             </div>
@@ -1441,7 +1441,7 @@
             <hr style="border: none; border-top: 1px solid var(--border); margin: 2.5em 0;">
             <h3 id="arch-the-same-pipeline-from-a-terminal">The same pipeline from a terminal</h3>
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                <code>shikari-cli</code> is the supervisor — <code>start</code>, <code>status</code>, <code>restart</code>,
+                <code>shikari</code> is the supervisor — <code>start</code>, <code>status</code>, <code>restart</code>,
                 <code>mcp</code>, <code>console</code> — and the console and offline modes run the identical stages without a
                 browser. A few surfaces are web-only (the saved Library, the Coverage matrix and Flows); everything else is
                 reachable from the command line.
@@ -1450,14 +1450,14 @@
             <div class="workflow-step">
                 <h4>Without a server at all</h4>
                 <pre><code># The pipeline with no server running
-shikari-cli offline generate "APT29"      # detections for a threat group
-shikari-cli offline hunt T1003.001        # one technique, by name or ID
-shikari-cli offline correlate "APT29"     # correlation rules
+shikari offline generate "APT29"      # detections for a threat group
+shikari offline hunt T1003.001        # one technique, by name or ID
+shikari offline correlate "APT29"     # correlation rules
 
 # The supervisor and interfaces
-shikari-cli start | status | restart      # run the server
-shikari-cli console                       # the modules interactively
-shikari-cli mcp                           # Shikari's tools for any MCP client</code></pre>
+shikari start | status | restart      # run the server
+shikari console                       # the modules interactively
+shikari mcp                           # Shikari's tools for any MCP client</code></pre>
             </div>
 
             <div class="workflow-step">
@@ -2124,7 +2124,7 @@ AI recognizes this as:
             </table>
             <p style="line-height: 1.6;">
                 Run them from the <a href="/agents" style="color: #C53030;">Agents</a> page, the console
-                (<code>use agent/repair</code>) or any MCP client: <code>shikari-cli mcp</code> exposes the same tools and the
+                (<code>use agent/repair</code>) or any MCP client: <code>shikari mcp</code> exposes the same tools and the
                 agents' prompts to Claude Code, Claude Desktop or your own agent. <code>examples/agents/minimal_agent.py</code>
                 is a complete agent in about 100 lines. Full guide: <code>docs/agents/README.md</code>.
             </p>
@@ -2155,7 +2155,7 @@ AI recognizes this as:
             <div class="workflow-step">
                 <h4>Console and MCP</h4>
                 <p>The same six agents are in the console (<code>agent/repair</code> … <code>agent/tune</code>) and over MCP:
-                <code>shikari-cli mcp</code> gives any MCP client — Claude Code, Claude Desktop or your own agent — Shikari's 21
+                <code>shikari mcp</code> gives any MCP client — Claude Code, Claude Desktop or your own agent — Shikari's 21
                 tools and the six agents' prompts, with the changing tools marked so the client asks first. It signs in to a
                 running Shikari as you, so hunts use your AI settings and your keys stay on the server.</p>
             </div>

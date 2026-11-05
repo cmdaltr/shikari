@@ -30,4 +30,4 @@ It uses the provider assigned to Ask Shikari in Profile → API Keys → AI Assi
 
 **How this agent is built** shows each agent's instructions, its tools, and which tools need approval.
 
-The same agents are in the console (`agent/repair`, `agent/ask`, `agent/triage`, `agent/sweep`, `agent/audit`, `agent/tune`) and in any MCP client through `shikari-cli mcp`. The design, the loop and the checks are explained in [Agents in Shikari](../agents/README.md).
+The same agents are in the console (`agent/repair`, `agent/ask`, `agent/triage`, `agent/sweep`, `agent/audit`, `agent/tune`) and in any MCP client through `shikari mcp`. The design, the loop and the checks are explained in [Agents in Shikari](../agents/README.md).

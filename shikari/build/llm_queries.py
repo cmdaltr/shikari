@@ -368,7 +368,7 @@ def call_llm(prompt: str, config: Optional[Dict] = None) -> str:
     """Send a prompt to the configured LLM and return the response.
 
     Resolution order (first match wins):
-    1. Config dict passed directly (from shikari-cli console or the API)
+    1. Config dict passed directly (from shikari console or the API)
     2. bespoke/config.yaml → llm section
     3. Environment variables
 

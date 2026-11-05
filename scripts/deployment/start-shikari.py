@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-start-shikari.py: Start Shikari: -b/--background runs it under the crash-restarting supervisor (shikari-cli start);
-otherwise it supervises in the foreground (shikari-cli run).
+start-shikari.py: Start Shikari: -b/--background runs it under the crash-restarting supervisor (shikari start);
+otherwise it supervises in the foreground (shikari run).
 Kept for older instructions; the implementation is shikari/service.py, which `shikari` runs.
 """
 

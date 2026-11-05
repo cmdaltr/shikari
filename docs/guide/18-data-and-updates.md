@@ -20,7 +20,7 @@ The desktop app running Shikari locally keeps the same layout in a per-user fold
 | Your lab's recordings | `scripts/telemetry/record-atomics.ps1` on your test machines | When you add a run | `data/telemetry/lab/` (never committed) |
 | World map, flags | Natural Earth; flag-icons (MIT) | Committed; rebuilt only by `scripts/data/` | `static/images/`, `static/vendor/flag-icons/` |
 
-Starting with `shikari-cli start --skip-index` skips rebuilding the OSINT technique index, for a faster start.
+Starting with `shikari start --skip-index` skips rebuilding the OSINT technique index, for a faster start.
 
 ## What you make
 

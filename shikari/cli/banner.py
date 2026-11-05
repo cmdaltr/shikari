@@ -1,4 +1,4 @@
-"""ASCII banner for shikari-cli console."""
+"""ASCII banner for shikari console."""
 
 from shikari.cli import __version__
 
@@ -15,7 +15,7 @@ def get_banner() -> str:
   ██╔══██║██╔══██╗██║     ██╔══██║██╔══╝  ██╔══██╗
   ██║  ██║██║  ██║╚██████╗██║  ██║███████╗██║  ██║
   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
-\033[0m\033[1m  shikari-cli console\033[0m
+\033[0m\033[1m  shikari console\033[0m
   \033[90m{module_count} modules | v{__version__}\033[0m
   \033[90mType 'help' for commands, 'show modules' to list modules\033[0m
 """

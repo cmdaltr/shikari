@@ -21,16 +21,16 @@ Shikari automates threat hunting and detection engineering from MITRE ATT&CK. Gi
 ### Running Shikari
 
 ```bash
-./shikari-cli install           # once: links `shikari-cli` into ~/bin (or ~/.local/bin)
-# sudo ./shikari-cli install --system   # instead: link into /usr/local/bin for all users
-shikari-cli start      # background; restarts Shikari (and Ollama) if they crash
-shikari-cli status
-shikari-cli logs -f
-shikari-cli restart
-shikari-cli stop
+./bin/shikari install           # once: links `shikari` into ~/.local/bin
+# sudo ./bin/shikari install --system   # instead: link into /usr/local/bin for all users
+shikari start      # background; restarts Shikari (and Ollama) if they crash
+shikari status
+shikari logs -f
+shikari restart
+shikari stop
 ```
 
-`shikari-cli start` runs a small supervisor (`shikari/service.py`) that starts uvicorn and, if Ollama is installed but not running, `ollama serve`. If either dies, it's started again (1s, then backing off to 60s; it gives up after 6 failed starts in a row, e.g. a port clash). Options are remembered: `--port`, `--no-reload`, `--no-ollama`, `--ollama-models DIR` (an external volume that isn't mounted falls back to Ollama's default folder rather than creating an empty one). `shikari-cli install` symlinks the launcher onto your PATH — a per-user bin dir by default (`~/bin`, or `~/.local/bin`, whichever is already on PATH), or `/usr/local/bin` for all users with `sudo ./shikari-cli install --system`. `shikari-cli serve` runs the server in the foreground without the supervisor; `shikari-cli docker ...` is `docker compose` with the project's compose file. The same command has the console (`shikari-cli console`), a dry-run preview (`shikari-cli preview <group>`), the MCP server (`shikari-cli mcp`) and the pipeline without the server (`shikari-cli offline generate|correlate|hunt`).
+`shikari start` runs a small supervisor (`shikari/service.py`) that starts uvicorn and, if Ollama is installed but not running, `ollama serve`. If either dies, it's started again (1s, then backing off to 60s; it gives up after 6 failed starts in a row, e.g. a port clash). Options are remembered: `--port`, `--no-reload`, `--no-ollama`, `--ollama-models DIR` (an external volume that isn't mounted falls back to Ollama's default folder rather than creating an empty one). `shikari install` symlinks the launcher onto your PATH — `~/.local/bin` by default, or `/usr/local/bin` for all users with `sudo ./bin/shikari install --system`. `shikari serve` runs the server in the foreground without the supervisor; `shikari docker ...` is `docker compose` with the project's compose file. The same command has the console (`shikari console`), a dry-run preview (`shikari preview <group>`), the MCP server (`shikari mcp`) and the pipeline without the server (`shikari offline generate|correlate|hunt`).
 
 ### Desktop App
 
@@ -38,9 +38,9 @@ Installers for macOS, Windows and Linux are on the Releases page: they bundle ev
 
 ```bash
 pip install -e '.[desktop]'      # pywebview, for a native window
-shikari-cli app install --dock    # macOS: ~/Applications/Shikari.app, kept in the Dock
-shikari-cli app install           # Linux: application menu entry (~/.local/share/applications)
-shikari-cli app uninstall
+shikari app install --dock    # macOS: ~/Applications/Shikari.app, kept in the Dock
+shikari app install           # Linux: application menu entry (~/.local/share/applications)
+shikari app uninstall
 ```
 
 On Windows, from the repository: `.venv\Scripts\python shikari\desktop.py install` adds Start menu and desktop shortcuts (pin to the taskbar from the Start menu).
@@ -49,7 +49,7 @@ On Windows, from the repository: `.venv\Scripts\python shikari\desktop.py instal
 
 To run the central instance that clients connect to as a managed service — a systemd service on Ubuntu/Debian/Rocky (`sudo deploy/linux/install.sh`) or a boot-start task on Windows Server (`deploy\windows\install-service.ps1`), with data under `SHIKARI_HOME`, TLS via a reverse proxy, in-place upgrades and backup/restore — see [docs/deployment/README.md](docs/deployment/README.md).
 
-The app launches this checkout's `.venv`, so it updates with `git pull`; it isn't a frozen copy. Opening it starts the server if it isn't running and shows Shikari in its own window. Quitting stops a server the app started and leaves one from `shikari-cli start` alone. Without pywebview it uses a Chrome/Edge/Brave app window, or the default browser. On Linux the native window also needs GTK (`python3-gi gir1.2-webkit2-4.1`) or Qt. If the repository sits in OneDrive on macOS, the first launch asks for permission to access files in OneDrive; allow it. Icons are built from `shikari.png` by `desktop/make_icons.py`.
+The app launches this checkout's `.venv`, so it updates with `git pull`; it isn't a frozen copy. Opening it starts the server if it isn't running and shows Shikari in its own window. Quitting stops a server the app started and leaves one from `shikari start` alone. Without pywebview it uses a Chrome/Edge/Brave app window, or the default browser. On Linux the native window also needs GTK (`python3-gi gir1.2-webkit2-4.1`) or Qt. If the repository sits in OneDrive on macOS, the first launch asks for permission to access files in OneDrive; allow it. Icons are built from `shikari.png` by `desktop/make_icons.py`.
 
 ---
 <br>
@@ -77,9 +77,9 @@ The app launches this checkout's `.venv`, so it updates with `git pull`; it isn'
 - 🔬 **Research Tab** - Actor technique consolidation with keyword/country filtering, tactic filtering, and professional XLSX export
 - 💬 **Ask Shikari** - Conversational Q&A panel for ATT&CK questions and SIEM query generation
 - 🌐 **Web UI & CLI** - VirusTotal-inspired tabbed interface plus command-line tools
-- 🖥️ **Interactive Console (`shikari-cli console`)** - Metasploit-style interactive shell with module selection, options, tab-completion
+- 🖥️ **Interactive Console (`shikari console`)** - Metasploit-style interactive shell with module selection, options, tab-completion
 - 🤖 **Agents** - Detection repair, Ask Shikari with tools, and intel triage: a model in a loop with Shikari's tools, with approval for anything that changes something ([docs](docs/agents/README.md))
-- 🔌 **MCP Server (`shikari-cli mcp`)** - Shikari's tools and agent prompts for Claude Code, Claude Desktop or any MCP client
+- 🔌 **MCP Server (`shikari mcp`)** - Shikari's tools and agent prompts for Claude Code, Claude Desktop or any MCP client
 - 🎯 **RAG Fidelity Enhancement** - Improve query quality using 3,400+ community detection examples ([docs](docs/rag/README.md))
 - 🏢 **Organization-Specific Customization** - Bespoke sample searches and global exclusions for your environment
 
@@ -91,7 +91,7 @@ Shikari closes the loop between red and blue: it runs a real adversary and then 
 - **Zero-touch log capture** - each step's endpoint logs are read back over the agent's own C2 channel, on Windows, Linux or macOS, with nothing installed on the host and no hypervisor access.
 - **Static detection and correlation checks** - saved detections and correlations are checked against what ran — per technique (matched / missed / no detection) and per correlation (every part on one host, inside its window) — with no AI and no SIEM.
 - **Provision agents in Shikari** - an agent-topology diagram, and **+ Add agent** to provision a disposable VM or container (Ubuntu on Tart or Docker, Rocky Linux on Docker, macOS on Tart, Windows on UTM) and enrol it, or enrol one you already manage — the machine pulls the architecture-correct sandcat itself. Names follow a convention (`shi-` always, a `cal-` marker for CALDERA machines, then an OS+version tag: `shi-cal-ubu24`, `shi-cal-rky10`, `shi-cal-mac15`, `shi-win11`), and every view shows which machines are enrolled.
-- **Wherever you work** - run, check and provision from the web UI, the desktop app, the `shikari-cli caldera` command, or the `lab/caldera` console module — one shared backend, so they can't drift.
+- **Wherever you work** - run, check and provision from the web UI, the desktop app, the `shikari caldera` command, or the `lab/caldera` console module — one shared backend, so they can't drift.
 - **In-browser consoles** - open a running lab machine from the browser (Emulate → Lab), gated to the machine's owner — no SSH client or jump box. **Console** is an interactive shell (Docker fully interactive; Tart/UTM through their `exec`); **Desktop** is a graphical console — VNC (noVNC) or SPICE (spice-html5), chosen per machine. UTM can't be auto-wired (its display is SPICE on an internal socket), so you give the machine's endpoint once and Shikari bridges to it ([#28](https://github.com/cmdaltr/shikari/issues/28), [design](docs/implementation-plans/28-vm-consoles.md)).
 
 ### Additional Features
@@ -162,7 +162,7 @@ About 318 of ATT&CK's 697 techniques name no command, file, registry key or othe
 
 **Quick Links:**
 - **Getting Started:** [GETTING_STARTED.md](GETTING_STARTED.md) | [Mapping Setup](GETTING_STARTED.md#step-4-configure-mapping-files-critical) | [User Guide](docs/guide/README.md)
-- **Interactive Console:** [shikari-cli console Guide](#-interactive-console-shikari-cli-console)
+- **Interactive Console:** [shikari console Guide](#-interactive-console-shikari-console)
 - **Usage:** [Where everything is, and the CLI](docs/USAGE.md) | [Auto-Generated API Docs](http://localhost:8000/docs)
 - **Research:** [Actor consolidation and XLSX export](docs/guide/05-research.md)
 - **Threat Briefing:** [On the Results page](docs/guide/06-results.md) | [API Reference](docs/features/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing)
@@ -185,14 +185,14 @@ About 318 of ATT&CK's 697 techniques name no command, file, registry key or othe
 ---
 <br>
 
-## 🖥️ Interactive Console (shikari-cli console)
+## 🖥️ Interactive Console (shikari console)
 
-`shikari-cli console` is a Metasploit-style interactive shell for building detection queries, running correlations and hunting techniques.
+`shikari console` is a Metasploit-style interactive shell for building detection queries, running correlations and hunting techniques.
 
 ### Launch
 
 ```bash
-shikari-cli console
+shikari console
 ```
 
 ### Modules
@@ -243,16 +243,16 @@ Tab-completion is supported for commands, module names, option names, and option
 ### Example Session
 
 ```
-$ shikari-cli console
+$ shikari console
 
-shikari-cli > use generate
-shikari-cli (generate) > set GROUP APT29
+shikari > use generate
+shikari (generate) > set GROUP APT29
   GROUP => APT29
-shikari-cli (generate) > set MODE llm
+shikari (generate) > set MODE llm
   MODE => llm
-shikari-cli (generate) > set CORRELATE true
+shikari (generate) > set CORRELATE true
   CORRELATE => True
-shikari-cli (generate) > show options
+shikari (generate) > show options
 
   Module options (generate):
 
@@ -266,7 +266,7 @@ shikari-cli (generate) > show options
   OSINT                False                     no         Enable OSINT enhancement
   OSINT_COMPARE        False                     no         Enable OSINT comparison
 
-shikari-cli (generate) > run
+shikari (generate) > run
 [*] Generating detections for APT29 (mode: llm)
 ...
 ```
@@ -283,10 +283,10 @@ Search across three domains from the console:
 | `all` | All three domains |
 
 ```
-shikari-cli > search mitre PowerShell
-shikari-cli > search library APT29
-shikari-cli > search bespoke credential
-shikari-cli > search all T1059
+shikari > search mitre PowerShell
+shikari > search library APT29
+shikari > search bespoke credential
+shikari > search all T1059
 ```
 
 Results are colour-coded by type (technique, group, software, detection, correlation, reference) with highlighted search terms.
@@ -294,9 +294,9 @@ Results are colour-coded by type (technique, group, software, detection, correla
 ### Server Module Example
 
 ```
-shikari-cli > use hunt/cve
-shikari-cli (hunt/cve) > set CVE CVE-2024-3400
-shikari-cli (hunt/cve) > run
+shikari > use hunt/cve
+shikari (hunt/cve) > set CVE CVE-2024-3400
+shikari (hunt/cve) > run
   Run started: CVE-2024-3400
   … detections
   … complete

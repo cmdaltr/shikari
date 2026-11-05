@@ -22,11 +22,11 @@ Set the variables for your provider and run:
 ```bash
 # Anthropic Claude
 export ANTHROPIC_API_KEY="sk-ant-..."
-shikari-cli console
-shikari-cli > use generate
-shikari-cli (generate) > set GROUP APT29
-shikari-cli (generate) > set MODE llm
-shikari-cli (generate) > run
+shikari console
+shikari > use generate
+shikari (generate) > set GROUP APT29
+shikari (generate) > set MODE llm
+shikari (generate) > run
 
 # OpenAI / ChatGPT
 export OPENAI_API_KEY="sk-..."
@@ -161,18 +161,18 @@ ollama serve
 
 # Configure Shikari
 export LLM_ENDPOINT="http://localhost:11434"
-shikari-cli console
-shikari-cli > use generate
-shikari-cli (generate) > set MODE llm
-shikari-cli (generate) > set GROUP APT29
-shikari-cli (generate) > run
+shikari console
+shikari > use generate
+shikari (generate) > set MODE llm
+shikari (generate) > set GROUP APT29
+shikari (generate) > run
 ```
 
 ## Resolution Order
 
 When `--llm` mode is used, Shikari resolves the LLM provider in this order:
 
-1. **Explicit config** passed via code (API/shikari-cli console)
+1. **Explicit config** passed via code (API/shikari console)
 2. **`bespoke/config.yaml`** → `llm:` section
 3. **Environment variables** (auto-detected by provider)
 

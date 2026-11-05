@@ -1,4 +1,4 @@
-"""Base module class for shikari-cli console."""
+"""Base module class for shikari console."""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field

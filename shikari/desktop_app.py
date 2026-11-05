@@ -1,6 +1,6 @@
 """
 Shikari as an installed application: what the .dmg / .msi / .deb built by desktop/stage.py
-and Briefcase runs (python -m shikari). A checkout uses `shikari-cli app` (shikari/desktop.py)
+and Briefcase runs (python -m shikari). A checkout uses `shikari app` (shikari/desktop.py)
 instead, which launches the repository's own server.
 
 An installed app's own folder is read-only, so everything Shikari writes goes to a per-user

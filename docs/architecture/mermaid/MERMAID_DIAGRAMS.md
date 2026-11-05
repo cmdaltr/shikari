@@ -267,8 +267,8 @@ This is the full journey from "I want detections for Scattered Spider" to finish
 flowchart TD
     subgraph "Entry Points"
         WEB(["Web UI"])
-        CLI(["shikari-cli offline"])
-        ADF(["shikari-cli console<br/><i>Interactive Shell</i>"])
+        CLI(["shikari offline"])
+        ADF(["shikari console<br/><i>Interactive Shell</i>"])
     end
 
     WEB --> START
@@ -367,8 +367,8 @@ graph TB
     subgraph IFACE ["Interfaces"]
         direction LR
         WEB["Web UI<br/>server-rendered"]
-        CON["shikari-cli console"]
-        CLI["shikari-cli"]
+        CON["shikari console"]
+        CLI["shikari"]
         MCP["MCP server"]
     end
 
@@ -910,7 +910,7 @@ How a CALDERA operation validates detections and correlations. CALDERA is used f
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
 flowchart TD
-    PROVISION(["Add an agent — provision &amp; enrol<br/>web · desktop app · shikari-cli caldera"]) --> AGENTS["Managed agent in a group<br/>Tart VM · Docker · UTM · OrbStack<br/><i>machine pulls arch-correct sandcat, runs it detached;<br/>topology shows enrolled vs not, managed vs external</i>"]
+    PROVISION(["Add an agent — provision &amp; enrol<br/>web · desktop app · shikari caldera"]) --> AGENTS["Managed agent in a group<br/>Tart VM · Docker · UTM · OrbStack<br/><i>machine pulls arch-correct sandcat, runs it detached;<br/>topology shows enrolled vs not, managed vs external</i>"]
     AGENTS -.->|"the agents an operation runs on"| TARGET
 
     TARGET(["Techniques, a threat group<br/>or a CVE + an agent group"]) --> READ["Read CALDERA's abilities<br/>and the group's agents<br/><i>reads only</i>"]

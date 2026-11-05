@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-restart-shikari.py: Restart Shikari in the background (shikari-cli restart).
+restart-shikari.py: Restart Shikari in the background (shikari restart).
 Kept for older instructions; the implementation is shikari/service.py, which `shikari` runs.
 """
 

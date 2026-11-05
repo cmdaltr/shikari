@@ -7,8 +7,8 @@ Shikari has six agents, an MCP server that gives the same tools to any MCP clien
 | Where | What |
 |---|---|
 | Web | **Agents** page (robot icon in the top bar) |
-| Console | `shikari-cli console` → `use agent/repair`, `agent/ask`, `agent/triage`, `agent/sweep`, `agent/audit`, `agent/tune` |
-| MCP | `shikari-cli mcp`: Shikari's tools and the six agents' prompts in Claude Code, Claude Desktop or your own agent |
+| Console | `shikari console` → `use agent/repair`, `agent/ask`, `agent/triage`, `agent/sweep`, `agent/audit`, `agent/tune` |
+| MCP | `shikari mcp`: Shikari's tools and the six agents' prompts in Claude Code, Claude Desktop or your own agent |
 | Example | [`examples/agents/minimal_agent.py`](../../examples/agents/minimal_agent.py): about 100 lines, no Shikari dependency |
 
 Agents run on any provider in your profile that can call tools (Profile → API Keys): Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok, or a local endpoint (Ollama, LM Studio, llama.cpp). Pick one on the Agents page or with `set PROVIDER` in the console. Without a choice, Claude is used if you have an Anthropic key (it's the most reliable at multi-step tool use), otherwise your Ask Shikari provider.
@@ -134,7 +134,7 @@ claude mcp add shikari --env SHIKARI_TOKEN=arch_... -- /path/to/shikari/.venv/bi
 
 Create the token in Profile → Security → API Tokens. It's shown once, works with MFA, and revoking it signs out whatever uses it; `SHIKARI_EMAIL` and `SHIKARI_PASSWORD` still work for accounts without MFA.
 
-`shikari-cli mcp` exposes the same 21 tools the agents use, with the 5 changing tools marked as not read-only so the client asks first, plus the six agents' instructions as prompts (`repair`, `ask`, `triage`, `sweep`, `audit`, `tune`). It signs in to a running Shikari as you, so hunts use your AI settings and your keys stay on the server.
+`shikari mcp` exposes the same 21 tools the agents use, with the 5 changing tools marked as not read-only so the client asks first, plus the six agents' instructions as prompts (`repair`, `ask`, `triage`, `sweep`, `audit`, `tune`). It signs in to a running Shikari as you, so hunts use your AI settings and your keys stay on the server.
 
 ## Building your own
 
@@ -148,7 +148,7 @@ Create the token in Profile → Security → API Tokens. It's shown once, works 
 
 On local `qwen3:8b` through Ollama, the Ask agent answered "which of FIN7's Execution techniques have no detection?" correctly in 2 turns (one `group_coverage` call), taking about 110 seconds on an Intel Mac Mini. Small models get through short lookups like that; on longer runs (repair, triage) they tend to stop early, skip the check step, or call tools with malformed arguments. Two settings matter:
 
-- **Context.** Ollama defaults to 4k tokens and truncates silently, and one tool result can be 5k. `shikari-cli start` runs Ollama with `OLLAMA_CONTEXT_LENGTH=16384` unless you set it yourself.
+- **Context.** Ollama defaults to 4k tokens and truncates silently, and one tool result can be 5k. `shikari start` runs Ollama with `OLLAMA_CONTEXT_LENGTH=16384` unless you set it yourself.
 - **Tool support.** The model has to support tool calling (qwen3, qwen2.5, llama3.1, mistral do; base and coder-base models don't).
 
 ## Known gaps

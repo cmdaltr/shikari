@@ -1,4 +1,4 @@
-"""shikari-cli start/stop/status (shikari/service.py): crash restarts and the Ollama models folder."""
+"""shikari start/stop/status (shikari/service.py): crash restarts and the Ollama models folder."""
 
 import importlib.util
 import sys

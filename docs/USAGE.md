@@ -25,24 +25,24 @@ The menu bar has three menus (Detections, Intel, Build), then Profile and Help. 
 | Ask questions; repair queries; triage a report | Build → Agents; the chat button | [Agents and Ask Shikari](guide/15-agents-and-ask-shikari.md) |
 | Set SIEMs, technology stack, industries, keys, MFA | Profile | [Profile and settings](guide/16-profile-and-settings.md) |
 
-Running atomics from Shikari itself (**Run Emulation** on Results, `shikari-cli offline emulate`) is **Coming soon**; for now, [record a lab](guide/20-recording-a-lab.md) on your own machines.
+Running atomics from Shikari itself (**Run Emulation** on Results, `shikari offline emulate`) is **Coming soon**; for now, [record a lab](guide/20-recording-a-lab.md) on your own machines.
 
 ## The console, client, API and MCP server
 
-`shikari-cli console`, the Python client (`shikari.client.ShikariClient`), the REST API (live reference at `http://localhost:8000/docs`) and `shikari-cli mcp` all drive a running server as a user: [Console, API and MCP](guide/17-console-api-mcp.md). Worked API examples: [API_INTEGRATION_GUIDE.md](features/API_INTEGRATION_GUIDE.md).
+`shikari console`, the Python client (`shikari.client.ShikariClient`), the REST API (live reference at `http://localhost:8000/docs`) and `shikari mcp` all drive a running server as a user: [Console, API and MCP](guide/17-console-api-mcp.md). Worked API examples: [API_INTEGRATION_GUIDE.md](features/API_INTEGRATION_GUIDE.md).
 
-## `shikari-cli offline`: the pipeline without the server
+## `shikari offline`: the pipeline without the server
 
 ```bash
-shikari-cli offline generate "APT29"                     # detections for a group into data/groups
-shikari-cli offline generate "APT29" --correlate         # then correlate them
-shikari-cli offline generate "APT29" --llm               # with the bespoke prompts and your AI provider (Mode 1)
-shikari-cli offline generate "APT29" --no-llm            # template-based fallback (Mode 2)
-shikari-cli offline generate "APT29" --hypothesis "..."  # an optional hypothesis for the group
-shikari-cli offline correlate "APT29"                    # correlations from the group's detections in data/groups
-shikari-cli offline correlate "APT29" --yaml-dir DIR --output FILE --min-queries 2 --max-queries 6 -v
-shikari-cli offline hunt "PowerShell"  # a technique by name (partial match) or ID
-shikari-cli offline emulate T1059.001  # Coming soon
+shikari offline generate "APT29"                     # detections for a group into data/groups
+shikari offline generate "APT29" --correlate         # then correlate them
+shikari offline generate "APT29" --llm               # with the bespoke prompts and your AI provider (Mode 1)
+shikari offline generate "APT29" --no-llm            # template-based fallback (Mode 2)
+shikari offline generate "APT29" --hypothesis "..."  # an optional hypothesis for the group
+shikari offline correlate "APT29"                    # correlations from the group's detections in data/groups
+shikari offline correlate "APT29" --yaml-dir DIR --output FILE --min-queries 2 --max-queries 6 -v
+shikari offline hunt "PowerShell"  # a technique by name (partial match) or ID
+shikari offline emulate T1059.001  # Coming soon
 ```
 
 ## Recorded telemetry

@@ -9,16 +9,16 @@ export SHIKARI_URL=http://127.0.0.1:8000
 export SHIKARI_TOKEN=arch_...
 ```
 
-## The console (`shikari-cli console`)
+## The console (`shikari console`)
 
 A Metasploit-style shell: choose a module, set its options, run it. Tab completion works throughout.
 
 ```bash
-shikari-cli console
-shikari-cli > use hunt/group
-shikari-cli (hunt/group) > set GROUP Scattered Spider
-shikari-cli (hunt/group) > show options
-shikari-cli (hunt/group) > run
+shikari console
+shikari > use hunt/group
+shikari (hunt/group) > set GROUP Scattered Spider
+shikari (hunt/group) > show options
+shikari (hunt/group) > run
 ```
 
 | Module | What it does |
@@ -39,7 +39,7 @@ shikari-cli (hunt/group) > run
 
 The hunt modules share options: `CORRELATE`, `LOL` (on), `OSINT`, `OSINT_COMPARE`, `MERGE_BY_TACTIC`, `MERGE_BY_PARENT`, `EXCLUDE` (SIEMs to leave out), `VALIDATE`, and `PROVIDER`/`MODEL` for AI. `show options` lists each module's own.
 
-Provisioning and enrolling CALDERA agents has its own top-level command, `shikari-cli caldera provision|enrol|list` — the CLI half of the web **+ Add agent** flow, sharing the same backend naming and group convention ([CALDERA](25-caldera.md)).
+Provisioning and enrolling CALDERA agents has its own top-level command, `shikari caldera provision|enrol|list` — the CLI half of the web **+ Add agent** flow, sharing the same backend naming and group convention ([CALDERA](25-caldera.md)).
 
 ## Python client
 
@@ -61,12 +61,12 @@ Other methods include `hunt_cve`, `hunt_techniques`, `analyse_url`, `analyse_fil
 
 Every page works through the HTTP API. The full, live reference is at `http://localhost:8000/docs`. Worked examples are in [API_INTEGRATION_GUIDE.md](../features/API_INTEGRATION_GUIDE.md).
 
-## MCP server (`shikari-cli mcp`)
+## MCP server (`shikari mcp`)
 
 Gives any MCP client (Claude Code, Claude Desktop, your own agent) Shikari's tools and the six agents' instructions as prompts. Tools that change something are marked so the client asks first. Your AI keys stay on the Shikari server.
 
 ```bash
-claude mcp add shikari --env SHIKARI_TOKEN=arch_... -- shikari-cli mcp
+claude mcp add shikari --env SHIKARI_TOKEN=arch_... -- shikari mcp
 ```
 
 ## Recorded telemetry

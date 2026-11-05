@@ -469,7 +469,7 @@ async def caldera_enrol(request: Request, shikari_session: Optional[str] = Cooki
 @router.post("/caldera/provision-agent")
 async def caldera_provision_agent(request: Request, shikari_session: Optional[str] = Cookie(None)):
     """Create an Shikari-managed machine for an OS and enrol it as a CALDERA agent, in one job — the
-    web half of `shikari-cli caldera provision`. Linux offers tart (VM) or docker (container)."""
+    web half of `shikari caldera provision`. Linux offers tart (VM) or docker (container)."""
     user, denied = _lab(shikari_session)
     if denied:
         return denied

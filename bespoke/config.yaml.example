@@ -69,7 +69,7 @@ platforms:
     index_pattern: "logs-*"
 
 # ---------------------------------------------------------------------------
-# LLM Configuration (for --llm mode in shikari-cli console / shikari-cli offline generate)
+# LLM Configuration (for --llm mode in shikari console / shikari offline generate)
 # ---------------------------------------------------------------------------
 # Provider options: anthropic | openai | azure | copilot | local
 #

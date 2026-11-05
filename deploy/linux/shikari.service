@@ -12,7 +12,7 @@ Group=shikari
 WorkingDirectory=/opt/shikari
 # SHIKARI_HOME, SHIKARI_HOST, SHIKARI_PORT, SHIKARI_WORKERS live here.
 EnvironmentFile=/etc/shikari/shikari.env
-# Foreground uvicorn — no shikari-cli supervisor (systemd does restart/boot). Single worker: Shikari
+# Foreground uvicorn — no shikari supervisor (systemd does restart/boot). Single worker: Shikari
 # keeps session, lab-job and in-browser-console state in-process, so >1 worker would break them.
 ExecStart=/opt/shikari/.venv/bin/python -m uvicorn shikari.app:app --host ${SHIKARI_HOST} --port ${SHIKARI_PORT} --workers ${SHIKARI_WORKERS}
 Restart=on-failure

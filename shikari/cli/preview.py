@@ -1,10 +1,10 @@
 """Preview detection queries for a threat group without writing files.
 
 Usage:
-    shikari-cli preview APT29
-    shikari-cli preview "Scattered Spider" --limit 5
-    shikari-cli preview APT29 --siem splunk,mde
-    shikari-cli preview APT29 --siem elastic,secops --limit 3
+    shikari preview APT29
+    shikari preview "Scattered Spider" --limit 5
+    shikari preview APT29 --siem splunk,mde
+    shikari preview APT29 --siem elastic,secops --limit 3
 """
 
 import argparse
@@ -30,7 +30,7 @@ def _parse_siem(value: str) -> set:
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="shikari-cli preview",
+        prog="shikari preview",
         description="Preview detection queries for a threat group (no files written)",
     )
     parser.add_argument("group", help="Threat group name (e.g. APT29, 'Scattered Spider')")

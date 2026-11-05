@@ -116,7 +116,7 @@ Models:
             print(f"     python scripts/test_enhancement.py --technique T1003.001")
             print()
             print("  3. Use in Shikari:")
-            print(f"     shikari-cli offline generate APT29")
+            print(f"     shikari offline generate APT29")
             print()
         else:
             print(f"✗ Failed to build embeddings: {stats.get('error')}")

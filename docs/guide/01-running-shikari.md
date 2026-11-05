@@ -4,19 +4,19 @@ Installation (Docker or local Python, mapping files, bespoke settings) is in [GE
 
 ## Start, stop and check
 
-Install the `shikari-cli` command once, then use it for everything:
+Install the `shikari` command once, then use it for everything:
 
 ```bash
-./shikari-cli install  # once: puts `shikari-cli` on your PATH (~/bin or ~/.local/bin)
-# sudo ./shikari-cli install --system   # instead: /usr/local/bin, for all users
-shikari-cli start      # start in the background
-shikari-cli status     # what's running, and on which port
-shikari-cli logs -f    # follow the log
-shikari-cli restart    # stop, then start
-shikari-cli stop       # stop Shikari, and the Ollama it started
+./bin/shikari install  # once: puts `shikari` on your PATH (~/.local/bin)
+# sudo ./bin/shikari install --system   # instead: /usr/local/bin, for all users
+shikari start      # start in the background
+shikari status     # what's running, and on which port
+shikari logs -f    # follow the log
+shikari restart    # stop, then start
+shikari stop       # stop Shikari, and the Ollama it started
 ```
 
-`shikari-cli start` runs a small supervisor. It starts the web server and, if Ollama is installed but not running, `ollama serve` too. If either stops, the supervisor starts it again, waiting 1 second at first and up to 60 seconds after repeated failures. It gives up after six failed starts in a row (usually a port already in use).
+`shikari start` runs a small supervisor. It starts the web server and, if Ollama is installed but not running, `ollama serve` too. If either stops, the supervisor starts it again, waiting 1 second at first and up to 60 seconds after repeated failures. It gives up after six failed starts in a row (usually a port already in use).
 
 | Option | What it does | Remembered |
 |---|---|---|
@@ -26,22 +26,22 @@ shikari-cli stop       # stop Shikari, and the Ollama it started
 | `--ollama-models DIR` | Where Ollama keeps its models (an external drive that isn't mounted falls back to Ollama's default folder) | Yes |
 | `--skip-index` | Don't rebuild the OSINT technique index first: a faster start | No |
 
-`shikari-cli serve` runs the server in the foreground with no supervisor. `shikari-cli docker ...` runs `docker compose` with the project's compose file.
+`shikari serve` runs the server in the foreground with no supervisor. `shikari docker ...` runs `docker compose` with the project's compose file.
 
 The same command covers everything else Shikari does from a terminal:
 
 | Command | What it does |
 |---|---|
-| `shikari-cli console` | The interactive console: [Console, API and MCP](17-console-api-mcp.md) |
-| `shikari-cli preview <group>` | A group's queries on stdout, nothing written (`--siem`, `--index`, `--limit`, `--output`) |
-| `shikari-cli mcp` | Shikari's tools for an MCP client, over stdio |
-| `shikari-cli offline generate\|correlate\|hunt\|emulate` | The pipeline without the server: [USAGE.md](../USAGE.md) |
-| `shikari-cli clear-cache` | Clear server-side caches and reset browser preferences |
-| `shikari-cli app install\|uninstall\|open` | Shikari as a desktop app (below) |
+| `shikari console` | The interactive console: [Console, API and MCP](17-console-api-mcp.md) |
+| `shikari preview <group>` | A group's queries on stdout, nothing written (`--siem`, `--index`, `--limit`, `--output`) |
+| `shikari mcp` | Shikari's tools for an MCP client, over stdio |
+| `shikari offline generate\|correlate\|hunt\|emulate` | The pipeline without the server: [USAGE.md](../USAGE.md) |
+| `shikari clear-cache` | Clear server-side caches and reset browser preferences |
+| `shikari app install\|uninstall\|open` | Shikari as a desktop app (below) |
 
 ## As a desktop app
 
-From a checkout, `shikari-cli app install` adds Shikari to Applications on macOS (`--dock` keeps it in the Dock), or to the application menu on Linux. On Windows, run `.venv\Scripts\python shikari\desktop.py install` for Start menu and desktop shortcuts. Opening it starts the server if it isn't running and shows Shikari in its own window; quitting stops a server the app started. `shikari-cli app uninstall` removes it. For a native window rather than a browser one, `pip install -e '.[desktop]'`.
+From a checkout, `shikari app install` adds Shikari to Applications on macOS (`--dock` keeps it in the Dock), or to the application menu on Linux. On Windows, run `.venv\Scripts\python shikari\desktop.py install` for Start menu and desktop shortcuts. Opening it starts the server if it isn't running and shows Shikari in its own window; quitting stops a server the app started. `shikari app uninstall` removes it. For a native window rather than a browser one, `pip install -e '.[desktop]'`.
 
 The installers on the Releases page bundle everything instead, and connect to your organisation's server or run Shikari locally: [desktop/README.md](../../desktop/README.md).
 

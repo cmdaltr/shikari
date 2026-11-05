@@ -4,11 +4,11 @@ Shikari ships two ways to run as an application with a Dock, Start menu or launc
 
 ![Shikari deployment comparison](../docs/architecture/deployment-comparison.svg)
 
-| | Installer (this folder) | `shikari-cli app` |
+| | Installer (this folder) | `shikari app` |
 |---|---|---|
 | For | Anyone: download, install, open | A checkout you develop in |
 | Runs | Its own bundled Python and dependencies | The repository's `.venv` |
-| Data | A per-user folder (below) | The repository, as `shikari-cli start` does |
+| Data | A per-user folder (below) | The repository, as `shikari start` does |
 | Updates | A new installer | `git pull` |
 
 ## Installing

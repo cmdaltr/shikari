@@ -164,7 +164,7 @@
       </div>`;
     }
     // Whether this machine is a live CALDERA agent — the same enrolled/not-enrolled cue the diagram
-    // and `shikari-cli caldera list` show. Only meaningful once the machine has an OS.
+    // and `shikari caldera list` show. Only meaningful once the machine has an OS.
     const enrol = m.enrolled
       ? '<span class="lab-agent-badge is-on" title="Enrolled as a CALDERA agent"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="5.5"/><path d="M8 4.5V8l2.5 1.5"/></svg>agent</span>'
       : (m.os ? '<span class="lab-agent-badge" title="Not a CALDERA agent — use Enrol in CALDERA">not enrolled</span>' : '');

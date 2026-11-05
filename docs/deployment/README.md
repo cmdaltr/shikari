@@ -4,7 +4,7 @@ A **team server** is the central Shikari instance that browsers and desktop clie
 covers running it as a managed service on Linux (Ubuntu 22.04+, Debian 12+, Rocky/RHEL 9) and Windows
 Server 2022+, with TLS, upgrades, backups and monitoring (#29).
 
-For a single-user machine, `shikari-cli start` or the desktop app is enough — you don't need any of this.
+For a single-user machine, `shikari start` or the desktop app is enough — you don't need any of this.
 
 ## What you get
 

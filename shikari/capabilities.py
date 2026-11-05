@@ -70,7 +70,7 @@ def dependency_matrix() -> dict:
          "status": _engine_status(utm), "detail": _engine_detail(utm)},
         {"name": "AI provider", "enables": "Ask Shikari, Agents, AI-written queries, threat briefings",
          "status": ai_status, "detail": ai_detail.strip(" ·")},
-        {"name": "Desktop app window", "enables": "The shikari-cli app window (otherwise use a browser)",
+        {"name": "Desktop app window", "enables": "The shikari app window (otherwise use a browser)",
          "status": desktop_status, "detail": desktop_detail},
     ]
     return {"host": host["label"], "rows": rows}

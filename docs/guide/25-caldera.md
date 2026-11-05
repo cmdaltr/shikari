@@ -22,7 +22,7 @@ Pushing detections into CALDERA was dropped from #30: CALDERA has nowhere to tak
 
 On a macOS host you run Shikari on yourself, the **Provision** button on the CALDERA card stands the whole lab up for you: it installs OrbStack, builds and runs a disposable CALDERA server, enrols agents, and saves the server and key to your profile — the in-app equivalent of `scripts/telemetry/caldera-lab.sh`. A step that needs you (your password for Homebrew, OrbStack's first launch) shows exactly what to do and carries on by itself once it's done, re-checking every 10 seconds. Nothing detonates during provisioning.
 
-It's deliberately narrow — an **admin** account, a **macOS** host, and the opt-in `SHIKARI_ALLOW_LAB_PROVISION=1` in the environment — so it can never fire on a shared server, where the host isn't your own machine. The **local desktop app** sets that flag for you (it runs its own server on your machine); running Shikari any other way, set it yourself, e.g. in `.envrc` or before `shikari-cli start`. Without all three gates you get the manual **Deploy** guide instead, and the server-side options below.
+It's deliberately narrow — an **admin** account, a **macOS** host, and the opt-in `SHIKARI_ALLOW_LAB_PROVISION=1` in the environment — so it can never fire on a shared server, where the host isn't your own machine. The **local desktop app** sets that flag for you (it runs its own server on your machine); running Shikari any other way, set it yourself, e.g. in `.envrc` or before `shikari start`. Without all three gates you get the manual **Deploy** guide instead, and the server-side options below.
 
 Once a lab is up, the button turns green and reads **Re-provision** (run it again), with **De-provision** beside it to tear the lab down — stop the server, delete the agents, and remove CALDERA from your profile.
 
@@ -58,12 +58,12 @@ Names follow a convention so the lab stays legible: an `shi-` prefix always, a `
 The same from the command line:
 
 ```
-shikari-cli caldera provision linux              # a Tart Ubuntu VM, enrolled
-shikari-cli caldera provision linux --engine docker
-shikari-cli caldera provision linux --distro rocky   # a Rocky 10 Docker container, enrolled
-shikari-cli caldera provision macos              # needs a cirruslabs base
-shikari-cli caldera enrol tart shi-cal-ubu24    # enrol a machine Shikari manages
-shikari-cli caldera list                         # managed machines, and which are agents
+shikari caldera provision linux              # a Tart Ubuntu VM, enrolled
+shikari caldera provision linux --engine docker
+shikari caldera provision linux --distro rocky   # a Rocky 10 Docker container, enrolled
+shikari caldera provision macos              # needs a cirruslabs base
+shikari caldera enrol tart shi-cal-ubu24    # enrol a machine Shikari manages
+shikari caldera list                         # managed machines, and which are agents
 ```
 
 The web, the desktop app (the same UI) and the CLI share one backend source for the naming and group convention, so they can't drift. For a throwaway lab from scratch, `scripts/telemetry/caldera-lab.sh` still does the whole bring-up end to end (`up` for the server and OrbStack Linux agents, `win <vm>` for a UTM Windows VM, `mac <vm>` for a Tart macOS VM), or deploy sandcat from CALDERA's own UI.

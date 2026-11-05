@@ -1,5 +1,5 @@
 """
-Search for shikari-cli console.
+Search for shikari console.
 
 Three search domains:
   bespoke  — prompts, templates, reference queries, mappings

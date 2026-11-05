@@ -21,7 +21,7 @@ Everything else is opt-in. Each capability below is simply unavailable when its 
 | Emulate lab — Windows VM | UTM | the Windows machine type is unavailable |
 | CALDERA operations | Docker (CALDERA itself runs as a container) | the Lab → CALDERA panel is inert |
 | AI: Ask Shikari, Agents, AI-written queries, threat briefings | a cloud model API key, or Ollama; local in-process models also need `pip install 'shikari[local-ai]'` | AI is opt-in and off by default; everything else is unaffected |
-| Desktop app window (`shikari-cli app`) | `pip install 'shikari[desktop]'` (Linux also needs GTK or Qt) | run Shikari in a browser instead |
+| Desktop app window (`shikari app`) | `pip install 'shikari[desktop]'` (Linux also needs GTK or Qt) | run Shikari in a browser instead |
 
 Rocky 10 is the sharpest case: it runs only as a Docker container, so a host without Docker loses both Rocky and the Ubuntu container — its Tart VM and the other machines still work. The `analysis`, `viz` and `geo` extras in `pyproject.toml` are for ancillary notebook and offline tooling; no page in the app requires them.
 
@@ -37,7 +37,7 @@ cd shikari
 **Option A: Docker**
 
 ```bash
-docker compose up --build  # or: shikari-cli docker up --build, once shikari-cli is installed
+docker compose up --build  # or: shikari docker up --build, once shikari is installed
 docker compose down        # stop
 ```
 
@@ -49,9 +49,9 @@ Data lives in Docker volumes and survives restarts.
 python3 -m venv .venv            # add --copies if the checkout is in a synced folder (OneDrive, Dropbox)
 source .venv/bin/activate
 pip install -r requirements.txt
-./shikari-cli install  # once: puts `shikari-cli` on your PATH (~/bin)
-shikari-cli start      # background, restarted if it crashes
-shikari-cli status | shikari-cli logs -f | shikari-cli restart | shikari-cli stop
+./bin/shikari install  # once: puts `shikari` on your PATH (~/.local/bin)
+shikari start      # background, restarted if it crashes
+shikari status | shikari logs -f | shikari restart | shikari stop
 ```
 
 Day-to-day running, start-up options and what Shikari updates when it starts: [Running Shikari](docs/guide/01-running-shikari.md).
@@ -134,10 +134,10 @@ Detections are YAML files, one per technique and SIEM. Copy a query into Defende
 ## Without the browser
 
 ```bash
-shikari-cli console                               # Metasploit-style console
-shikari-cli offline generate "APT29" --correlate  # the pipeline, locally
-shikari-cli offline correlate "APT29"             # correlations from its detections
-shikari-cli offline hunt "PowerShell"             # one technique, by name or ID
+shikari console                               # Metasploit-style console
+shikari offline generate "APT29" --correlate  # the pipeline, locally
+shikari offline correlate "APT29"             # correlations from its detections
+shikari offline hunt "PowerShell"             # one technique, by name or ID
 ```
 
 The console, the Python client, the REST API (live reference at `http://localhost:8000/docs`) and the MCP server: [Console, API and MCP](docs/guide/17-console-api-mcp.md).
@@ -148,8 +148,8 @@ The console, the Python client, the REST API (live reference at `http://localhos
 |---|---|
 | Can't sign in with the default login | `python scripts/admin/reset_password.py`, or `scripts/admin/create_admin.py` for a new administrator |
 | Queries don't match my SIEM's tables or fields | The mapping files (above): start-up names any that are missing |
-| Port 8000 in use | `lsof -i :8000`, or `shikari-cli start --port 8001` |
+| Port 8000 in use | `lsof -i :8000`, or `shikari start --port 8001` |
 | Docker won't start | `docker compose logs shikari`; rebuild with `docker compose down -v && docker compose up --build` |
-| A page shows old data after an update | `shikari-cli restart --skip-index` |
+| A page shows old data after an update | `shikari restart --skip-index` |
 
 More: the [documentation index](docs/DOCS_INDEX.md), or open an [issue](https://github.com/cmdaltr/shikari/issues).

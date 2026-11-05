@@ -77,4 +77,4 @@ The products are grouped into categories (shown as a 4×4×4 grid) in `shikari/m
 
 Create, edit and remove accounts: name, email, role (Standard or Administrator) and state (an inactive account can't sign in). **Reset Password** sets a new password for the user. Users who forget their own can use **Forgot password** on the sign-in page, which emails a reset link when SMTP is configured.
 
-A **Sample data** toggle seeds (or removes) a clearly-labelled `[SAMPLE]` scenario across every surface, so you can see where data appears. It sits alongside real work and removes exactly what it added. The same thing runs from the CLI with `shikari-cli test populate` / `depopulate`.
+A **Sample data** toggle seeds (or removes) a clearly-labelled `[SAMPLE]` scenario across every surface, so you can see where data appears. It sits alongside real work and removes exactly what it added. The same thing runs from the CLI with `shikari test populate` / `depopulate`.

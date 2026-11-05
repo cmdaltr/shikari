@@ -1,5 +1,5 @@
 """
-shikari-cli offline: the pipeline without the server (generate, correlate, hunt, emulate),
+shikari offline: the pipeline without the server (generate, correlate, hunt, emulate),
 writing to data/groups as the server would.
 """
 
@@ -458,7 +458,7 @@ def run_emulation(
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="shikari-cli offline",
+        prog="shikari offline",
         description="The Shikari pipeline without the server",
         epilog="""
 Typical workflow: generate → correlate

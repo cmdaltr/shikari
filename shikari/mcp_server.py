@@ -93,7 +93,7 @@ def main() -> None:
     try:
         client.login()  # fail now with a clear message rather than on the first tool call
     except ShikariError as e:
-        print(f"shikari-cli mcp: {e}", file=sys.stderr)
+        print(f"shikari mcp: {e}", file=sys.stderr)
         sys.exit(1)
     server = build_server(client)
 

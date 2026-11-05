@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-status-shikari.py: Show whether Shikari and Ollama are running (shikari-cli status).
+status-shikari.py: Show whether Shikari and Ollama are running (shikari status).
 Kept for older instructions; the implementation is shikari/service.py, which `shikari` runs.
 """
 

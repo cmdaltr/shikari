@@ -182,7 +182,7 @@ MITRESaw/
 # UI walkthrough run output
 tests/screenshots/walkthrough/
 
-# shikari-cli start/stop supervisor state (shikari/service.py)
+# shikari start/stop supervisor state (shikari/service.py)
 data/run/
 logs/
 

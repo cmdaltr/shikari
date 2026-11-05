@@ -1,6 +1,6 @@
 # Correlation Engine Quick Reference
 
-> **Status (2026-10-16):** some of what this document names was never built: `scripts/test_correlation_params.py`; try thresholds with `shikari-cli offline correlate <group> --min-queries … --max-queries …` instead. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
+> **Status (2026-10-16):** some of what this document names was never built: `scripts/test_correlation_params.py`; try thresholds with `shikari offline correlate <group> --min-queries … --max-queries …` instead. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
 
 ## TL;DR
 

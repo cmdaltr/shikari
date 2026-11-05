@@ -178,7 +178,7 @@ openai>=1.0.0
 # For local LLM support
 # ollama-python>=0.1.0
 
-# MCP server (shikari-cli mcp); sse-starlette 2.x keeps starlette at FastAPI's pin
+# MCP server (shikari mcp); sse-starlette 2.x keeps starlette at FastAPI's pin
 httpx-sse==0.4.3
 mcp==1.30.0
 pydantic-settings==2.15.0

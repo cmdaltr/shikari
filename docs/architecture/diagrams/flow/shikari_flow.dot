@@ -16,7 +16,7 @@ digraph ShikariFlow {
     fontsize=12;
 
     web_ui [label="Web UI\n(VirusTotal-style\nTabbed Interface)", shape=component, fillcolor="#4a90e2", fontcolor=white];
-    cli [label="CLI\n(shikari-cli)", shape=component, fillcolor="#4a90e2", fontcolor=white];
+    cli [label="CLI\n(shikari)", shape=component, fillcolor="#4a90e2", fontcolor=white];
     api_clients [label="External API Clients\n(SOAR, etc.)", shape=component, fillcolor="#4a90e2", fontcolor=white];
   }
 

@@ -144,5 +144,5 @@ def test_data_dir():
 def ensure_shikari_running(client):
     """Ensure Shikari is running before tests."""
     if not client.check_health():
-        pytest.skip("Shikari is not running. Start it with: shikari-cli start")
+        pytest.skip("Shikari is not running. Start it with: shikari start")
     return True

@@ -188,7 +188,7 @@ local-ai = [
     "sentencepiece>=0.1.99",
 ]
 
-# Desktop app window (shikari-cli app). Linux also needs GTK (python3-gi, gir1.2-webkit2-4.1) or Qt
+# Desktop app window (shikari app). Linux also needs GTK (python3-gi, gir1.2-webkit2-4.1) or Qt
 desktop = [
     "pywebview>=5.0",
     # Checks an organisation's server against the OS certificate store, as the window does
@@ -244,7 +244,7 @@ Repository = "https://github.com/yourusername/shikari"
 Issues = "https://github.com/yourusername/shikari/issues"
 
 [project.scripts]
-shikari-cli = "shikari.service:main"
+shikari = "shikari.service:main"
 
 [tool.setuptools]
 packages = ["shikari"]

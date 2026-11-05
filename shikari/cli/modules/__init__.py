@@ -1,4 +1,4 @@
-"""Module registry for shikari-cli console."""
+"""Module registry for shikari console."""
 
 from .generate import GenerateModule
 from .correlate import CorrelateModule

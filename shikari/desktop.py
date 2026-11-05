@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-shikari-cli app: Shikari as a desktop application with its own Dock / Start menu / launcher entry.
+shikari app: Shikari as a desktop application with its own Dock / Start menu / launcher entry.
 
-    shikari-cli app install [--dock]   add Shikari to Applications (macOS), the Start menu and desktop
+    shikari app install [--dock]   add Shikari to Applications (macOS), the Start menu and desktop
                                       (Windows) or the application menu (Linux); --dock also pins it
                                       to the macOS Dock
-    shikari-cli app uninstall          remove what install added
-    shikari-cli app open               what the app runs: start the server if it isn't up, then
+    shikari app uninstall          remove what install added
+    shikari app open               what the app runs: start the server if it isn't up, then
                                       show Shikari in a window
 
 The app is a launcher for this checkout, not a frozen copy: it runs the repository's .venv, so
@@ -15,7 +15,7 @@ installed (pip install -e '.[desktop]'), otherwise a Chrome/Edge/Brave/Chromium 
 otherwise the default browser.
 
 A server the app started is stopped when its window closes; one that was already running
-(`shikari-cli start`) is left alone. Windows has no supervisor (shikari/service.py is POSIX), so
+(`shikari start`) is left alone. Windows has no supervisor (shikari/service.py is POSIX), so
 there the app runs the server itself.
 
 On Windows, run it as: .venv\\Scripts\\python shikari\\desktop.py install
@@ -72,7 +72,7 @@ class Server:
         self.url = f"http://127.0.0.1:{self.port}"
         self.started_here = False
         self.proc = None
-        self.log = f"{service.LOG_DIR / 'shikari.log'} (or run: shikari-cli status)"
+        self.log = f"{service.LOG_DIR / 'shikari.log'} (or run: shikari status)"
 
     def healthy(self):
         return service.http_ok(f"{self.url}/health", timeout=2)
@@ -95,7 +95,7 @@ class Server:
                                          cwd=ROOT, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
                                          creationflags=flags)
         else:
-            # The supervisor, as `shikari-cli start` runs it (crash restarts, remembered settings)
+            # The supervisor, as `shikari start` runs it (crash restarts, remembered settings)
             out = open(service.LOG_DIR / "app.log", "a")
             self.proc = subprocess.Popen([venv_python(), str(ROOT / "shikari" / "service.py"), "start"],
                                          cwd=ROOT, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
@@ -333,7 +333,7 @@ def install_macos(args):
     if args.dock:
         dock_add(app)
     else:
-        print("Open it from Launchpad or Spotlight; to keep it in the Dock: shikari-cli app install --dock")
+        print("Open it from Launchpad or Spotlight; to keep it in the Dock: shikari app install --dock")
 
 
 def dock_add(app):
@@ -441,7 +441,7 @@ def cmd_uninstall(args):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(prog="shikari-cli app", description="Shikari as a desktop application.")
+    parser = argparse.ArgumentParser(prog="shikari app", description="Shikari as a desktop application.")
     sub = parser.add_subparsers(dest="command", required=True)
     install = sub.add_parser("install", help="add Shikari to Applications / the Start menu / the app menu")
     install.add_argument("--dock", action="store_true", help="macOS: also keep it in the Dock")

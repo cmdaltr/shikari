@@ -15,7 +15,7 @@ up front, so the rest is detail:
 
 ## Part 1 — MCP tools
 
-Shikari **already ships an MCP server**: `shikari-cli mcp` (`shikari/mcp_server.py`), a stdio server built
+Shikari **already ships an MCP server**: `shikari mcp` (`shikari/mcp_server.py`), a stdio server built
 over `ShikariClient`, exposing the server-side console agent tools (`hunt_report`, `analyse_report`,
 `hunt_cve`, `intel_company`, …). So this is **curate + extend**, not build-from-scratch.
 

@@ -285,7 +285,7 @@ def print_completion():
     print("     python scripts/config/search_similar_detections.py --technique T1003.001 --show-query")
     print()
     print("  3. Generate enhanced detections:")
-    print("     shikari-cli offline generate APT29")
+    print("     shikari offline generate APT29")
     print()
     print("  4. Read the documentation:")
     print("     docs/rag/FIDELITY_IMPLEMENTATION_GUIDE.md")
@@ -341,7 +341,7 @@ Steps:
 
     # Check if running from project root
     root = get_project_root()
-    if not (root / "shikari-cli").exists():
+    if not (root / "shikari").exists():
         print_error("Please run this script from the shikari project root directory")
         sys.exit(1)
 

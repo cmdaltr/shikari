@@ -11,7 +11,7 @@ Plain-language guide to every part of Shikari, one page each: what it's for, how
 | Page | Covers |
 |------|--------|
 | [Overview](guide/README.md) | What Shikari does, where everything is, which SIEMs, what uses AI |
-| [Running Shikari](guide/01-running-shikari.md) | `shikari-cli start/stop/status`, signing in, what happens at start-up |
+| [Running Shikari](guide/01-running-shikari.md) | `shikari start/stop/status`, signing in, what happens at start-up |
 | [Hunt](guide/02-hunt.md) | Threat group, CVE and technique hunts; every option |
 | [Analyse](guide/03-analyse.md) | Detections from a report URL or file |
 | [Company profile](guide/04-company-profile.md) | Who targets a company, then their detections |
@@ -27,7 +27,7 @@ Plain-language guide to every part of Shikari, one page each: what it's for, how
 | [Regex](guide/14-regex.md) | Regex tester and per-SIEM checks (RE2, PCRE, Lucene) |
 | [Agents and Ask Shikari](guide/15-agents-and-ask-shikari.md) | The AI features |
 | [Profile and settings](guide/16-profile-and-settings.md) | Account, SIEMs, industries, keys, MFA, tokens, users |
-| [Console, API and MCP](guide/17-console-api-mcp.md) | `shikari-cli console`, the Python client, REST, `shikari-cli mcp` |
+| [Console, API and MCP](guide/17-console-api-mcp.md) | `shikari console`, the Python client, REST, `shikari mcp` |
 | [Data and updates](guide/18-data-and-updates.md) | What's downloaded, when, and where everything is kept |
 | [Emulate](guide/19-emulate.md) | Which logs record each technique (native, Sysmon, EDR; Windows, Linux, macOS, ESXi, cloud), detections checked against lab recordings, Defender XDR's own alerting |
 | [Recording a lab](guide/20-recording-a-lab.md) | **Coming soon**: Atomic Red Team on your own VMs, with Defender for Endpoint's rows, into Emulate |
@@ -40,20 +40,20 @@ Plain-language guide to every part of Shikari, one page each: what it's for, how
 
 | Document | Description |
 |----------|-------------|
-| [README.md](../README.md) | Project overview, features, shikari-cli console usage |
+| [README.md](../README.md) | Project overview, features, shikari console usage |
 | [GETTING_STARTED.md](../GETTING_STARTED.md) | Installation, setup, first run |
-| [USAGE.md](USAGE.md) | Where each task is done, and `shikari-cli offline` |
+| [USAGE.md](USAGE.md) | Where each task is done, and `shikari offline` |
 | [desktop/README.md](../desktop/README.md) | Desktop installers: connecting to an organisation's server (MDM, Group Policy), running locally, building releases |
 | [scripts/video/README.md](../scripts/video/README.md) | Remaking the in-app guide's pictures and the narrated walkthrough video |
 | [Deployment comparison](architecture/deployment-comparison.svg) | Web, desktop client, desktop local and checkout: where users, detections and mappings live |
 
 ---
 
-## Interactive Console (shikari-cli console)
+## Interactive Console (shikari console)
 
 | Document | Description |
 |----------|-------------|
-| [README.md — shikari-cli console](../README.md#-interactive-console-shikari-cli-console) | Commands, modules, example session |
+| [README.md — shikari console](../README.md#-interactive-console-shikari-console) | Commands, modules, example session |
 
 ---
 

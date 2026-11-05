@@ -1,4 +1,4 @@
-"""shikari-cli console: the interactive console."""
+"""shikari console: the interactive console."""
 
 import cmd
 import os
@@ -16,7 +16,7 @@ class ShikariConsole(cmd.Cmd):
     """Metasploit-style interactive console for Shikari."""
 
     intro = ""
-    prompt = "\033[1;36mshikari-cli\033[0m > "
+    prompt = "\033[1;36mshikari\033[0m > "
 
     def __init__(self):
         super().__init__()
@@ -25,7 +25,7 @@ class ShikariConsole(cmd.Cmd):
 
     def _setup_history(self):
         """Configure readline history."""
-        histfile = os.path.expanduser("~/.shikari-cli_history")
+        histfile = os.path.expanduser("~/.shikari_history")
         try:
             readline.read_history_file(histfile)
         except OSError:
@@ -46,9 +46,9 @@ class ShikariConsole(cmd.Cmd):
 
     def postcmd(self, stop, line):
         if self.current_module:
-            self.prompt = f"\033[1;36mshikari-cli\033[0m (\033[1;33m{self.current_module.name}\033[0m) > "
+            self.prompt = f"\033[1;36mshikari\033[0m (\033[1;33m{self.current_module.name}\033[0m) > "
         else:
-            self.prompt = "\033[1;36mshikari-cli\033[0m > "
+            self.prompt = "\033[1;36mshikari\033[0m > "
         return stop
 
     # ------------------------------------------------------------------
@@ -290,7 +290,7 @@ class ShikariConsole(cmd.Cmd):
 
 
 def main():
-    """Entry point for shikari-cli console."""
+    """Entry point for shikari console."""
     console = ShikariConsole()
     try:
         console.cmdloop()

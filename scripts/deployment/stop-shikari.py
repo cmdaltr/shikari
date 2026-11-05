@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-stop-shikari.py: Stop Shikari (shikari-cli stop --force).
+stop-shikari.py: Stop Shikari (shikari stop --force).
 Kept for older instructions; the implementation is shikari/service.py, which `shikari` runs.
 """
 

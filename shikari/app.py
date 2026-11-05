@@ -13134,11 +13134,11 @@ def main():
     Shikari CLI entry point.
 
     Usage:
-      shikari-cli serve              Start the Shikari server (default: port 8000)
-      shikari-cli serve --port 8001  Start on a custom port
-      shikari-cli serve --host 0.0.0.0  Bind to all interfaces
-      shikari-cli serve --reload     Enable auto-reload (development)
-      shikari-cli clear-cache        Clear server-side caches and reset browser preferences
+      shikari serve              Start the Shikari server (default: port 8000)
+      shikari serve --port 8001  Start on a custom port
+      shikari serve --host 0.0.0.0  Bind to all interfaces
+      shikari serve --reload     Enable auto-reload (development)
+      shikari clear-cache        Clear server-side caches and reset browser preferences
     """
     import sys
     import argparse
@@ -13154,7 +13154,7 @@ def main():
         return
 
     parser = argparse.ArgumentParser(
-        prog="shikari-cli serve",
+        prog="shikari serve",
         description="Shikari – Threat Detection Engineering Platform",
     )
     parser.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")

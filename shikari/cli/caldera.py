@@ -1,12 +1,12 @@
 """
-shikari-cli caldera — provision and enrol CALDERA agents from the command line (the CLI half of the
+shikari caldera — provision and enrol CALDERA agents from the command line (the CLI half of the
 #30 provisioning the web 'Add CALDERA agent' flow also exposes).
 
-  shikari-cli caldera provision linux [name] [--engine tart|docker] [--distro ubuntu|rocky] [--group G]
-  shikari-cli caldera provision macos [name]            # needs a cirruslabs base (Tart guest agent)
+  shikari caldera provision linux [name] [--engine tart|docker] [--distro ubuntu|rocky] [--group G]
+  shikari caldera provision macos [name]            # needs a cirruslabs base (Tart guest agent)
                                                        # --distro rocky is Docker-only (Rocky 10)
-  shikari-cli caldera enrol <tart|docker|utm> <name>    # enrol a machine Shikari already manages
-  shikari-cli caldera list                              # managed machines, and which are agents
+  shikari caldera enrol <tart|docker|utm> <name>    # enrol a machine Shikari already manages
+  shikari caldera list                              # managed machines, and which are agents
 
 The disposable-lab bring-up (the server plus a couple of Linux agents) still lives in
 scripts/telemetry/caldera-lab.sh; this is for adding individual, Shikari-managed agents.
@@ -77,7 +77,7 @@ def _list(args) -> int:
     # Rivendell's own VMs are excluded — this is Shikari's lab.
     rows = [m for m in machines.listing(is_admin=True) if not m["name"].lower().startswith("rivendell-")]
     if not rows:
-        print("No Shikari-managed machines. Create one with: shikari-cli caldera provision linux")
+        print("No Shikari-managed machines. Create one with: shikari caldera provision linux")
         return 0
     rank = {"windows": 0, "macos": 1, "linux": 2}
     rows.sort(key=lambda m: (rank.get(m.get("os"), 3), m["name"]))
@@ -91,7 +91,7 @@ def _list(args) -> int:
 
 
 def main():
-    p = argparse.ArgumentParser(prog="shikari-cli caldera", description="Provision and enrol CALDERA agents.")
+    p = argparse.ArgumentParser(prog="shikari caldera", description="Provision and enrol CALDERA agents.")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     pr = sub.add_parser("provision", help="create a managed VM/container for an OS and enrol it")

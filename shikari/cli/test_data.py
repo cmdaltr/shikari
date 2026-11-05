@@ -1,10 +1,10 @@
 """
-Sample data for a guided tour of Shikari (`shikari-cli test populate`).
+Sample data for a guided tour of Shikari (`shikari test populate`).
 
 Seeds one cohesive, clearly-labelled scenario — a fictional group **SampleSpider** and a fictional
 company **sample-corp.example** — across every surface that displays data, so you can see where and
 how each kind of data appears and is accessed. Everything it creates is recorded in a manifest
-(``data/.sample_data_manifest.json``) and removed exactly by ``shikari-cli test depopulate``, so it
+(``data/.sample_data_manifest.json``) and removed exactly by ``shikari test depopulate``, so it
 never gets confused with real work and never lingers in the Library.
 
 Subcommands: populate [--force] [--user EMAIL] · depopulate · status.
@@ -53,7 +53,7 @@ def _detection_doc(tid, name, tactic, vendor, table_or_et, query, indicators):
     return {
         "name": name,
         "technique_id": tid,
-        "description": f"{LABEL} Sample detection — {GROUP} using {name}. Remove with `shikari-cli test depopulate`.",
+        "description": f"{LABEL} Sample detection — {GROUP} using {name}. Remove with `shikari test depopulate`.",
         "severity": "High",
         "requiredDataConnectors": [{"connectorId": connector, "dataTypes": [table_or_et]}],
         "queryFrequency": "1d", "queryPeriod": "1d", "triggerOperator": "gt", "triggerThreshold": 0,
@@ -66,7 +66,7 @@ def _detection_doc(tid, name, tactic, vendor, table_or_et, query, indicators):
 
 def _write_yaml(path, doc):
     with open(path, "w", encoding="utf-8") as f:
-        f.write(f"# {LABEL} sample data — shikari-cli test populate\n")
+        f.write(f"# {LABEL} sample data — shikari test populate\n")
         yaml.dump(doc, f, sort_keys=False, allow_unicode=True, width=10000)
 
 
@@ -94,7 +94,7 @@ def populate(force=False, email=""):
     if os.path.exists(MANIFEST):
         if not force:
             print(f"Sample data already present ({MANIFEST}).\n"
-                  f"Run `shikari-cli test depopulate` first, or `shikari-cli test populate --force`.")
+                  f"Run `shikari test depopulate` first, or `shikari test populate --force`.")
             return 1
         depopulate()
 
@@ -153,7 +153,7 @@ def populate(force=False, email=""):
         json.dump(manifest, f, indent=2)
 
     print(f"\nManifest: {MANIFEST}")
-    print(f"Remove everything with: shikari-cli test depopulate")
+    print(f"Remove everything with: shikari test depopulate")
     return 0
 
 
@@ -268,7 +268,7 @@ def _seed_db(manifest, email):
 
         assessment = Assessment(user_id=user.id, name=f"{LABEL} Q4 Purple Team",
                                 target=DOMAIN, operator="sample", run_date=datetime.utcnow().date().isoformat(),
-                                notes=f"{LABEL} Example assessment — remove with shikari-cli test depopulate")
+                                notes=f"{LABEL} Example assessment — remove with shikari test depopulate")
         db.add(assessment); db.flush()
         outcomes = [("executed", "alerted"), ("executed", "logged"), ("blocked", "prevented")]
         for tc, (red, blue) in zip(test_cases, outcomes):
@@ -354,7 +354,7 @@ def depopulate():
 def status():
     m = _load_manifest()
     if not m:
-        print("No sample data present. Add it with `shikari-cli test populate`.")
+        print("No sample data present. Add it with `shikari test populate`.")
         return 0
     files = [p for p in m.get("files", []) if os.path.exists(p)]
     db = m.get("db") or {}
@@ -364,7 +364,7 @@ def status():
     print(f"  company: {m.get('domain')}")
     print(f"  files:   {len(files)} present of {len(m.get('files', []))} recorded")
     print(f"  db rows: " + ", ".join(f"{k}={len(v)}" for k, v in db.items()) if db else "  db rows: none")
-    print("Remove with `shikari-cli test depopulate`.")
+    print("Remove with `shikari test depopulate`.")
     return 0
 
 
@@ -389,7 +389,7 @@ def state():
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
-    parser = argparse.ArgumentParser(prog="shikari-cli test",
+    parser = argparse.ArgumentParser(prog="shikari test",
                                      description="Sample data for a guided tour of Shikari.")
     sub = parser.add_subparsers(dest="action")
     p = sub.add_parser("populate", help="seed the sample scenario")
