@@ -70,3 +70,35 @@ def forget(engine: str, name: str):
         data = _load()
         if data.pop(_key(engine, name), None) is not None:
             _save(data)
+
+
+def set_vnc(engine: str, name: str, host: str, port: int):
+    """Record the trusted VNC (RFB) endpoint for a machine's graphical console (#28). Upserts onto the
+    machine's entry, creating a minimal one if Shikari didn't make the machine. The WebSocket bridge
+    reads this and never a client-supplied address — see shikari.lab.vnc."""
+    with _lock:
+        data = _load()
+        entry = data.get(_key(engine, name))
+        if entry is None:
+            entry = {"template": None, "os": "", "image": "", "provisioned": [], "shikari": False,
+                     "owner": None}
+        entry["vnc"] = {"host": host, "port": int(port)}
+        data[_key(engine, name)] = entry
+        _save(data)
+
+
+def get_vnc(engine: str, name: str):
+    """The stored (host, port) for a machine's VNC console, or None if not configured."""
+    entry = _load().get(_key(engine, name)) or {}
+    vnc = entry.get("vnc") or {}
+    if vnc.get("host") and vnc.get("port"):
+        return vnc["host"], int(vnc["port"])
+    return None
+
+
+def clear_vnc(engine: str, name: str):
+    with _lock:
+        data = _load()
+        entry = data.get(_key(engine, name))
+        if entry is not None and entry.pop("vnc", None) is not None:
+            _save(data)

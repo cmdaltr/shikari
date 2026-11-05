@@ -57,7 +57,7 @@ A session registry (`shikari.lab.console.REGISTRY`) decouples the shell from the
 
 Covered by `tests/unit/test_lab_console.py` (ring trimming, reconnect identity check, expiry rules, reap).
 
-## Graphical Windows / GUI console — the real blocker (not yet built)
+## Graphical Windows / GUI console — path 1 (user-provided VNC endpoint, done)
 
 A text PTY can't drive a Windows desktop; that needs a pixel protocol (VNC via noVNC, or SPICE via
 spice-html5). The snag is **getting an endpoint out of UTM**:
@@ -65,15 +65,42 @@ spice-html5). The snag is **getting an endpoint out of UTM**:
 - `utmctl` exposes `list/status/start/stop/exec/ip-address/clone/snapshot` — **no display/VNC/port
   command**. UTM's own viewer uses **SPICE**, not VNC/RFB, so noVNC (which speaks RFB) can't connect to a
   stock UTM VM, and Shikari has no API to discover a SPICE/VNC port either.
-- So a graphical console can't be *auto-wired* to a UTM VM the way the text console is. Two sound paths:
-  1. **User-provided VNC endpoint.** The VM is configured with a QEMU `-vnc` display (or any VNC target —
-     a QEMU/Tart VM, a bare host), and its `host:port` is saved as trusted **per-machine config** (same
-     pattern as the CALDERA server URL). Shikari then runs a WebSocket↔TCP bridge to *that* endpoint and
-     serves noVNC. The port must come from trusted config, never client input (SSRF).
-  2. **SPICE path.** Bridge UTM's SPICE socket to spice-html5 — more work, but matches UTM's default.
-- Shippable foundation when we build it: a generic, SSRF-safe WS↔TCP proxy (bridges only to the stored
-  per-machine endpoint) + vendored noVNC + a `vnc-console` page, reusing the same `_owns` gate. Testable
-  against a local VNC server; the UTM-specific wiring is the environment-dependent part.
+- So a graphical console can't be *auto-wired* to a UTM VM the way the text console is. The shipped path is
+  **path 1 — a user-provided VNC endpoint**: the machine exposes a VNC/RFB display (a QEMU `-vnc` target, a
+  Tart VM, any VNC server the Shikari host can reach) and its `host:port` is saved as trusted per-machine
+  config; Shikari bridges a WebSocket↔TCP to *that* endpoint and serves noVNC. (Path 2 — bridging UTM's
+  SPICE socket to spice-html5 — matches UTM's default but is more work and stays a follow-up.)
+
+### Pieces (shipped)
+
+- **`shikari/lab/vnc.py`** — `valid_endpoint(host, port)` (pure, tested: port 1-65535 and a
+  loopback/private/link-local host or `localhost`; public addresses refused) and an async
+  `bridge(websocket, host, port)` (WS↔TCP byte pump via `asyncio.open_connection`).
+- **`shikari/lab/registry.py`** — `set_vnc`/`get_vnc`/`clear_vnc` store the endpoint on the machine's
+  entry in `data/lab/machines.json` (upsert; survives re-record). `machines._decorate` surfaces
+  `vnc: bool` so the UI knows whether it's configured.
+- **`WS /api/lab/vnc`** + **`GET`/`POST /api/lab/vnc-endpoint`** (`shikari/lab/web.py`) — same `_can_lab` +
+  `_owns` gate as the text console (4401/4403 before `accept`; 4404 when no endpoint is set). The bridge
+  resolves `host:port` from the registry by engine+name and **ignores any address in the request** — the
+  SSRF guarantee. noVNC's `binary` subprotocol is echoed back so RFB frames pass through.
+- **`static/lab-vnc.html`** + vendored **`static/vendor/novnc/`** (noVNC 1.4.0, MPL-2.0) — a standalone
+  page opened from the machine row ("Desktop", shown when running). If no endpoint is configured it shows
+  a small form to set one (POST), then connects; a trailing `*` on the link flags "not yet configured".
+- **Lab UI** — a Desktop link per running machine in `static/js/lab.js`.
+
+### Security
+
+The endpoint is **trusted config set out-of-band by the owner**, never client input, so the bridge can't
+be aimed at an arbitrary address. `valid_endpoint` is defence in depth: even a mis-set endpoint can't
+reach the public internet. Everything else is the text console's model — owner/admin gate, strict name
+validation, allow-listed engine.
+
+### Testing
+
+`tests/unit/test_lab_vnc.py` covers `valid_endpoint` (accept/refuse table) and the registry round-trip
+(set/get/clear, upsert preserves the rest of the entry). The live bridge needs a real VNC target: stand
+one up (e.g. `x11vnc`/`Xvnc` on the host, or a QEMU `-vnc 127.0.0.1:0` VM), set it via the Desktop panel,
+and confirm the desktop renders. Do live VM/VNC work inside `sbx`.
 
 ## Other follow-ups
 

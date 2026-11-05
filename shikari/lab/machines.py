@@ -41,6 +41,7 @@ def _decorate(m: Dict, user_id=None, is_admin: bool = False) -> Dict:
             "template": (known or {}).get("template", ""),
             "records": template["records"] if template else "",
             "provisioned": (known or {}).get("provisioned", []),
+            "vnc": bool((known or {}).get("vnc")),
             "owner": owner,
             "manageable": _manageable(m["engine"], owner, user_id, is_admin)}
 

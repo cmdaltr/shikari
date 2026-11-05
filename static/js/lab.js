@@ -130,6 +130,7 @@
     enrol: '<circle cx="8" cy="8" r="5"/><circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/>',
     logs: '<path d="M4 5h8M4 8h8M4 11h5"/>',
     console: '<rect x="2.5" y="3.5" width="11" height="9" rx="1.2"/><path d="M5 6.5l1.8 1.5L5 9.5M8.5 10h3"/>',
+    desktop: '<rect x="2.5" y="3" width="11" height="7.5" rx="1"/><path d="M6 13h4M8 10.5V13"/>',
     delete: '<path d="M4 5h8M6.5 5V3.9h3V5M5.5 5l.4 8h4.2l.4-8"/>',
     info: '<circle cx="8" cy="8" r="5.5"/><path d="M8 7.3v3.4"/><circle cx="8" cy="5.2" r=".7" fill="currentColor" stroke="none"/>',
   };
@@ -159,6 +160,7 @@
         ${m.os && on && !m.enrolled ? act('enrol', 'Enrol in CALDERA') : ''}
         ${act('logs', 'Logs')}
         ${on ? `<a class="ui-pill lab-act" href="/static/lab-console.html?engine=${encodeURIComponent(m.engine)}&name=${encodeURIComponent(m.name)}" target="_blank" rel="noopener" title="Open an interactive console in a new tab">${actIcon('console')}Console</a>` : ''}
+        ${on ? `<a class="ui-pill lab-act" href="/static/lab-vnc.html?engine=${encodeURIComponent(m.engine)}&name=${encodeURIComponent(m.name)}" target="_blank" rel="noopener" title="Open the graphical (VNC) desktop in a new tab${m.vnc ? '' : ' — endpoint not yet configured'}">${actIcon('desktop')}Desktop${m.vnc ? '' : ' *'}</a>` : ''}
       </div>`;
     }
     // Whether this machine is a live CALDERA agent — the same enrolled/not-enrolled cue the diagram
