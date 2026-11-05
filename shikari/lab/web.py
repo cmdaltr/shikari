@@ -741,17 +741,21 @@ async def console_ws(websocket: WebSocket):
     """An interactive shell on a lab machine, bridged over the WebSocket (#28).
 
     Gated exactly like every other lab action: an operational analyst (or admin) who owns the machine.
-    engine and name come as query params; a `{"type":"resize","rows","cols"}` text frame resizes the PTY,
-    any other frame is keystrokes. Output is sent as binary frames.
+    engine and name come as query params; pass `sid` to reconnect to a shell whose browser dropped (the
+    scrollback is replayed). A `{"type":"resize",...}` text frame resizes the PTY, any other frame is
+    keystrokes; output is binary. On connect the server sends `{"type":"session","sid":...}`, and
+    `{"type":"exit"}` when the shell itself ends (so the client knows not to reconnect). The PTY survives
+    a dropped socket for a grace window and is reaped if idle or abandoned (shikari.lab.console.REGISTRY).
     """
     import asyncio
     import json
 
-    from shikari.lab.console import ConsoleSession, console_argv, valid_name
+    from shikari.lab.console import REGISTRY, ConsoleSession, console_argv, valid_name
     from shikari.lab.engines import engine_for
 
     engine = websocket.query_params.get("engine", "")
     name = websocket.query_params.get("name", "")
+    sid = websocket.query_params.get("sid", "") or ""
     user = _user(websocket.cookies.get("shikari_session"))
     if not user or not _can_lab(user):
         await websocket.close(code=4401)
@@ -760,29 +764,42 @@ async def console_ws(websocket: WebSocket):
         await websocket.close(code=4403)
         return
 
-    windows = "win" in name.lower()
-    try:
-        windows = windows or engine_for(engine).status(name).get("os") == "windows"
-    except Exception:  # noqa: BLE001 — status is best-effort; the name heuristic still stands
-        pass
-
+    managed = REGISTRY.get(sid, user.id, engine, name) if sid else None
     await websocket.accept()
-    try:
-        sess = ConsoleSession(console_argv(engine, name, windows))
-    except Exception as e:  # noqa: BLE001 — surface the reason, then close
-        await websocket.send_text(f"\r\n[console failed: {e}]\r\n")
-        await websocket.close()
-        return
+    if managed is None:
+        windows = "win" in name.lower()
+        try:
+            windows = windows or engine_for(engine).status(name).get("os") == "windows"
+        except Exception:  # noqa: BLE001 — status is best-effort; the name heuristic still stands
+            pass
+        try:
+            session = ConsoleSession(console_argv(engine, name, windows))
+        except Exception as e:  # noqa: BLE001 — surface the reason, then close
+            await websocket.send_text(f"\r\n[console failed: {e}]\r\n")
+            await websocket.close()
+            return
+        sid = REGISTRY.create(user.id, engine, name, session)
+        managed = REGISTRY.get(sid, user.id, engine, name)
+    else:
+        managed.attach()
+
+    sess = managed.session
+    await websocket.send_text(json.dumps({"type": "session", "sid": sid}))
+    if managed.buf:  # replay scrollback to a reconnecting (or any) client
+        await websocket.send_bytes(bytes(managed.buf))
 
     loop = asyncio.get_event_loop()
     outq: "asyncio.Queue" = asyncio.Queue()
+    state = {"exited": False}
 
     def on_readable():
         data = sess.read()
         if data:
+            managed.record(data)
             outq.put_nowait(data)
         elif not sess.alive():
-            outq.put_nowait(None)  # the shell exited
+            state["exited"] = True
+            outq.put_nowait(None)  # the shell itself ended
 
     async def sender():
         while True:
@@ -790,6 +807,11 @@ async def console_ws(websocket: WebSocket):
             if data is None:
                 break
             await websocket.send_bytes(data)
+        if state["exited"]:
+            try:
+                await websocket.send_text(json.dumps({"type": "exit"}))
+            except Exception:  # noqa: BLE001
+                pass
         try:
             await websocket.close()
         except Exception:  # noqa: BLE001
@@ -804,6 +826,7 @@ async def console_ws(websocket: WebSocket):
                 break
             if msg.get("bytes") is not None:
                 sess.write(msg["bytes"])
+                managed.touch()
             elif msg.get("text"):
                 text = msg["text"]
                 if text.startswith("{"):
@@ -811,10 +834,12 @@ async def console_ws(websocket: WebSocket):
                         obj = json.loads(text)
                         if obj.get("type") == "resize":
                             sess.resize(obj.get("rows", 24), obj.get("cols", 80))
+                            managed.touch()
                             continue
                     except ValueError:
                         pass
                 sess.write(text.encode())
+                managed.touch()
     except WebSocketDisconnect:
         pass
     finally:
@@ -822,9 +847,14 @@ async def console_ws(websocket: WebSocket):
             loop.remove_reader(sess.fd)
         except Exception:  # noqa: BLE001
             pass
-        sess.close()
         outq.put_nowait(None)
         try:
             await send_task
         except Exception:  # noqa: BLE001
             pass
+        # Keep the shell for a reconnect if it's still alive; the reaper closes it after the grace
+        # window (or sooner if idle). If it already exited, drop it now.
+        if state["exited"] or not sess.alive():
+            REGISTRY.drop(sid)
+        else:
+            managed.detach()

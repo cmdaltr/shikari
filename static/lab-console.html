@@ -31,7 +31,7 @@
 <script>
 (function(){
   var q = new URLSearchParams(location.search);
-  var engine = q.get('engine') || '', name = q.get('name') || '';
+  var engine = q.get('engine') || '', name = q.get('name') || '', sid = q.get('sid') || '';
   document.getElementById('who').textContent = name ? (engine + ' · ' + name) : '(no machine)';
   document.title = 'Shikari console — ' + (name || '');
 
@@ -47,29 +47,57 @@
 
   if (!engine || !name){ term.write('\r\nNo engine/name in the URL. Open as ?engine=docker&name=<machine>\r\n'); setState('s-shut','no machine'); return; }
 
-  var proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(proto + '://' + location.host + '/api/lab/console?engine=' +
-                         encodeURIComponent(engine) + '&name=' + encodeURIComponent(name));
-  ws.binaryType = 'arraybuffer';
+  var ws = null, attempts = 0, maxAttempts = 10, ended = false;
+
+  function wsUrl(){
+    var proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    var u = proto + '://' + location.host + '/api/lab/console?engine=' +
+            encodeURIComponent(engine) + '&name=' + encodeURIComponent(name);
+    if (sid) u += '&sid=' + encodeURIComponent(sid);
+    return u;
+  }
 
   function sendResize(){
     fit.fit();
-    if (ws.readyState === 1) ws.send(JSON.stringify({ type:'resize', rows: term.rows, cols: term.cols }));
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type:'resize', rows: term.rows, cols: term.cols }));
   }
 
-  ws.onopen = function(){ setState('s-open','connected'); term.focus(); sendResize(); };
-  ws.onmessage = function(ev){
-    if (typeof ev.data === 'string') term.write(ev.data);
-    else term.write(new Uint8Array(ev.data));
-  };
-  ws.onclose = function(ev){
-    setState('s-shut', 'closed' + (ev.code === 4403 ? ' (not your machine)' : ev.code === 4401 ? ' (please log in)' : ''));
-    term.write('\r\n\x1b[2m[session closed]\x1b[0m\r\n');
-  };
-  ws.onerror = function(){ setState('s-shut','error'); };
+  function connect(){
+    setState('s-conn', attempts ? ('reconnecting… (' + attempts + ')') : 'connecting…');
+    ws = new WebSocket(wsUrl());
+    ws.binaryType = 'arraybuffer';
 
-  term.onData(function(d){ if (ws.readyState === 1) ws.send(d); });
+    ws.onopen = function(){ attempts = 0; setState('s-open','connected'); term.focus(); sendResize(); };
+
+    ws.onmessage = function(ev){
+      if (typeof ev.data === 'string'){
+        var m = null; try { m = JSON.parse(ev.data); } catch(e){}
+        if (m && m.type === 'session'){                 // remember the id so a reconnect reattaches
+          sid = m.sid;
+          var nu = new URL(location); nu.searchParams.set('sid', sid); history.replaceState(null, '', nu);
+          return;
+        }
+        if (m && m.type === 'exit'){ ended = true; return; }   // the shell itself closed
+        term.write(ev.data);                            // plain text (e.g. a console-failed line)
+        return;
+      }
+      term.write(new Uint8Array(ev.data));
+    };
+
+    ws.onclose = function(ev){
+      if (ev.code === 4401){ setState('s-shut','closed (please log in)'); return; }
+      if (ev.code === 4403){ setState('s-shut','closed (not your machine)'); return; }
+      if (ended){ setState('s-shut','session ended'); term.write('\r\n\x1b[2m[session closed]\x1b[0m\r\n'); return; }
+      if (attempts < maxAttempts){ attempts++; setState('s-conn','reconnecting… (' + attempts + ')'); setTimeout(connect, Math.min(1000 * attempts, 5000)); }
+      else { setState('s-shut','disconnected'); term.write('\r\n\x1b[2m[disconnected — reload to retry]\x1b[0m\r\n'); }
+    };
+
+    ws.onerror = function(){ /* onclose handles the retry */ };
+  }
+
+  term.onData(function(d){ if (ws && ws.readyState === 1) ws.send(d); });
   window.addEventListener('resize', sendResize);
+  connect();
 })();
 </script>
 </body>

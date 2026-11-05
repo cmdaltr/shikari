@@ -43,12 +43,40 @@ browser (xterm.js)  ──WS /api/lab/console?engine=&name=──  server
 - A console is a real shell on a lab machine; lab machines can run live adversary emulation (CALDERA,
   atomics). Treat console access as privileged — it already requires the operational-analyst role.
 
-## Not in this increment (follow-ups)
+## Reconnect & reaping (done)
 
-- **Graphical Windows consoles.** `powershell` over the PTY is text-only and depends on the guest tool
-  forwarding a tty. A proper Windows (or GUI) console wants VNC: UTM exposes a SPICE/VNC port, so a
-  `websockify` → noVNC bridge, surfaced the same way, is the follow-up for `-win` machines.
-- **Scrollback persistence / session reconnect**, and an idle timeout to reap abandoned PTYs.
+A session registry (`shikari.lab.console.REGISTRY`) decouples the shell from the socket:
+
+- Each session has an unguessable id and a capped scrollback ring (`RING_BYTES`). On connect the server
+  sends `{"type":"session","sid":…}`; the page stores it in the URL.
+- A dropped socket does **not** kill the shell — the session is *detached* and survives `DETACH_GRACE`
+  (5 min) for a reconnect, which replays the scrollback. The client auto-reconnects (backoff, 10 tries)
+  with `?sid=`, unless it got `{"type":"exit"}` (the shell itself ended).
+- A daemon reaper closes sessions that exited, went idle past `IDLE_LIMIT` (30 min), or stayed detached
+  past the grace window — so abandoned PTYs can't leak. A reconnect must still match owner+engine+name.
+
+Covered by `tests/unit/test_lab_console.py` (ring trimming, reconnect identity check, expiry rules, reap).
+
+## Graphical Windows / GUI console — the real blocker (not yet built)
+
+A text PTY can't drive a Windows desktop; that needs a pixel protocol (VNC via noVNC, or SPICE via
+spice-html5). The snag is **getting an endpoint out of UTM**:
+
+- `utmctl` exposes `list/status/start/stop/exec/ip-address/clone/snapshot` — **no display/VNC/port
+  command**. UTM's own viewer uses **SPICE**, not VNC/RFB, so noVNC (which speaks RFB) can't connect to a
+  stock UTM VM, and Shikari has no API to discover a SPICE/VNC port either.
+- So a graphical console can't be *auto-wired* to a UTM VM the way the text console is. Two sound paths:
+  1. **User-provided VNC endpoint.** The VM is configured with a QEMU `-vnc` display (or any VNC target —
+     a QEMU/Tart VM, a bare host), and its `host:port` is saved as trusted **per-machine config** (same
+     pattern as the CALDERA server URL). Shikari then runs a WebSocket↔TCP bridge to *that* endpoint and
+     serves noVNC. The port must come from trusted config, never client input (SSRF).
+  2. **SPICE path.** Bridge UTM's SPICE socket to spice-html5 — more work, but matches UTM's default.
+- Shippable foundation when we build it: a generic, SSRF-safe WS↔TCP proxy (bridges only to the stored
+  per-machine endpoint) + vendored noVNC + a `vnc-console` page, reusing the same `_owns` gate. Testable
+  against a local VNC server; the UTM-specific wiring is the environment-dependent part.
+
+## Other follow-ups
+
 - **Read-only / audited sessions** for shared review.
 
 ## Testing

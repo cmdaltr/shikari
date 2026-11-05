@@ -18,9 +18,12 @@ from __future__ import annotations
 import fcntl
 import os
 import re
+import secrets
 import signal
 import struct
 import termios
+import threading
+import time
 from typing import List, Optional
 
 # Machine names follow the lab's own convention (shi-…, no spaces); be strict here too, since the name
@@ -111,3 +114,117 @@ class ConsoleSession:
                 step()
             except OSError:
                 pass
+
+
+# ── Session registry: reconnect to a dropped console, and reap idle/abandoned PTYs (#28) ─────────────
+IDLE_LIMIT = 1800        # close a session after this many seconds with no input or output
+DETACH_GRACE = 300       # after the browser drops, keep the shell alive this long for a reconnect
+RING_BYTES = 256 * 1024  # scrollback kept and replayed to a reconnecting client
+
+
+class _Managed:
+    """One live console: its PTY session, a capped scrollback ring, and liveness bookkeeping."""
+
+    def __init__(self, sid: str, owner, engine: str, name: str, session: "ConsoleSession"):
+        self.sid = sid
+        self.owner = owner
+        self.engine = engine
+        self.name = name
+        self.session = session
+        self.buf = bytearray()
+        self.attached = True
+        self.last_activity = time.time()
+        self.detached_at: Optional[float] = None
+
+    def record(self, data: bytes) -> None:
+        """Append output to the scrollback ring (trimmed to RING_BYTES) and mark activity."""
+        self.buf += data
+        if len(self.buf) > RING_BYTES:
+            del self.buf[:len(self.buf) - RING_BYTES]
+        self.last_activity = time.time()
+
+    def touch(self) -> None:
+        self.last_activity = time.time()
+
+    def attach(self) -> None:
+        self.attached = True
+        self.detached_at = None
+        self.touch()
+
+    def detach(self) -> None:
+        self.attached = False
+        self.detached_at = time.time()
+
+    def expired(self, now: float) -> bool:
+        """Whether the reaper should close this: the shell exited, it's been idle too long, or the
+        browser dropped and didn't come back within the grace window."""
+        if not self.session.alive():
+            return True
+        if now - self.last_activity > IDLE_LIMIT:
+            return True
+        if not self.attached and self.detached_at is not None and now - self.detached_at > DETACH_GRACE:
+            return True
+        return False
+
+
+class ConsoleRegistry:
+    """Live console sessions so a dropped WebSocket can reconnect to the same shell, and idle or
+    abandoned PTYs get reaped. Keyed by an unguessable session id; a reconnect must also match the
+    original owner, engine and machine name."""
+
+    def __init__(self):
+        self._by_sid: dict = {}
+        self._lock = threading.Lock()
+        self._reaper: Optional[threading.Thread] = None
+
+    def create(self, owner, engine: str, name: str, session: "ConsoleSession") -> str:
+        sid = secrets.token_urlsafe(16)
+        with self._lock:
+            self._by_sid[sid] = _Managed(sid, owner, engine, name, session)
+        self._ensure_reaper()
+        return sid
+
+    def get(self, sid: str, owner, engine: str, name: str) -> Optional[_Managed]:
+        with self._lock:
+            m = self._by_sid.get(sid)
+        if m and m.owner == owner and m.engine == engine and m.name == name and m.session.alive():
+            return m
+        return None
+
+    def drop(self, sid: str) -> None:
+        with self._lock:
+            m = self._by_sid.pop(sid, None)
+        if m:
+            m.session.close()
+
+    def reap(self, now: Optional[float] = None) -> int:
+        """Close and forget every expired session. Returns how many were reaped."""
+        now = now or time.time()
+        with self._lock:
+            dead = [sid for sid, m in self._by_sid.items() if m.expired(now)]
+            gone = [self._by_sid.pop(sid) for sid in dead]
+        for m in gone:
+            m.session.close()
+        return len(gone)
+
+    def count(self) -> int:
+        with self._lock:
+            return len(self._by_sid)
+
+    def _ensure_reaper(self) -> None:
+        if self._reaper and self._reaper.is_alive():
+            return
+
+        def loop():
+            while True:
+                time.sleep(15)
+                try:
+                    self.reap()
+                except Exception:  # noqa: BLE001 — the reaper must never die
+                    pass
+
+        self._reaper = threading.Thread(target=loop, daemon=True, name="console-reaper")
+        self._reaper.start()
+
+
+REGISTRY = ConsoleRegistry()
