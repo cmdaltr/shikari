@@ -145,6 +145,21 @@ sudo pwsh ./record-atomics.ps1 -Techniques T1543.001,T1543.004,T1547.015,T1037.0
 
 Revert the VM to `ready` after each run.
 
+## 6a. Recording a custom or novel execution
+
+Atomic Red Team only covers behaviours someone has already written an atomic for. To build your own dataset for a **novel or undocumented technique**, a custom procedure variant, or anything no public corpus covers, use `scripts/telemetry/record-custom.ps1`. It wraps an arbitrary command instead of an ART test, captures the identical per-platform telemetry, and writes the same layout — so it grounds detection fields exactly as an ART run does, including for behaviours with no public procedure example.
+
+Because it executes whatever you hand it — unvetted, possibly malicious — it **refuses to run unless the machine is a designated lab host**: set `SHIKARI_LAB_HOST=1`, create `~/.shikari-lab-host`, or pass `-IAmADisposableLabHost`. Designate only a snapshot-and-revert VM or an `sbx` microVM, never a host that matters.
+
+```bash
+# Map it to a best-fit (sub-)technique...
+sudo pwsh ./record-custom.ps1 -ScriptPath ./variant.sh -Name 'per-second cron' -Mapping T1053.003 -MappingKind sub -Notes 'schedule ART does not cover'
+# ...or record it as explicitly novel/unmapped
+sudo SHIKARI_LAB_HOST=1 pwsh ./record-custom.ps1 -Command 'rundll32 .\payload.dll,Start' -Name 'novel dll persistence' -MappingKind novel
+```
+
+Each execution lands in `shikari-lab/<run>/custom-<n>/`; call it again with the same `-Run` to add more to one run. The manifest entry is marked `custom`, carries your mapping (or `novel`), the command and your notes, and round-trips through **Update** like any other recording. A novel/unmapped recording has no technique to file under, so it won't show in the technique-organised views — it still grounds a detection you target at it directly.
+
 ## 7. Into Shikari
 
 1. Copy the run folder from the VM to Shikari's `data/telemetry/lab/` (scp, a shared folder, or `tart` file sharing):

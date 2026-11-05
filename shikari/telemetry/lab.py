@@ -11,6 +11,11 @@ on a test machine, each test's logs saved beside a manifest:
                                               /plists.ndjson   launch agents, daemons and login items changed
                                               /mde.json        Defender XDR rows (shikari.telemetry.mde)
 
+A run's `tests` are Atomic Red Team tests or captured CALDERA steps (keyed by ATT&CK technique), or
+custom-execution recordings (#27) — an operator-supplied command wrapped by record-custom.ps1, carrying
+its own mapping (a technique, a sub-technique, or explicitly novel/unmapped) rather than a technique key.
+Both kinds parse through the same pipeline and ground detection fields the same way.
+
 Copy a run's folder here from the test machine; Update on the Emulate page (or --build) reads it.
 The recordings hold your hosts' and tenant's names, so they stay on this machine: data/telemetry
 is gitignored and this source is local (INFO["local"]).
@@ -28,7 +33,7 @@ NAME = "lab"
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 LAB_DIR = str(paths.DATA / "telemetry" / "lab")
 INFO = {"name": "Your lab", "url": "", "licence": "Yours", "local": True,
-        "note": "Atomic Red Team tests, and CALDERA steps captured, on your own machines (scripts/telemetry). Never committed"}
+        "note": "Atomic Red Team tests, CALDERA steps, and custom/novel executions recorded on your own machines (scripts/telemetry). Never committed"}
 
 
 def runs() -> Iterable[Tuple[str, Dict]]:
@@ -45,18 +50,27 @@ def _files(run: str, test: Dict) -> list:
     return sorted(os.path.join(folder, f) for f in os.listdir(folder)) if os.path.isdir(folder) else []
 
 
+def _folder_name(test: Dict) -> str:
+    """The run-relative folder for an entry: its explicit `folder`, or the ART `technique-test` form."""
+    return test.get("folder") or f"{test.get('technique')}-{test.get('test', 1)}"
+
+
 def datasets(previous: Dict[str, Dict], log=print) -> Iterable[Tuple[Dict, Optional[Dict], str]]:
     found = list(runs())
     log(f"Your lab: {len(found)} run{'' if len(found) == 1 else 's'} in {LAB_DIR}")
     for run, manifest in found:
         platform = str(manifest.get("platform") or "").lower()
         for test in manifest.get("tests") or []:
-            if not test.get("technique"):
+            custom = bool(test.get("custom"))
+            # ART/CALDERA entries are keyed by technique; a custom-execution entry (#27) may map to a
+            # best-fit technique, a sub-technique, or be explicitly novel/unmapped — so it carries no
+            # technique of its own and is kept on the `custom` flag instead.
+            if not custom and not test.get("technique"):
                 continue
             files = _files(run, test)
             stamp = hashlib.sha1("".join(f"{f}:{os.path.getsize(f)}:{os.path.getmtime(f)}" for f in files).encode()).hexdigest()
             key = f"{PARSER_VERSION}:{stamp}"
-            did = f"lab:{run}/{test['technique']}-{test.get('test', 1)}"
+            did = f"lab:{run}/{_folder_name(test)}"
             if previous.get(did, {}).get("key") == key:
                 yield previous[did]["summary"], None, key
                 continue
@@ -68,7 +82,27 @@ def datasets(previous: Dict[str, Dict], log=print) -> Iterable[Tuple[Dict, Optio
                 except OSError as e:
                     log(f"  {did}: {os.path.basename(f)}: {e}")
             counts, values = summarise(events)
-            yield {"id": did, "source": NAME, "title": f"{test.get('name') or test['technique']} ({test['technique']})",
-                   "techniques": [test["technique"]], "platform": [platform] if platform else [],
-                   "tools": [manifest.get("tool") or "Atomic Red Team"], "description": f"{run}: test {test.get('test', 1)} on {platform or 'unknown'}",
-                   "events": counts, "date": str(test.get("start") or "")[:10], "url": ""}, values, key
+            if custom:
+                yield _custom_dataset(run, manifest, test, platform, did, counts), values, key
+            else:
+                yield {"id": did, "source": NAME, "title": f"{test.get('name') or test['technique']} ({test['technique']})",
+                       "techniques": [test["technique"]], "platform": [platform] if platform else [],
+                       "tools": [manifest.get("tool") or "Atomic Red Team"], "description": f"{run}: test {test.get('test', 1)} on {platform or 'unknown'}",
+                       "events": counts, "date": str(test.get("start") or "")[:10], "url": ""}, values, key
+
+
+def _custom_dataset(run: str, manifest: Dict, test: Dict, platform: str, did: str, counts: Dict) -> Dict:
+    """A dataset entry for a custom-execution recording (#27). The operator's mapping may be a technique,
+    a sub-technique, or absent; absent (or mapping_kind 'novel') means novel/unmapped, so it grounds a
+    detection with no public procedure example. Telemetry is parsed exactly as for ART runs."""
+    mapping = (test.get("mapping") or test.get("technique") or "").strip()
+    novel = test.get("mapping_kind") == "novel" or not mapping
+    label = test.get("name") or _folder_name(test)
+    title = f"{label} ({mapping})" if mapping else f"{label} (novel)"
+    desc = f"{run}: custom execution on {platform or 'unknown'}" + ("" if not novel else " — novel/unmapped")
+    return {"id": did, "source": NAME, "title": title,
+            "techniques": [mapping] if mapping else [], "platform": [platform] if platform else [],
+            "tools": [manifest.get("tool") or "Custom execution"], "description": desc,
+            "events": counts, "date": str(test.get("start") or "")[:10], "url": "",
+            "custom": True, "novel": novel, "command": test.get("command") or "",
+            "notes": test.get("notes") or "", "provenance": test.get("provenance") or ""}
