@@ -1,0 +1,36 @@
+[Unit]
+Description=Shikari team server
+Documentation=https://github.com/cmdaltr/shikari
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=shikari
+Group=shikari
+# The checkout (code). install.sh rewrites this to where it put Shikari.
+WorkingDirectory=/opt/shikari
+# SHIKARI_HOME, SHIKARI_HOST, SHIKARI_PORT, SHIKARI_WORKERS live here.
+EnvironmentFile=/etc/shikari/shikari.env
+# Foreground uvicorn — no shikari-cli supervisor (systemd does restart/boot). Single worker: Shikari
+# keeps session, lab-job and in-browser-console state in-process, so >1 worker would break them.
+ExecStart=/opt/shikari/.venv/bin/python -m uvicorn shikari.app:app --host ${SHIKARI_HOST} --port ${SHIKARI_PORT} --workers ${SHIKARI_WORKERS}
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=20
+
+# Hardening. Code is read-only; only the data dir (SHIKARI_HOME) is writable.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictSUIDSGID=true
+ReadWritePaths=/var/lib/shikari
+# Needed to bind a port < 1024 directly (e.g. 443). Prefer a reverse proxy and leave this off.
+# AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

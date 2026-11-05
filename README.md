@@ -45,6 +45,10 @@ shikari-cli app uninstall
 
 On Windows, from the repository: `.venv\Scripts\python shikari\desktop.py install` adds Start menu and desktop shortcuts (pin to the taskbar from the Start menu).
 
+### Team server
+
+To run the central instance that clients connect to as a managed service — a systemd service on Ubuntu/Debian/Rocky (`sudo deploy/linux/install.sh`) or a boot-start task on Windows Server (`deploy\windows\install-service.ps1`), with data under `SHIKARI_HOME`, TLS via a reverse proxy, in-place upgrades and backup/restore — see [docs/deployment/README.md](docs/deployment/README.md).
+
 The app launches this checkout's `.venv`, so it updates with `git pull`; it isn't a frozen copy. Opening it starts the server if it isn't running and shows Shikari in its own window. Quitting stops a server the app started and leaves one from `shikari-cli start` alone. Without pywebview it uses a Chrome/Edge/Brave app window, or the default browser. On Linux the native window also needs GTK (`python3-gi gir1.2-webkit2-4.1`) or Qt. If the repository sits in OneDrive on macOS, the first launch asks for permission to access files in OneDrive; allow it. Icons are built from `shikari.png` by `desktop/make_icons.py`.
 
 ---
