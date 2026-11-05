@@ -1,6 +1,6 @@
 <div align="center">
 <a href="https://github.com/cmdaltr/shikari">
-<img src="static/images/shikari/shikari-hero-light.png" alt="Shikari - Automated Multi-Vendor Threat Hunting & Detection Suite" width="620px">
+<img src="static/images/shikari/shikari-lockup-perched-light.png" alt="Shikari - Automated Multi-Vendor Threat Hunting & Detection Suite" width="620px">
 </a>
 </div>
 
