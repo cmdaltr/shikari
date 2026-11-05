@@ -42,6 +42,24 @@ ARM64 is best-effort — if no pywin32 wheel exists for the bundled interpreter 
 step; use the x64 bundle under emulation. On failure the script dumps recent `Shikari` Application-log
 events.
 
+## Windows on a throwaway Azure VM (no local Windows box)
+
+`azure-windows-verify.sh` runs the whole Windows check on a disposable Azure VM **entirely from your Mac's
+CLI** — no RDP, no inbound ports. It creates a Windows Server 2022 B2s, pushes a build+install+smoke
+script with `az vm run-command`, prints `PASS`/`FAIL`, and deletes the resource group.
+
+```bash
+brew install azure-cli
+az login
+export GITHUB_TOKEN=ghp_...        # a token that can READ cmdaltr/shikari (fine-grained: contents:read)
+./azure-windows-verify.sh          # REF=<branch> to test another ref; KEEP=1 to leave the VM up
+```
+
+**Cost:** there is no free Windows Server VM. A B2s is ~$0.10–0.15/hr (Windows licence included), so on a
+new account's **$200 / 30-day trial credit** a create-verify-delete run is effectively free. The script
+tears the VM down on exit (even on failure) unless you set `KEEP=1` — if you do, delete it yourself with
+`az group delete`.
+
 ## Notes
 
 - The scripts find the checkout automatically when run from inside it; otherwise set `SHIKARI_REPO`
