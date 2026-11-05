@@ -100,7 +100,8 @@ Shikari closes the loop between red and blue: it runs a real adversary and then 
 - **CVE Hunting** - Generate detections from CVE IDs with NVD enrichment
 - **Query Execution** - Splunk API client (code implemented, see [UNTESTED.md](docs/other/UNTESTED.md)); Defender XDR planned with hit counts (#16)
 - **Running atomics from Shikari** - Coming soon; [record a lab](docs/guide/20-recording-a-lab.md) on your own VMs for now (#22)
-- **Threat library with red and blue outcomes (VECTR-style)** - Built (Build → Assessments, #24); CALDERA operations run from Emulate → Lab ([#30](https://github.com/cmdaltr/shikari/issues/30), [guide](docs/guide/25-caldera.md)), for the fact chaining and implant behaviour Atomic runs can't give. MACAT was declined ([#31](https://github.com/cmdaltr/shikari/issues/31)): Atomic Red Team's macOS tests and the lab recorder already cover it
+- **Threat library with red and blue outcomes (VECTR-style)** - Built (Build → Assessments, #24); CALDERA operations run from Emulate → Lab ([#30](https://github.com/cmdaltr/shikari/issues/30), [guide](docs/guide/25-caldera.md)), for the fact chaining and implant behaviour Atomic runs can't give. The MACAT *runner* was declined ([#31](https://github.com/cmdaltr/shikari/issues/31)): Atomic Red Team's macOS tests and the lab recorder already cover it
+- **VECTR interop** - The threat library and emulation plans export as **MACATable TOML** (`shikari/assessments/macat.py`), VECTR's native bulk-import format. This file export is the supported VECTR path by design — Shikari stays upstream (intel → detections) and VECTR owns the campaign lifecycle; a live GraphQL connector ([#26](https://github.com/cmdaltr/shikari/issues/26)) was assessed and declined to avoid coupling to VECTR's shifting API when a loosely-coupled file contract already covers it
 
 ### Security & User Management
 - 🔐 **Enterprise Authentication** - Bcrypt password hashing, session management, MFA support (TOTP)
