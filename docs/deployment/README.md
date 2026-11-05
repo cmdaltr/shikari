@@ -147,8 +147,48 @@ On Windows, archive `%ProgramData%\Shikari` while the task is stopped.
 `http://127.0.0.1:<port>/health` on the box). systemd restarts the service on failure; the Scheduled Task
 does the same on Windows.
 
-## Not yet packaged
+## Native packages (`.deb` / `.rpm`)
 
-Native `.deb`/`.rpm` packages and a bundled Python (the install scripts use the system Python and a
-checkout) are a follow-up; the bundled-CPython approach from the desktop build carries over when we do it.
-A first-class Windows service (vs. the Scheduled Task) is the NSSM route above until then.
+As an alternative to the checkout + `install.sh` route above, `deploy/packaging/build_server_pkg.py` builds
+a native package carrying its **own** Python — a SHA-256-pinned standalone CPython (python-build-standalone),
+the same mechanism as the desktop `.deb`. No system Python, no venv, no checkout on the server. It installs
+as `shikari-server` (coexisting with the desktop `shikari` package) and puts the `shikari` CLI on `PATH`.
+
+Build on the **oldest** distro you support (the compiled dependency wheels link against its glibc), matching
+the target architecture:
+
+```bash
+python3 deploy/packaging/build_server_pkg.py --format deb --out dist   # Debian/Ubuntu (needs dpkg-dev)
+python3 deploy/packaging/build_server_pkg.py --format rpm --out dist   # Rocky/RHEL 9 (needs rpm-build)
+```
+
+The package lays down:
+
+| | Path |
+|---|---|
+| Bundled Python + deps | `/usr/lib/shikari/python` |
+| App code (`shikari`/`templates`/`static`) | `/usr/lib/shikari/app` |
+| CLI launcher | `/usr/bin/shikari` |
+| systemd unit | `/lib/systemd/system/shikari.service` |
+| Config (first install only) | `/etc/shikari/shikari.env` |
+| Data (`SHIKARI_HOME`) | `/var/lib/shikari` |
+
+Install, and the post-install script creates the `shikari` user and data dir, seeds the config, labels the
+SELinux port when enforcing, and enables + starts the service:
+
+```bash
+sudo apt install ./dist/shikari-server_2.0.0-1_amd64.deb      # Debian/Ubuntu
+sudo dnf install ./dist/shikari-server-2.0.0-1.*.rpm          # Rocky/RHEL
+```
+
+Upgrade by installing the newer package; `/etc/shikari/shikari.env` is a conffile and `/var/lib/shikari`
+is untouched. A full purge (`apt purge shikari-server` / `dnf remove` then manual cleanup) removes the data
+and the user. TLS, firewall and monitoring are exactly as above — the package only changes how the code and
+Python get onto the box.
+
+## Windows service
+
+The NSSM route under [Windows Server](#windows-server-2022) registers a genuine Windows service (SCM-managed,
+auto-start, crash-restart) rather than the Scheduled Task — that is the supported first-class service today.
+A self-contained installer that bundles its own Python and NSSM, mirroring the Linux native package, is the
+remaining packaging nicety.
