@@ -4,7 +4,7 @@ Remove the Shikari team-server Windows service and files (#29).
 
 .DESCRIPTION
 Stops and unregisters the Shikari SCM service and deletes the install dir. The data dir
-(%ProgramData%\Shikari — database, bespoke config, telemetry) is kept unless you pass -Purge.
+(%ProgramData%\Shikari - database, bespoke config, telemetry) is kept unless you pass -Purge.
 
 Run in an elevated PowerShell:
     .\uninstall.ps1 [-InstallDir 'C:\Program Files\Shikari'] [-DataDir "$env:ProgramData\Shikari"] [-Purge]

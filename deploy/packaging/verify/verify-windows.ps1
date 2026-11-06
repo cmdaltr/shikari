@@ -13,7 +13,7 @@ register the SCM service, waits for /health, prints the result, and uninstalls a
     $env:SHIKARI_REPO='C:\src\shikari'; .\verify-windows.ps1    # checkout elsewhere
 
 Needs: a working `python` on PATH only to read the version for the zip name (optional); the build itself
-downloads its own CPython. Run elevated — install.ps1 registers a system service.
+downloads its own CPython. Run elevated - install.ps1 registers a system service.
 #>
 param(
     [ValidateSet('x86_64', 'aarch64')]

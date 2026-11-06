@@ -23,6 +23,10 @@ REF="${REF:-main}"
 LOCATION="${LOCATION:-uksouth}"
 RG="${RG:-shikari-verify-$RANDOM}"
 VM="${VM:-win}"
+# Trial/free subscriptions often get live "Capacity Restrictions" on B-series burstable VMs (the SKU
+# catalogue won't show it). Override with SIZE= if the default fails preflight — a D-series size such as
+# Standard_D2s_v3 is usually provisionable where B2s is not.
+SIZE="${SIZE:-Standard_B2s}"
 ADMIN_USER="${ADMIN_USER:-shikariadmin}"
 # A fresh random admin password (never reused, VM is thrown away). Meets Azure's complexity rule.
 ADMIN_PASS="${ADMIN_PASS:-Sk$(openssl rand -hex 8)!A9}"
@@ -42,10 +46,10 @@ trap cleanup EXIT
 echo "==> Resource group $RG in $LOCATION"
 az group create -n "$RG" -l "$LOCATION" -o none
 
-echo "==> Creating Windows Server 2022 B2s (no inbound ports; run-command only)"
+echo "==> Creating Windows Server 2022 $SIZE (no inbound ports; run-command only)"
 az vm create -g "$RG" -n "$VM" \
     --image MicrosoftWindowsServer:WindowsServer:2022-datacenter-azure-edition:latest \
-    --size Standard_B2s \
+    --size "$SIZE" \
     --admin-username "$ADMIN_USER" --admin-password "$ADMIN_PASS" \
     --public-ip-sku Standard --nsg-rule NONE -o none
 echo "    VM up (admin: $ADMIN_USER / $ADMIN_PASS — throwaway)"

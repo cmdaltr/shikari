@@ -4,7 +4,7 @@ Install the self-contained Shikari team server as a Windows service (#29).
 
 .DESCRIPTION
 Runs from an unpacked shikari-server Windows bundle (built by deploy/packaging/build_server_pkg_windows.ps1).
-The bundle carries its own Python — no system Python, no venv, no checkout. This copies it to -InstallDir,
+The bundle carries its own Python - no system Python, no venv, no checkout. This copies it to -InstallDir,
 points the bundled interpreter at the app, seeds %ProgramData%\Shikari\shikari.env on first install, and
 registers a first-class SCM service (pywin32) that starts at boot and restarts on failure.
 
@@ -61,6 +61,15 @@ New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
 $envFile = Join-Path $DataDir 'shikari.env'
 if (-not (Test-Path $envFile)) {
     Copy-Item (Join-Path $bundle 'shikari.env.example') $envFile
+    # Pin SHIKARI_HOME to the actual data dir (the service uses it as its working directory, and it
+    # must be a valid Windows path - not the example's default - whenever -DataDir was overridden).
+    $lines = Get-Content $envFile
+    if ($lines -match '^\s*SHIKARI_HOME\s*=') {
+        $lines = $lines -replace '^\s*SHIKARI_HOME\s*=.*', "SHIKARI_HOME=$DataDir"
+    } else {
+        $lines += "SHIKARI_HOME=$DataDir"
+    }
+    Set-Content -Path $envFile -Value $lines -Encoding ASCII
     Write-Host "Wrote $envFile (edit host/port there, then restart the service)"
 }
 
@@ -95,10 +104,12 @@ Get-Content $envFile | ForEach-Object {
 $port = if ($cfg['SHIKARI_PORT']) { $cfg['SHIKARI_PORT'] } else { '8000' }
 Write-Host "Waiting for Shikari to answer on 127.0.0.1:$port ..."
 $ok = $false
-foreach ($i in 1..30) {
+# Cold start is slow: the service spawns the bundled Python, which starts uvicorn, imports the app and
+# loads the ATT&CK bundle - comfortably over 30s on a small box. Wait up to ~90s before warning.
+foreach ($i in 1..90) {
     try {
         if ((Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:$port/health" -TimeoutSec 2).StatusCode -eq 200) { $ok = $true; break }
     } catch { Start-Sleep 1 }
 }
 if ($ok) { Write-Host "Shikari is up. Put a reverse proxy on 443 in front of 127.0.0.1:$port." }
-else { Write-Warning "No /health yet — check the Event Log and 'Get-Service Shikari'." }
+else { Write-Warning "No /health yet - check the Event Log and 'Get-Service Shikari'." }
