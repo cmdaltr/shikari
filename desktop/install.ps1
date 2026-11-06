@@ -26,9 +26,11 @@ $ProgressPreference = "SilentlyContinue"
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
 $repo = if ($env:SHIKARI_REPO) { $env:SHIKARI_REPO } else { "cmdaltr/shikari" }
-# The processor, not this process: an x64 PowerShell under emulation on ARM still gets the ARM64 build
+# The processor, not this process: an x64 PowerShell under emulation on ARM still reports ARM here
 $arm = (Get-CimInstance Win32_Processor | Select-Object -First 1).Architecture -eq 12
-$suffix = if ($arm) { "-windows-arm64.msi" } else { "-windows-x64.msi" }
+# On ARM prefer the native arm64 build, but fall back to the x64 .msi (it runs under emulation) when a
+# release ships no arm64 asset, so a release without an arm64 build still installs on ARM machines.
+$suffixes = if ($arm) { @("-windows-arm64.msi", "-windows-x64.msi") } else { @("-windows-x64.msi") }
 function Test-DesktopRuntime {
     foreach ($root in @($env:DOTNET_ROOT, (Join-Path $env:ProgramFiles "dotnet"), (Join-Path $env:LOCALAPPDATA "Microsoft\dotnet"))) {
         if (-not $root) { continue }
@@ -69,9 +71,13 @@ try {
 
         $path = if ($Version -eq "latest") { "releases/latest" } else { "releases/tags/$Version" }
         $release = Invoke-RestMethod -Headers ($auth + @{ Accept = "application/vnd.github+json" }) "https://api.github.com/repos/$repo/$path"
-        $asset = $release.assets | Where-Object { $_.name.EndsWith($suffix) } | Select-Object -First 1
+        $asset = $null
+        foreach ($s in $suffixes) {
+            $asset = $release.assets | Where-Object { $_.name.EndsWith($s) } | Select-Object -First 1
+            if ($asset) { break }
+        }
         $sums = $release.assets | Where-Object { $_.name -eq "SHA256SUMS" } | Select-Object -First 1
-        if (-not $asset) { throw "The $Version release has no *$suffix" }
+        if (-not $asset) { throw "The $Version release has no Windows installer ($($suffixes -join ' or '))" }
         if (-not $sums) { throw "The $Version release has no SHA256SUMS" }
 
         Write-Host "Downloading $($asset.name)"
@@ -96,7 +102,9 @@ try {
         Get-Content $log -Tail 40
         throw "msiexec failed with $($p.ExitCode)"
     }
-    if ($arm -and -not $NoDotnet) { Install-DesktopRuntime $tmp }
+    # Only the native arm64 build needs the ARM64 .NET Desktop Runtime; the x64 build (the ARM fallback,
+    # or on x64) does not. Key off the file actually installed, which also covers -File.
+    if ($arm -and -not $NoDotnet -and $File -like "*-windows-arm64.msi") { Install-DesktopRuntime $tmp }
     # It's a per-user install (LocalAppData\Programs\<author>\Shikari\Shikari.exe, three deep); don't
     # recurse the whole of Program Files, which takes minutes on an ARM64 machine. Fall back to a
     # machine-wide install there, but bounded.
