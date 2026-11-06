@@ -94,7 +94,7 @@ def main():
     master.save(out / "shikari-lockup.png")
 
     # hexagon + favicons
-    MK.build(1197).save(out / "shikari-hexagon.png")
+    MK.build(1197).save(out / "shikari-bateleur-hexagon.png")
     MK.on_navy(MK.build(180), 180).save(out / "shikari-apple-touch-icon.png")
     MK.on_navy(MK.build(180), 180).save(out / "shikari-apple-touch-icon-precomposed.png")
     MK.build(32).save(out / "shikari-favicon-32.png")

@@ -26,7 +26,7 @@ python scripts/brand/build_assets.py --out /tmp/preview   # preview without touc
   perched is the home/auth hero), the perched-eagle nav banner `shikari-wordmark-{light,dark}`, the
   video master `shikari-lockup.png`, the hexagon and the favicon/apple-touch set.
 
-Source cutouts come from `static/images/shikari/shikari-bird.png` (perched eagle) and
+Source cutouts come from `static/images/shikari/shikari-bateleur-perched.png` (perched eagle) and
 `static/images/bateleur/_src/bateleur-{profile,screech}.png`. The video pipeline consumes
 `shikari-lockup.png` (horizontal master, no tagline — `make_video.py` adds the tagline itself).
 

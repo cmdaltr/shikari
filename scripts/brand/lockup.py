@@ -15,7 +15,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
 TTF = HERE / "fonts" / "Rajdhani-SemiBold.ttf"
 BIRDS = {
-    "branch":  REPO / "static" / "images" / "shikari" / "shikari-bird.png",
+    "branch":  REPO / "static" / "images" / "shikari" / "shikari-bateleur-perched.png",
     "profile": REPO / "static" / "images" / "bateleur" / "_src" / "bateleur-profile.png",
     "screech": REPO / "static" / "images" / "bateleur" / "_src" / "bateleur-screech.png",
 }

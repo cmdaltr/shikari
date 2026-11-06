@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
-Build the desktop app icons from shikari.png: shikari.png and shikari-<size>.png (Linux),
+Build the desktop app icons from the Bateleur hexagon: shikari.png and shikari-<size>.png (Linux),
 shikari.ico (Windows) and, on macOS (needs iconutil), shikari.icns. The outputs are committed; rerun after changing the art.
+
+The master is the hexagon brand mark (static/images/shikari/shikari-bateleur-hexagon.png). The
+rounded-square alternate (shikari-bateleur.png in the repo root) is there if the hexagon's
+transparent surround reads badly in the Dock: point SOURCE at it instead and rerun.
 
     .venv/bin/python desktop/make_icons.py
 """
@@ -12,34 +16,22 @@ import sys
 import tempfile
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
-SOURCE = ROOT / "shikari.png"
+SOURCE = ROOT / "static" / "images" / "shikari" / "shikari-bateleur-hexagon.png"
 OUT = ROOT / "desktop" / "icons"
 
 SIZE = 1024
-PAD = 100           # transparent margin around the rounded square (macOS leaves the corners clear)
-RADIUS = 186        # corner radius of the square, ~22.5% of its side, as macOS icons use
-BG = (233, 221, 190, 255)  # parchment: a warm cream, clearly not white against the Dock
-FIGURE = 0.70       # the shikari's height as a fraction of the square
 
 
 def master():
-    """The shikari centred on an opaque light rounded square. Opaque, not transparent:
-    a transparent icon shows see-through in the Dock once the app sets it at runtime."""
+    """The Bateleur app icon, finished art with its corners already transparent, exactly as macOS
+    wants. Used as-is, only normalised to a square SIZE canvas."""
     art = Image.open(SOURCE).convert("RGBA")
-    # The source has faint stray pixels around the figure; crop to what's actually visible
-    art = art.crop(art.getchannel("A").point(lambda a: 255 if a > 64 else 0).getbbox())
-
-    canvas = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(canvas)
-    draw.rounded_rectangle([PAD, PAD, SIZE - PAD, SIZE - PAD], radius=RADIUS, fill=BG)
-
-    fit = int((SIZE - 2 * PAD) * FIGURE)
-    art.thumbnail((fit, fit), Image.LANCZOS)
-    canvas.alpha_composite(art, ((SIZE - art.width) // 2, (SIZE - art.height) // 2))
-    return canvas
+    if art.size != (SIZE, SIZE):
+        art = art.resize((SIZE, SIZE), Image.LANCZOS)
+    return art
 
 
 def main():
