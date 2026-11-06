@@ -51,7 +51,7 @@ Shikari > Change Server switches later. Data made in local mode stays on that co
 
 ## Connecting an Organisation
 
-Deploy Shikari centrally as usual (`scripts/deployment/DEPLOY.md`) behind HTTPS, then point the apps at it. Users can type the address into the first-run screen, or IT can set it, which skips that screen and removes Change Server:
+Deploy Shikari as a team server ([docs/deployment/README.md](../docs/deployment/README.md)) behind HTTPS, then point the apps at it. Users can type the address into the first-run screen, or IT can set it, which skips that screen and removes Change Server:
 
 | | Setting |
 |---|---|

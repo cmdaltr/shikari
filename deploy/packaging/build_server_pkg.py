@@ -13,8 +13,8 @@ This is the server counterpart to desktop/build_deb.py: same SHA-pinned standalo
     python3 deploy/packaging/build_server_pkg.py --format rpm --out dist
 
 Build on the OLDEST distro you intend to support: the compiled dependency wheels link against its glibc.
-The package installs as `shikari-server` (so it can coexist with the desktop `shikari` package) and puts
-the CLI on PATH as `shikari`.
+The package installs as `shikari-server` and puts the CLI on PATH as `shikari`. It conflicts with the
+desktop `shikari` .deb: both ship /usr/bin/shikari and /usr/lib/shikari, and a server doesn't need the app.
 
 Layout installed:
     /usr/lib/shikari/python                 standalone CPython + the server's dependencies
@@ -217,6 +217,7 @@ def build_deb(machine, out):
         f"Architecture: {arch}\n"
         f"Maintainer: Shikari <https://github.com/cmdaltr/shikari>\n"
         f"Depends: adduser\n"
+        f"Conflicts: shikari\n"
         f"Installed-Size: {installed_kb}\n"
         f"Section: admin\n"
         f"Priority: optional\n"

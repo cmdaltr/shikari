@@ -157,7 +157,9 @@ does the same on Windows.
 As an alternative to the checkout + `install.sh` route above, `deploy/packaging/build_server_pkg.py` builds
 a native package carrying its **own** Python — a SHA-256-pinned standalone CPython (python-build-standalone),
 the same mechanism as the desktop `.deb`. No system Python, no venv, no checkout on the server. It installs
-as `shikari-server` (coexisting with the desktop `shikari` package) and puts the `shikari` CLI on `PATH`.
+as `shikari-server` and puts the `shikari` CLI on `PATH`. It can't be installed alongside the desktop
+`shikari` `.deb` (both own `/usr/bin/shikari` and `/usr/lib/shikari`), and dpkg refuses to; a server doesn't
+need the desktop app.
 
 Build on the **oldest** distro you support (the compiled dependency wheels link against its glibc), matching
 the target architecture:
