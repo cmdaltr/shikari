@@ -1,6 +1,6 @@
 {
- "attack_version": "20.0 2026-10-13T17:53:10.145Z",
- "generated": "2026-10-14",
+ "attack_version": "20.1 2026-11-05T15:11:27.678Z",
+ "generated": "2026-11-06",
  "checked": 706,
  "techniques": {
   "T1001": {
@@ -525,6 +525,22 @@
    ],
    "reason": "no_indicators"
   },
+  "T1134.001": {
+   "name": "Token Impersonation/Theft",
+   "tactics": [
+    "Stealth",
+    "Privilege Escalation"
+   ],
+   "reason": "no_indicators"
+  },
+  "T1134.003": {
+   "name": "Make and Impersonate Token",
+   "tactics": [
+    "Stealth",
+    "Privilege Escalation"
+   ],
+   "reason": "no_indicators"
+  },
   "T1134.005": {
    "name": "SID-History Injection",
    "tactics": [
@@ -623,6 +639,13 @@
    "name": "Hardware Additions",
    "tactics": [
     "Initial Access"
+   ],
+   "reason": "no_indicators"
+  },
+  "T1203": {
+   "name": "Exploitation for Client Execution",
+   "tactics": [
+    "Execution"
    ],
    "reason": "no_indicators"
   },
@@ -855,6 +878,14 @@
   },
   "T1497.002": {
    "name": "User Activity Based Checks",
+   "tactics": [
+    "Stealth",
+    "Discovery"
+   ],
+   "reason": "no_indicators"
+  },
+  "T1497.003": {
+   "name": "Time Based Checks",
    "tactics": [
     "Stealth",
     "Discovery"
