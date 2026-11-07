@@ -175,6 +175,8 @@ def main():
     (out / "seed" / "VERSION").write_text(project["version"] + "\n")
     shutil.copytree(ROOT / "desktop" / "icons", out / "icons")
     shutil.copy2(ROOT / "LICENSE", out / "LICENSE")
+    # Inside seed/ too, which the app carries: Help > Licence shows it (LICENSE itself isn't a source)
+    shutil.copy2(ROOT / "LICENSE", out / "seed" / "LICENSE")
     # Debian packages must carry one; the release notes live on GitHub
     (out / "CHANGELOG.md").write_text(f"# {project['version']}\n\nSee https://github.com/cmdaltr/shikari/releases\n")
     wheels = out / "wheels"

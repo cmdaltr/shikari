@@ -1,10 +1,12 @@
 {#
   The one navigation bar, on every page: Home, then three menus (Detections, Intel, Build),
-  then Local LLM, Profile, Help, the theme toggle and Log out. Pages that need an account are greyed out for
+  then Local LLM, Profile, Help, the theme toggle and Log out (Connect in the desktop app). Pages that need an account are greyed out for
   guests. A menu opens on hover or click (keyboard: Enter, arrows, Escape); the one holding
   the current page is highlighted. The bar spans the page's main content (common.css).
 #}
 {% set path = request.url.path %}
+{# The desktop app shows the footer's credits under Help > About, so its pages drop it #}
+{% if request.app.state.desktop %}<style>.page-footer{display:none}</style>{% endif %}
 {% set here = (request.url.path ~ ('?' ~ request.url.query if request.url.query else '')) | urlencode %}
 {% set ICON = {
   'home': '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
@@ -123,7 +125,12 @@
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
             </svg>
         </button>
-        {% if user %}
+        {% if request.app.state.desktop %}
+        {# The desktop app's own copy: signed in already, so this switches to an organisation's server #}
+        <button type="button" class="nav-tab nav-auth" title="Connect to your organisation's Shikari" onclick="window.pywebview && pywebview.api.change_server()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Connect</span>
+        </button>
+        {% elif user %}
         <a href="/logout" class="nav-tab nav-auth" title="Log out">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span>Log out</span>
         </a>

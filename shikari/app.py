@@ -1140,6 +1140,8 @@ def get_indicators_from_yaml(yaml_file, yaml_data=None):
 
 
 app = FastAPI(title="Shikari Threat Hunting Service")
+# Run by the desktop app on the user's own computer: the nav offers Connect instead of Log in / Log out
+app.state.desktop = os.environ.get("SHIKARI_DESKTOP") == "1"
 app.mount("/static", StaticFiles(directory=str(paths.STATIC)), name="static")
 
 
@@ -7933,6 +7935,38 @@ async def login_page(
     )
 
     return template_response
+
+
+@app.get("/desktop/enter")
+async def desktop_enter(request: Request, token: str = ""):
+    """
+    Sign the desktop app's own window in. The app sets SHIKARI_DESKTOP_TOKEN at random for the
+    server it runs in-process and opens this once with it; the token is spent on first use, so a
+    browser on the same port (or another page guessing) still goes through /login.
+    """
+    import hmac
+
+    expected = os.environ.get("SHIKARI_DESKTOP_TOKEN", "")
+    client = request.client.host if request.client else ""
+    if not expected or not token or client not in ("127.0.0.1", "::1") \
+            or not hmac.compare_digest(token.encode(), expected.encode()):
+        return RedirectResponse(url="/login", status_code=303)
+    os.environ.pop("SHIKARI_DESKTOP_TOKEN", None)
+
+    db = next(get_db())
+    try:
+        # The local app is one person's: sign in as its first admin (the default one on a fresh home)
+        user = (db.query(User).filter(User.role == UserRole.ADMIN, User.is_active.is_(True))
+                .order_by(User.id).first())
+        if not user:
+            return RedirectResponse(url="/login", status_code=303)
+        session_id = create_session(user.id, remember_me=True, db=db)
+    finally:
+        db.close()
+    response = RedirectResponse(url="/", status_code=303)
+    response.set_cookie(key="shikari_session", value=session_id, max_age=7 * 24 * 60 * 60,
+                        httponly=True, samesite="lax")
+    return response
 
 
 @app.get("/reset-password", response_class=HTMLResponse)

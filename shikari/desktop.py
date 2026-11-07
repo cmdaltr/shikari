@@ -47,8 +47,21 @@ html,body{height:100%;margin:0;background:#fff;color:#444;font:15px -apple-syste
 body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
 .bar{width:180px;height:3px;background:#e5e7eb;overflow:hidden;border-radius:2px}
 .bar i{display:block;width:40%;height:100%;background:#C53030;animation:s 1.2s infinite ease-in-out}
-@keyframes s{0%{margin-left:-40%}100%{margin-left:100%}}</style></head>
-<body><div>Starting Shikari&hellip;</div><div class="bar"><i></i></div></body></html>"""
+@keyframes s{0%{margin-left:-40%}100%{margin-left:100%}}
+.step{font-size:13px;opacity:.75}.note{max-width:420px;text-align:center;font-size:13px;line-height:1.5;opacity:.6;margin:6px 0 0}
+.gloss{position:fixed;bottom:22px;font-size:13px;opacity:.7}.gloss b{font-weight:600}.gloss i{margin:0 8px;opacity:.8}
+</style></head>
+<body><div>Starting Shikari&hellip;</div><div class="bar"><i></i></div>
+<div class="step"><span id="step">Getting ready</span> &middot; <span id="elapsed">0:00</span></div>
+<p class="note">The first start takes a few minutes while Shikari unpacks MITRE ATT&amp;CK and builds its
+database. After that it starts in seconds.</p>
+<div class="gloss"><b>shi&middot;ka&middot;ri</b><i>\\shi-&#712;k&auml;r-&#275;\\</i>a professional big-game hunter or guide</div>
+<script>
+// The app reports each stage with shikariStep(); the clock shows it hasn't stalled
+var t0=Date.now();window.shikariStep=function(s){document.getElementById('step').textContent=s};
+setInterval(function(){var s=Math.floor((Date.now()-t0)/1000);
+document.getElementById('elapsed').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0')},1000);
+</script></body></html>"""
 
 
 def venv_python(windowed=False):

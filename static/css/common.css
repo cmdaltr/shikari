@@ -86,7 +86,8 @@ a.nav-tab:hover { background: rgba(255,255,255,0.1); color: #fff; }
 .nav-tab.is-active { background: rgba(255,255,255,0.12); border-color: var(--accent); color: #fff; }
 .nav-tab.is-disabled { color: rgba(255,255,255,0.32); cursor: not-allowed; }
 .nav-auth { border-color: var(--accent); color: #fff; }
-a.nav-auth:hover { background: var(--accent); }
+.nav-auth:hover { background: var(--accent); }
+button.nav-auth { background: transparent; cursor: pointer; font-family: inherit; font-size: inherit; }
 
 .nav-icon-btn {
     display: inline-flex;

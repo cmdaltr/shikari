@@ -25,6 +25,7 @@ A client copies no data in and starts no server.
 import html
 import json
 import os
+import secrets
 import shutil
 import socket
 import sys
@@ -70,7 +71,7 @@ def seed(home, version):
     upgraded = (marker.read_text().strip() if marker.exists() else "") != version
     copied = 0
     for src in SEED.rglob("*"):
-        if not src.is_file() or src == SEED / "VERSION":
+        if not src.is_file() or src in (SEED / "VERSION", SEED / "LICENSE"):
             continue
         dest = home / src.relative_to(SEED)
         if dest.exists() and not upgraded:
@@ -180,6 +181,37 @@ main{max-width:480px;margin:0 auto;padding:14vh 24px 0;line-height:1.5}h1{font-s
 </style></head><body><main><h1>Shikari isn't available</h1><p>__MESSAGE__</p>
 <p>Your organisation set this server, so contact IT if it carries on.</p></main></body></html>"""
 
+# Help menu windows. Links carry target=_blank so pywebview opens them in the browser.
+_HELP_STYLE = """<style>
+:root{--bg:#fff;--fg:#1f2937;--muted:#6b7280;--line:#e5e7eb}
+@media(prefers-color-scheme:dark){:root{--bg:#111827;--fg:#e5e7eb;--muted:#9ca3af;--line:#374151}}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 -apple-system,'Segoe UI',sans-serif}
+main{padding:28px 32px}h1{font-size:22px;font-weight:600;margin:0}a{color:inherit}
+.muted{color:var(--muted)}.gloss b{font-weight:600}.gloss i{margin:0 8px}
+footer{margin-top:22px;padding-top:14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+pre{white-space:pre-wrap;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;border-top:1px solid var(--line);padding-top:14px}
+</style>"""
+
+ABOUT = """<!doctype html><html><head><meta charset="utf-8">""" + _HELP_STYLE + """</head><body><main>
+<h1>Shikari</h1><div class="muted">Version __VERSION__</div>
+<p class="gloss"><b>shi&middot;ka&middot;ri</b><i>\\shi-&#712;k&auml;r-&#275;\\</i>a professional big-game hunter or guide</p>
+<p>Automated multi-vendor threat hunting and detection.</p>
+<p><a href="https://github.com/cmdaltr" target="_blank">@cmdaltr</a> on GitHub</p>
+<p class="muted">Free software under the GNU Affero General Public License v3.0; a commercial licence is
+available for organisations that can't meet its terms. See Help &rarr; Licence.</p>
+<footer>Splunk&reg;, Microsoft&reg;, Google&reg; and Elastic&reg; names and logos are trademarks of their
+respective companies.</footer></main></body></html>"""
+
+LICENCE = """<!doctype html><html><head><meta charset="utf-8">""" + _HELP_STYLE + """</head><body><main>
+<h1>Licence</h1>
+<p>Shikari is free software under the GNU Affero General Public License v3.0 (AGPL-3.0-only): you can use,
+study, change and share it, and if you change it and let others use it, over a network included, you must
+make your changed source available to them under the same licence.</p>
+<p>Organisations that can't meet the AGPL's terms, for example to keep changes private or to build Shikari
+into a closed product, can get a commercial licence instead: contact
+<a href="https://github.com/cmdaltr" target="_blank">@cmdaltr</a> on GitHub.</p>
+<pre>__TEXT__</pre></main></body></html>"""
+
 
 class ChooserApi:
     """What the chooser page can call (pywebview.api.*). pywebview hands this to every page the
@@ -195,6 +227,12 @@ class ChooserApi:
     def use_local(self):
         if self._app.choosing:
             self._app.use_local()
+
+    def change_server(self):
+        # The nav's Connect button. Only from Shikari on this computer, so an organisation's server
+        # can't pop the chooser over itself; it only shows the page, the user still picks
+        if self._app.local is not None and not self._app.choosing:
+            self._app.show_chooser()
 
 
 class App:
@@ -253,14 +291,22 @@ class App:
             # here (shikari.lab.caldera_provision) is in scope — a client of a central server never
             # reaches this path. setdefault so SHIKARI_ALLOW_LAB_PROVISION=0 can still turn it off.
             os.environ.setdefault("SHIKARI_ALLOW_LAB_PROVISION", "1")
+            # One person's own copy: nothing held back (emulation planning included), and the nav
+            # offers Connect (to an organisation's server) in place of Log in / Log out
+            os.environ.setdefault("ENABLE_EMULATION", "true")
+            os.environ["SHIKARI_DESKTOP"] = "1"
+            # The window signs itself in with this, once; a browser on the same port still logs in
+            os.environ["SHIKARI_DESKTOP_TOKEN"] = secrets.token_urlsafe(32)
             # Only a local Shikari needs the bundled data and its own server
+            self.step("Unpacking the bundled data")
             seed(self.home, version())
             from shikari import paths
             paths.seed_bespoke()
+            self.step("Starting the server and building its caches")
             self.local = InProcessServer(free_port(), self.log)
             self.local.start()
         if self.local.wait():
-            self.window.load_url(self.local.url)
+            self.window.load_url(f"{self.local.url}/desktop/enter?token={os.environ['SHIKARI_DESKTOP_TOKEN']}")
         else:
             reason = html.escape(repr(self.local.failed) if self.local.failed else "it took too long to start")
             self.window.set_title("Shikari didn't start")
@@ -268,6 +314,26 @@ class App:
                 "<div style='font:15px/1.5 system-ui,sans-serif;padding:40px;max-width:720px'>"
                 f"<h2 style='margin:0 0 12px'>Shikari didn't start</h2><p>{reason}</p>"
                 f"<p>The log is at <code>{html.escape(str(self.log))}</code>.</p></div>")
+
+    def show_about(self):
+        import webview
+        webview.create_window(f"About {NAME}", html=ABOUT.replace("__VERSION__", html.escape(version())),
+                              width=480, height=400, resizable=False, background_color="#111827")
+
+    def show_licence(self):
+        import webview
+        path = next((p for p in (SEED / "LICENSE", ROOT / "LICENSE") if p.exists()), ROOT / "LICENSE")
+        text = path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
+        webview.create_window(f"{NAME} Licence", html=LICENCE.replace("__TEXT__", html.escape(text)),
+                              width=720, height=760, background_color="#111827")
+
+    def step(self, text):
+        """Name the stage on the loading screen, so a slow first start doesn't look stuck."""
+        print(text)
+        try:
+            self.window.evaluate_js(f"window.shikariStep && shikariStep({json.dumps(text)})")
+        except Exception:  # noqa: BLE001  (the splash may not have loaded yet; the clock still runs)
+            pass
 
     def stop_local(self):
         if self.local is not None:
@@ -316,6 +382,9 @@ class App:
                                             background_color="#111827")
         managed = bool(self.choice and self.choice.managed)
         menu = [] if managed else [Menu(NAME, [MenuAction("Change Server\u2026", lambda: self.show_chooser())])]
+        # macOS puts it in the menu bar; Windows and Linux in the window's own menu bar
+        menu.append(Menu("Help", [MenuAction(f"About {NAME}", self.show_about),
+                                  MenuAction("Licence", self.show_licence)]))
         desktop.brand_process()
         try:
             webview.start(self.boot, private_mode=False, storage_path=str(self.home / "webview"), menu=menu)
