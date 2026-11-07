@@ -83,7 +83,7 @@ cmd_up() {
 
 cmd_status() {
   local ip k n; ip="$(lan_ip)"; k="$(redkey)"
-  n="$(curl -s -H "KEY: $k" "http://$ip:8888/api/v2/agents" 2>/dev/null | grep -o '"paw"' | wc -l | tr -d ' ')"
+  n="$(curl -s -H "KEY: $k" "http://$ip:8888/api/v2/agents" 2>/dev/null | grep -o '"paw"' | wc -l | tr -d ' ' || true)"
   echo "================ CALDERA lab ================"
   echo "  URL    : http://$ip:8888   (UI login red / admin)"
   echo "  Key    : $k"
