@@ -33,9 +33,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CODE = ("shikari", "templates", "static")
-# In [project].dependencies but not used by the app: test tooling, and msticpy (no imports)
+# In [project].dependencies but not used by the app: test tooling
 NOT_BUNDLED = {"playwright", "pytest", "pytest-base-url", "pytest-playwright", "hypothesis", "iniconfig",
-               "pluggy", "msticpy"}
+               "pluggy"}
 # Pure Python but published only as source archives, and Briefcase installs wheels only: staging
 # builds their wheels (into wheels/, which the build's pip searches). antlr4 is pinned by
 # stix2-patterns; proxy_tools comes with pywebview.
