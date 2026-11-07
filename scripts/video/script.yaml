@@ -53,22 +53,29 @@ scenes:
   - id: intro
     chapter: What Shikari is
     narration: >
-      Welcome to Shikari. An automated, multi-vendor threat hunting and detection suite. Provide a threat
-      group, a CVE, a threat report or a company domain, and Shikari will map the respective adversary
-      groups or proof-of-concept exploits, and build the detection queries and correlations tailored to
-      your SIEM and technology stack. Over the next few minutes, we will explore Shikari and explain its
-      various features, and who in the security team is best placed to utilise each one.
+      This is Shikari. Most detection work starts from very little: a threat group named in a report, a
+      CVE that's suddenly everywhere, a blog post a colleague forwards, or the domain of the organisation
+      you defend. Give Shikari one of those and it does two jobs. It works out what the input means: the
+      techniques in play, how the actor operates, and where your exposure sits. Then it turns that into
+      detections for the SIEMs you run, whether that's Google SecOps, Microsoft Defender, Splunk or
+      Elastic, and shows you the coverage gaps you didn't know you had. Every result is grounded in MITRE
+      ATT&CK and tied back to its evidence, so you can see why it's there. Most of it runs with no AI at
+      all. The analysis is deterministic, and the AI is there when you want a second opinion. Let's take
+      a look.
     actions:
       - goto: /
+      - scroll: 300
+        at: 0.55
 
   - id: overview
     chapter: The sections at the top
     narration: >
-      Everything starts from the tabs at the top. Hunt turns a threat group or a CVE into detections, so a
-      named adversary is covered in minutes. Analyse turns a threat report into detections — a new write-up
-      becomes queries, not a reading task. Profile starts from a company instead of a threat, and tells you
-      who is most likely to target it. Research finds the groups that hit a sector and region, and the
-      techniques they share, so you spend detection effort where it covers the most.
+      It all runs from the tabs along the top, one per starting point. Hunt turns a threat group or a CVE
+      into detections — a named adversary covered in minutes. Analyse does the same from a threat report —
+      a new write-up becomes queries, not a reading task. Profile starts from a company rather than a
+      threat, and tells you who's most likely to come for it. And Research finds the groups that hit a
+      given sector and region, and the techniques they have in common — so your effort lands where it
+      covers the most.
     actions:
       - goto: /
       - show: 'button.tab-button[data-tab="generate"]'
@@ -83,9 +90,9 @@ scenes:
   - id: hunt
     chapter: Hunting a threat group
     narration: >
-      Hunt is where most work starts. Type a threat group by any of its names — APT29, Cozy Bear and
-      Midnight Blizzard all resolve to the same group. Shikari collects every technique that group uses:
-      directly, through its campaigns, and through the software it runs, and builds a detection for each.
+      Hunt is where most work starts. Name a threat group by any alias you like — APT29, Cozy Bear and
+      Midnight Blizzard all resolve to the one group. Shikari gathers every technique that group uses —
+      directly, through its campaigns, and through the software it runs — and writes a detection for each.
     actions:
       - goto: /
       - click: 'button.tab-button[data-tab="generate"]'
@@ -99,10 +106,10 @@ scenes:
     chapter: CVEs and techniques
     continues: true
     narration: >
-      Or hunt a CVE. Shikari reads its NVD record, the advisories and any public proof-of-concept, then
-      generates detections for the exploit attempt and for the activity that follows a successful one.
-      Browse lists new CVEs from the last thirty days, with CISA's known-exploited ones marked. You can
-      also hunt a list of ATT&CK techniques across every group that uses them.
+      Or start from a CVE. Shikari reads its NVD record, the advisories and any public proof-of-concept,
+      then writes detections for the exploit attempt and for the activity that follows a successful one.
+      Browse lists the last thirty days of new CVEs, with CISA's known-exploited ones marked. And you can
+      hunt a list of ATT&CK techniques straight across every group that uses them.
     actions:
       # Clear the group box the previous (continuing) scene typed into: group and CVE are mutually
       # exclusive, so the CVE field and its Browse button stay disabled until the group box is empty.
@@ -121,11 +128,11 @@ scenes:
     chapter: Enrichment options
     continues: true
     narration: >
-      The options add enrichment. LOL datasets add the real command lines, hashes and paths of the
-      living-off-the-land binaries, drivers and remote tools a group uses. OSINT Enhancement merges
-      indicators and known false positives from public detection rules. OSINT Comparison scores your
-      detections against those public rules, and writes new detections for the techniques no public rule
-      covers — over three hundred of them.
+      The options add enrichment. The LOL datasets drop in the real command lines, hashes and paths of the
+      living-off-the-land binaries, drivers and remote tools a group reaches for. OSINT Enhancement folds
+      in indicators and known false positives from public detection rules. OSINT Comparison scores your
+      detections against those public rules — and writes fresh ones for the techniques no public rule
+      covers, over three hundred of them.
     actions:
       - show: '#tab-generate details.options-section'
         at: 0.08
@@ -133,10 +140,10 @@ scenes:
   - id: results
     chapter: Results and the threat briefing
     narration: >
-      Every run ends on a Results page. The threat briefing comes first: how much of the group you
-      detect, its weakest stage, and the gaps to close first, ranked by how early they land in the
-      attack. Below it, the anatomy of the attack in plain words, then the detections themselves —
-      one card each, grouped by SIEM.
+      Every run lands on a Results page. The threat briefing comes first — how much of the group you
+      actually detect, its weakest stage, and the gaps worth closing first, ranked by how early they sit
+      in the attack. Below that, the anatomy of the attack in plain words, then the detections themselves
+      — one card each, grouped by SIEM.
     actions:
       - goto: /results?group_name=APT29
       - click: '#briefing h2'
@@ -151,11 +158,11 @@ scenes:
     continues: true
     narration: >
       Correlations chain detections into a single query that fires only when several steps of an attack
-      land on the same host or account inside a time window. A chain of three techniques fires far less
-      often than any one detection, so treat it as a high-confidence lead. The attack flow lays the
-      group's techniques out by tactic, each marked with the SIEMs that detect it, or with nothing.
-      Before you deploy anything, work through the validation checklist — generated queries are a
-      starting point, not production rules.
+      land on the same host or account inside a time window — three techniques together fire far less
+      often than any one alone, so you can treat a hit as a high-confidence lead. The attack flow lays the
+      group's techniques out by tactic, each marked with the SIEMs that catch it, or with nothing. And
+      before you deploy a thing, work the validation checklist: generated queries are a starting point,
+      not production rules.
     actions:
       - show: '#correlations'
         at: 0.04
@@ -167,10 +174,9 @@ scenes:
   - id: analyse
     chapter: Analysing a report
     narration: >
-      Analyse builds detections from a threat report. Paste a URL or upload a PDF, and Shikari pulls out
+      Analyse builds detections from a threat report. Paste a URL or drop in a PDF, and Shikari pulls out
       the techniques, the commands and the indicators — defanged ones included — and shows you every one
-      before it generates anything. Untick the vendor's own domains and anything mentioned only in
-      passing.
+      before it writes anything. Untick the vendor's own domains, and anything mentioned only in passing.
     actions:
       - goto: /
       - click: 'button.tab-button[data-tab="upload"]'
@@ -183,10 +189,10 @@ scenes:
   - id: profile-company
     chapter: Profiling a company
     narration: >
-      Profile starts from a company instead of a threat. Enter a domain and Shikari works out the sector,
-      geography and hosting from public sources, then recommends the groups most likely to target it.
-      The review opens with an exposure map: what an attacker sees before they act — whether the domain
-      can be spoofed, its exposed services, and its breach history.
+      Profile starts from a company rather than a threat. Enter a domain and Shikari works out the sector,
+      geography and hosting from public sources, then names the groups most likely to target it. The review
+      opens on an exposure map — what an attacker sees before they move: whether the domain can be spoofed,
+      the services it exposes, and its breach history.
     actions:
       - goto: /
       - click: 'button.tab-button[data-tab="profile"]'
@@ -203,9 +209,9 @@ scenes:
   - id: research
     chapter: Researching groups
     narration: >
-      Research answers a different question: who targets finance in Europe? Enter a few keywords and
+      Research answers a different question — who targets finance in Europe? Give it a few keywords and
       Shikari finds the matching groups, then builds a table of the techniques they share. A technique
-      several of your groups use is the best value a detection can buy.
+      several of your groups use is the best value a single detection can buy.
     actions:
       - goto: /
       - click: 'button.tab-button[data-tab="research"]'
@@ -218,10 +224,10 @@ scenes:
   - id: environment
     chapter: Your environment
     narration: >
-      Narrow all of this to your estate. Under Profile, Environment, tick the SIEMs you run, the
-      industries you care about, and the products you have. Every hunt then generates only for those
-      SIEMs, and drops techniques that can't happen in your technology stack. The Threat Feed honours it
-      too.
+      You can narrow all of this to your own estate. Under Profile, Environment, tick the SIEMs you run,
+      the industries you care about, and the products you have. From then on every hunt generates only for
+      those SIEMs, and quietly drops the techniques that can't happen on your stack. The Threat Feed
+      honours it too.
     actions:
       - goto: /profile
       - click: 'button.tab-button[data-tab="environment"]'
@@ -237,9 +243,9 @@ scenes:
     chapter: Library and coverage
     narration: >
       Save a run and it lands in your Library — your working set of detections and correlations. Search
-      it, filter it, tag detections in bulk, and export them. Coverage shows which ATT&CK techniques you
-      have queries for, by tactic and across the full matrix, and where one SIEM covers what another
-      misses.
+      it, filter it, tag detections in bulk, export them. Coverage then shows which ATT&CK techniques
+      you've got queries for — by tactic, across the whole matrix, and where one SIEM picks up what
+      another misses.
     actions:
       - goto: /library
       - click: 'h2:text-is("Metrics")'
@@ -254,9 +260,9 @@ scenes:
   - id: flows
     chapter: Flows and anatomy
     narration: >
-      Flows and Anatomy are for the people who don't read queries. A flow shows every technique in an
-      attack by tactic, with what you detect and what you don't. Anatomy tells the same story the way
-      the DFIR Report draws it: how they get in, what they run, what they do, and where they go next.
+      Flows and Anatomy are for the people who don't read queries. A flow lays out every technique in an
+      attack by tactic, with what you detect and what you don't. Anatomy tells the same story the way the
+      DFIR Report draws it — how they get in, what they run, what they do, and where they go next.
     actions:
       - goto: /flows
       - show: '#af-canvas'
@@ -269,8 +275,8 @@ scenes:
   - id: detections-code
     chapter: Detections as code
     narration: >
-      Detections as code commits a run to git — one stable file per detection — so regenerating after a
-      new ATT&CK release shows you exactly which queries moved.
+      Detections as code commits a run to git — one stable file per detection — so when you regenerate
+      after a new ATT&CK release, you can see exactly which queries moved.
     actions:
       - goto: /detections/code
       - show: 'section.ms-card:has(h2:has-text("History"))'
@@ -279,10 +285,10 @@ scenes:
   - id: feed
     chapter: The Threat Feed
     narration: >
-      The Threat Feed is the last seven days of technical research from vendors and governments,
-      tagged with the industries, nations and products involved. By default it keeps what's relevant
-      to your industries and your stack. Save a watchlist and Shikari collects every six hours,
-      flagging anything new. Analyse in Shikari turns a post straight into detections.
+      The Threat Feed is the last seven days of technical research from vendors and governments, tagged
+      with the industries, nations and products in play. By default it keeps what's relevant to your
+      industries and your stack. Save a watchlist and Shikari checks every six hours, flagging anything
+      new — and Analyse turns any post straight into detections.
     actions:
       - goto: /feed
       - show: section.fd-intro
@@ -296,9 +302,9 @@ scenes:
     chapter: Cyber Powers, STIX and MITRESaw
     narration: >
       Cyber Powers puts national capability on a map — from the IISS tiers, and from how firmly ATT&CK
-      attributes groups to each country. STIX, TAXII and MISP take intelligence from your sharing
-      communities as a hunt input, and export a finished run back. MITRESaw is the procedure data
-      underneath all of it, with the evidence for every link between a group and a technique.
+      pins groups to each country. STIX, TAXII and MISP take intelligence from your sharing communities in
+      as a hunt input, and send a finished run back out. And MITRESaw is the procedure data under all of
+      it — the evidence behind every link between a group and a technique.
     actions:
       - goto: /cyber-powers
       - show: '#cp-map'
@@ -315,12 +321,12 @@ scenes:
   - id: emulate
     chapter: Emulation and assessments
     narration: >
-      Emulate shows which logs record each technique, drawn from attacks captured in public labs, and
-      checks your detections' indicators against those recordings. Plan an emulation for a group or CVE
-      and export it for MACAT. In the Lab, run a CALDERA operation against an agent group — each step's
-      facts feed the next, and the sandcat agent behaves like a real implant — then test your detections
-      and correlations against what actually ran, capturing each step's endpoint logs over the agent's
-      own C2. Assessments record what each test did and what the defence saw, and export an ATT&CK
+      Emulate shows which logs record each technique — drawn from real attacks captured in public labs —
+      and checks your detections' indicators against those recordings. Plan an emulation for a group or a
+      CVE and export it for MACAT. In the Lab, run a CALDERA operation against a group of agents — each
+      step's facts feed the next, and the sandcat agent behaves like a real implant — then test your
+      detections and correlations against what actually ran, capturing each step's endpoint logs over the
+      agent's own C2. Assessments record what each test did and what the defence saw, and export an ATT&CK
       Navigator layer.
     actions:
       - goto: /emulate
@@ -338,11 +344,10 @@ scenes:
   - id: build
     chapter: Manual, Regex and Agents
     narration: >
-      Manual writes detections from your own intelligence, one technique at a time. Regex tests a
-      pattern in the engine your SIEM actually uses, and catches the mistakes that only surface there.
-      And Agents put a model to work with Shikari's tools — repairing queries that fail the checks,
-      triaging reports, sweeping coverage gaps — with every step shown and every change waiting on
-      your approval.
+      Manual writes detections from your own intelligence, one technique at a time. Regex tests a pattern
+      in the engine your SIEM actually uses, and catches the mistakes that only ever surface there. And
+      Agents put a model to work with Shikari's own tools — repairing queries that fail the checks,
+      triaging reports, sweeping coverage gaps — every step shown, every change waiting on your say-so.
     actions:
       - goto: /manual
       - show: section.mn-entry
@@ -359,9 +364,9 @@ scenes:
   - id: guide
     chapter: The guide and tips
     narration: >
-      You don't need to remember all of this. The Help menu has a guide to every page — each part
-      highlighted with what it's for, who uses it, and when it helps most — plus tips for the things
-      that are easy to miss. Shikari runs in a browser from a central server for the whole team, or as
+      You don't have to remember any of this. The Help menu carries a guide to every page — each part
+      highlighted with what it's for, who uses it, and when it earns its keep — plus tips for the things
+      that are easy to miss. Shikari runs in the browser from one central server for the whole team, or as
       an app on your own machine. It's on GitHub. Happy hunting.
     actions:
       - goto: /library
