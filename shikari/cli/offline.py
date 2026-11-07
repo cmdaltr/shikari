@@ -35,8 +35,6 @@ def process_group(group_name, hypothesis=None, manual_data=None, run_correlation
 def generate_detection(technique_name):
     """Generate a detection for a specific technique"""
     from shikari.mitre import get_stix_data, obtain_all_techniques
-    from shikari.mitre.retrieve import retrieve_procedures
-    from shikari.build.detections import compile_query
 
     print(f"Generating detection for technique: {technique_name}")
 
@@ -70,17 +68,18 @@ def generate_detection(technique_name):
         technique = matching[0]
 
     print(f"Using technique: {technique}")
-    procedures = retrieve_procedures(bundle, [technique], merge_expanded=False)  # one technique: its sub-techniques too
+    # The web technique hunt's own path: the ATT&CK procedure examples of every group using the
+    # technique (and its sub-techniques) give the indicators, then the normal pipeline builds them.
+    from shikari import app as web
 
-    if not procedures:
-        print(f"No procedures found for {technique}")
-        return
-
-    print(f"Found {len(procedures)} procedures. Generating detections...")
-
-    for procedure in procedures:
-        compile_query(procedure)
-
+    tid = technique.split(":", 1)[0].strip()
+    web.app.state.bundle = bundle
+    info = web._get_technique_info(tid)
+    entries = web._technique_entries(tid, info, bundle)
+    tactic = (info or {}).get("tactic", "Unknown Tactic")
+    web.modified_process_group_wrapper(web.sanitize_group_name(f"Hunt_{tid}"), hypothesis=f"Technique Hunt: {tid}",
+                                       manual_data=[{"tactic": tactic, "techniques": entries}],
+                                       genai_mode="heuristic", run_correlation=True)
     print("Detection generation complete.")
 
 
