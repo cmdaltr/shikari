@@ -527,6 +527,29 @@ class App:
             self.stop_local()
 
 
+def hide_console_windows():
+    """Windows: the app has no console, so every console program it runs (git, docker, powershell,
+    where, ollama...) got a console window of its own, popping up over the app. Start them with none,
+    unless the caller asked for a console or a detached process."""
+    if sys.platform != "win32":
+        return
+    import subprocess
+
+    if getattr(subprocess.Popen, "_shikari_no_window", False):
+        return
+    original = subprocess.Popen.__init__
+    own_console = subprocess.CREATE_NEW_CONSOLE | subprocess.DETACHED_PROCESS
+
+    def __init__(self, *args, **kwargs):
+        flags = kwargs.get("creationflags", 0) or 0
+        if not flags & own_console:
+            kwargs["creationflags"] = flags | subprocess.CREATE_NO_WINDOW
+        original(self, *args, **kwargs)
+
+    subprocess.Popen.__init__ = __init__
+    subprocess.Popen._shikari_no_window = True
+
+
 def bundled_git():
     """The Windows installer carries MinGit (desktop/stage.py), since Windows has no git. It goes
     last on PATH, so a git the user installed (with their credentials and config) still wins."""
@@ -574,6 +597,7 @@ def main():
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
     log = redirect_output(home)
+    hide_console_windows()
     bundled_git()
 
     from shikari import desktop
