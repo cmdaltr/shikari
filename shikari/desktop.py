@@ -22,6 +22,7 @@ On Windows, run it as: .venv\\Scripts\\python shikari\\desktop.py install
 """
 
 import argparse
+import base64
 import os
 import plistlib
 import shutil
@@ -41,6 +42,13 @@ ICONS = ROOT / "desktop" / "icons"
 WINDOWS = sys.platform == "win32"
 MACOS = sys.platform == "darwin"
 
+# The screeching bateleur over the loading words, inline: the splash shows before there's a server
+try:
+    _BIRD = "data:image/webp;base64," + base64.b64encode(
+        (ROOT / "static" / "images" / "shikari" / "shikari-screech-loading.webp").read_bytes()).decode()
+except OSError:
+    _BIRD = ""
+
 LOADING = """<!doctype html><html><head><meta charset="utf-8"><style>
 html,body{height:100%;margin:0;background:#fff;color:#444;font:15px -apple-system,'Segoe UI',sans-serif}
 @media(prefers-color-scheme:dark){html,body{background:#111827;color:#d1d5db}}
@@ -49,9 +57,10 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 .bar i{display:block;width:40%;height:100%;background:#C53030;animation:s 1.2s infinite ease-in-out}
 @keyframes s{0%{margin-left:-40%}100%{margin-left:100%}}
 .step{font-size:13px;opacity:.75}.note{max-width:420px;text-align:center;font-size:13px;line-height:1.5;opacity:.6;margin:6px 0 0}
-.gloss{position:fixed;bottom:22px;font-size:13px;opacity:.7}.gloss b{font-weight:600}.gloss i{margin:0 8px;opacity:.8}
+.gloss{position:fixed;bottom:22px;font-size:13px;opacity:.7}
+.title{position:relative}.bird{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);margin-bottom:28px;width:260px;pointer-events:none}.gloss b{font-weight:600}.gloss i{margin:0 8px;opacity:.8}
 </style></head>
-<body><div>Starting Shikari&hellip;</div><div class="bar"><i></i></div>
+<body><div class="title">__BIRD__Starting Shikari&hellip;</div><div class="bar"><i></i></div>
 <div class="step"><span id="step">Getting ready</span> &middot; <span id="elapsed">0:00</span></div>
 <p class="note">The first start takes a few minutes while Shikari unpacks MITRE ATT&amp;CK and builds its
 database. After that it starts in seconds.</p>
@@ -61,7 +70,7 @@ database. After that it starts in seconds.</p>
 var t0=Date.now();window.shikariStep=function(s){document.getElementById('step').textContent=s};
 setInterval(function(){var s=Math.floor((Date.now()-t0)/1000);
 document.getElementById('elapsed').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0')},1000);
-</script></body></html>"""
+</script></body></html>""".replace("__BIRD__", f'<img class="bird" alt="" src="{_BIRD}">' if _BIRD else "")
 
 
 def venv_python(windowed=False):
