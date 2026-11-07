@@ -324,11 +324,15 @@ The `generate` module supports three modes via `set MODE <mode>`:
 
 ## 🤝 Contributing
 
-Feel free to open issues or submit pull requests to improve Shikari.
+Feel free to open issues or submit pull requests to improve Shikari. Because Shikari is also offered under a commercial licence, outside contributions need a contributor licence agreement before they can be merged.
 
 ---
 <br>
 
 ## 📝 License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+Copyright (C) 2025-2026 cmdaltr.
+
+Shikari is free software under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only): you can use, study, change and share it, and if you change it and let others use it, over a network included, you must make your changed source available to them under the same licence.
+
+Organisations that can't meet the AGPL's terms, for example to keep changes private or to build Shikari into a closed product, can get a commercial licence instead: contact @cmdaltr on GitHub.
