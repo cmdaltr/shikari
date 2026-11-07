@@ -122,6 +122,11 @@ class ValidationOrchestrator:
 
     def get_docker_status(self) -> Dict[str, Any]:
         """Get Docker availability status"""
+        # Docker started after the server (OrbStack waking up) shouldn't need a restart to be seen
+        if not self.docker_available and self.docker_manager is None:
+            self.docker_available, self.docker_message = check_docker_available()
+            if self.docker_available:
+                self._init_components()
         return {
             "available": self.docker_available,
             "message": self.docker_message,
