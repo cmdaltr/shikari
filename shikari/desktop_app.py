@@ -588,7 +588,17 @@ def main():
     if sys.argv[1:2] == ["update"]:
         if str(ROOT) not in sys.path:
             sys.path.insert(0, str(ROOT))
-        return cli_update(sys.argv[2:])
+        # The macOS app's launcher sends stdout to the system log, not the terminal it was run
+        # from: write to the terminal itself
+        if sys.platform == "darwin" and not (sys.stdout and sys.stdout.isatty()):
+            try:
+                sys.stdout = sys.stderr = open("/dev/tty", "w", buffering=1)
+            except OSError:
+                pass
+        code = cli_update(sys.argv[2:])
+        sys.stdout.flush()
+        # Out now: on macOS the launcher keeps the process alive after main() returns
+        os._exit(code)
     # Before anything imports shikari.paths, which reads SHIKARI_HOME once
     home = Path(os.environ.get("SHIKARI_HOME") or default_home()).expanduser()
     home.mkdir(parents=True, exist_ok=True)
