@@ -18,11 +18,38 @@ Process Information:
 """
 
 
+CLASSIC_PS = (b"<Event xmlns='x'><System><EventID Qualifiers='0'>400</EventID><Channel>Windows PowerShell</Channel></System>"
+              b"<EventData><Data>Available</Data><Data>None</Data><Data>\tNewEngineState=Available\n\tPreviousEngineState=None\n\n"
+              b"\tHostName=ConsoleHost\n\tHostApplication=C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe "
+              b"-ExecutionPolicy Bypass -C systeminfo\n\tEngineVersion=5.1.26100\n\tPipelineId=\n\tCommandLine=</Data></EventData></Event>")
+
+
+def test_parse_classic_powershell_keeps_every_field():
+    # A host with no process auditing or Sysmon records the command line only here, in unnamed <Data>.
+    # Every value is kept, named for its meaning: the bare values by the event's message, the host's
+    # command line as CommandLine like Sysmon's, the block's (pipeline) CommandLine= as ScriptBlockText.
+    [(etype, fields)] = list(ds.parse(CLASSIC_PS))
+    assert etype == "Windows PowerShell 400"
+    assert fields == {"NewEngineState": "Available", "PreviousEngineState": "None", "HostName": "ConsoleHost",
+                      "EngineVersion": "5.1.26100",
+                      "CommandLine": "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe "
+                                     "-ExecutionPolicy Bypass -C systeminfo"}
+
+
+def test_field_names_are_canonical_across_sources():
+    # 4688's NewProcessName is Sysmon's Image, in what's parsed now and in values built before
+    assert list(ds.parse(TEXT))[0][1]["Image"] == "C:\\Windows\\System32\\schtasks.exe"
+    assert ds._canonical({"NewProcessName": ["a.exe"], "Image": ["a.exe", "b.exe"], "ImagePath": ["svc.exe"]}) == {
+        "Image": ["a.exe", "b.exe"], "ServiceFileName": ["svc.exe"]}
+    named = {f for fs in ds.FIELDS.values() for f in fs}
+    assert not named & set(ds.CANONICAL)
+
+
 def test_parse_each_format():
     assert list(ds.parse(SYSMON)) == [("Microsoft-Windows-Sysmon/Operational 1", {
         "Image": "C:\\Windows\\System32\\rundll32.exe",
         "CommandLine": "rundll32.exe C:\\windows\\System32\\comsvcs.dll, MiniDump 624 C:\\Users\\bob\\lsass.dmp full"})]
-    assert list(ds.parse(TEXT)) == [("Security 4688", {"NewProcessName": "C:\\Windows\\System32\\schtasks.exe",
+    assert list(ds.parse(TEXT)) == [("Security 4688", {"Image": "C:\\Windows\\System32\\schtasks.exe",
                                                        "CommandLine": "schtasks /create /tn Updater /tr evil.exe"})]
     trail = b'{"eventSource": "iam.amazonaws.com", "eventName": "CreateUser", "userAgent": "aws-cli/2"}\n'
     assert list(ds.parse(trail))[0][0] == "CloudTrail iam.amazonaws.com CreateUser"

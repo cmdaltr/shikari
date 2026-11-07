@@ -44,17 +44,16 @@ LOCAL_VALUES_PATH = str(paths.CACHE / "telemetry_local_values.json.gz")
 STATE_PATH = str(paths.CACHE / "telemetry_state.json")
 MAP_FILES = (os.path.join(HERE, "mappings", "telemetry_map.json"),
              os.path.join("bespoke", "mappings", "telemetry_map.json"))
-PARSER_VERSION = 3  # part of each recording's build key: a parser change fetches everything again
+PARSER_VERSION = 4  # part of each recording's build key: a parser change fetches everything again
 BACKGROUND_SHARE = 0.4  # an event type recorded in this share of datasets is the lab's background
 MAX_VALUES = 150  # distinct values per field per event type per dataset
 MAX_LEN = 500
 
 # The fields kept, by what a detection's indicators are (shikari/build indicator kinds)
 FIELDS = {
-    "cmd": ["CommandLine", "ParentCommandLine", "ScriptBlockText", "Payload", "ContextInfo"],
-    "file": ["Image", "ParentImage", "TargetFilename", "ImageLoaded", "NewProcessName", "ParentProcessName",
-             "ServiceFileName", "ImagePath", "TargetImage", "SourceImage", "Application", "ObjectName",
-             "RelativeTargetName", "OriginalFileName", "exe"],
+    "cmd": ["CommandLine", "ParentCommandLine", "ScriptBlockText", "Payload", "ContextInfo", "CommandName"],
+    "file": ["Image", "ParentImage", "TargetFilename", "ImageLoaded", "ServiceFileName", "TargetImage",
+             "SourceImage", "ObjectName", "RelativeTargetName", "OriginalFileName", "ScriptName", "CommandPath"],
     "reg": ["TargetObject", "ObjectName", "Details", "NewName"],
     "network": ["QueryName", "DestinationHostname", "DestinationIp", "DestinationPort", "ShareName", "PipeName"],
     "other": ["ServiceName", "TargetUserName", "TicketEncryptionType", "Properties", "AccessMask", "GrantedAccess",
@@ -62,6 +61,10 @@ FIELDS = {
               "UserAgent"],
 }
 KEEP = {f for fs in FIELDS.values() for f in fs}
+# One name per meaning across log sources, Sysmon's where it has one (the MDE, eslogger, osquery and
+# Elastic parsers already map to them). Applied as events are parsed and to values built before this.
+CANONICAL = {"NewProcessName": "Image", "exe": "Image", "Application": "Image",
+             "ParentProcessName": "ParentImage", "ImagePath": "ServiceFileName"}
 # Indicator kinds (YAML 'indicators:' keys) to the field groups they're looked for in
 KIND_FIELDS = {"cmd": ("cmd",), "sw": ("file", "cmd"), "path": ("file", "cmd"), "file": ("file", "cmd"),
                "reg": ("reg", "cmd"), "evt": ("other",), "api": ("other", "cmd"), "operation": ("other",),
@@ -133,11 +136,23 @@ _TEXT_FIELDS = {
     "Task Name": "TaskName", "Task Content": "TaskContent", "Ticket Encryption Type": "TicketEncryptionType",
     "Properties": "Properties", "Accesses": "AccessMask", "Access Mask": "AccessMask", "Share Name": "ShareName",
     "Relative Target Name": "RelativeTargetName", "Application Name": "Application", "Image Path": "ImagePath",
-    "LDAP Display Name": "AttributeLDAPDisplayName", "Host Application": "ContextInfo",
+    "LDAP Display Name": "AttributeLDAPDisplayName", "Host Application": "CommandLine",
 }
 _TEXT_BLOCK = re.compile(r"(?m)^(?=\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2} [AP]M\s*$)")
 _XML_EVENT = re.compile(r"<Event[ >].*?</Event>", re.S)
 _XML_DATA = re.compile(r"<Data Name=['\"]([^'\"]+)['\"]\s*>(.*?)</Data>", re.S)
+# The classic Windows PowerShell log is a legacy source with no event templates, so its <Data> is
+# unnamed: bare values in the order of each event's message, and one block of key=value lines.
+# HostApplication is the host's full command line, the only one a host without process auditing or
+# Sysmon records. Every value is kept, under the canonical name for its meaning.
+_XML_ANON_DATA = re.compile(r"<Data>(.*?)</Data>", re.S)
+_KEY_VALUE = re.compile(r"(?m)^\s*([A-Za-z]\w*)=(.*?)\s*$")
+_CLASSIC_PS_KEYS = {"HostApplication": "CommandLine", "CommandLine": "ScriptBlockText"}  # CommandLine= is the pipeline's
+_CLASSIC_PS_ORDER = {  # each event's bare values, as its message uses them (%1, %2, …)
+    "400": ("NewEngineState", "PreviousEngineState"), "403": ("NewEngineState", "PreviousEngineState"),
+    "500": ("CommandName", "NewCommandState"), "501": ("CommandName", "NewCommandState"),
+    "600": ("ProviderName", "NewProviderState"), "800": ("ScriptBlockText", None, "Payload"),
+}
 
 
 def channel(name: str) -> str:
@@ -147,6 +162,7 @@ def channel(name: str) -> str:
 
 def _keep(event: Dict, fields: Dict[str, str]) -> Dict[str, str]:
     for k, v in fields.items():
+        k = CANONICAL.get(k, k)
         if k in KEEP and v not in (None, "", "-", "null", "None"):
             event[k] = str(v)[:MAX_LEN]
     return event
@@ -159,7 +175,25 @@ def _xml_events(text: str, default_channel: str = "") -> Iterable[Tuple[str, Dic
         if not eid:
             continue
         fields = {k: html.unescape(v) for k, v in _XML_DATA.findall(raw)}
-        yield f"{channel(ch.group(1) if ch else default_channel)} {eid.group(1)}", _keep({}, fields)
+        name = channel(ch.group(1) if ch else default_channel)
+        event = _classic_powershell(eid.group(1), raw) if name == "Windows PowerShell" else {}
+        yield f"{name} {eid.group(1)}", _keep(event, fields)
+
+
+def _classic_powershell(eid: str, raw: str) -> Dict[str, str]:
+    """A classic Windows PowerShell event's unnamed <Data>, every value under its canonical name."""
+    out: Dict[str, str] = {}
+    order = _CLASSIC_PS_ORDER.get(eid, ())
+    for i, block in enumerate(_XML_ANON_DATA.findall(raw)):
+        block = html.unescape(block)
+        pairs = _KEY_VALUE.findall(block)
+        if pairs:
+            for k, v in pairs:
+                if v:
+                    out.setdefault(_CLASSIC_PS_KEYS.get(k, k), v[:MAX_LEN])
+        elif block.strip() and i < len(order) and order[i]:
+            out.setdefault(order[i], block.strip()[:MAX_LEN])
+    return out
 
 
 def _evtx_events(blob: bytes, default_channel: str = "") -> Iterable[Tuple[str, Dict]]:
@@ -516,7 +550,21 @@ def values() -> Optional[Dict]:
                 _cache["values"].update(local)
         except (OSError, ValueError, EOFError):
             pass
+        if _cache["values"]:
+            _cache["values"] = {did: {etype: _canonical(fields) for etype, fields in by_type.items()}
+                                for did, by_type in _cache["values"].items()}
     return _cache["values"]
+
+
+def _canonical(fields: Dict[str, List[str]]) -> Dict[str, List[str]]:
+    """A recording's {field: values} under CANONICAL names, for values built before the names were."""
+    if not any(k in CANONICAL for k in fields):
+        return fields
+    out: Dict[str, List[str]] = {}
+    for k, vs in fields.items():
+        merged = out.setdefault(CANONICAL.get(k, k), [])
+        merged.extend(v for v in vs if v not in merged)
+    return out
 
 
 def event_map() -> Dict:
