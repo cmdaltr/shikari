@@ -273,15 +273,10 @@ class FileIntelligenceParser:
     def _extract_pdf_text(self, file_path: str) -> str:
         """Extract text from PDF file."""
         try:
-            import PyPDF2
-            text = []
             with open(file_path, 'rb') as f:
-                reader = PyPDF2.PdfReader(f)
-                for page in reader.pages:
-                    text.append(page.extract_text())
-            return '\n\n'.join(text)
-        except ImportError:
-            print("Warning: PyPDF2 not installed. Install with: pip install PyPDF2")
+                return self._extract_pdf_bytes(f.read())
+        except OSError as e:
+            print(f"Error reading PDF: {e}")
             return ""
         except Exception as e:
             print(f"Error extracting PDF text: {e}")
@@ -290,17 +285,12 @@ class FileIntelligenceParser:
     def _extract_pdf_bytes(self, content: bytes) -> str:
         """Extract text from PDF bytes."""
         try:
-            import PyPDF2
+            # pypdf is a dependency; it's PyPDF2's successor (PyPDF2 was never installed, so a
+            # PDF report quietly came back as no text at all)
+            from pypdf import PdfReader
             from io import BytesIO
-            text = []
-            pdf_file = BytesIO(content)
-            reader = PyPDF2.PdfReader(pdf_file)
-            for page in reader.pages:
-                text.append(page.extract_text())
-            return '\n\n'.join(text)
-        except ImportError:
-            print("Warning: PyPDF2 not installed. Install with: pip install PyPDF2")
-            return ""
+            reader = PdfReader(BytesIO(content))
+            return '\n\n'.join(page.extract_text() or "" for page in reader.pages)
         except Exception as e:
             print(f"Error extracting PDF bytes: {e}")
             return ""

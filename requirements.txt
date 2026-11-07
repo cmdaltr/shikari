@@ -156,6 +156,7 @@ yarl==1.20.1
 # Report generation dependencies
 python-docx==1.1.2  # For Word document export
 reportlab==4.2.5  # For PDF export
+pypdf==7.0.0  # Reading PDF reports (Analyse)
 
 
 # RAG-based Fidelity Enhancement System Requirements
@@ -169,7 +170,7 @@ faiss-cpu>=1.8.0  # Use faiss-gpu if you have CUDA
 
 # LLM providers (optional - install as needed)
 # OpenAI (recommended for cloud-based enhancement)
-openai>=1.0.0
+openai==2.54.0
 
 # Anthropic Claude (alternative cloud provider)
 # anthropic>=0.7.0
