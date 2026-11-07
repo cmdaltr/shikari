@@ -132,10 +132,28 @@ case "$suffix" in
         case "$file" in /*) ;; *) file="$PWD/$file" ;; esac
         # apt rather than dpkg, so GTK and WebKit come with it
         sudo=""
-        [ "$(id -u)" -eq 0 ] || { sudo=sudo; note "apt needs administrator rights: sudo may ask for your password"; }
-        note "apt installs it with GTK and WebKit, and shows its own progress"
-        $sudo apt-get install -y "$file"
-        ok "Installed"
+        if [ "$(id -u)" -ne 0 ]; then
+            sudo=sudo
+            note "apt needs administrator rights: sudo may ask for your password"
+            sudo true || die "no administrator rights"
+        fi
+        # apt's own output is hundreds of lines (every GTK and WebKit package): keep it in a log, show a
+        # clock so it doesn't look stuck, and print the end of the log if it fails
+        note "apt is installing it with GTK and WebKit (a few minutes on a fresh machine)"
+        $sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y "$file" > "$tmp/apt.log" 2>&1 &
+        pid=$!
+        t=0
+        while kill -0 "$pid" 2>/dev/null; do
+            [ -t 1 ] && printf '\r      %s%dm %02ds%s' "$d" $((t / 60)) $((t % 60)) "$o"
+            sleep 1
+            t=$((t + 1))
+        done
+        [ -t 1 ] && printf '\r              \r'
+        if ! wait "$pid"; then
+            tail -n 25 "$tmp/apt.log" >&2
+            die "apt couldn't install $(basename "$file")"
+        fi
+        ok "Installed, with $(grep -c '^Setting up' "$tmp/apt.log") package(s)"
         where="Run shikari, or open Shikari from the applications menu"
         ;;
 esac
