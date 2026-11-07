@@ -28,7 +28,7 @@ The builds aren't signed with a paid developer certificate yet, so the first lau
 
 ### Install scripts
 
-`desktop/install.sh` (macOS and Linux) and `desktop/install.ps1` (Windows) download the right installer for the machine from a release, check it against `SHA256SUMS`, and install it; run again to upgrade. The repository is private, so they need `GH_TOKEN` set to a token that can read it, or a logged-in `gh`.
+`desktop/install.sh` (macOS and Linux) and `desktop/install.ps1` (Windows) download the right installer for the machine from a release, check it against `SHA256SUMS`, and install it; run again to upgrade. They number each step as they go, with the download's progress, and say how long it took; `--launch` / `-Launch` opens Shikari at the end. The repository is private, so they need `GH_TOKEN` set to a token that can read it, or a logged-in `gh`.
 
 ```bash
 sh install.sh                    # or --version v2.1.0, or --file Shikari-<version>-macos-arm64.dmg

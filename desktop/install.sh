@@ -4,6 +4,7 @@
 #   sh install.sh                    the latest release
 #   sh install.sh --version v2.1.0   a given release
 #   sh install.sh --file Shikari.dmg  an installer already downloaded (no checksum: you chose the file)
+#   sh install.sh --launch           open Shikari when it's installed
 #
 # The repository is private: set GH_TOKEN (or GITHUB_TOKEN) to a token that can read it, or be
 # logged in to the gh CLI. The installer is checked against the release's SHA256SUMS before use.
@@ -12,14 +13,25 @@ set -eu
 REPO="${SHIKARI_REPO:-cmdaltr/shikari}"
 version=latest
 file=
+launch=
+started=$(date +%s)
 
-die() { echo "install.sh: $*" >&2; exit 1; }
+# Numbered steps, so it's clear how far through the install is. Colour only on a terminal.
+if [ -t 1 ]; then c=$(printf '\033[36m'); g=$(printf '\033[32m'); d=$(printf '\033[2m'); r=$(printf '\033[31m'); o=$(printf '\033[0m')
+else c= g= d= r= o=; fi
+n=0
+steps=0
+step() { n=$((n + 1)); printf '\n%s[%d/%d] %s%s\n' "$c" "$n" "$steps" "$*" "$o"; }
+ok() { printf '      %sOK  %s%s\n' "$g" "$*" "$o"; }
+note() { printf '      %s%s%s\n' "$d" "$*" "$o"; }
+die() { printf '\n%sinstall.sh: %s%s\n' "$r" "$*" "$o" >&2; exit 1; }
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --version) version="${2:?--version needs a tag}"; shift 2 ;;
         --file) file="${2:?--file needs a path}"; shift 2 ;;
-        -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
+        --launch) launch=1; shift ;;
+        -h|--help) sed -n '2,11p' "$0"; exit 0 ;;
         *) die "unknown option $1" ;;
     esac
 done
@@ -34,6 +46,11 @@ esac
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
+
+# Find, download and check the installer when there's no --file, install it, done
+[ -n "$file" ] && steps=1 || steps=4
+printf '\n  Shikari: desktop app installer\n'
+printf '  %sshi\302\267ka\302\267ri  \\shi-\313\210k\303\244r-\304\223\\  a professional big-game hunter or guide%s\n' "$d" "$o"
 
 # Picks a field out of the release JSON on stdin. macOS has no python3 without the developer
 # tools, but always has JavaScript for Automation; Debian and Ubuntu always have python3.
@@ -61,6 +78,7 @@ if [ -z "$file" ]; then
     [ -n "$token" ] || die "set GH_TOKEN to a token that can read $REPO, or log in with gh auth login"
     get() { curl -fsSL -H "Authorization: Bearer $token" "$@"; }
 
+    step "Finding the $version release of $REPO"
     [ "$version" = latest ] && path=releases/latest || path="releases/tags/$version"
     get -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$REPO/$path" > "$tmp/release.json" \
         || die "couldn't read $version from $REPO"
@@ -70,37 +88,61 @@ if [ -z "$file" ]; then
     [ -n "$name" ] || die "the $version release has no *$suffix"
     url() { awk -F '\t' -v n="$1" '$1 == n { print $2; exit }' "$tmp/assets"; }
     [ -n "$(url SHA256SUMS)" ] || die "the $version release has no SHA256SUMS"
+    ok "$name"
 
-    echo "Downloading $name"
-    get -H "Accept: application/octet-stream" -o "$tmp/$name" "$(url "$name")"
+    step "Downloading $name"
+    # curl's own bar on a terminal (get's -s would hide it); quiet in a log
+    if [ -t 2 ]; then
+        curl -fL -# -H "Authorization: Bearer $token" -H "Accept: application/octet-stream" -o "$tmp/$name" "$(url "$name")"
+    else
+        get -H "Accept: application/octet-stream" -o "$tmp/$name" "$(url "$name")"
+    fi
     get -H "Accept: application/octet-stream" -o "$tmp/SHA256SUMS" "$(url SHA256SUMS)"
+    ok "$(du -h "$tmp/$name" | cut -f1 | tr -d ' ') downloaded"
+
+    step "Checking it against the release's SHA256SUMS"
     expected=$(awk -v n="$name" '$2 == n || $2 == "*" n { print $1; exit }' "$tmp/SHA256SUMS")
     actual=$(shasum -a 256 "$tmp/$name" 2>/dev/null || sha256sum "$tmp/$name")
     [ -n "$expected" ] && [ "${actual%% *}" = "$expected" ] || die "$name doesn't match SHA256SUMS: not installing it"
+    ok "SHA-256 matches"
     file="$tmp/$name"
 fi
 [ -f "$file" ] || die "no such file: $file"
+
+step "Installing $(basename "$file")"
 
 case "$suffix" in
     *.dmg)
         mnt="$tmp/mnt"
         mkdir -p "$mnt"
+        note "Opening the disk image"
         hdiutil attach -nobrowse -quiet -mountpoint "$mnt" "$file"
         # /Applications needs an admin account; anyone else gets their own Applications folder
         dest=/Applications
         [ -w "$dest" ] || { dest="$HOME/Applications"; mkdir -p "$dest"; }
-        pgrep -xq Shikari && echo "Shikari is running: quit it to use the new version"
+        pgrep -xq Shikari && note "Shikari is running: quit it to use the new version"
+        note "Copying Shikari.app to $dest"
         rm -rf "$dest/Shikari.app"
         ditto "$mnt/Shikari.app" "$dest/Shikari.app"
         hdiutil detach -quiet "$mnt"
-        echo "Installed $dest/Shikari.app"
+        ok "$dest/Shikari.app"
+        where="Open it from Launchpad or $dest"
         ;;
     *.deb)
         case "$file" in /*) ;; *) file="$PWD/$file" ;; esac
         # apt rather than dpkg, so GTK and WebKit come with it
         sudo=""
-        [ "$(id -u)" -eq 0 ] || sudo=sudo
+        [ "$(id -u)" -eq 0 ] || { sudo=sudo; note "apt needs administrator rights: sudo may ask for your password"; }
+        note "apt installs it with GTK and WebKit, and shows its own progress"
         $sudo apt-get install -y "$file"
-        echo "Installed: run shikari, or open Shikari from the applications menu"
+        ok "Installed"
+        where="Run shikari, or open Shikari from the applications menu"
         ;;
 esac
+
+took=$(( $(date +%s) - started ))
+printf '\n  %sShikari is installed (%dm %ds). %s.%s\n' "$g" $((took / 60)) $((took % 60)) "$where" "$o"
+printf '  %sThe first start takes a few minutes while it unpacks MITRE ATT&CK; after that, seconds.%s\n' "$d" "$o"
+if [ -n "$launch" ]; then
+    case "$suffix" in *.dmg) open "$dest/Shikari.app" ;; *) (shikari >/dev/null 2>&1 &) ;; esac
+fi
