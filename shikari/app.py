@@ -6166,7 +6166,8 @@ def _technique_entries(tid: str, info: Optional[dict], bundle=None) -> list:
     from shikari.mitre.retrieve import retrieve_procedures
 
     try:
-        procs = [p for p in retrieve_procedures(bundle, [(description, info["stix_id"])], merge_expanded=False)
+        examples = _procedure_examples(bundle, info["stix_id"]) or description
+        procs = [p for p in retrieve_procedures(bundle, [(examples, info["stix_id"])], merge_expanded=False)
                  if p[0] == tid or p[0].startswith(tid + ".")]
     except Exception as e:
         print(f"Could not gather ATT&CK procedure indicators for {tid}: {e}")
@@ -6176,17 +6177,76 @@ def _technique_entries(tid: str, info: Optional[dict], bundle=None) -> list:
         if not (isinstance(proc[4], dict) and any(k != "description" for k in proc[4])):
             continue
         own = proc[0] == tid
-        entries.append({
+        base = {
             **entry,
             "technique": proc[0], "name": entry["name"] if own else (proc[1] or proc[0]),
             "activity_desc": description if own else (proc[3] or description),
-            "op_guidance": proc[4], "red_tool": proc[5] or {},
-            "procedure_platforms": (proc[7] if len(proc) > 7 and proc[7] else entry["procedure_platforms"]),
+            "red_tool": proc[5] or {},
             "software_platforms": proc[8] if len(proc) > 8 else {},
-        })
-        print(f"{proc[0]}: indicators from ATT&CK procedure examples "
-              f"({', '.join(k for k in proc[4] if k != 'description')})")
+        }
+        platforms = proc[7] if len(proc) > 7 and proc[7] else entry["procedure_platforms"]
+        for plats, guidance in _by_platform(proc[4], platforms, info):
+            entries.append({**base, "op_guidance": guidance, "procedure_platforms": plats})
+            print(f"{proc[0]} ({', '.join(plats)}): indicators from ATT&CK procedure examples "
+                  f"({', '.join(k for k in guidance if k != 'description')})")
     return entries or [entry]
+
+
+# A platform's indicators are validated against one of its own log sources, as the generator does
+_PLATFORM_SOURCES = {"Windows": ("microsoft_windows_prod", "Splunk"), "Linux": ("unix_prod", "Splunk")}
+# A Windows file, path, variable or registry root is never a Linux or macOS indicator
+_WINDOWS_MARK = re.compile(r"\.exe\b|\\|%\w+%|^hk(lm|cu|ey)", re.I)
+
+
+def _by_platform(guidance: dict, platforms: list, info: dict) -> list:
+    """
+    A technique hunt's indicators, split by the platform they belong to: [(platforms, guidance)].
+
+    Every group's procedure examples together mix Windows, Linux and macOS commands, and the
+    generator judges a source by all of a detection's commands at once, so mixed in one entry every
+    endpoint source refuses them. Each command is kept for the platform whose log source accepts it
+    (macOS goes with Linux); one that names no platform is left out. A built-in Windows tool also
+    gets its bare name, the way it's usually typed (systeminfo for systeminfo.exe). Other kinds
+    (registry, API, network) are Windows'. Guidance with no commands is returned as it was. Short
+    names (cmd, net, reg, sc, at) would match nearly every command line, so only names of six or
+    more letters get a bare form.
+    """
+    from shikari.build.platform_validator_v2 import validate_procedure_for_index
+    from shikari.build.runtime_detection import SHELLS
+    from shikari.visualization.anatomy import BUILT_IN
+
+    cmds = guidance.get("cmd") or []
+    if not cmds:
+        return [(platforms, guidance)]
+    rest = {k: list(dict.fromkeys(v)) if isinstance(v, list) else v for k, v in guidance.items() if k != "cmd"}
+    lower = {p.lower() for p in platforms or []}
+    out = []
+    for plat, (source, vendor) in _PLATFORM_SOURCES.items():
+        plats = [p for p in platforms if p.lower() in ({"windows"} if plat == "Windows" else {"linux", "macos"})]
+        if not plats and lower:
+            continue
+        # a shell's bare name (cmd.exe) matches every prompt anyone opens, so it's no indicator
+        keep = [c for c in cmds if str(c).strip().lower() not in SHELLS
+                and (plat == "Windows" or not _WINDOWS_MARK.search(str(c).strip())) and validate_procedure_for_index(
+            str(c), source, vendor=vendor, technique_desc=info.get("description", ""),
+            technique_platforms=info.get("platforms", []))]
+        if plat == "Windows":
+            keep += [c[:-4] for c in keep
+                     if c.lower().endswith(".exe") and c[:-4].lower() in BUILT_IN and len(c) - 4 >= 6]
+        if keep:
+            # commands first, as the extractor gives them: the first kind decides each source's query
+            out.append((plats or [plat], {"cmd": list(dict.fromkeys(keep)), **(rest if plat == "Windows" else {})}))
+    return out or [(platforms, guidance)]
+
+
+def _procedure_examples(bundle, stix_id: str) -> str:
+    """The ATT&CK procedure examples for a technique: every group's, software's and campaign's
+    "uses" description of it, current ones only."""
+    objects = bundle.objects if hasattr(bundle, "objects") else bundle.get("objects", [])
+    return "\n\n".join(o.get("description", "") for o in objects
+                        if o.get("type") == "relationship" and o.get("relationship_type") == "uses"
+                        and o.get("target_ref") == stix_id and not o.get("revoked")
+                        and not o.get("x_mitre_deprecated") and o.get("description"))
 
 
 def _get_technique_info(ttp_id: str) -> dict:

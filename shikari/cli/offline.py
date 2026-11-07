@@ -43,8 +43,9 @@ def generate_detection(technique_name):
     )
     techniques = obtain_all_techniques(bundle)
 
-    # Find matching technique
-    matching = [t for t in techniques if technique_name.lower() in t.lower()]
+    # Find matching technique: an exact ID wins (T1016, not also T1016.001 and T1016.002)
+    exact = [t for t in techniques if t.split(":", 1)[0].lower() == technique_name.strip().lower()]
+    matching = exact or [t for t in techniques if technique_name.lower() in t.lower()]
 
     if not matching:
         print(f"Error: No technique found matching '{technique_name}'")
