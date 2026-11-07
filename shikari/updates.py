@@ -2,7 +2,8 @@
 Is there a newer Shikari, and installing it: the shared half of `shikari update` (shikari/service.py,
 a source checkout), the installed app's `shikari update` and its update notice (shikari/desktop_app.py).
 
-Standard library only, so it works when the rest of the app is broken, which is when an update matters.
+Standard library (and truststore, when it's there), so it works when the rest of the app is broken,
+which is when an update matters.
 
 A release is GitHub's latest release of SHIKARI_REPO (cmdaltr/shikari). The repository is private, so
 reading it needs a token: GH_TOKEN, GITHUB_TOKEN or a logged-in gh, as the install scripts do. The
@@ -16,6 +17,7 @@ import json
 import os
 import re
 import shutil
+import ssl
 import subprocess
 import sys
 import time
@@ -65,6 +67,16 @@ def is_newer(latest, current):
     return bool(a) and a + (0,) * (width - len(a)) > b + (0,) * (width - len(b))
 
 
+def _context():
+    # The OS certificate store, as shikari.desktop_client does: the installed app's own Python has
+    # no CA bundle of its own (its check of GitHub timed out on macOS without this)
+    try:
+        import truststore
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    except ImportError:
+        return ssl.create_default_context()
+
+
 def latest_release(timeout=10):
     """{'tag', 'version', 'url', 'notes'} for the latest release, or UpdateError."""
     headers = {"Accept": "application/vnd.github+json", "User-Agent": "shikari-update"}
@@ -73,7 +85,7 @@ def latest_release(timeout=10):
         headers["Authorization"] = f"Bearer {tok}"
     try:
         with urlopen(Request(f"https://api.github.com/repos/{repo()}/releases/latest", headers=headers),
-                     timeout=timeout) as r:
+                     timeout=timeout, context=_context()) as r:
             data = json.load(r)
     except HTTPError as e:
         if e.code == 404:
