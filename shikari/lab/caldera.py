@@ -720,6 +720,12 @@ def load(name: str) -> Optional[Dict]:
 
 # --------------------------------------------------------------------------- capture
 
+def _step_folder(i: int, step: Dict) -> str:
+    """A step's folder in the capture (<technique>-<step number>), which is also its lab dataset's
+    id, lab:<run>/<folder>, so the check can find the logs the step left."""
+    return f"{step.get('technique_id') or 'T0000'}-{i}"
+
+
 def windows(manifest: Dict) -> List[Dict]:
     """
     The per-step time windows for capture-window.ps1: each step's own window, widened by 5s before
@@ -731,7 +737,7 @@ def windows(manifest: Dict) -> List[Dict]:
         if not (start and end):
             continue
         tid = s.get("technique_id") or "T0000"
-        out.append({"technique": tid, "folder": f"{tid}-{i}", "name": s.get("ability") or tid,
+        out.append({"technique": tid, "folder": _step_folder(i, s), "name": s.get("ability") or tid,
                     "start": _iso(start - timedelta(seconds=5)),
                     "end": _iso(end + timedelta(seconds=20))})
     return out
@@ -744,7 +750,7 @@ def capture(engine: str, name: str, os_name: str, manifest: Dict, host: str = ""
     caldera-<operation>. Reuses the lab recorder's push/run/pull so it reads nothing but the logs.
     """
     from shikari.lab.engines import engine_for
-    from shikari.lab.record import _pull, _push, _pwsh, _paths  # the lab recorder's machine plumbing
+    from shikari.lab.record import _pull, _push, _pwsh_file, _paths  # the lab recorder's machine plumbing
     from shikari.telemetry.lab import LAB_DIR
 
     wins = windows(manifest)
@@ -771,8 +777,8 @@ def capture(engine: str, name: str, os_name: str, manifest: Dict, host: str = ""
     say(f"Capturing {len(wins)} window(s) on {name}…")
     _push(eng, name, script, script_remote, is_windows)
     _push(eng, name, local_windows, windows_remote, is_windows)
-    argv = [_pwsh(os_name), "-NoProfile", "-File", script_remote, "-Windows", windows_remote,
-            "-Run", run_name, "-Out", out_remote, "-Tool", "CALDERA"]
+    argv = _pwsh_file(os_name, script_remote) + ["-Windows", windows_remote,
+                                                 "-Run", run_name, "-Out", out_remote, "-Tool", "CALDERA"]
     out = eng.exec(name, argv, timeout=1800)
     for line in (out or "").strip().splitlines()[-15:]:
         say(line)
@@ -790,8 +796,8 @@ def capture(engine: str, name: str, os_name: str, manifest: Dict, host: str = ""
     build(["lab"], log=say)
 
     manifest["captured"] = True
-    for s in manifest.get("steps") or []:
-        s["recorded"] = f"lab:{run_name}/{s.get('technique_id')}"
+    for i, s in enumerate(manifest.get("steps") or [], 1):
+        s["recorded"] = f"lab:{run_name}/{_step_folder(i, s)}"
     folder = os.path.join(_caldera_dir(), manifest["name"])
     os.makedirs(folder, exist_ok=True)
     with open(os.path.join(folder, "manifest.json"), "w", encoding="utf-8") as fh:
@@ -1009,9 +1015,9 @@ def capture_via_agent(client: "Client", manifest: Dict, say: Callable[[str], Non
     build(["lab"], log=say)
 
     manifest["captured"] = True
-    for s in manifest.get("steps") or []:
+    for i, s in enumerate(manifest.get("steps") or [], 1):
         host = s.get("host") or s.get("paw") or ""
-        s["recorded"] = f"lab:{run_for(host)}/{s.get('technique_id')}"
+        s["recorded"] = f"lab:{run_for(host)}/{_step_folder(i, s)}"
     folder = os.path.join(_caldera_dir(), manifest["name"])
     os.makedirs(folder, exist_ok=True)
     with open(os.path.join(folder, "manifest.json"), "w", encoding="utf-8") as fh:

@@ -52,6 +52,13 @@ def _pwsh(os_name: str) -> str:
     return "powershell" if os_name == "windows" else "pwsh"
 
 
+def _pwsh_file(os_name: str, script: str) -> list:
+    """PowerShell running one script file. Windows' default execution policy (Restricted) refuses an
+    unsigned script, so on Windows bypass it for this one process; the machine's policy is untouched."""
+    bypass = ["-ExecutionPolicy", "Bypass"] if os_name == "windows" else []
+    return [_pwsh(os_name), "-NoProfile", *bypass, "-File", script]
+
+
 def plan(engine_key: str, name: str, os_name: str, techniques: List[str], run_name: str,
          settle: int = 20, timeout: int = 120, revert_to: str = "") -> List[str]:
     """A human-readable list of what record() would do, for the dry run and the confirm dialog."""
@@ -108,7 +115,7 @@ def record(engine_key: str, name: str, os_name: str, techniques, run_name: str =
     _push(engine, name, SCRIPT, script_remote, windows)
 
     say(f"Running {len(techniques)} technique(s) in {name}. This detonates the atomics; it can take a while.")
-    argv = [_pwsh(os_name), "-NoProfile", "-File", script_remote, "-Techniques", ",".join(techniques),
+    argv = _pwsh_file(os_name, script_remote) + ["-Techniques", ",".join(techniques),
             "-Run", run_name, "-Out", out_remote, "-Settle", str(settle), "-Timeout", str(timeout)]
     out = engine.exec(name, argv, timeout=max(1800, timeout * len(techniques) * 3))
     for l in (out or "").strip().splitlines()[-15:]:

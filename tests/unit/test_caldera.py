@@ -589,7 +589,8 @@ def test_capture_via_agent_round_trip(tmp_home, monkeypatch):
     assert (lab_dir / "caldera-op" / "T1057-1" / "events.xml").is_file()
     # the manifest is marked captured and each step points at its lab run
     assert out["captured"] is True
-    assert out["steps"][0]["recorded"] == "lab:caldera-op/T1057"
+    # ...by the dataset id the lab import gives that folder, so the check reads the captured logs
+    assert out["steps"][0]["recorded"] == "lab:caldera-op/T1057-1"
     # the ability carried all three OS executors and our markers
     execs = {e["platform"] for e in seen["posts"]["ability"]["executors"]}
     assert execs == {"windows", "linux", "darwin"}

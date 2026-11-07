@@ -327,3 +327,13 @@ def test_utm_engine_is_detected_on_macos(monkeypatch):
     e = {x["key"]: x for x in hosts.capabilities()["engines"]}["utm"]
     assert e["supported"] and e["installed"] and e["running"] and e["version"] == "5.0.8"
     assert e["blurb"] and "brew install --cask utm" not in e["install"]  # installed, so no install cmd
+
+
+def test_pwsh_file_bypasses_execution_policy_on_windows_only():
+    # Windows' default policy (Restricted) refuses an unsigned script, so the recorder and the
+    # CALDERA capture bypass it for their own process; pwsh elsewhere needs no flag.
+    from shikari.lab.record import _pwsh_file
+
+    assert _pwsh_file("windows", r"C:\t\cap.ps1") == [
+        "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", r"C:\t\cap.ps1"]
+    assert _pwsh_file("linux", "/tmp/cap.ps1") == ["pwsh", "-NoProfile", "-File", "/tmp/cap.ps1"]
