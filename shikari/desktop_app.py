@@ -347,7 +347,13 @@ class App:
         if not self.window.events.shown.wait(600):
             print("The window never appeared")
             return
+        # Shown isn't ready: WebView2 (Windows) starts up after the window does, and a page sent
+        # before it has loaded the splash is dropped without an error, leaving the splash up for good
+        if not self.window.events.loaded.wait(600):
+            print("The window's web view never loaded")
+            return
         choice = self.choice
+        print(f"Opening: {choice.mode + (' ' + choice.url if choice.url else '') if choice else 'the chooser'}")
         if choice is None:
             self.show_chooser()
         elif choice.mode == "local":

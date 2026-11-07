@@ -8,7 +8,6 @@ Browsing needs no account; anything that changes a file does.
 import csv
 import json
 import logging
-import sys
 import threading
 import time
 from collections import deque
@@ -65,7 +64,7 @@ def _rows() -> List[dict]:
         return []
     mtime = path.stat().st_mtime
     if _cache["mtime"] != mtime:
-        csv.field_size_limit(sys.maxsize)
+        csv.field_size_limit(2**31 - 1)  # sys.maxsize overflows a C long on Windows
         with open(path, newline="", encoding="utf-8") as fh:
             rows = list(csv.DictReader(fh))
         for r in rows:

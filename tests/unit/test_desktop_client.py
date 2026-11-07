@@ -106,8 +106,9 @@ def test_probe_unreachable():
 class FakeWindow:
     def __init__(self):
         self.loaded, self.title = [], ""
-        self.events = type("Events", (), {"shown": threading.Event()})()
+        self.events = type("Events", (), {"shown": threading.Event(), "loaded": threading.Event()})()
         self.events.shown.set()
+        self.events.loaded.set()
 
     def load_url(self, url):
         self.loaded.append(("url", url))
@@ -134,6 +135,19 @@ def test_a_window_slow_to_appear_is_waited_for(tmp_path):
     threading.Timer(0.3, app.window.events.shown.set).start()
     app.boot()
     assert app.window.loaded and app.window.loaded[-1][0] == "html"
+
+
+def test_nothing_is_sent_before_the_web_view_has_loaded(tmp_path):
+    """Windows: WebView2 comes up after the window is shown, and a page sent before it has loaded the
+    splash was dropped silently, leaving "Starting Shikari..." up for good."""
+    app, _ = _app(tmp_path)
+    app.choice = None
+    app.window.events.loaded = threading.Event()
+    seen = []
+    threading.Timer(0.3, lambda: (seen.append(list(app.window.loaded)), app.window.events.loaded.set())).start()
+    app.boot()
+    assert seen == [[]]
+    assert app.window.loaded[-1][0] == "html"
 
 
 def test_chooser_connects_and_remembers(tmp_path):

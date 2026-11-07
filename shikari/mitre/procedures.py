@@ -468,7 +468,7 @@ def check_procedures(csv_path: Path, bundle_path: Path) -> Dict:
     techniques each group has. Shikari is the reference, so a difference is MITRESaw's."""
     expected = _expected_techniques(bundle_path)
     found: Dict[str, Set[str]] = {}
-    csv.field_size_limit(sys.maxsize)
+    csv.field_size_limit(2**31 - 1)  # sys.maxsize overflows a C long on Windows
     with open(csv_path, newline="", encoding="utf-8") as fh:
         for row in csv.DictReader(fh):
             gid, tid = row.get("group_sw_id", ""), row.get("technique_id", "")
@@ -554,7 +554,7 @@ def _write_meta(output_csv: Path, version: str, index: Dict, flags: List[str], m
 
 
 def _read_rows(path: Path) -> Tuple[List[str], List[dict]]:
-    csv.field_size_limit(sys.maxsize)
+    csv.field_size_limit(2**31 - 1)  # sys.maxsize overflows a C long on Windows
     with open(path, newline="", encoding="utf-8") as fh:
         reader = csv.DictReader(fh)
         return list(reader.fieldnames or []), list(reader)
