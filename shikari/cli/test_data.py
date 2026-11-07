@@ -230,7 +230,7 @@ def _sample_profile():
             "ip_addresses": ["203.0.113.10", "203.0.113.11"],
         },
         "risk_score": 62,
-        "recommended_groups": [GROUP, "APT41", "FIN13"],
+        "recommended_groups": ["APT29", "APT41", "FIN13"],
         "recommended_techniques": [t[0] for t in TECHNIQUES],
         "osint": {"subdomains": ["mail.sample-corp.example", "vpn.sample-corp.example", "portal.sample-corp.example"],
                   "ip_addresses": ["203.0.113.10", "203.0.113.11"], "asns": ["AS64500"],
