@@ -58,7 +58,7 @@ def uvicorn_argv(config: dict) -> list:
     python_exe = Path(sys.prefix) / "python.exe"
     return [str(python_exe), "-m", "uvicorn", "shikari.app:app",
             "--host", config.get("SHIKARI_HOST", "127.0.0.1"),
-            "--port", str(config.get("SHIKARI_PORT", "8000")),
+            "--port", str(config.get("SHIKARI_PORT", "32453")),
             "--workers", "1"]
 
 

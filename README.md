@@ -163,7 +163,7 @@ About 318 of ATT&CK's 697 techniques name no command, file, registry key or othe
 **Quick Links:**
 - **Getting Started:** [GETTING_STARTED.md](GETTING_STARTED.md) | [Mapping Setup](GETTING_STARTED.md#step-4-configure-mapping-files-critical) | [User Guide](docs/guide/README.md)
 - **Interactive Console:** [shikari console Guide](#-interactive-console-shikari-console)
-- **Usage:** [Where everything is, and the CLI](docs/USAGE.md) | [Auto-Generated API Docs](http://localhost:8000/docs)
+- **Usage:** [Where everything is, and the CLI](docs/USAGE.md) | [Auto-Generated API Docs](http://localhost:32453/docs)
 - **Research:** [Actor consolidation and XLSX export](docs/guide/05-research.md)
 - **Threat Briefing:** [On the Results page](docs/guide/06-results.md) | [API Reference](docs/features/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing)
 - **Ask Shikari:** [Agents and Ask Shikari](docs/guide/15-agents-and-ask-shikari.md)
@@ -221,7 +221,7 @@ Local modules run in the console's own process. Server modules drive a running S
 | `agent/triage` | server | Agent: triage a threat report into coverage gaps, hunts and a briefing |
 | `agent/history` | server | Recent agent runs (kept across restarts); replay one, or `CONTINUE true` to carry on an interrupted or stopped one (**only on the provider it started on**) |
 
-Server modules sign in with `SHIKARI_TOKEN`, an API token from Profile → Security → API Tokens (works with MFA), or with `SHIKARI_EMAIL` and `SHIKARI_PASSWORD` (the console prompts for anything unset), against `SHIKARI_URL` (default `http://127.0.0.1:8000`). Agents take `PROVIDER` and `MODEL` too. `PROVIDER assigned` uses the hunt choice you remembered in the web app, otherwise your detection assignment; `PROVIDER none` runs without AI.
+Server modules sign in with `SHIKARI_TOKEN`, an API token from Profile → Security → API Tokens (works with MFA), or with `SHIKARI_EMAIL` and `SHIKARI_PASSWORD` (the console prompts for anything unset), against `SHIKARI_URL` (default `http://127.0.0.1:32453`). Agents take `PROVIDER` and `MODEL` too. `PROVIDER assigned` uses the hunt choice you remembered in the web app, otherwise your detection assignment; `PROVIDER none` runs without AI.
 
 ### Commands
 

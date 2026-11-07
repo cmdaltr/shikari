@@ -108,15 +108,15 @@ Once the script completes, you can start Shikari:
 docker-compose up --build
 ```
 
-Access at: `http://localhost:8000`
+Access at: `http://localhost:32453`
 
 ### Using Local Python
 
 ```bash
-uvicorn shikari.app:app --reload
+uvicorn shikari.app:app --reload --port 32453
 ```
 
-Access at: `http://localhost:8000`
+Access at: `http://localhost:32453`
 
 ### Default Login
 
@@ -216,7 +216,7 @@ OLLAMA_BASE_URL=http://localhost:11434
 docker-compose up --build
 
 # OR Local Python
-uvicorn shikari.app:app --reload
+uvicorn shikari.app:app --reload --port 32453
 ```
 
 ## Advanced Options

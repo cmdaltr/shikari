@@ -8,7 +8,7 @@ Standard library only, and the shikari package loads nothing until it's used, so
 status work even when the app is broken: as a file (./bin/shikari runs python shikari/service.py)
 or as shikari.service (the pip-installed shikari).
 
-    shikari start [--port 8000] [--no-reload] [--no-ollama] [--ollama-models DIR] [--skip-index]
+    shikari start [--port 32453] [--no-reload] [--no-ollama] [--ollama-models DIR] [--skip-index]
     shikari stop
     shikari restart [same options as start]
     shikari status
@@ -64,7 +64,7 @@ STATE_FILE = RUN_DIR / "service.json"
 SETTINGS_FILE = RUN_DIR / "settings.json"
 LOG_ROTATE_BYTES = 20 * 1024 * 1024
 
-DEFAULTS = {"host": "0.0.0.0", "port": 8000, "reload": True, "ollama": True, "ollama_models": ""}
+DEFAULTS = {"host": "0.0.0.0", "port": 32453, "reload": True, "ollama": True, "ollama_models": ""}
 OLLAMA_URL = "http://127.0.0.1:11434"
 # Ollama's default 4k context silently truncates agent conversations (a single tool result can be
 # 5k tokens); 16k costs ~2 GB more memory per loaded 8B model
@@ -607,7 +607,7 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="command")
 
     def server_options(p):
-        p.add_argument("--port", type=int, help="port (default 8000; remembered)")
+        p.add_argument("--port", type=int, help="port (default 32453; remembered)")
         p.add_argument("--host", help="bind address (default 0.0.0.0; remembered)")
         p.add_argument("--reload", dest="reload", action="store_true", default=None, help="restart on code changes (default)")
         p.add_argument("--no-reload", dest="reload", action="store_false", help="don't restart on code changes")

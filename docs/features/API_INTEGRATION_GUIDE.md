@@ -2,7 +2,7 @@
 
 **Version**: 2.1
 **Last Updated**: 2025-03-04
-**Base URL**: `http://localhost:8000` (default)
+**Base URL**: `http://localhost:32453` (default)
 
 ---
 
@@ -32,7 +32,7 @@ The Shikari API provides programmatic access to automated threat detection gener
 
 ### Prerequisites
 
-- Shikari instance running (default: `http://localhost:8000`)
+- Shikari instance running (default: `http://localhost:32453`)
 - User account created
 - Python 3.11 required (torch==2.2.2 in requirements.txt caps compatibility at 3.11) or Node.js 14+ (for examples)
 
@@ -46,7 +46,7 @@ session = requests.Session()
 
 # 2. Login
 response = session.post(
-    'http://localhost:8000/login',
+    'http://localhost:32453/login',
     data={
         'email': 'your_email@example.com',
         'password': 'your_password'
@@ -55,7 +55,7 @@ response = session.post(
 
 # 3. Generate detections for a threat group
 generate_response = session.post(
-    'http://localhost:8000/generate',
+    'http://localhost:32453/generate',
     data={'group_name': 'APT29'}
 )
 
@@ -81,7 +81,7 @@ session = requests.Session()
 
 # Login
 login_response = session.post(
-    'http://localhost:8000/login',
+    'http://localhost:32453/login',
     data={
         'email': 'user@example.com',
         'password': 'your_password'
@@ -95,7 +95,7 @@ login_response = session.post(
 #### Logout
 
 ```python
-logout_response = session.get('http://localhost:8000/logout')
+logout_response = session.get('http://localhost:32453/logout')
 ```
 
 ### CSRF Protection
@@ -118,7 +118,7 @@ response = session.post(
 ✅ **Use HTTPS in production**
 ```python
 BASE_URL = 'https://shikari.yourcompany.com'  # Production
-# BASE_URL = 'http://localhost:8000'  # Development only
+# BASE_URL = 'http://localhost:32453'  # Development only
 ```
 
 ✅ **Store credentials securely**
@@ -169,13 +169,13 @@ session = requests.Session()
 
 # 1. Login
 session.post(
-    'http://localhost:8000/login',
+    'http://localhost:32453/login',
     data={'email': 'user@example.com', 'password': 'your_password'}
 )
 
 # 2. Start generation
 generate_response = session.post(
-    'http://localhost:8000/generate',
+    'http://localhost:32453/generate',
     data={
         'group_name': 'APT29',
         'osint_enhancement': 'true',  # Merge OSINT patterns
@@ -191,7 +191,7 @@ group_name = redirect_url.split('group_name=')[1]
 print("Generating detections...")
 while True:
     progress = session.get(
-        f'http://localhost:8000/progress_status?group_name={group_name}'
+        f'http://localhost:32453/progress_status?group_name={group_name}'
     ).json()
 
     status = progress['progress']['status']
@@ -210,7 +210,7 @@ while True:
     time.sleep(2)
 
 # 4. Download results
-zip_file = session.get(f'http://localhost:8000/api/download/all/{group_name}')
+zip_file = session.get(f'http://localhost:32453/api/download/all/{group_name}')
 with open(f'{group_name}.zip', 'wb') as f:
     f.write(zip_file.content)
 
@@ -231,7 +231,7 @@ print(f"Downloaded {group_name}.zip")
 ```python
 # Generate detections for Log4Shell
 generate_response = session.post(
-    'http://localhost:8000/generate/cve',
+    'http://localhost:32453/generate/cve',
     data={
         'cve_id': 'CVE-2021-44228',  # Can be comma-separated: 'CVE-2021-44228,CVE-2022-22965'
         'run_correlation': 'true'
@@ -269,7 +269,7 @@ else:
 # 1. Upload threat report
 with open('threat_report.pdf', 'rb') as f:
     upload_response = session.post(
-        'http://localhost:8000/upload',
+        'http://localhost:32453/upload',
         files={'file': ('threat_report.pdf', f, 'application/pdf')},
         data={
             'use_openai': 'true',      # Use AI for extraction (requires API key)
@@ -285,7 +285,7 @@ print(f"TTPs: {[ttp['technique_id'] for ttp in result['ttps']]}")
 
 # 2. Generate detections from extracted TTPs
 generate_response = session.post(
-    'http://localhost:8000/upload/generate',
+    'http://localhost:32453/upload/generate',
     data={
         'synthetic_group_name': synthetic_group,
         'selected_ttps': '["T1059.001", "T1078", "T1003"]',  # Optional: filter TTPs
@@ -310,7 +310,7 @@ generate_response = session.post(
 
 ```python
 analyze_response = session.post(
-    'http://localhost:8000/analyze_blog',
+    'http://localhost:32453/analyze_blog',
     data={
         'url': 'https://www.mandiant.com/resources/threat-report-xyz',
         'use_openai': 'true',
@@ -331,7 +331,7 @@ print(f"Extracted {result['ttps_count']} TTPs from blog post")
 ```python
 # 1. Profile company
 profile_response = session.post(
-    'http://localhost:8000/profile',
+    'http://localhost:32453/profile',
     data={
         'domain': 'example.com',
         'include_industry': 'true',
@@ -355,7 +355,7 @@ for group in profile['threat_groups']:
 selected_groups = ['APT29', 'APT28']  # Based on profile results
 
 generate_response = session.post(
-    'http://localhost:8000/profile/generate-detections',
+    'http://localhost:32453/profile/generate-detections',
     data={
         'domain': 'example.com',
         'selected_groups': ','.join(selected_groups),
@@ -373,7 +373,7 @@ generate_response = session.post(
 ```python
 # Search for PowerShell detections
 search_response = session.post(
-    'http://localhost:8000/api/library/search',
+    'http://localhost:32453/api/library/search',
     json={
         'query': 'powershell',
         'type_filter': 'yaml',           # 'all', 'yaml', 'json', 'correlation'
@@ -390,7 +390,7 @@ print(f"Found {len(detections)} PowerShell detections")
 
 ```python
 save_response = session.post(
-    'http://localhost:8000/api/library/save',
+    'http://localhost:32453/api/library/save',
     json={
         'title': 'Pass the Hash Detection',
         'detection_type': 'yaml',
@@ -410,13 +410,13 @@ print(f"Saved detection ID: {detection_id}")
 
 ```python
 # Get all detections
-detections_response = session.get('http://localhost:8000/api/library/detections')
+detections_response = session.get('http://localhost:32453/api/library/detections')
 detections = detections_response.json()['detections']
 detection_ids = [d['id'] for d in detections]
 
 # Export to JSON
 export_response = session.post(
-    'http://localhost:8000/api/library/export',
+    'http://localhost:32453/api/library/export',
     json={
         'ids': detection_ids,
         'format': 'json'  # 'json', 'csv', 'xml'
@@ -432,7 +432,7 @@ with open('detections_export.json', 'w') as f:
 ```python
 # Update tags for multiple detections
 session.post(
-    'http://localhost:8000/api/library/tags',
+    'http://localhost:32453/api/library/tags',
     json={
         'ids': [123, 456, 789],
         'tags': ['Production', 'High Priority', 'Reviewed']
@@ -441,7 +441,7 @@ session.post(
 
 # Update visibility
 session.post(
-    'http://localhost:8000/api/library/visibility',
+    'http://localhost:32453/api/library/visibility',
     json={
         'ids': [123, 456],
         'visibility': 'shared'
@@ -450,7 +450,7 @@ session.post(
 
 # Delete detections
 session.post(
-    'http://localhost:8000/api/library/delete',
+    'http://localhost:32453/api/library/delete',
     json={'ids': [123, 456]}
 )
 ```
@@ -466,18 +466,18 @@ import requests
 import time
 
 session = requests.Session()
-session.post('http://localhost:8000/login',
+session.post('http://localhost:32453/login',
     data={'email': 'user@example.com', 'password': 'password'})
 
 # 1. Check Docker availability
-docker_status = session.get('http://localhost:8000/api/validation/docker-status').json()
+docker_status = session.get('http://localhost:32453/api/validation/docker-status').json()
 if not docker_status['available']:
     print(f"Docker not available: {docker_status['message']}")
     exit(1)
 
 # 2. Create validation session
 session_response = session.post(
-    'http://localhost:8000/api/validation/sessions',
+    'http://localhost:32453/api/validation/sessions',
     json={
         'technique_id': 'T1059.001',
         'technique_name': 'PowerShell',
@@ -490,7 +490,7 @@ session_id = session_response['session']['session_id']
 
 # 3. Start SIEM container
 siem_result = session.post(
-    'http://localhost:8000/api/validation/start-siem',
+    'http://localhost:32453/api/validation/start-siem',
     json={'session_id': session_id}
 ).json()
 
@@ -500,7 +500,7 @@ if not siem_result['success']:
 
 # 4. Generate sample events
 events_result = session.post(
-    'http://localhost:8000/api/validation/generate-events',
+    'http://localhost:32453/api/validation/generate-events',
     json={
         'session_id': session_id,
         'indicators': {
@@ -514,7 +514,7 @@ events_result = session.post(
 
 # 5. Test detection
 test_result = session.post(
-    'http://localhost:8000/api/validation/test',
+    'http://localhost:32453/api/validation/test',
     json={'session_id': session_id}
 ).json()
 
@@ -529,7 +529,7 @@ print(f"F1 Score: {result['f1_score']:.2%}")
 # 6. Get suggestions if failed
 if not result['passed']:
     suggestions = session.get(
-        f'http://localhost:8000/api/validation/suggestions/{session_id}'
+        f'http://localhost:32453/api/validation/suggestions/{session_id}'
     ).json()
 
     for i, suggestion in enumerate(suggestions.get('suggestions', [])):
@@ -540,7 +540,7 @@ if not result['passed']:
         print(f"  Confidence: {suggestion['confidence']:.0%}")
 
 # 7. Clean up
-session.post(f'http://localhost:8000/api/validation/stop/{session_id}')
+session.post(f'http://localhost:32453/api/validation/stop/{session_id}')
 ```
 
 **Validation API Endpoints:**
@@ -621,12 +621,12 @@ Content-Type: application/json
 import requests
 
 session = requests.Session()
-session.post('http://localhost:8000/login',
+session.post('http://localhost:32453/login',
     data={'email': 'user@example.com', 'password': 'password'})
 
 # Get threat briefing for Scattered Spider
 briefing = session.post(
-    'http://localhost:8000/api/threat-briefing',
+    'http://localhost:32453/api/threat-briefing',
     json={'group': 'Scattered Spider', 'top_n': 5}
 ).json()
 
@@ -650,7 +650,7 @@ for tech in briefing['top_techniques']:
 #### cURL Example
 
 ```bash
-curl -b cookies.txt -X POST http://localhost:8000/api/threat-briefing \
+curl -b cookies.txt -X POST http://localhost:32453/api/threat-briefing \
   -H "Content-Type: application/json" \
   -d '{"group": "Scattered Spider", "top_n": 5}'
 ```
@@ -690,12 +690,12 @@ briefing.top_techniques.forEach(t => {
 Hunt several groups and CVEs with one call. The server runs them one after another, as you, so your SIEM platforms, technology stack and AI settings apply to each; one that fails doesn't stop the rest. Up to 50 per batch.
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/batch -H "Authorization: Bearer $SHIKARI_TOKEN" \
+curl -X POST http://127.0.0.1:32453/api/batch -H "Authorization: Bearer $SHIKARI_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"groups": ["APT29", "Scattered Spider"], "cves": ["CVE-2024-3400"], "correlate": true}'
 # {"id": "118ad0ce5170", "items": 3, "status_url": "/api/batch/118ad0ce5170"}
 
-curl http://127.0.0.1:8000/api/batch/118ad0ce5170 -H "Authorization: Bearer $SHIKARI_TOKEN"
+curl http://127.0.0.1:32453/api/batch/118ad0ce5170 -H "Authorization: Bearer $SHIKARI_TOKEN"
 ```
 
 Each item reports its run name (the results page is `/results/<run>`), `status` and `created_yaml`; the batch's `status` ends as `complete`, `partial` or `failed`. From Python: `ShikariClient().batch(groups=[...], cves=[...])` and `batch_status(id)`. `GET /api/batch` lists your batches.
@@ -705,7 +705,7 @@ Each item reports its run name (the results page is `/results/<run>`), `status` 
 `GET /api/progress/<run>/stream` sends a run's progress as Server-Sent Events: a `progress` event each time it changes, a comment line every 15 seconds while it's quiet, and a `done` event when the run finishes. It replaces polling `/progress_status`.
 
 ```bash
-curl -N http://127.0.0.1:8000/api/progress/APT29/stream -H "Authorization: Bearer $SHIKARI_TOKEN"
+curl -N http://127.0.0.1:32453/api/progress/APT29/stream -H "Authorization: Bearer $SHIKARI_TOKEN"
 ```
 
 ```javascript
@@ -725,7 +725,7 @@ An admin registers URLs that Shikari POSTs to when something happens:
 | `watchlist.match` | a Threat Feed watchlist finds new posts | `user_id`, `matches` (`query`, `title`, `url`) |
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/webhooks -H "Authorization: Bearer $ADMIN_TOKEN" \
+curl -X POST http://127.0.0.1:32453/api/webhooks -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://hooks.example.com/shikari", "events": ["run.completed", "run.failed"]}'
 # returns the webhook with its secret: the only time the secret is shown
@@ -756,7 +756,7 @@ from pathlib import Path
 class ShikariClient:
     """Simple Shikari API client"""
 
-    def __init__(self, base_url='http://localhost:8000'):
+    def __init__(self, base_url='http://localhost:32453'):
         self.base_url = base_url
         self.session = requests.Session()
 
@@ -829,7 +829,7 @@ const axios = require('axios');
 const fs = require('fs');
 
 class ShikariClient {
-    constructor(baseURL = 'http://localhost:8000') {
+    constructor(baseURL = 'http://localhost:32453') {
         this.client = axios.create({
             baseURL,
             withCredentials: true
@@ -905,7 +905,7 @@ class ShikariClient {
 ```bash
 #!/bin/bash
 
-BASE_URL="http://localhost:8000"
+BASE_URL="http://localhost:32453"
 COOKIES="cookies.txt"
 
 # Login
@@ -1338,9 +1338,9 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
 
 For complete endpoint documentation, see the auto-generated API reference:
 
-- **Interactive Docs** (Swagger UI): `http://localhost:8000/docs`
-- **Alternative Docs** (ReDoc): `http://localhost:8000/redoc`
-- **OpenAPI Schema**: `http://localhost:8000/openapi.json`
+- **Interactive Docs** (Swagger UI): `http://localhost:32453/docs`
+- **Alternative Docs** (ReDoc): `http://localhost:32453/redoc`
+- **OpenAPI Schema**: `http://localhost:32453/openapi.json`
 
 The auto-generated documentation provides:
 - Complete list of all endpoints

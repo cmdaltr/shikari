@@ -6,7 +6,7 @@ plus the three agents' instructions as prompts.
 It talks to a running Shikari server as a user (shikari.client), so it does what the web
 app does with that user's AI settings and keys, which never reach the MCP client.
 
-  SHIKARI_URL=http://127.0.0.1:8000 SHIKARI_TOKEN=arch_... python -m shikari.mcp_server
+  SHIKARI_URL=http://127.0.0.1:32453 SHIKARI_TOKEN=arch_... python -m shikari.mcp_server
 
 Claude Code (the token is from Profile → Security → API tokens; SHIKARI_EMAIL and
 SHIKARI_PASSWORD also work for accounts without MFA):

@@ -51,7 +51,7 @@ print_footer() {
 }
 
 check_shikari_running() {
-    local url="${SHIKARI_API_URL:-http://127.0.0.1:8000}"
+    local url="${SHIKARI_API_URL:-http://127.0.0.1:32453}"
 
     echo -n "Checking if Shikari is running at ${url}... "
     if curl -s "${url}/health" > /dev/null 2>&1; then

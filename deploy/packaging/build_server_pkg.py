@@ -84,7 +84,7 @@ fi
 chown -R shikari:shikari "$SHIKARI_HOME"
 # SELinux: label the port if enforcing (Rocky/RHEL).
 if command -v getenforce >/dev/null 2>&1 && [ "$(getenforce)" = "Enforcing" ] && command -v semanage >/dev/null 2>&1; then
-    PORT=$(. /etc/shikari/shikari.env; echo "${SHIKARI_PORT:-8000}")
+    PORT=$(. /etc/shikari/shikari.env; echo "${SHIKARI_PORT:-32453}")
     semanage port -a -t http_port_t -p tcp "$PORT" 2>/dev/null || true
 fi
 systemctl daemon-reload || true

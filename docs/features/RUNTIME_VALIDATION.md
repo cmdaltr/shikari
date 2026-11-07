@@ -173,7 +173,7 @@ docker-compose.yml                 # Main compose file (all services with profil
 
 ### Accessing the Feature
 
-1. Navigate to the Shikari web UI (`http://localhost:8000`)
+1. Navigate to the Shikari web UI (`http://localhost:32453`)
 2. Click the **Validate** tab (with the play ▶ icon)
 3. The validation panel appears with:
    - A **Detection Query** textarea to paste your query
@@ -503,10 +503,10 @@ Stops docker-compose SIEM containers when you're done with validation.
 **Examples:**
 ```bash
 # Stop specific SIEM
-curl -X POST http://localhost:8000/api/validation/cleanup-siem/splunk
+curl -X POST http://localhost:32453/api/validation/cleanup-siem/splunk
 
 # Stop all SIEMs
-curl -X POST http://localhost:8000/api/validation/cleanup-siem/all
+curl -X POST http://localhost:32453/api/validation/cleanup-siem/all
 ```
 
 **Response:**

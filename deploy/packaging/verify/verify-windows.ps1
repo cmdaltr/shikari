@@ -53,7 +53,7 @@ Write-Host "==> Installing (registers the Shikari service)"
 & (Join-Path $unpack 'install.ps1')
 
 $envFile = Join-Path $env:ProgramData 'Shikari\shikari.env'
-$port = '8000'
+$port = '32453'
 if (Test-Path $envFile) {
     $m = Select-String -Path $envFile -Pattern '^\s*SHIKARI_PORT\s*=\s*(.+?)\s*$' | Select-Object -First 1
     if ($m) { $port = $m.Matches[0].Groups[1].Value.Trim('"').Trim("'") }

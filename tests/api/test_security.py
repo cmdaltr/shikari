@@ -69,7 +69,7 @@ class TestSSRFPrevention:
 
     @pytest.mark.parametrize("url", [
         "http://localhost/admin",
-        "http://127.0.0.1:8000/",
+        "http://127.0.0.1:32453/",
         "http://192.168.1.1/",
         "http://10.0.0.1/",
         "http://169.254.169.254/latest/meta-data/",  # AWS metadata

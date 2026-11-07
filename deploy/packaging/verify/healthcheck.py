@@ -5,7 +5,7 @@ Shared by verify-linux.sh and verify-windows.ps1 so "is it actually up?" is deci
 every platform: a 200 from /health whose body says {"app": "shikari"} (the same check the desktop smoke
 test uses). Stdlib only — it runs under the bundled interpreter with nothing installed.
 
-    python3 healthcheck.py [--url http://127.0.0.1:8000/health] [--timeout 120]
+    python3 healthcheck.py [--url http://127.0.0.1:32453/health] [--timeout 120]
 
 Exit 0 once healthy; exit 1 on timeout (last error printed).
 """
@@ -18,7 +18,7 @@ import urllib.request
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--url", default="http://127.0.0.1:8000/health")
+    ap.add_argument("--url", default="http://127.0.0.1:32453/health")
     ap.add_argument("--timeout", type=float, default=120.0)
     ap.add_argument("--interval", type=float, default=3.0)
     args = ap.parse_args()

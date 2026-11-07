@@ -277,7 +277,7 @@ jobs:
           fi
           # The first launch seeds the data folder and builds caches before the server answers
           for _ in $(seq 1 120); do
-            body=$(curl -sf http://127.0.0.1:8000/health) && break
+            body=$(curl -sf http://127.0.0.1:32453/health) && break
             sleep 5
           done
           echo "$body"

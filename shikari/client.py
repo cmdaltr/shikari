@@ -6,7 +6,7 @@ rather than importing the route logic, so every surface runs the same code as th
 app: profile AI assignment and call cap, IOC sweeps, IOC flow, latest-run view.
 
 Connection settings come from the environment:
-  SHIKARI_URL       default http://127.0.0.1:8000
+  SHIKARI_URL       default http://127.0.0.1:32453
   SHIKARI_TOKEN     an API token from Profile → Security → API tokens (works with MFA)
   SHIKARI_EMAIL     or the account to sign in as...
   SHIKARI_PASSWORD  ...and its password (the console prompts when unset and interactive)
@@ -25,7 +25,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-DEFAULT_URL = "http://127.0.0.1:8000"
+DEFAULT_URL = "http://127.0.0.1:32453"
 TERMINAL_STATUSES = {"complete", "error", "failed", "cancelled"}
 
 

@@ -101,7 +101,7 @@ $cfg = @{}
 Get-Content $envFile | ForEach-Object {
     if ($_ -match '^\s*([^#=]+?)\s*=\s*(.*?)\s*$') { $cfg[$matches[1]] = $matches[2].Trim('"').Trim("'") }
 }
-$port = if ($cfg['SHIKARI_PORT']) { $cfg['SHIKARI_PORT'] } else { '8000' }
+$port = if ($cfg['SHIKARI_PORT']) { $cfg['SHIKARI_PORT'] } else { '32453' }
 Write-Host "Waiting for Shikari to answer on 127.0.0.1:$port ..."
 $ok = $false
 # Cold start is slow: the service spawns the bundled Python, which starts uvicorn, imports the app and

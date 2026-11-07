@@ -17,7 +17,7 @@ services:
       context: .
       dockerfile: shikari/Dockerfile
     ports:
-      - "8000:8000"
+      - "32453:32453"
     volumes:
       - ./shikari:/app/shikari
       - ./templates:/app/templates

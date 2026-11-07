@@ -64,7 +64,7 @@ for arg in "$@"; do
 done
 
 # Check Shikari is running
-SHIKARI_URL="${SHIKARI_API_URL:-http://127.0.0.1:8000}"
+SHIKARI_URL="${SHIKARI_API_URL:-http://127.0.0.1:32453}"
 echo -n "Checking Shikari at ${SHIKARI_URL}... "
 if curl -s "${SHIKARI_URL}/health" > /dev/null 2>&1; then
     echo -e "${GREEN}OK${NC}"

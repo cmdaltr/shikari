@@ -23,10 +23,10 @@ COPY data/ ./data/
 RUN chmod +x scripts/deployment/docker_entrypoint.py
 
 # Expose port
-EXPOSE 8000
+EXPOSE 32453
 
 # Use Python entrypoint to initialize OSINT repos before starting app (cross-platform)
 ENTRYPOINT ["python", "scripts/deployment/docker_entrypoint.py"]
 
 # Run the FastAPI application
-CMD ["uvicorn", "shikari.app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "shikari.app:app", "--host", "0.0.0.0", "--port", "32453", "--reload"]

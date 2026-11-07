@@ -110,7 +110,7 @@ def create_admin():
         print(f"Name: {full_name}")
         print(f"Role: Admin")
         print()
-        print("You can now log in at: http://localhost:8000/login")
+        print("You can now log in at: http://localhost:32453/login")
         print("=" * 60)
 
     except Exception as e:

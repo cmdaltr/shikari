@@ -9,7 +9,7 @@ using only built-in Windows, no third-party tools. For a true Windows service, s
 docs/deployment/README.md; the layout here is identical, you just point NSSM at the same wrapper.
 
 Run in an elevated PowerShell from a Shikari checkout:
-    .\deploy\windows\install-service.ps1 [-CodeDir 'C:\Program Files\Shikari'] [-Port 8000] [-BindHost 127.0.0.1]
+    .\deploy\windows\install-service.ps1 [-CodeDir 'C:\Program Files\Shikari'] [-Port 32453] [-BindHost 127.0.0.1]
 
 Python 3.11+ must be on PATH (or pass -Python). Single worker only: Shikari keeps session, lab-job and
 in-browser-console state in-process.
@@ -17,7 +17,7 @@ in-browser-console state in-process.
 param(
     [string]$CodeDir = 'C:\Program Files\Shikari',
     [string]$DataDir = (Join-Path $env:ProgramData 'Shikari'),
-    [int]$Port = 8000,
+    [int]$Port = 32453,
     [string]$BindHost = '127.0.0.1',
     [string]$Python = '',
     [string]$TaskName = 'Shikari'

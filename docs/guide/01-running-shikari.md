@@ -20,7 +20,7 @@ shikari stop       # stop Shikari, and the Ollama it started
 
 | Option | What it does | Remembered |
 |---|---|---|
-| `--port 8000` | The port to serve on | Yes |
+| `--port 32453` | The port to serve on | Yes |
 | `--no-reload` | Don't restart the server when code changes | Yes |
 | `--no-ollama` | Don't start Ollama | Yes |
 | `--ollama-models DIR` | Where Ollama keeps its models (an external drive that isn't mounted falls back to Ollama's default folder) | Yes |
@@ -47,7 +47,7 @@ The installers on the Releases page bundle everything instead, and connect to yo
 
 ## Signing in
 
-Open `http://localhost:8000`. The default administrator is set in the configuration and documented in [GETTING_STARTED.md](../../GETTING_STARTED.md#default-login); change its password after the first sign-in (Profile → Security).
+Open `http://localhost:32453`. The default administrator is set in the configuration and documented in [GETTING_STARTED.md](../../GETTING_STARTED.md#default-login); change its password after the first sign-in (Profile → Security).
 
 **Continue as Guest** lets someone try Shikari without an account. A guest's work isn't saved once the browser closes.
 

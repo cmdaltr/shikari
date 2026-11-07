@@ -477,7 +477,7 @@ shikari offline generate APT29 --validate
 
 The web interface automatically uses RAG when generating queries:
 
-1. Navigate to `http://localhost:8000`
+1. Navigate to `http://localhost:32453`
 2. Go to "Generate Detection" tab
 3. Enter threat group name
 4. Enable "Use RAG Enhancement" (enabled by default)

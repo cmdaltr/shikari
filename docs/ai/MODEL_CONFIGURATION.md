@@ -64,9 +64,9 @@ Shikari supports multiple AI model backends for different use cases:
    docker-compose up --build
 
    # OR using local Python
-   uvicorn shikari.app:app --reload
+   uvicorn shikari.app:app --reload --port 32453
 
-   # Access at http://localhost:8000
+   # Access at http://localhost:32453
    # Login: admin@shikari.app / BigGameHunter
    ```
 
@@ -110,9 +110,9 @@ Shikari supports multiple AI model backends for different use cases:
    docker-compose up --build
 
    # OR using local Python
-   uvicorn shikari.app:app --reload
+   uvicorn shikari.app:app --reload --port 32453
 
-   # Access at http://localhost:8000
+   # Access at http://localhost:32453
    ```
 
    **For CLI**:
@@ -133,7 +133,7 @@ The Shikari web application is built with **FastAPI** and uses **Uvicorn** as th
 # Start with Docker Compose
 docker-compose up --build
 
-# Access at http://localhost:8000
+# Access at http://localhost:32453
 # Default login: admin@shikari.app / BigGameHunter
 ```
 
@@ -149,9 +149,9 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # Start the web server
-uvicorn shikari.app:app --reload
+uvicorn shikari.app:app --reload --port 32453
 
-# Access at http://localhost:8000
+# Access at http://localhost:32453
 ```
 
 ### Environment Configuration
@@ -203,7 +203,7 @@ services:
       context: .
       dockerfile: shikari/Dockerfile
     ports:
-      - "8000:8000"
+      - "32453:32453"
     environment:
       - PYTHONUNBUFFERED=1
       - LLM_PROVIDER=ollama
@@ -245,7 +245,7 @@ services:
       context: .
       dockerfile: shikari/Dockerfile
     ports:
-      - "8000:8000"
+      - "32453:32453"
     environment:
       - PYTHONUNBUFFERED=1
       - LLM_PROVIDER=ollama
@@ -298,7 +298,7 @@ CORRELATION_MAX_LIMIT = int(os.getenv("CORRELATION_MAX_LIMIT", "250"))
 
 Once the web app is running:
 
-1. **Access the application**: Navigate to `http://localhost:8000`
+1. **Access the application**: Navigate to `http://localhost:32453`
 2. **Login**: Use default credentials (change immediately!)
    - Email: `admin@shikari.app`
    - Password: `BigGameHunter`
@@ -324,7 +324,7 @@ docker-compose logs -f ollama
 # Uvicorn logs are displayed in terminal
 # Look for startup messages like:
 # INFO:     Application startup complete.
-# INFO:     Uvicorn running on http://127.0.0.1:8000
+# INFO:     Uvicorn running on http://127.0.0.1:32453
 ```
 
 ---
@@ -484,7 +484,7 @@ services:
       context: .
       dockerfile: shikari/Dockerfile
     ports:
-      - "8000:8000"
+      - "32453:32453"
     environment:
       - PYTHONUNBUFFERED=1
       - LLM_PROVIDER=ollama
@@ -518,7 +518,7 @@ services:
       context: .
       dockerfile: shikari/Dockerfile
     ports:
-      - "8000:8000"
+      - "32453:32453"
     environment:
       - PYTHONUNBUFFERED=1
       - LLM_PROVIDER=ollama
@@ -554,9 +554,9 @@ ollama run llama3.1:70b-instruct-q4_K_M "Generate a KQL query to detect PowerShe
 docker-compose up --build
 
 # OR using local Python (ensure .env is configured)
-uvicorn shikari.app:app --reload
+uvicorn shikari.app:app --reload --port 32453
 
-# Access the web app at http://localhost:8000
+# Access the web app at http://localhost:32453
 # Default login: admin@shikari.app / BigGameHunter
 ```
 

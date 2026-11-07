@@ -17,7 +17,7 @@ shikari logs [shikari|ollama|supervisor] [-f]
 ```
 
 **What they do**:
-- `shikari start` launches a supervisor in the background. Its pid file, state and remembered options (`supervisor.pid`, `service.json`, `settings.json`) live in `~/Library/Application Support/Shikari` on macOS (`$XDG_STATE_HOME/shikari/run` on Linux, or `$SHIKARI_STATE_DIR/run`), and logs in `~/Library/Logs/Shikari` (`shikari logs`). They are kept out of the repository because a synced folder such as OneDrive replaces files that are open for writing, which killed the server and the supervisor. It runs uvicorn with `.venv/bin/python`, bound to `0.0.0.0:8000` so reverse proxies (e.g. Caddy via `host.docker.internal`) reach it, and restarts it if it exits: after 1s, backing off to 60s for repeated quick failures, giving up after 6 in a row. If Ollama is installed and nothing answers on port 11434, it also runs `ollama serve` (with `--ollama-models` as `OLLAMA_MODELS`) and restarts that too. Options are remembered in `settings.json` there.
+- `shikari start` launches a supervisor in the background. Its pid file, state and remembered options (`supervisor.pid`, `service.json`, `settings.json`) live in `~/Library/Application Support/Shikari` on macOS (`$XDG_STATE_HOME/shikari/run` on Linux, or `$SHIKARI_STATE_DIR/run`), and logs in `~/Library/Logs/Shikari` (`shikari logs`). They are kept out of the repository because a synced folder such as OneDrive replaces files that are open for writing, which killed the server and the supervisor. It runs uvicorn with `.venv/bin/python`, bound to `0.0.0.0:32453` so reverse proxies (e.g. Caddy via `host.docker.internal`) reach it, and restarts it if it exits: after 1s, backing off to 60s for repeated quick failures, giving up after 6 in a row. If Ollama is installed and nothing answers on port 11434, it also runs `ollama serve` (with `--ollama-models` as `OLLAMA_MODELS`) and restarts that too. Options are remembered in `settings.json` there.
 - Before the first start it rebuilds the OSINT technique index (`scripts/data/build_osint_index.py --skip-clone`) if `data/cache/osint_technique_index.json` is missing or more than 24 hours old; `--skip-index` skips it. This only re-indexes what's on disk, and a failure is non-fatal.
 - `shikari stop` stops the supervisor, which stops what it started. `--force` also stops an Shikari on the port that was started some other way (matched on `shikari.app` in its command line).
 - `shikari status` shows what's running, uptime, crash restarts, and whether `/health` answers.
@@ -51,7 +51,7 @@ Docker container entry point that initializes OSINT repositories and starts the 
 services:
   shikari:
     entrypoint: ["python", "scripts/deployment/docker_entrypoint.py"]
-    command: ["uvicorn", "shikari.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["uvicorn", "shikari.app:app", "--host", "0.0.0.0", "--port", "32453"]
 ```
 
 **Note**: First run may take 15-20 minutes to download OSINT repositories. The Azure Sentinel clone in particular needs a long timeout — if a run is killed mid-clone, delete the partial `data/repos/azure_sentinel/` directory before retrying rather than leaving a corrupted `.git` dir in place.
@@ -169,7 +169,7 @@ docker-compose up --build  # or shikari start
 
 ## Troubleshooting
 
-**Reachable at `127.0.0.1:8000` but not via a reverse proxy / hostname (e.g. FlightDeck's `shikari.lab`)**: `shikari start` binds to `0.0.0.0` by default so this shouldn't happen on current versions — but if you're running uvicorn manually, make sure you pass `--host 0.0.0.0`, not `--host 127.0.0.1`. Reverse proxies running in Docker (Caddy via `host.docker.internal`, etc.) connect via a gateway interface, not literal loopback, so a loopback-only bind rejects the connection even though direct `127.0.0.1` access works fine.
+**Reachable at `127.0.0.1:32453` but not via a reverse proxy / hostname (e.g. FlightDeck's `shikari.lab`)**: `shikari start` binds to `0.0.0.0` by default so this shouldn't happen on current versions — but if you're running uvicorn manually, make sure you pass `--host 0.0.0.0`, not `--host 127.0.0.1`. Reverse proxies running in Docker (Caddy via `host.docker.internal`, etc.) connect via a gateway interface, not literal loopback, so a loopback-only bind rejects the connection even though direct `127.0.0.1` access works fine.
 
 **`pip install -r requirements.txt` fails with a `torch` dependency conflict on macOS**: you're likely on an Intel Mac with a Python version newer than 3.12. Install Python 3.11 or 3.12 (`brew install python@3.11`) and rebuild the venv with that interpreter — `torch==2.2.2` (the last Intel-mac-compatible release, pinned in `requirements.txt`) doesn't have wheels for Python 3.13+.
 

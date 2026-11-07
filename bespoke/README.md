@@ -39,7 +39,7 @@ A new install starts with generic mappings from `shikari/mappings/defaults/` (CE
 
 3. **Reload the configuration** via API or restart the server:
    ```bash
-   curl -X POST http://localhost:8000/api/bespoke/reload
+   curl -X POST http://localhost:32453/api/bespoke/reload
    ```
 
 ## API Endpoints

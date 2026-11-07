@@ -41,7 +41,7 @@ from datetime import datetime
 # TEST CONFIGURATION
 # =============================================================================
 
-BASE_URL = os.getenv("SHIKARI_BASE_URL", "http://127.0.0.1:8000")
+BASE_URL = os.getenv("SHIKARI_BASE_URL", "http://127.0.0.1:32453")
 TIMEOUT = 900  # 15 minutes for long-running generation tasks (large threat groups)
 SHORT_TIMEOUT = 30
 

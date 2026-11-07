@@ -14,12 +14,12 @@
 #   ./tests/run_all_tests.sh --report           # Generate HTML report
 #
 # Prerequisites:
-#   - Shikari must be running: uvicorn shikari.app:app --host 0.0.0.0 --port 8000
+#   - Shikari must be running: uvicorn shikari.app:app --host 0.0.0.0 --port 32453
 #   - pip install pytest requests pytest-playwright pytest-html
 #   - playwright install chromium
 #
 # Environment variables:
-#   SHIKARI_BASE_URL    Base URL (default: http://127.0.0.1:8000)
+#   SHIKARI_BASE_URL    Base URL (default: http://127.0.0.1:32453)
 #   SHIKARI_TEST_EMAIL  Login email
 #   SHIKARI_TEST_PASSWORD  Login password
 # =============================================================================
@@ -69,13 +69,13 @@ echo -e "${BLUE}================================================================
 echo ""
 
 # Check Shikari is running
-SHIKARI_URL="${SHIKARI_BASE_URL:-http://127.0.0.1:8000}"
+SHIKARI_URL="${SHIKARI_BASE_URL:-http://127.0.0.1:32453}"
 echo -n "Checking Shikari at $SHIKARI_URL... "
 if curl -s -o /dev/null -w "%{http_code}" "$SHIKARI_URL/health" | grep -q "200"; then
     echo -e "${GREEN}OK${NC}"
 else
     echo -e "${RED}FAILED${NC}"
-    echo "Shikari is not running. Start with: uvicorn shikari.app:app --host 0.0.0.0 --port 8000"
+    echo "Shikari is not running. Start with: uvicorn shikari.app:app --host 0.0.0.0 --port 32453"
     exit 1
 fi
 echo ""

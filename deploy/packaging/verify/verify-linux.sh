@@ -60,8 +60,8 @@ else
     dnf install -y "$pkg" || rpm -i "$pkg"
 fi
 
-# Port from the installed config (default 8000).
-port="$(. /etc/shikari/shikari.env 2>/dev/null; echo "${SHIKARI_PORT:-8000}")"
+# Port from the installed config (default 32453).
+port="$(. /etc/shikari/shikari.env 2>/dev/null; echo "${SHIKARI_PORT:-32453}")"
 echo "==> Waiting for the service on 127.0.0.1:$port"
 ok=0
 python3 "$here/healthcheck.py" --url "http://127.0.0.1:$port/health" --timeout 120 && ok=1 || true

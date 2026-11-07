@@ -14,7 +14,7 @@ The `bespoke/` directory (at the project root) contains **organization-specific*
 
 3. **Reload the configuration** via API or restart the server:
    ```bash
-   curl -X POST http://localhost:8000/api/bespoke/reload
+   curl -X POST http://localhost:32453/api/bespoke/reload
    ```
 
 ## Directory Structure
@@ -142,13 +142,13 @@ Store organization-specific detection queries that are tailored for your environ
 
 ```bash
 # Check bespoke status
-curl http://localhost:8000/api/status/bespoke
+curl http://localhost:32453/api/status/bespoke
 
 # Get sample searches for a technique
-curl "http://localhost:8000/api/bespoke/sample-searches?technique_id=T1003.001"
+curl "http://localhost:32453/api/bespoke/sample-searches?technique_id=T1003.001"
 
 # Reload after editing config files
-curl -X POST http://localhost:8000/api/bespoke/reload
+curl -X POST http://localhost:32453/api/bespoke/reload
 ```
 
 ## How Exclusions Are Applied
@@ -217,8 +217,8 @@ events:
 
 1. Check that `exclusions.yaml` exists (not just `.example`)
 2. Verify YAML syntax: `python -c "import yaml; yaml.safe_load(open('exclusions.yaml'))"`
-3. Reload configuration: `curl -X POST http://localhost:8000/api/bespoke/reload`
-4. Check status: `curl http://localhost:8000/api/status/bespoke`
+3. Reload configuration: `curl -X POST http://localhost:32453/api/bespoke/reload`
+4. Check status: `curl http://localhost:32453/api/status/bespoke`
 
 ### Configuration not loading?
 

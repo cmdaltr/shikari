@@ -51,7 +51,7 @@ except ImportError:
 # =============================================================================
 
 # API URL - override with SHIKARI_API_URL env var
-API_URL = os.environ.get("SHIKARI_API_URL", "http://127.0.0.1:8000")
+API_URL = os.environ.get("SHIKARI_API_URL", "http://127.0.0.1:32453")
 
 # Timeouts
 DEFAULT_TIMEOUT = 900  # 15 minutes for long-running generation tasks

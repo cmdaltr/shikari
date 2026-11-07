@@ -114,10 +114,10 @@ def main():
         total_failed += failed
         found_any = True
 
-    # 3. Kill processes using port 8000 (Shikari's default port)
-    pids = find_processes_on_port(8000)
+    # 3. Kill processes using port 32453 (Shikari's default port)
+    pids = find_processes_on_port(32453)
     if pids:
-        killed, failed = kill_processes(pids, "processes using port 8000")
+        killed, failed = kill_processes(pids, "processes using port 32453")
         total_killed += killed
         total_failed += failed
         found_any = True
@@ -174,7 +174,7 @@ def main():
         remaining_pids.update(pids)
 
     # Check ports
-    for port in range(8000, 8011):
+    for port in range(32453, 32464):
         pids = find_processes_on_port(port)
         remaining_pids.update(pids)
 

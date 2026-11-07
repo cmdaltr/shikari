@@ -825,7 +825,7 @@ python scripts/deploy_model.py --model models/fine-tuned-llama-2-7b.gguf
 ### Example: Submit Feedback via cURL
 
 ```bash
-curl -X POST http://localhost:8000/api/query-feedback \
+curl -X POST http://localhost:32453/api/query-feedback \
   -H "Cookie: session_id=your-session-id" \
   -F "technique_id=T1003.001" \
   -F "platform=splunk" \
@@ -838,7 +838,7 @@ curl -X POST http://localhost:8000/api/query-feedback \
 ### Example: Refine Query
 
 ```bash
-curl -X POST http://localhost:8000/api/query-refine \
+curl -X POST http://localhost:32453/api/query-refine \
   -H "Cookie: session_id=your-session-id" \
   -F "technique_id=T1003.001" \
   -F "platform=mde" \
@@ -1200,10 +1200,10 @@ wget https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/
 export OPENAI_API_KEY="sk-your-key"
 
 # 2. Start server
-uvicorn shikari.app:app --reload
+uvicorn shikari.app:app --reload --port 32453
 
 # 3. Test refinement
-curl -X POST http://localhost:8000/api/query-refine \
+curl -X POST http://localhost:32453/api/query-refine \
   -H "Cookie: session_id=your-session" \
   -F "technique_id=T1003.001" \
   -F "platform=splunk" \

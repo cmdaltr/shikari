@@ -84,7 +84,7 @@ sed -e "s#^WorkingDirectory=.*#WorkingDirectory=$CODE_DIR#" \
     "$HERE/shikari.service" > "$UNIT"
 
 # --- SELinux (Rocky/RHEL): label the port if it isn't a default http port --------------------------
-PORT=$(. "$CONF_DIR/shikari.env"; echo "${SHIKARI_PORT:-8000}")
+PORT=$(. "$CONF_DIR/shikari.env"; echo "${SHIKARI_PORT:-32453}")
 if command -v getenforce >/dev/null 2>&1 && [ "$(getenforce)" = "Enforcing" ]; then
     echo "==> SELinux is enforcing"
     if command -v semanage >/dev/null 2>&1; then

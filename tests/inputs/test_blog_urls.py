@@ -285,7 +285,7 @@ class TestBlogSecurity:
         """Test that 127.x.x.x IPs are blocked."""
         response = client.post(
             "/analyze_blog",
-            data={"url": "http://127.0.0.1:8000/"},
+            data={"url": "http://127.0.0.1:32453/"},
             allow_redirects=False
         )
 

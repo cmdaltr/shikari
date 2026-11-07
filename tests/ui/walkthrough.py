@@ -15,7 +15,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
-BASE = os.getenv("SHIKARI_BASE_URL", "http://localhost:8000").rstrip("/")
+BASE = os.getenv("SHIKARI_BASE_URL", "http://localhost:32453").rstrip("/")
 # Defaults are the documented first-run admin from GETTING_STARTED.md
 EMAIL = os.getenv("SHIKARI_EMAIL", "admin@shikari.app")
 PASSWORD = os.getenv("SHIKARI_PASSWORD", "BigGameHunter")

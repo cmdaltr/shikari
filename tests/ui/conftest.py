@@ -8,7 +8,7 @@ Run:     pytest tests/ui/ -v --headed  (to see the browser)
 import pytest
 import os
 
-BASE_URL = os.getenv("SHIKARI_BASE_URL", "http://127.0.0.1:8000")
+BASE_URL = os.getenv("SHIKARI_BASE_URL", "http://127.0.0.1:32453")
 SCREENSHOT_DIR = os.path.join(os.path.dirname(__file__), "..", "screenshots")
 
 

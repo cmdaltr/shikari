@@ -29,7 +29,7 @@ Running atomics from Shikari itself (**Run Emulation** on Results, `shikari offl
 
 ## The console, client, API and MCP server
 
-`shikari console`, the Python client (`shikari.client.ShikariClient`), the REST API (live reference at `http://localhost:8000/docs`) and `shikari mcp` all drive a running server as a user: [Console, API and MCP](guide/17-console-api-mcp.md). Worked API examples: [API_INTEGRATION_GUIDE.md](features/API_INTEGRATION_GUIDE.md).
+`shikari console`, the Python client (`shikari.client.ShikariClient`), the REST API (live reference at `http://localhost:32453/docs`) and `shikari mcp` all drive a running server as a user: [Console, API and MCP](guide/17-console-api-mcp.md). Worked API examples: [API_INTEGRATION_GUIDE.md](features/API_INTEGRATION_GUIDE.md).
 
 ## `shikari offline`: the pipeline without the server
 

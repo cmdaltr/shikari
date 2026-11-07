@@ -17,7 +17,7 @@ detections and your own mappings there are never overwritten.
 
 It opens either an organisation's Shikari server, as a client (shikari/desktop_client.py says
 which and how IT sets it), or Shikari on this computer: then the server runs in this process
-(uvicorn on 127.0.0.1, port 8000 or the next free one) and stops when the window closes. The
+(uvicorn on 127.0.0.1, port 32453 or the next free one) and stops when the window closes. The
 first launch asks which, unless IT or SHIKARI_SERVER has decided; Shikari > Change Server switches.
 A client copies no data in and starts no server.
 """
@@ -82,7 +82,7 @@ def seed(home, version):
     print(f"Seeded {copied} file(s) from the app" + (f" (version {version})" if upgraded else ""))
 
 
-def free_port(preferred=8000, tries=20):
+def free_port(preferred=32453, tries=20):
     # Stable when possible: the window's storage (theme, preferences) is per origin, port included
     for port in range(preferred, preferred + tries):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

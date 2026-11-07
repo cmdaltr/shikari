@@ -26,7 +26,7 @@ pip install pytest requests pytest-playwright pytest-html
 playwright install chromium
 
 # Ensure Shikari is running
-uvicorn shikari.app:app --host 0.0.0.0 --port 8000 --reload
+uvicorn shikari.app:app --host 0.0.0.0 --port 32453 --reload
 ```
 
 ### Run Everything
@@ -301,7 +301,7 @@ The API test suite covers every endpoint in Shikari:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SHIKARI_BASE_URL` | Shikari server URL | `http://127.0.0.1:8000` |
+| `SHIKARI_BASE_URL` | Shikari server URL | `http://127.0.0.1:32453` |
 | `SHIKARI_TEST_EMAIL` | Login email for tests | `admin@shikari.app` |
 | `SHIKARI_TEST_PASSWORD` | Login password for tests | *(see conftest)* |
 

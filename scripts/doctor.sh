@@ -50,7 +50,7 @@ fi
 
 echo ""
 echo "=== Local server ==="
-check "Shikari server responding on :8000" "curl -sf -o /dev/null http://127.0.0.1:8000/health"
+check "Shikari server responding on :32453" "curl -sf -o /dev/null http://127.0.0.1:32453/health"
 
 echo ""
 echo "=== Summary: $PASS passed, $FAIL failed ==="

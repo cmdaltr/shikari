@@ -10,7 +10,7 @@ from typing import Optional, Dict, Any
 
 
 # Configuration
-DEFAULT_BASE_URL = os.getenv("SHIKARI_BASE_URL", "http://127.0.0.1:8000")
+DEFAULT_BASE_URL = os.getenv("SHIKARI_BASE_URL", "http://127.0.0.1:32453")
 DEFAULT_TIMEOUT = 30
 GENERATION_TIMEOUT = 300  # 5 minutes for generation tests
 

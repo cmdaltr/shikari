@@ -5,7 +5,7 @@ Everything in the web app can be done without a browser. All three talk to a run
 Sign in with an API token from Profile → Security → API Tokens (works with MFA), or an email and password:
 
 ```bash
-export SHIKARI_URL=http://127.0.0.1:8000
+export SHIKARI_URL=http://127.0.0.1:32453
 export SHIKARI_TOKEN=arch_...
 ```
 
@@ -59,7 +59,7 @@ Other methods include `hunt_cve`, `hunt_techniques`, `analyse_url`, `analyse_fil
 
 ## REST API
 
-Every page works through the HTTP API. The full, live reference is at `http://localhost:8000/docs`. Worked examples are in [API_INTEGRATION_GUIDE.md](../features/API_INTEGRATION_GUIDE.md).
+Every page works through the HTTP API. The full, live reference is at `http://localhost:32453/docs`. Worked examples are in [API_INTEGRATION_GUIDE.md](../features/API_INTEGRATION_GUIDE.md).
 
 ## MCP server (`shikari mcp`)
 

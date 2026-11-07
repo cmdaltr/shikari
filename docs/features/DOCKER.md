@@ -98,8 +98,8 @@ volumes:
 
 Once started, Shikari is available at:
 
-- **Web UI:** http://localhost:8000
-- **API Docs:** http://localhost:8000/docs
+- **Web UI:** http://localhost:32453
+- **API Docs:** http://localhost:32453/docs
 
 ### Web Interface Loading
 
@@ -150,7 +150,7 @@ docker-compose logs shikari
 ```
 
 **Common issues:**
-- Port 8000 already in use
+- Port 32453 already in use
 - Missing dependencies in requirements.txt
 - Python syntax errors
 
@@ -239,13 +239,13 @@ environment:
 
 2. **Remove --reload flag**
    ```dockerfile
-   CMD ["uvicorn", "shikari.app:app", "--host", "0.0.0.0", "--port", "8000"]
+   CMD ["uvicorn", "shikari.app:app", "--host", "0.0.0.0", "--port", "32453"]
    ```
 
 3. **Add health check**
    ```yaml
    healthcheck:
-     test: ["CMD", "curl", "-f", "http://localhost:8000/api/status/osint"]
+     test: ["CMD", "curl", "-f", "http://localhost:32453/api/status/osint"]
      interval: 30s
      timeout: 10s
      retries: 3
@@ -287,7 +287,7 @@ docker-compose up --build
 For issues:
 - Check logs: `docker-compose logs -f shikari`
 - Verify mounts: `docker-compose config`
-- Test locally: `python -m uvicorn shikari.app:app`
+- Test locally: `python -m uvicorn shikari.app:app --port 32453`
 
 ## Summary
 
@@ -296,7 +296,7 @@ For issues:
 | **First run** | 15-20 minutes (clones OSINT repos) |
 | **Subsequent runs** | Seconds (repos already present) |
 | **Disk space** | ~1GB total |
-| **Ports** | 8000 (Shikari) |
+| **Ports** | 32453 (Shikari) |
 | **Data persistence** | `./data` volume |
 | **OSINT update** | Automatic (hourly check) |
 
@@ -348,7 +348,7 @@ docker-compose --profile validation up -d
 
 | Service | Profile | Ports | RAM |
 |---------|---------|-------|-----|
-| Shikari | (always) | 8000 | - |
+| Shikari | (always) | 32453 | - |
 | Google SecOps | `secops` | 8081 | ~512MB |
 | MDE | `mde` | 8082 | ~512MB |
 | Splunk | `splunk` | 8001, 8088, 8089 | ~2GB |

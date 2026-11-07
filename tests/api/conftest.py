@@ -7,7 +7,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.getenv("SHIKARI_BASE_URL", "http://127.0.0.1:8000")
+BASE_URL = os.getenv("SHIKARI_BASE_URL", "http://127.0.0.1:32453")
 
 
 @pytest.fixture(scope="session")

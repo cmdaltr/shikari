@@ -5,7 +5,7 @@ Shikari Clean Start Script (Cross-Platform)
 This script:
 1. Kills all running Python/uvicorn processes
 2. Clears Python cache (__pycache__ and .pyc files)
-3. Starts a fresh Shikari server on port 8000
+3. Starts a fresh Shikari server on port 32453
 
 Works on Windows, macOS, and Linux.
 """
@@ -28,7 +28,7 @@ def print_header():
     print("This script will:")
     print("  1. Kill all running Python/uvicorn processes")
     print("  2. Clear Python cache (__pycache__ and .pyc files)")
-    print("  3. Start a fresh Shikari server on port 8000")
+    print("  3. Start a fresh Shikari server on port 32453")
     print()
     print("WARNING: This will stop ALL Python processes!")
     print()
@@ -113,7 +113,7 @@ def clear_cache():
 
 def start_server():
     """Start Shikari server."""
-    print("Starting fresh server on port 8000...")
+    print("Starting fresh server on port 32453...")
 
     root = Path(__file__).parent.parent
     venv_python = root / ".venv" / "bin" / "python3"
@@ -134,7 +134,7 @@ def start_server():
                 python_cmd, "-m", "uvicorn",
                 "shikari.app:app",
                 "--host", "127.0.0.1",
-                "--port", "8000",
+                "--port", "32453",
                 "--reload"
             ],
             cwd=root
@@ -145,7 +145,7 @@ def start_server():
         print(f"Error starting server: {e}")
         sys.exit(1)
 
-    print("Server started! Visit http://localhost:8000")
+    print("Server started! Visit http://localhost:32453")
 
 
 def main():

@@ -57,7 +57,7 @@ Terminate TLS in a reverse proxy in front of Shikari. Caddy gets you a certifica
 
 ```
 shikari.example.com {
-    reverse_proxy 127.0.0.1:8000
+    reverse_proxy 127.0.0.1:32453
 }
 ```
 
@@ -70,7 +70,7 @@ server {
     ssl_certificate     /etc/ssl/certs/shikari.crt;
     ssl_certificate_key /etc/ssl/private/shikari.key;
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:32453;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
@@ -98,7 +98,7 @@ sudo firewall-cmd --reload
 ### SELinux (Rocky / RHEL)
 
 `install.sh` labels the Shikari port as `http_port_t` when SELinux is enforcing and `semanage` is present.
-If you let the proxy reach `127.0.0.1:8000`, also allow proxy egress:
+If you let the proxy reach `127.0.0.1:32453`, also allow proxy egress:
 
 ```bash
 sudo setsebool -P httpd_can_network_connect 1
@@ -109,12 +109,12 @@ sudo setsebool -P httpd_can_network_connect 1
 From a checkout, in an elevated PowerShell:
 
 ```powershell
-.\deploy\windows\install-service.ps1 -Port 8000
+.\deploy\windows\install-service.ps1 -Port 32453
 ```
 
 It copies the code to `C:\Program Files\Shikari`, builds a virtualenv, writes a launcher wrapper under
 `%ProgramData%\Shikari`, and registers the boot-start `Shikari` Scheduled Task running as `LocalService`.
-Put IIS (with ARR) or another reverse proxy on 443 in front of `127.0.0.1:8000`, and open the firewall.
+Put IIS (with ARR) or another reverse proxy on 443 in front of `127.0.0.1:32453`, and open the firewall.
 
 For a **true Windows service** instead of a task, point [NSSM](https://nssm.cc) at the same wrapper:
 
@@ -224,7 +224,7 @@ cd C:\Temp\shikari
 It lays the code and Python under `C:\Program Files\Shikari`, seeds `%ProgramData%\Shikari\shikari.env`,
 registers the boot-start `Shikari` service with crash-restart recovery, starts it, and waits for `/health`.
 Re-running upgrades in place (data and `shikari.env` untouched); `uninstall.ps1` removes the service and
-files, keeping the data unless you pass `-Purge`. Put a reverse proxy on 443 in front of `127.0.0.1:8000`
+files, keeping the data unless you pass `-Purge`. Put a reverse proxy on 443 in front of `127.0.0.1:32453`
 and open the firewall exactly as on Linux.
 
 ARM64 is best-effort: pywin32 ARM64 wheels are newer and may be missing for the bundled interpreter, in

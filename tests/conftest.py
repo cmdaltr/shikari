@@ -38,7 +38,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--shikari-url",
         action="store",
-        default=os.getenv("SHIKARI_BASE_URL", "http://127.0.0.1:8000"),
+        default=os.getenv("SHIKARI_BASE_URL", "http://127.0.0.1:32453"),
         help="Shikari base URL for testing"
     )
 

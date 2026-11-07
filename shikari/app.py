@@ -13194,7 +13194,7 @@ def main():
     Shikari CLI entry point.
 
     Usage:
-      shikari serve              Start the Shikari server (default: port 8000)
+      shikari serve              Start the Shikari server (default: port 32453)
       shikari serve --port 8001  Start on a custom port
       shikari serve --host 0.0.0.0  Bind to all interfaces
       shikari serve --reload     Enable auto-reload (development)
@@ -13218,7 +13218,7 @@ def main():
         description="Shikari – Threat Detection Engineering Platform",
     )
     parser.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
-    parser.add_argument("--port", type=int, default=8000, help="Bind port (default: 8000)")
+    parser.add_argument("--port", type=int, default=32453, help="Bind port (default: 32453)")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload (dev mode)")
     parser.add_argument("--workers", type=int, default=1, help="Number of worker processes")
     args = parser.parse_args()
@@ -13267,7 +13267,7 @@ def _cli_clear_cache():
 
     print()
     print("To reset browser preferences (LLM choice, etc.), visit:")
-    print("  http://localhost:8000/clear-browser-cache")
+    print("  http://localhost:32453/clear-browser-cache")
     print()
     print("Or paste this in your browser console:")
     print("  localStorage.clear(); location.reload();")

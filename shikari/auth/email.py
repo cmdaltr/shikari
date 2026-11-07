@@ -25,7 +25,7 @@ EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
 SMTP_TIMEOUT = float(os.getenv("SMTP_TIMEOUT", "10"))
 
 # Base URL for reset links
-BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+BASE_URL = os.getenv("BASE_URL", "http://localhost:32453")
 
 
 def send_password_reset_email(email: str, token: str, full_name: Optional[str] = None) -> bool:

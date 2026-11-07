@@ -27,9 +27,9 @@ See **[MODEL_CONFIGURATION.md](MODEL_CONFIGURATION.md)** for complete setup guid
 # Start Shikari
 docker-compose up --build
 # or
-uvicorn shikari.app:app --reload
+uvicorn shikari.app:app --reload --port 32453
 
-# Access at http://localhost:8000
+# Access at http://localhost:32453
 # Navigate to Generate → Select technique → AI-powered generation
 ```
 
