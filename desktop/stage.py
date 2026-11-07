@@ -177,6 +177,9 @@ def main():
     shutil.copy2(ROOT / "LICENSE", out / "LICENSE")
     # Inside seed/ too, which the app carries: Help > Licence shows it (LICENSE itself isn't a source)
     shutil.copy2(ROOT / "LICENSE", out / "seed" / "LICENSE")
+    # And the install scripts: the app updates itself with them (shikari/updates.py)
+    for script in ("install.sh", "install.ps1"):
+        shutil.copy2(ROOT / "desktop" / script, out / "seed" / script)
     # Debian packages must carry one; the release notes live on GitHub
     (out / "CHANGELOG.md").write_text(f"# {project['version']}\n\nSee https://github.com/cmdaltr/shikari/releases\n")
     wheels = out / "wheels"

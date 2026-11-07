@@ -21,6 +21,7 @@ or as shikari.service (the pip-installed shikari).
     shikari mcp                    Shikari's tools for an MCP client, over stdio
     shikari offline <command>      generate | correlate | hunt | emulate without the server
     shikari install [--system]     put `shikari` on your PATH (~/.local/bin; --system: /usr/local/bin)
+    shikari update [--check]       pull the latest code, update dependencies, restart if running
     shikari app install [--dock]   Shikari as a desktop app (Dock, Start menu, app menu); see shikari/desktop.py
     shikari docker <args>          docker compose with the project's docker-compose.yml
 
@@ -573,6 +574,92 @@ def cmd_install(args):
     return 0
 
 
+def _git(*args, check=True):
+    out = subprocess.run(["git", "-C", str(ROOT), *args], capture_output=True, text=True)
+    if check and out.returncode != 0:
+        raise RuntimeError((out.stderr or out.stdout).strip() or f"git {' '.join(args)} failed")
+    return out.stdout.strip()
+
+
+def _project_version():
+    try:
+        import tomllib
+        return tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
+    except Exception:
+        return "unknown"
+
+
+def cmd_update(args):
+    """A source checkout: pull, update dependencies when they changed, restart a running Shikari.
+    An installed app (.dmg, .msi, .deb) updates through its own `shikari update` or install script."""
+    if not (ROOT / ".git").exists():
+        print("This Shikari isn't a git checkout. The desktop app updates from its Help menu, or with the "
+              "install script: sh desktop/install.sh (macOS, Linux) or desktop\\install.ps1 (Windows).")
+        return 1
+    sys.path.insert(0, str(ROOT))
+    from shikari import updates
+
+    try:
+        branch = _git("rev-parse", "--abbrev-ref", "HEAD")
+        upstream = _git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}", check=False)
+        print(f"Shikari {_project_version()} ({branch} at {_git('rev-parse', '--short', 'HEAD')})")
+        try:
+            latest = updates.latest_release()
+            print(f"Latest release: {latest['tag']}" + (" (newer)" if updates.is_newer(latest["version"], _project_version()) else ""))
+        except updates.UpdateError as e:
+            print(f"Latest release: unknown ({e})")
+        if not upstream:
+            print(f"The {branch} branch tracks nothing to pull from (git branch --set-upstream-to).")
+            return 1
+        print(f"Fetching {upstream}...")
+        _git("fetch", "--quiet")
+        behind = int(_git("rev-list", "--count", f"HEAD..{upstream}") or 0)
+        ahead = int(_git("rev-list", "--count", f"{upstream}..HEAD") or 0)
+        if not behind:
+            print("Up to date." + (f" ({ahead} local commit(s) not pushed)" if ahead else ""))
+            return 0
+        print(f"{behind} new commit(s) on {upstream}:")
+        for line in _git("log", "--oneline", "--no-decorate", "-n", "15", f"HEAD..{upstream}").splitlines():
+            print(f"  {line}")
+        if behind > 15:
+            print(f"  ... and {behind - 15} more")
+        if args.check:
+            print("Update with: shikari update")
+            return 0
+        if _git("status", "--porcelain", "--untracked-files=no"):
+            print("Not updating: there are uncommitted changes. Commit or stash them first.")
+            return 1
+        if ahead:
+            print(f"Not updating: {branch} has {ahead} commit(s) that aren't on {upstream}, so it can't fast-forward.")
+            return 1
+
+        before = _git("rev-parse", "HEAD")
+        print("Pulling...")
+        _git("pull", "--ff-only", "--quiet")
+        if (ROOT / ".gitmodules").exists():
+            _git("submodule", "update", "--init", "--recursive", "--quiet")
+        changed = _git("diff", "--name-only", before, "HEAD").splitlines()
+    except RuntimeError as e:
+        print(f"git: {e}")
+        return 1
+
+    if any(f == "pyproject.toml" or Path(f).name.startswith("requirements") for f in changed):
+        print("Dependencies changed: installing them...")
+        out = subprocess.run([python(), "-m", "pip", "install", "--quiet", "-e", str(ROOT)])
+        if out.returncode != 0:
+            print("pip couldn't install them: run it by hand: .venv/bin/pip install -e .")
+            return 1
+    print(f"Updated to {_git('rev-parse', '--short', 'HEAD')} (version {_project_version()}).")
+
+    if supervisor_pid():
+        print("Restarting Shikari...")
+        none = argparse.Namespace(port=None, host=None, reload=None, ollama=None, ollama_models=None, skip_index=False)
+        return cmd_restart(none)
+    if Path("/etc/systemd/system/shikari.service").exists():
+        print("This machine runs Shikari as a service: deploy the new code with sudo deploy/linux/install.sh")
+    return 0
+
+
 def cmd_docker(args):
     os.execvp("docker", ["docker", "compose", "-f", str(ROOT / "docker-compose.yml")] + args.args)
 
@@ -630,6 +717,8 @@ def main(argv=None):
     install.add_argument("--force", action="store_true")
     install.add_argument("--system", action="store_true",
                          help="install to /usr/local/bin for all users (needs sudo) instead of a per-user bin dir")
+    update = sub.add_parser("update", help="pull the latest code, update dependencies, restart if running")
+    update.add_argument("--check", action="store_true", help="only say whether there's anything newer")
     docker = sub.add_parser("docker", help="docker compose with the project's compose file")
     docker.add_argument("args", nargs=argparse.REMAINDER)
     parser.epilog = ("Also: serve [--port N] (foreground, no supervisor) · clear-cache · console (interactive) · "
@@ -640,7 +729,7 @@ def main(argv=None):
 
     args = parser.parse_args(argv)
     commands = {"start": cmd_start, "stop": cmd_stop, "restart": cmd_restart, "status": cmd_status,
-                "logs": cmd_logs, "run": cmd_run, "install": cmd_install, "docker": cmd_docker}
+                "logs": cmd_logs, "run": cmd_run, "install": cmd_install, "update": cmd_update, "docker": cmd_docker}
     if not args.command:
         parser.print_help()
         return 0

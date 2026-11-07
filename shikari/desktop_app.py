@@ -71,7 +71,7 @@ def seed(home, version):
     upgraded = (marker.read_text().strip() if marker.exists() else "") != version
     copied = 0
     for src in SEED.rglob("*"):
-        if not src.is_file() or src in (SEED / "VERSION", SEED / "LICENSE"):
+        if not src.is_file() or src in (SEED / "VERSION", SEED / "LICENSE", SEED / "install.sh", SEED / "install.ps1"):
             continue
         dest = home / src.relative_to(SEED)
         if dest.exists() and not upgraded:
@@ -213,6 +213,42 @@ into a closed product, can get a commercial licence instead: contact
 <pre>__TEXT__</pre></main></body></html>"""
 
 
+# The update notice, dropped into whichever page is showing (Shikari's own or an organisation's
+# server's): bottom left, clear of Ask Shikari. __DATA__ is {version, url, linux}.
+UPDATE_NOTICE = """(function (d) {
+  var old = document.getElementById('shikari-update'); if (old) old.remove();
+  var b = document.createElement('div'); b.id = 'shikari-update';
+  b.style.cssText = 'position:fixed;left:20px;bottom:20px;z-index:2147483000;max-width:380px;padding:14px 16px;'
+    + 'background:#1f2937;color:#e5e7eb;border:1px solid #C53030;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);'
+    + 'font:14px/1.45 -apple-system,"Segoe UI",sans-serif';
+  var how = d.linux ? '<div style="margin-top:8px;color:#9ca3af">Install it from a terminal: '
+    + '<code style="color:#e5e7eb">shikari update</code></div>' : '';
+  b.innerHTML = '<div><b>Shikari ' + d.version + '</b> is available.'
+    + (d.url ? ' <a href="' + d.url + '" target="_blank" style="color:#e5e7eb">What&rsquo;s new</a>' : '') + '</div>' + how
+    + '<div style="margin-top:10px;display:flex;gap:8px">'
+    + (d.linux ? '' : '<button data-a="now" style="padding:6px 12px;border:0;border-radius:6px;background:#C53030;color:#fff;font:inherit;font-weight:600;cursor:pointer">Update</button>')
+    + '<button data-a="later" style="padding:6px 12px;border:1px solid #4b5563;border-radius:6px;background:none;color:#e5e7eb;font:inherit;cursor:pointer">Later</button>'
+    + '<button data-a="skip" style="padding:6px 12px;border:0;background:none;color:#9ca3af;font:inherit;cursor:pointer">Skip this version</button></div>';
+  b.onclick = function (e) {
+    var a = e.target.getAttribute('data-a'); if (!a || !window.pywebview) return;
+    if (a === 'now') { b.innerHTML = 'Downloading Shikari ' + d.version + '. Shikari closes, installs it and reopens: a minute or two.'; pywebview.api.update_now(); }
+    else { b.remove(); pywebview.api[a === 'skip' ? 'update_skip' : 'update_later'](); }
+  };
+  document.body.appendChild(b);
+})(__DATA__);"""
+
+# Help > Check for Updates...: the answer, and whether to check once a day
+UPDATE_CHECK = """<!doctype html><html><head><meta charset="utf-8">""" + _HELP_STYLE + """</head><body><main>
+<h1>__TITLE__</h1><p>__MESSAGE__</p>__ACTION__
+<footer><label><input type="checkbox" id="auto" __CHECKED__> Check for updates once a day</label>
+<div style="margin-top:6px">The check asks GitHub for Shikari's latest release and sends nothing else.</div></footer>
+</main><script>
+document.getElementById('auto').onchange = function () { pywebview.api.set_update_checks(this.checked); };
+var u = document.getElementById('update');
+if (u) u.onclick = function () { u.disabled = true; u.textContent = 'Starting\u2026'; pywebview.api.update_now(); };
+</script></body></html>"""
+
+
 class ChooserApi:
     """What the chooser page can call (pywebview.api.*). pywebview hands this to every page the
     window loads, the organisation's server's included, so it does nothing unless the chooser is
@@ -234,6 +270,23 @@ class ChooserApi:
         if self._app.local is not None and not self._app.choosing:
             self._app.show_chooser()
 
+    # The update notice and Help > Check for Updates. Only once the app itself has found a newer
+    # release on GitHub: a page can't make it install anything else
+    def update_now(self):
+        if self._app.update:
+            self._app.update_now()
+
+    def update_later(self):
+        self._app.update_hidden = True
+
+    def update_skip(self):
+        if self._app.update:
+            self._app.skip_update()
+
+    def set_update_checks(self, enabled):
+        from shikari import updates
+        updates.set_checks(self._app.home, bool(enabled))
+
 
 class App:
     """The window: the chooser, an organisation's server, or Shikari on this computer."""
@@ -246,6 +299,8 @@ class App:
         self.local = None
         self.choosing = False
         self.choice = client.resolve(home)
+        self.update = None          # a newer release, once the daily check finds one
+        self.update_hidden = False  # Later: not again this session
 
     # --- from the chooser page, through ChooserApi ---
     def connect(self, url):
@@ -327,6 +382,76 @@ class App:
         webview.create_window(f"{NAME} Licence", html=LICENCE.replace("__TEXT__", html.escape(text)),
                               width=720, height=760, background_color="#111827")
 
+    # --- updates ---
+    def daily_update_check(self):
+        """In the background once the window is up: GitHub at most once a day (shikari.updates)."""
+        from shikari import updates
+        latest = updates.daily_check(self.home, version())
+        if latest:
+            print(f"Update available: {latest['tag']}")
+            self.update = latest
+            self.show_update_notice()
+
+    def show_update_notice(self, *_):
+        if not self.update or self.update_hidden or self.choosing:
+            return
+        data = {"version": html.escape(self.update["version"]), "url": self.update.get("url", ""),
+                "linux": sys.platform.startswith("linux")}
+        try:
+            self.window.evaluate_js(UPDATE_NOTICE.replace("__DATA__", json.dumps(data)))
+        except Exception:  # noqa: BLE001  (a page mid-load; the next load shows it)
+            pass
+
+    def check_for_updates(self):
+        """Help > Check for Updates...: ask now, whatever the daily check last saw."""
+        import webview
+        from shikari import updates
+
+        current = version()
+        action = ""
+        try:
+            latest = updates.latest_release()
+        except updates.UpdateError as e:
+            title, message = "Couldn't check for updates", html.escape(str(e)[:1].upper() + str(e)[1:]) + "."
+        else:
+            if updates.is_newer(latest["version"], current):
+                self.update = latest
+                title = f"Shikari {html.escape(latest['version'])} is available"
+                message = f"You have {html.escape(current)}."
+                if latest.get("url"):
+                    message += f' <a href="{html.escape(latest["url"])}" target="_blank">What&rsquo;s new</a>'
+                action = ('<p>Install it from a terminal: <code>shikari update</code></p>'
+                          if sys.platform.startswith("linux") else
+                          '<p><button id="update" style="padding:8px 16px;border:0;border-radius:6px;background:#C53030;'
+                          'color:#fff;font:inherit;font-weight:600;cursor:pointer">Update now</button></p>')
+            else:
+                title, message = "Shikari is up to date", f"You have {html.escape(current)}, the latest release."
+        page = (UPDATE_CHECK.replace("__TITLE__", title).replace("__MESSAGE__", message).replace("__ACTION__", action)
+                .replace("__CHECKED__", "checked" if updates.checks_enabled(self.home) else ""))
+        webview.create_window("Check for Updates", html=page, js_api=ChooserApi(self), width=480, height=330,
+                              resizable=False, background_color="#111827")
+
+    def skip_update(self):
+        from shikari import updates
+        updates.skip(self.home, self.update["version"])
+        self.update = None
+
+    def update_now(self):
+        """Hand over to the install script, which waits for the app to quit, installs and reopens it."""
+        import webview
+        from shikari import updates
+
+        script = updates.install_script(SEED)
+        if sys.platform.startswith("linux") or not script:
+            return
+        log = self.home / "logs" / "update.log"
+        print(f"Updating to {self.update['tag']} with {script} (log: {log})")
+        updates.start_installer(script, self.update["tag"], os.getpid(), log)
+        # Long enough to read what's happening, then quit so the installer can replace the app
+        time.sleep(4)
+        for w in list(webview.windows):
+            w.destroy()
+
     def step(self, text):
         """Name the stage on the loading screen, so a slow first start doesn't look stuck."""
         print(text)
@@ -354,6 +479,7 @@ class App:
             return
         choice = self.choice
         print(f"Opening: {choice.mode + (' ' + choice.url if choice.url else '') if choice else 'the chooser'}")
+        threading.Thread(target=self.daily_update_check, name="update-check", daemon=True).start()
         if choice is None:
             self.show_chooser()
         elif choice.mode == "local":
@@ -390,7 +516,10 @@ class App:
         menu = [] if managed else [Menu(NAME, [MenuAction("Change Server\u2026", lambda: self.show_chooser())])]
         # macOS puts it in the menu bar; Windows and Linux in the window's own menu bar
         menu.append(Menu("Help", [MenuAction(f"About {NAME}", self.show_about),
+                                  MenuAction("Check for Updates\u2026", self.check_for_updates),
                                   MenuAction("Licence", self.show_licence)]))
+        # Every page load (Shikari's or a server's) brings the notice back until it's dealt with
+        self.window.events.loaded += self.show_update_notice
         desktop.brand_process()
         try:
             webview.start(self.boot, private_mode=False, storage_path=str(self.home / "webview"), menu=menu)
@@ -406,7 +535,37 @@ def bundled_git():
         os.environ["PATH"] = os.pathsep.join(filter(None, [os.environ.get("PATH"), str(mingit)]))
 
 
+def cli_update(argv):
+    """`shikari update [--check]` from the installed app (the .deb's shikari command, or the app's
+    executable on macOS and Windows): the same release and install script as the Help menu."""
+    from shikari import updates
+
+    current = version()
+    print(f"Shikari {current}")
+    try:
+        latest = updates.latest_release()
+    except updates.UpdateError as e:
+        print(f"Couldn't check for updates: {e}")
+        return 1
+    if not updates.is_newer(latest["version"], current):
+        print(f"Up to date (the latest release is {latest['tag']}).")
+        return 0
+    print(f"Shikari {latest['version']} is available: {latest['url']}")
+    if "--check" in argv:
+        print("Install it with: shikari update")
+        return 0
+    script = updates.install_script(SEED)
+    if not script:
+        print("This copy of Shikari has no install script: download the installer from the release page.")
+        return 1
+    return updates.run_installer(script, latest["tag"])
+
+
 def main():
+    if sys.argv[1:2] == ["update"]:
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+        return cli_update(sys.argv[2:])
     # Before anything imports shikari.paths, which reads SHIKARI_HOME once
     home = Path(os.environ.get("SHIKARI_HOME") or default_home()).expanduser()
     home.mkdir(parents=True, exist_ok=True)

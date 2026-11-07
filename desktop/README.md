@@ -42,6 +42,10 @@ On macOS the app goes to /Applications, or ~/Applications for an account that is
 
 On Windows on ARM64, `install.ps1` also downloads Microsoft's .NET Desktop Runtime (8 or later, about 55 MB) for the current user, using Microsoft's `dotnet-install.ps1` once its signature checks out, unless a Desktop Runtime is already installed; `-NoDotnet` skips it. The installer doesn't carry it. The ARM64 app's native window needs it: on .NET Framework, pythonnet's loader has no ARM64 build. Without it, or if that window fails, Shikari opens in an Edge app window instead, with no tabs or address bar and its own Edge profile. That window has no Change Server menu; the chooser shows whenever no server is saved or the saved one doesn't answer. `SHIKARI_WINDOW=edge` or `SHIKARI_WINDOW=webview` picks one.
 
+### Updates
+
+The app checks GitHub for a newer release once a day, in the background, and says so in a small notice: **Update** downloads the installer, checks it against `SHA256SUMS`, closes Shikari, installs it and reopens it (macOS and Windows; on Linux the notice gives the command, since apt needs a password). **Later** hides it until the next launch, **Skip this version** until a newer one. **Help > Check for Updates** asks now, and has the switch that turns the daily check off (or set `SHIKARI_UPDATE_CHECK=0`). The check sends GitHub nothing but the request; while the repository is private it needs `GH_TOKEN` or a logged-in `gh`, and without one it stays quiet. From a terminal, the installed app's `shikari update` (the `.deb`'s command, or `Shikari.app/Contents/MacOS/Shikari update`) does the same, and `shikari update --check` only looks. The app carries the install scripts for this (`seed/install.sh`, `seed/install.ps1`).
+
 The first launch asks how to use it:
 
 - **Connect to your organisation's Shikari**: the app becomes a window onto the central server, with that server's users, library, detections and mappings. Nothing is stored or run locally apart from the login session, and upgrading the server upgrades everyone.
