@@ -166,8 +166,13 @@ def single_instance(directory):
 
 def _set_dock_icon_now():
     """The actual AppKit call. Must run on the main thread."""
-    from AppKit import NSApplication, NSImage
+    from AppKit import NSApplication, NSBundle, NSImage
     icns = ICONS / "shikari.icns"
+    if not icns.exists():
+        # The installed app has no desktop/icons: Briefcase put the same icon in the bundle. Set at
+        # runtime it shows as drawn, a hexagon; the bundle icon alone gets macOS 26's grey square
+        bundled = NSBundle.mainBundle().pathForResource_ofType_("shikari", "icns")
+        icns = Path(bundled) if bundled else icns
     if icns.exists():
         # Eager load, not initByReferencingFile_: keep the bitmap in memory so a Dock redraw
         # never re-reads the file from OneDrive (that read came back blank → white tile).

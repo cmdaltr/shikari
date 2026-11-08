@@ -562,6 +562,8 @@ class App:
         # Every page load (Shikari's or a server's) brings the notice back until it's dealt with
         self.window.events.loaded += self.show_update_notice
         self.window.events.loaded += self.apply_zoom
+        # A page load resets the Dock tile on macOS: put Shikari's icon back each time
+        self.window.events.loaded += desktop.set_dock_icon
         desktop.brand_process()
         try:
             webview.start(self.boot, private_mode=False, storage_path=str(self.home / "webview"), menu=menu)
