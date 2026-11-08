@@ -36,6 +36,8 @@ The "direct integration" is that last column end to end: you run one operation, 
 
 ## Running the capture on the Windows host
 
+Prepare the Windows host's logging once, elevated: `powershell -ExecutionPolicy Bypass -File scripts\telemetry\prepare-windows.ps1`. It installs Sysmon with a log-everything lab config and turns on process-creation auditing (4688) with command lines and PowerShell script block logging. Without it a capture holds only Windows' defaults: no Sysmon and no 4688.
+
 Point Shikari at your CALDERA server first — **Profile → API Keys → Emulation Tools** (server URL + red API key, encrypted per user), or the `caldera:` block in `bespoke/config.yaml`, or the `CALDERA_URL` / `CALDERA_API_KEY` environment variables (which override both). The Windows sandcat agent must be checked in to a disposable agent group.
 
 > ⚠ A live run detonates a real implant and beacons over C2. Run it only against a throwaway Windows VM, and treat it as a sandboxed task.

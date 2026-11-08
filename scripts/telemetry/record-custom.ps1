@@ -18,8 +18,8 @@ inside sbx. It refuses to run unless the machine is a designated lab host: set S
 create ~/.shikari-lab-host), or pass -IAmADisposableLabHost. Never designate a host that matters.
 
 PowerShell 7, elevated (an administrator prompt, or sudo pwsh), same logging prerequisites as
-record-atomics.ps1 (Sysmon/auditing/PowerShell logging on Windows, auditd on Linux, eslogger + Full Disk
-Access on macOS). Captured sources:
+record-atomics.ps1 (on Windows, run prepare-windows.ps1 once for Sysmon, 4688 and PowerShell logging;
+auditd on Linux, eslogger + Full Disk Access on macOS). Captured sources:
   Windows  events.xml      Security, System, PowerShell, Sysmon (if installed), Task Scheduler, WMI, Defender, BITS
   Linux    audit.log       auditd, by each record's epoch
            journal.log     the systemd journal, syslog format

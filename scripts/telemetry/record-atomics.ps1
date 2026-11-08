@@ -12,6 +12,8 @@ Invoke-AtomicRedTeam and the atomics installed:
     IEX (IWR 'https://raw.githubusercontent.com/redcanaryco/invoke-atomicredteam/master/install-atomicredteam.ps1' -UseBasicParsing)
     Install-AtomicRedTeam -getAtomics
 
+On Windows, run prepare-windows.ps1 once first: Sysmon, 4688 with command lines, PowerShell logging.
+
 For each test it records, between the test's start and end:
   Windows  events.xml      Security, System, PowerShell, Sysmon (if installed), Task Scheduler, WMI, Defender, BITS
   Linux    audit.log       auditd (/var/log/audit; auditd with ATT&CK rules, e.g. Neo23x0's)
