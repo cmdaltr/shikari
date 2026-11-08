@@ -97,7 +97,8 @@ def test_splunk_pack(gdir):
         app = {m.name: tar.extractfile(m).read().decode() for m in tar.getmembers()}
     assert set(app) == {f"shikari_detections/{p}" for p in
                         ("default/app.conf", "default/savedsearches.conf", "default/indexes.conf",
-                         "metadata/default.meta")}
+                         "default/props.conf", "metadata/default.meta")}
+    assert app["shikari_detections/default/props.conf"].count("[source::shikari-lab]") == 1
     saved = app["shikari_detections/default/savedsearches.conf"]
     assert saved.startswith("[Shikari - T1016 - FindDomainSpl - finddoma]\n")
     search = next(line for line in saved.splitlines() if line.startswith("search = "))

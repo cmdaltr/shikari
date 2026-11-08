@@ -24,6 +24,8 @@ import zipfile
 from datetime import datetime, timezone
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
+from shikari.export import siem_telemetry
+from shikari.export.siem_telemetry import SPLUNK_PROPS
 from shikari.visualization.navigator import _attack_id, _get, technique_index
 
 SIEMS = {"elastic": {"label": "Elastic", "connector": "Elastic"},
@@ -214,6 +216,7 @@ def splunk_app(docs: List[Dict], version: str) -> bytes:
         "default/indexes.conf": _conf((i, {"homePath": f"$SPLUNK_DB/{i}/db",
                                            "coldPath": f"$SPLUNK_DB/{i}/colddb",
                                            "thawedPath": f"$SPLUNK_DB/{i}/thaweddb"}) for i in indexes),
+        "default/props.conf": SPLUNK_PROPS,
         "metadata/default.meta": "[]\naccess = read : [ * ], write : [ admin ]\nexport = system\n",
     }
     buf = io.BytesIO()
@@ -318,12 +321,14 @@ def select(siem: str, files: Iterable[str], generate_dir: str,
 
 
 def build(siem: str, group: Optional[str], generate_dir: str, list_files: Callable[[str, str], List[str]],
-          bundle=None, exclude_unavailable: bool = True, wazuh_ids: Optional[str] = None) -> Tuple[bytes, Dict]:
+          bundle=None, exclude_unavailable: bool = True, wazuh_ids: Optional[str] = None,
+          telemetry_run: Optional[str] = None, rebase: bool = True) -> Tuple[bytes, Dict]:
     """The pack as zip bytes, and its manifest.
 
     group None exports every detection in generate_dir (All); otherwise list_files(group, generate_dir)
     gives the group's files (inject group_yaml_files). wazuh_ids is the rule-ID map file (default
-    data/wazuh_rule_ids.json)."""
+    data/wazuh_rule_ids.json). telemetry_run, a lab run's folder, adds its events under telemetry/,
+    shifted to end now unless rebase is False."""
     if siem not in SIEMS:
         raise ValueError(f"No export pack for {siem}: choose {', '.join(SIEMS)}")
     if group:
@@ -356,6 +361,9 @@ def build(siem: str, group: Optional[str], generate_dir: str, list_files: Callab
         out[f"{SPLUNK_APP}.tgz"] = splunk_app(docs, version)
         indexes = splunk_indexes(d["query"] for d in docs)
 
+    if telemetry_run:
+        extra["telemetry"] = _telemetry(siem, telemetry_run, rebase, docs, out)
+
     manifest = {
         "siem": siem,
         "group": group or "All",
@@ -369,9 +377,11 @@ def build(siem: str, group: Optional[str], generate_dir: str, list_files: Callab
         **extra,
     }
     scope = f" for {group}" if group else ""
-    out["README.txt"] = README[siem].format(count=extra.get("rules", len(docs)), scope=scope,
-                                            techniques=len(manifest["techniques"]),
-                                            indexes=", ".join(indexes) or "none").encode("utf-8")
+    readme = README[siem].format(count=extra.get("rules", len(docs)), scope=scope,
+                                 techniques=len(manifest["techniques"]), indexes=", ".join(indexes) or "none")
+    if telemetry_run:
+        readme += TELEMETRY_README[siem].format(**extra["telemetry"])
+    out["README.txt"] = readme.encode("utf-8")
     out["manifest.json"] = (json.dumps(manifest, indent=2) + "\n").encode("utf-8")
 
     buf = io.BytesIO()
@@ -379,6 +389,89 @@ def build(siem: str, group: Optional[str], generate_dir: str, list_files: Callab
         for name, data in out.items():
             zf.writestr(name, data)
     return buf.getvalue(), manifest
+
+
+TELEMETRY_README = {
+    "elastic": """
+Lab telemetry: {events} events from {run}{shifted}
+  telemetry/events-*.ndjson   Elastic Defend's field names, into logs-endpoint.events.*-shikari
+  Load:  ES_URL=https://localhost:9200 ES_PASSWORD=… sh telemetry/load.sh
+  Then enable the rules (or open Discover on logs-endpoint.events.*) and look for the run's alerts.
+""",
+    "splunk": """
+Lab telemetry: {events} events from {run}{shifted}, written to {targets}
+  telemetry/<index>-*.json    HEC events carrying the fields these searches use, source={source}
+  Install the app first (it creates the indexes and parses these events as JSON), then make an HEC
+  token allowed to write to those indexes, and load:
+  SPLUNK_HEC_URL=https://localhost:8088 SPLUNK_HEC_TOKEN=… sh telemetry/load.sh
+""",
+    "wazuh": """
+Lab telemetry: {events} Windows events from {run}{shifted}
+  telemetry/events.json       one event per line, as Wazuh's eventchannel decoder holds it (win.system,
+                              win.eventdata). Check a rule with /var/ossec/bin/wazuh-logtest.
+""",
+}
+
+LOAD_SH = {
+    "elastic": """#!/bin/sh
+# Loads the pack's lab events into Elasticsearch: ES_URL (default https://localhost:9200),
+# ES_USER (default elastic) and ES_PASSWORD. -k accepts a local self-signed certificate.
+set -e
+cd "$(dirname "$0")"
+for f in events-*.ndjson; do
+  if curl -sS -k -u "${ES_USER:-elastic}:${ES_PASSWORD:?set ES_PASSWORD}" -H 'Content-Type: application/x-ndjson' \
+       -X POST "${ES_URL:-https://localhost:9200}/_bulk?refresh=wait_for" --data-binary @"$f" | grep -q '"errors":false'; then
+    echo "OK     $f"
+  else
+    echo "ERRORS $f: some events weren't indexed"
+  fi
+done
+""",
+    "splunk": """#!/bin/sh
+# Sends the pack's lab events to Splunk's HTTP Event Collector: SPLUNK_HEC_URL (default
+# https://localhost:8088) and SPLUNK_HEC_TOKEN, a token allowed to write to the indexes named in
+# the file names. -k accepts a local self-signed certificate.
+set -e
+cd "$(dirname "$0")"
+for f in *.json; do
+  printf '%s  ' "$f"
+  curl -sS -k "${SPLUNK_HEC_URL:-https://localhost:8088}/services/collector/event" \
+       -H "Authorization: Splunk ${SPLUNK_HEC_TOKEN:?set SPLUNK_HEC_TOKEN}" --data-binary @"$f"
+  echo
+done
+""",
+}
+
+
+def _telemetry(siem: str, run_dir: str, rebase: bool, docs: List[Dict], out: Dict[str, bytes]) -> Dict:
+    """Adds a lab run's events to the pack's files; returns what the manifest records."""
+    manifest, events = siem_telemetry.read_run(run_dir)
+    run = manifest.get("run") or os.path.basename(run_dir.rstrip("/\\"))
+    shift = siem_telemetry.rebase(events) if rebase else None
+    info = {"run": run, "events": 0, "rebased": bool(rebase),
+            "shifted": f", shifted {shift.total_seconds() / 3600:+.1f} h to end now" if shift else "",
+            "source": siem_telemetry.SPLUNK_SOURCE, "targets": "none"}
+    if siem == "elastic":
+        for n, body in enumerate(siem_telemetry.elastic_bulk(events, run), 1):
+            out[f"telemetry/events-{n:03d}.ndjson"] = body.encode("utf-8")
+        out["telemetry/load.sh"] = LOAD_SH["elastic"].encode("utf-8")
+        info["events"] = len(events)
+    elif siem == "splunk":
+        by_index = siem_telemetry.splunk_events(events, siem_telemetry.learn_splunk_fields(docs), run)
+        for index, evs in sorted(by_index.items()):
+            for n in range(0, len(evs), siem_telemetry.CHUNK):
+                chunk = evs[n:n + siem_telemetry.CHUNK]
+                out[f"telemetry/{index}-{n // siem_telemetry.CHUNK + 1:03d}.json"] = "".join(
+                    json.dumps(e, ensure_ascii=False) + "\n" for e in chunk).encode("utf-8")
+        out["telemetry/load.sh"] = LOAD_SH["splunk"].encode("utf-8")
+        info["events"] = len({id(e) for e in events})
+        info["targets"] = ", ".join(f"{i} ({len(v)})" for i, v in sorted(by_index.items())) or "none"
+        info["indexes"] = {i: len(v) for i, v in by_index.items()}
+    else:
+        lines = [json.dumps(w, ensure_ascii=False) for w in map(siem_telemetry.to_wazuh, events) if w]
+        out["telemetry/events.json"] = ("\n".join(lines) + "\n" if lines else "").encode("utf-8")
+        info["events"] = len(lines)
+    return info
 
 
 def filename(siem: str, group: Optional[str]) -> str:
