@@ -23,12 +23,22 @@ SOURCE = ROOT / "static" / "images" / "shikari" / "shikari-bateleur-hexagon.png"
 OUT = ROOT / "desktop" / "icons"
 
 SIZE = 1024
+# The hexagon drawn this much bigger than in the source art, by trimming the transparent margin
+# around it: macOS 26 sits a non-square icon in a grey rounded square, and at 1.0 it looked small there
+SCALE = 1.05
 
 
 def master():
     """The Bateleur app icon, finished art with its corners already transparent, exactly as macOS
-    wants. Used as-is, only normalised to a square SIZE canvas."""
+    wants. Enlarged by SCALE about its centre, then normalised to a square SIZE canvas."""
     art = Image.open(SOURCE).convert("RGBA")
+    side = art.width / SCALE
+    left, top = (art.width - side) / 2, (art.height - side) / 2
+    bbox = art.getchannel("A").getbbox()
+    box = (round(left), round(top), round(left + side), round(top + side))
+    if bbox[0] < box[0] or bbox[1] < box[1] or bbox[2] > box[2] or bbox[3] > box[3]:
+        raise SystemExit(f"SCALE {SCALE} would crop the hexagon: art {bbox}, crop {box}")
+    art = art.crop(box)
     if art.size != (SIZE, SIZE):
         art = art.resize((SIZE, SIZE), Image.LANCZOS)
     return art

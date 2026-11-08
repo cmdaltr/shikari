@@ -249,6 +249,23 @@ if (u) u.onclick = function () { u.disabled = true; u.textContent = 'Starting\u2
 </script></body></html>"""
 
 
+# The app opens a little zoomed out: Shikari's pages are dense, and 90% fits more on a laptop screen
+ZOOM_DEFAULT, ZOOM_MIN, ZOOM_MAX = 0.9, 0.5, 2.0
+
+# Cmd (macOS) or Ctrl with + - 0, on every page the window loads. Added once per page.
+ZOOM_KEYS = """if(!window.__shikariZoom){window.__shikariZoom=1;document.addEventListener('keydown',function(e){
+if(!(e.metaKey||e.ctrlKey)||e.altKey)return;var s={'=':1,'+':1,'-':-1,'_':-1,'0':0}[e.key];
+if(s===undefined||!window.pywebview||!pywebview.api||!pywebview.api.zoom)return;e.preventDefault();pywebview.api.zoom(s)},true)}"""
+
+
+def load_zoom(home):
+    try:
+        zoom = float(json.loads((home / "zoom.json").read_text())["zoom"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return ZOOM_DEFAULT
+    return min(ZOOM_MAX, max(ZOOM_MIN, zoom))
+
+
 class ChooserApi:
     """What the chooser page can call (pywebview.api.*). pywebview hands this to every page the
     window loads, the organisation's server's included, so it does nothing unless the chooser is
@@ -287,6 +304,10 @@ class ChooserApi:
         from shikari import updates
         updates.set_checks(self._app.home, bool(enabled))
 
+    # Cmd/Ctrl + - 0 (ZOOM_KEYS); harmless from any page
+    def zoom(self, step):
+        self._app.zoom_by(int(step))
+
 
 class App:
     """The window: the chooser, an organisation's server, or Shikari on this computer."""
@@ -301,6 +322,7 @@ class App:
         self.choice = client.resolve(home)
         self.update = None          # a newer release, once the daily check finds one
         self.update_hidden = False  # Later: not again this session
+        self.zoom = load_zoom(home)
 
     # --- from the chooser page, through ChooserApi ---
     def connect(self, url):
@@ -400,6 +422,22 @@ class App:
         try:
             self.window.evaluate_js(UPDATE_NOTICE.replace("__DATA__", json.dumps(data)))
         except Exception:  # noqa: BLE001  (a page mid-load; the next load shows it)
+            pass
+
+    def zoom_by(self, step):
+        """View > Zoom In / Zoom Out (step 1 / -1) or Reset Zoom (0); remembered for next time."""
+        self.zoom = ZOOM_DEFAULT if step == 0 else min(ZOOM_MAX, max(ZOOM_MIN, round(self.zoom + step * 0.1, 2)))
+        try:
+            (self.home / "zoom.json").write_text(json.dumps({"zoom": self.zoom}))
+        except OSError:
+            pass
+        self.apply_zoom()
+
+    def apply_zoom(self, *_):
+        # CSS zoom, which WebKit, WebView2 and WebKitGTK all honour; the native page zoom differs per platform
+        try:
+            self.window.evaluate_js(f"document.documentElement.style.zoom={self.zoom};" + ZOOM_KEYS)
+        except Exception:  # noqa: BLE001  (a page mid-load; its loaded event applies it)
             pass
 
     def check_for_updates(self):
@@ -515,11 +553,15 @@ class App:
         managed = bool(self.choice and self.choice.managed)
         menu = [] if managed else [Menu(NAME, [MenuAction("Change Server\u2026", lambda: self.show_chooser())])]
         # macOS puts it in the menu bar; Windows and Linux in the window's own menu bar
+        menu.append(Menu("View", [MenuAction("Zoom In", lambda: self.zoom_by(1)),
+                                  MenuAction("Zoom Out", lambda: self.zoom_by(-1)),
+                                  MenuAction("Reset Zoom", lambda: self.zoom_by(0))]))
         menu.append(Menu("Help", [MenuAction(f"About {NAME}", self.show_about),
                                   MenuAction("Check for Updates\u2026", self.check_for_updates),
                                   MenuAction("Licence", self.show_licence)]))
         # Every page load (Shikari's or a server's) brings the notice back until it's dealt with
         self.window.events.loaded += self.show_update_notice
+        self.window.events.loaded += self.apply_zoom
         desktop.brand_process()
         try:
             webview.start(self.boot, private_mode=False, storage_path=str(self.home / "webview"), menu=menu)
