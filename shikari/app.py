@@ -8846,6 +8846,15 @@ def _runs_list():
     return [name for _m, name in sorted(entries, reverse=True)]
 
 
+def _lab_runs():
+    from shikari.cli.export import lab_runs
+
+    try:
+        return lab_runs()
+    except OSError:
+        return {}
+
+
 @app.get("/detections/code", response_class=HTMLResponse)
 def detections_code_page(request: Request, shikari_session: Optional[str] = Cookie(None)):
     """Export detections to a git repo (one commit per run) and diff two commits."""
@@ -8861,6 +8870,7 @@ def detections_code_page(request: Request, shikari_session: Optional[str] = Cook
     commits = detections_git.list_commits(repo, limit=50)
     return templates.TemplateResponse("detections_code.html", {
         "request": request, "user": user, "runs": _runs_list(), "commits": commits,
+        "lab_runs": list(_lab_runs()),
         "repo_path": repo, "remote_url": cfg["remote_url"], "push_enabled": cfg["push_enabled"],
         "repo_configured": repo_config.is_configured(), "is_admin": user.role.value == "admin"})
 
@@ -8944,6 +8954,47 @@ def detections_code_push(request: Request, group: str = Form(...), siem: str = F
     if excluded:
         plan["excluded_unavailable"] = excluded
     return JSONResponse(plan, status_code=200 if plan.get("success") else 400)
+
+
+@app.get("/api/detections/code/siem-pack")
+def detections_code_siem_pack(request: Request, siem: str = Query(...), group: str = Query(""),
+                              telemetry: str = Query(""), rebase: bool = Query(True),
+                              shikari_session: Optional[str] = Cookie(None)):
+    """A SIEM export pack (#41): a zip of a run's detections (or all of them) in Elastic's, Splunk's or
+    Wazuh's import format, optionally with a lab run's events. Nothing is sent anywhere."""
+    from fastapi.responses import Response
+
+    from shikari.cli.export import lab_runs
+    from shikari.export import siem_pack
+
+    auth = require_auth(request, shikari_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in to export"}, status_code=401)
+    _user, db = auth
+    db.close()
+    if siem not in siem_pack.SIEMS:
+        return JSONResponse({"success": False, "error": f"Choose {', '.join(siem_pack.SIEMS)}"}, status_code=400)
+    safe = sanitize_group_name(group) if group else None
+    if safe and not group_yaml_files(safe, GENERATE_DIR):
+        return JSONResponse({"success": False, "error": f"No detections for {group}. Hunt it first."}, status_code=404)
+    run_dir = None
+    if telemetry:
+        run_dir = lab_runs().get(telemetry)  # only a recorded run's name, never a path
+        if not run_dir:
+            return JSONResponse({"success": False, "error": f"No lab run called {telemetry}"}, status_code=404)
+    try:
+        data, manifest = siem_pack.build(siem, safe, GENERATE_DIR, group_yaml_files,
+                                         bundle=getattr(app.state, "bundle", None),
+                                         telemetry_run=run_dir, rebase=rebase)
+    except Exception as e:
+        return JSONResponse({"success": False, "error": f"Export failed: {e}"}, status_code=500)
+    summary = {"detections": manifest["detections"], "rules": manifest.get("rules"),
+               "excluded": len(manifest["excluded"]), "indexes": manifest["indexes"],
+               "telemetry": (manifest.get("telemetry") or {}).get("events")}
+    name = siem_pack.filename(siem, safe)
+    return Response(data, media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{name}"',
+                             "X-Shikari-Pack": json.dumps(summary)})
 
 
 @app.get("/api/detections/code/config")

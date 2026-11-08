@@ -50,6 +50,7 @@ data/mitre_procedures.building.csv
 data/mitre_procedures.building.json
 data/*.sqlite
 data/*.sqlite3
+data/wazuh_rule_ids.json
 # Runtime caches (IOC lookups etc.)
 data/cache/
 

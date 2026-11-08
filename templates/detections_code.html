@@ -13,7 +13,7 @@
   <div class="page-header">
     <h1>Detections as code</h1>
     <p>Commit a run's detections to a git repository, then diff two commits to see what a Regenerate
-      changed. One tree per group. No AI involved.</p>
+      changed, or export them as a pack for your own SIEM. One tree per group. No AI involved.</p>
   </div>
 
   <!-- Configured repository -->
@@ -69,6 +69,38 @@
     {% else %}
     <p class="ms-note">No commits yet. Export a run above and it will appear here.</p>
     {% endif %}
+  </section>
+
+  <!-- Export pack -->
+  <section class="ui-card ms-card">
+    <h2>Export to a SIEM</h2>
+    <p class="ms-note">A zip to import into your own Elastic, Splunk or Wazuh by hand: the detections in
+      that SIEM's own format, created disabled, with a README of the import steps. Add a lab run and its
+      events come too, shaped so the detections can fire on them. Nothing is sent anywhere.</p>
+    <div class="dc-actions">
+      <select id="dc-pack-group" class="dropdown-styled" aria-label="Run to export">
+        <option value="">All detections</option>
+        {% for g in runs %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+      </select>
+      <span class="dc-siem-pick">
+        <img id="dc-pack-siem-logo" src="/static/images/siem/elastic.png" alt="">
+        <select id="dc-pack-siem" class="dropdown-styled" aria-label="Target SIEM">
+          <option value="elastic">Elastic</option>
+          <option value="splunk">Splunk</option>
+          <option value="wazuh">Wazuh</option>
+        </select>
+      </span>
+      <button type="button" class="btn-primary" id="dc-pack">Download pack</button>
+      <select id="dc-pack-telemetry" class="dropdown-styled" aria-label="Lab run to include">
+        <option value="">No lab telemetry</option>
+        {% for r in lab_runs %}<option value="{{ r }}">Lab run: {{ r }}</option>{% endfor %}
+      </select>
+      <label class="dc-check"><input type="checkbox" id="dc-pack-rebase" checked>
+        Shift the events to end now</label>
+      <span class="ms-state" id="dc-pack-state" aria-live="polite"></span>
+    </div>
+    <div id="dc-pack-result" class="dc-result" hidden></div>
+    {% if not lab_runs %}<p class="ms-note">No lab runs recorded yet: see <code>scripts/telemetry</code>.</p>{% endif %}
   </section>
 
   <!-- Push (dry run) -->
@@ -147,6 +179,35 @@
     } catch (e) { state.textContent = e.message; }
   });
 
+  const packSiem = $('dc-pack-siem');
+  packSiem.addEventListener('change', () => { $('dc-pack-siem-logo').src = `/static/images/siem/${packSiem.value}.png`; });
+  $('dc-pack').addEventListener('click', async () => {
+    const state = $('dc-pack-state'), out = $('dc-pack-result');
+    const params = new URLSearchParams({ siem: packSiem.value, group: $('dc-pack-group').value,
+      telemetry: $('dc-pack-telemetry').value, rebase: $('dc-pack-rebase').checked });
+    state.textContent = 'Building…'; out.hidden = true;
+    try {
+      const r = await fetch('/api/detections/code/siem-pack?' + params);
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(j.error || ('HTTP ' + r.status));
+      }
+      const blob = await r.blob();
+      const name = (/filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') || '') || [])[1] || 'shikari-pack.zip';
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: name });
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      const s = JSON.parse(r.headers.get('X-Shikari-Pack') || '{}');
+      const what = s.rules != null ? `${s.rules} rules from ${s.detections} detections` : `${s.detections} detections`;
+      out.innerHTML = `<p class="ms-note">Downloaded <code>${esc(name)}</code>: ${what}`
+        + (s.excluded ? `, ${s.excluded} left out (their data source isn't ingested)` : '')
+        + (s.telemetry != null ? `, ${s.telemetry} lab events` : '') + '. The README inside has the import steps.</p>'
+        + (s.telemetry === 0 ? '<p class="ms-note">The run has no events these detections match: '
+          + 'record with Sysmon and 4688 on (<code>scripts/telemetry/prepare-windows.ps1</code>).</p>' : '');
+      state.textContent = ''; out.hidden = false;
+    } catch (e) { state.textContent = e.message; }
+  });
+
   const pushSiem = $('dc-push-siem'), pushSiemLogo = $('dc-push-siem-logo');
   if (pushSiem && pushSiemLogo) pushSiem.addEventListener('change', () => {
     pushSiemLogo.src = `/static/images/siem/${pushSiem.value}.png`;
@@ -184,6 +245,7 @@
   .dc-repo-sep { color: var(--text-secondary); font-weight: 700; }
   .dc-repo-flag { font-size: 0.72em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
     padding: 1px 8px; border-radius: 8px; background: var(--bg-secondary); border: 1px solid var(--border-color); }
+  .dc-check { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--text-secondary); }
   .dc-siem-pick { display: flex; align-items: center; gap: 8px; }
   .dc-siem-pick img { width: 22px; height: 22px; object-fit: contain; flex: 0 0 auto; }
   .dc-siem-pick .dropdown-styled { flex: 1 1 auto; }
