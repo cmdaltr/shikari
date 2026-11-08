@@ -20,13 +20,12 @@ import re
 from typing import Dict, Iterable, List, Optional, Tuple
 from xml.sax.saxutils import escape
 
+from shikari.build.indicator_hygiene import too_generic
+
 FIRST_ID, LAST_ID = 100100, 119999
 LEVEL = {"informational": 3, "low": 5, "medium": 8, "high": 10, "critical": 12}
 MAX_ALTERNATIVES = 40  # per rule; more indicators split over several rules
 MIN_LENGTH = 3  # a shorter substring matches nearly everything
-# A bare extension this common is in nearly every event, so as a rule on its own it only makes noise
-COMMON_EXTENSIONS = {".exe", ".dll", ".sys", ".txt", ".jpg", ".jpeg", ".jpe", ".gif", ".png", ".zip",
-                     ".tmp", ".log", ".dat", ".ini", ".xml", ".json"}
 
 # (event key) -> the built-in rule group it chains from, and the event it must be
 SOURCES = {
@@ -70,7 +69,8 @@ _HASH = re.compile(r"^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$")
 def _clean(kind: str, value) -> Optional[str]:
     """The indicator as a match value, or None when it can't make a sound Wazuh match."""
     v = str(value or "").strip().strip("*")
-    if len(v) < MIN_LENGTH or "<" in v or ">" in v or v.lower() in COMMON_EXTENSIONS:
+    # A rule raises an alert each time it fires: no lone extension, stopword or always-running process
+    if len(v) < MIN_LENGTH or "<" in v or ">" in v or too_generic(v):
         return None
     if kind == "domain":
         v = v.lower().rstrip(".")
