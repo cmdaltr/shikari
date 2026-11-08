@@ -4,7 +4,7 @@ Install Shikari as a team server on Windows Server 2022+ (#29).
 
 .DESCRIPTION
 Lays out data under %ProgramData%\Shikari (SHIKARI_HOME), builds a virtualenv from the checkout, and
-registers a boot-start Scheduled Task that runs uvicorn and restarts on failure — a working "service"
+registers a boot-start Scheduled Task that runs uvicorn and restarts on failure - a working "service"
 using only built-in Windows, no third-party tools. For a true Windows service, see the NSSM note in
 docs/deployment/README.md; the layout here is identical, you just point NSSM at the same wrapper.
 
@@ -92,7 +92,7 @@ foreach ($i in 1..30) {
     catch { Start-Sleep -Seconds 1 }
 }
 if ($ok) { Write-Host "    healthy on 127.0.0.1:$Port" }
-else { Write-Warning "not healthy yet — check Task Scheduler history and $DataDir" }
+else { Write-Warning "not healthy yet - check Task Scheduler history and $DataDir" }
 
 Write-Host @"
 

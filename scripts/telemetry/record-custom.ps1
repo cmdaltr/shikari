@@ -1,23 +1,23 @@
 <#
 .SYNOPSIS
-Records the telemetry of an arbitrary operator-supplied command for Shikari's Emulate page — a novel or
+Records the telemetry of an arbitrary operator-supplied command for Shikari's Emulate page - a novel or
 undocumented technique, a custom procedure variant, something no public corpus or Atomic Red Team covers
 (shikari/telemetry/lab.py, #27).
 
 .DESCRIPTION
 A sibling to record-atomics.ps1. Instead of invoking an Atomic test, it wraps a command you give it,
 captures the identical per-platform telemetry set between the command's start and end, and writes the
-same data/telemetry/lab/<run>/ layout — with a manifest entry marked `custom` that carries your own
+same data/telemetry/lab/<run>/ layout - with a manifest entry marked `custom` that carries your own
 ATT&CK mapping (a technique, a sub-technique, or explicitly novel/unmapped), the command, and notes. The
 recording then grounds generated detection fields exactly as an ART run does, including for behaviours
 with no public procedure example.
 
 DANGER. This EXECUTES WHATEVER YOU PASS IT, which for novel/undocumented behaviour is unvetted and may be
-genuinely malicious. Run it only on a disposable machine you can throw away — a snapshot-and-revert VM, or
+genuinely malicious. Run it only on a disposable machine you can throw away - a snapshot-and-revert VM, or
 inside sbx. It refuses to run unless the machine is a designated lab host: set SHIKARI_LAB_HOST=1 (or
 create ~/.shikari-lab-host), or pass -IAmADisposableLabHost. Never designate a host that matters.
 
-PowerShell 7, elevated (an administrator prompt, or sudo pwsh), same logging prerequisites as
+PowerShell 7 (or Windows PowerShell 5.1 on Windows), elevated (an administrator prompt, or sudo pwsh), same logging prerequisites as
 record-atomics.ps1 (on Windows, run prepare-windows.ps1 once for Sysmon, 4688 and PowerShell logging;
 auditd on Linux, eslogger + Full Disk Access on macOS). Captured sources:
   Windows  events.xml      Security, System, PowerShell, Sysmon (if installed), Task Scheduler, WMI, Defender, BITS
@@ -51,7 +51,11 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
-# ── Lab-host gate (#27): refuse to detonate unvetted code on a machine that isn't opted in ──────────
+# $IsWindows/$IsMacOS/$IsLinux are PowerShell 7 automatic variables; Windows PowerShell 5.1 leaves them
+# undefined, and without this the platform would misdetect as linux. 5.1 only runs on Windows.
+if ($null -eq $IsWindows) { $IsWindows = $true; $IsLinux = $false; $IsMacOS = $false }
+
+# -- Lab-host gate (#27): refuse to detonate unvetted code on a machine that isn't opted in ----------
 $truthy = @('1', 'true', 'yes', 'on')
 $designated = $IAmADisposableLabHost -or
     ($truthy -contains ("$env:SHIKARI_LAB_HOST").ToLower()) -or
@@ -59,7 +63,7 @@ $designated = $IAmADisposableLabHost -or
 if (-not $designated) {
     throw "This machine isn't a designated lab host. record-custom.ps1 executes unvetted code and will " +
           "only run on a disposable machine. Set SHIKARI_LAB_HOST=1, create $HOME/.shikari-lab-host, or " +
-          "pass -IAmADisposableLabHost — on a snapshot-and-revert VM or inside sbx, never a host that matters."
+          "pass -IAmADisposableLabHost - on a snapshot-and-revert VM or inside sbx, never a host that matters."
 }
 if (-not $Command -and -not $ScriptPath) { throw 'Give -Command or -ScriptPath.' }
 if ($Command -and $ScriptPath) { throw 'Give -Command or -ScriptPath, not both.' }
@@ -136,7 +140,7 @@ if ($IsMacOS) {
 
 $start = Get-Date
 # Run the operator's command in a job so it can be time-bounded. It runs with this (elevated) session's
-# privileges — that's the point, and why this only runs on a throwaway machine.
+# privileges - that's the point, and why this only runs on a throwaway machine.
 $job = if ($ScriptPath) {
     Start-Job -ScriptBlock { param($p) & $p } -ArgumentList $ScriptPath
 } else {

@@ -5,7 +5,7 @@ Runs Atomic Red Team tests on this machine and saves each test's logs for Shikar
 
 .DESCRIPTION
 Run it on a disposable test machine, never on one you care about: the tests change the system.
-PowerShell 7 on Windows, Linux or macOS, elevated (an administrator prompt, or sudo pwsh), with
+PowerShell 7 on Windows, Linux or macOS (Windows PowerShell 5.1 also works on Windows), elevated (an administrator prompt, or sudo pwsh), with
 Invoke-AtomicRedTeam and the atomics installed:
 
     Install-Module invoke-atomicredteam -Scope CurrentUser
@@ -36,10 +36,14 @@ param(
     [string]$Out = (Join-Path $PWD 'shikari-lab'),
     [int]$Settle = 20,
     [int]$Timeout = 120,
-    [string]$AtomicsPath = $(if ($IsWindows) { 'C:\AtomicRedTeam\atomics' } else { "$HOME/AtomicRedTeam/atomics" }),
+    [string]$AtomicsPath = $(if ($IsWindows -or $env:OS -eq 'Windows_NT') { 'C:\AtomicRedTeam\atomics' } else { "$HOME/AtomicRedTeam/atomics" }),
     [switch]$NoCleanup
 )
 $ErrorActionPreference = 'Stop'
+
+# $IsWindows/$IsMacOS/$IsLinux are PowerShell 7 automatic variables; Windows PowerShell 5.1 leaves them
+# undefined, and without this the platform would misdetect as linux. 5.1 only runs on Windows.
+if ($null -eq $IsWindows) { $IsWindows = $true; $IsLinux = $false; $IsMacOS = $false }
 Import-Module invoke-atomicredteam
 
 $platform = if ($IsWindows) { 'windows' } elseif ($IsMacOS) { 'macos' } else { 'linux' }

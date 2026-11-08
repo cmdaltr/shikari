@@ -29,8 +29,8 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
-# $IsWindows/$IsMacOS/$IsLinux are PowerShell 7 automatic variables; Windows PowerShell 5.1 — which
-# Lab invokes as `powershell` (shikari.lab.record._pwsh) — leaves them undefined, so without this the
+# $IsWindows/$IsMacOS/$IsLinux are PowerShell 7 automatic variables; Windows PowerShell 5.1 - which
+# Lab invokes as `powershell` (shikari.lab.record._pwsh) - leaves them undefined, so without this the
 # platform would misdetect as linux and nothing would be captured. 5.1 only runs on Windows.
 if ($null -eq $IsWindows) { $IsWindows = $true; $IsLinux = $false; $IsMacOS = $false }
 
