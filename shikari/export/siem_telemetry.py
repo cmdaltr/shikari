@@ -143,7 +143,8 @@ def read_run(run_dir: str) -> Tuple[Dict, List[Dict]]:
     events: List[Dict] = []
     for test in manifest.get("tests") or []:
         folder = os.path.join(run_dir, str(test.get("folder") or ""))
-        technique = str(test.get("technique") or "")
+        # An Atomic or CALDERA step names its technique; a custom recording (record-custom.ps1) maps one
+        technique = str(test.get("technique") or test.get("mapping") or "")
         for name, reader in (("events.xml", _windows), ("es.ndjson", _eslogger)):
             path = os.path.join(folder, name)
             if os.path.isfile(path):
@@ -261,6 +262,10 @@ _KIND_VALUES = {
     "network": lambda e: [e.get("domain"), e.get("dst_host")],
     "port": lambda e: [str(e["dst_port"]) if e.get("dst_port") else None],
 }
+# The events each kind is taken from: every Sysmon event names its process's Image, but only a process
+# creation is a process event; a registry write filling process_name would pass for one
+_KIND_EVENTS = {"cmd": {"process"}, "sw": {"process"}, "reg": {"registry"}, "network": {"dns", "network"},
+                "port": {"network"}}
 _KIND_ALIAS = {"domain": "network", "path": "sw", "file": "sw"}
 _CLOUD_INDEX = re.compile(r"aws|azure|gcp|google|o365|office|m365|okta|entra|cloud|saas|identity|guardduty|wiz", re.I)
 _FIELD_VALUE = re.compile(r"([A-Za-z_][\w.{}]*)\s*(?:IN\s*\(([^)]*)\)|=\s*\"((?:[^\"\\]|\\.)*)\")")
@@ -317,11 +322,19 @@ def learn_splunk_fields(docs: Iterable[Dict]) -> Dict[str, Dict]:
     return {i: e for i, e in learned.items() if e["kinds"] and not _CLOUD_INDEX.search(i)}
 
 
+_PARENT_FIELD = re.compile(r"parent|initiating", re.I)
+
+
 def _splunk_value(field: str, kind: str, ev: Dict) -> Optional[str]:
-    values = [v for v in _KIND_VALUES[kind](ev) if v]
-    if not values:
+    values = _KIND_VALUES[kind](ev)
+    # cmd and sw list the process's value, then its parent's: a field named for the parent
+    # (parent_process_name, InitiatingProcessFileName) takes the parent's
+    if kind in ("cmd", "sw") and _PARENT_FIELD.search(field):
+        value = values[1]
+    else:
+        value = next((v for v in values if v), None)
+    if not value:
         return None
-    value = values[0]
     # A software field named for a path holds the full path; any other (process_name, dproc, process)
     # holds what the searches match exactly: the file name
     if kind == "sw" and not re.search(r"path|image|executable|exe$|binary", field, re.I):
@@ -359,6 +372,8 @@ def splunk_events(events: List[Dict], learned: Dict[str, Dict], run: str) -> Dic
             fields, filled = {}, set()
             # In _KIND_VALUES' order, so a field two kinds were learned for holds the command line
             for kind in [k for k in _KIND_VALUES if k in info["kinds"]]:
+                if ev["kind"] not in _KIND_EVENTS[kind]:
+                    continue
                 for raw in info["kinds"][kind]:
                     value = None if raw in filled else _splunk_value(raw, kind, ev)
                     if value:

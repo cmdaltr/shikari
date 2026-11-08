@@ -45,7 +45,8 @@ def _run(tmp_path):
                              "args": ["curl", "-s", "http://x"]}}, "event_type": 9}
     (run / "T1059.004-2" / "es.ndjson").write_text(json.dumps(es) + "\nnot json\n")
     (run / "manifest.json").write_text(json.dumps({"run": "lab-run", "host": "lab-win", "tests": [
-        {"technique": "T1016", "folder": "T1016-1"}, {"technique": "T1059.004", "folder": "T1059.004-2"}]}))
+        {"technique": "T1016", "folder": "T1016-1"},
+        {"custom": True, "mapping": "T1059.004", "mapping_kind": "sub", "folder": "T1059.004-2"}]}))
     return str(run)
 
 
@@ -58,6 +59,7 @@ def test_read_run_keeps_matchable_events(tmp_path):
     assert (first["cmd"], first["user"], first["pid"], first["technique"]) == ("nbtstat -n", "ben", 4242, "T1016")
     assert (sec["image"], sec["pid"]) == (r"C:\Windows\System32\ipconfig.exe", 16)
     assert (mac["platform"], mac["cmd"], mac["image"]) == ("macos", "curl -s http://x", "/usr/bin/curl")
+    assert mac["technique"] == "T1059.004"  # a custom recording's mapping
 
 
 def test_rebase_keeps_spacing(tmp_path):
@@ -123,6 +125,16 @@ def test_splunk_events(tmp_path):
     assert reg["event"]["cs3"] == r"HKLM\SOFTWARE\Run\evil" and reg["sourcetype"] == "cef:sysmon"
 
 
+def test_parent_fields_take_the_parent(tmp_path):
+    _, events = st.read_run(_run(tmp_path))
+    learned = {"mde": {"kinds": {"sw": {"properties.InitiatingProcessFileName": 1, "properties.FileName": 1},
+                                 "cmd": {"properties.InitiatingProcessCommandLine": 1}},
+                       "sourcetypes": [], "host": ""}}
+    ev = st.splunk_events(events[:1], learned, "r")["mde"][0]["event"]["properties"]
+    assert ev == {"InitiatingProcessFileName": "cmd.exe", "FileName": "nbtstat.exe",
+                  "InitiatingProcessCommandLine": "cmd /c nbtstat -n"}
+
+
 def test_put_nests_dotted_names():
     fields = {}
     st._put(fields, "properties.CommandLine", "x")
@@ -163,9 +175,9 @@ def test_packs_with_telemetry(tmp_path):
 
     files, manifest = _pack(tmp_path / "s", "splunk")
     assert {"telemetry/windows_prod-001.json", "telemetry/os-001.json", "telemetry/load.sh"} <= set(files)
-    # every Windows event with a process the searches name (the registry and DNS events' too); the
-    # Mac's exec stays out of a Windows index, and os takes only what fills its registry field
-    assert manifest["telemetry"]["indexes"] == {"windows_prod": 4, "os": 1}
+    # the two Windows process creations (not the registry and DNS events, though they name a process);
+    # the Mac's exec stays out of a Windows index, and os takes only the registry write
+    assert manifest["telemetry"]["indexes"] == {"windows_prod": 2, "os": 1}
 
     files, manifest = _pack(tmp_path / "w", "wazuh")
     assert manifest["telemetry"]["events"] == 4  # Windows only
