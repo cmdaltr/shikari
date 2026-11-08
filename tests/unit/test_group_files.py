@@ -99,3 +99,9 @@ def test_a_query_refused_on_writing_is_not_the_runs(tmp_path, monkeypatch):
         assert run_files.produced("G-refused") == {"Good_DeviceEvents.yaml"}
     finally:
         run_files.finish("G-refused")
+
+
+def test_a_runs_underscored_name_finds_the_groups_tags(tmp_path):
+    # runs are saved as Scattered_Spider; detections are tagged "Scattered Spider (Group)"
+    _write(tmp_path, "CloudAccounts_GoogleSecOps.yaml", ["Scattered Spider"])
+    assert group_yaml_files("Scattered_Spider", str(tmp_path)) == [str(tmp_path / "CloudAccounts_GoogleSecOps.yaml")]

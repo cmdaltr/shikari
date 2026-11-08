@@ -25,7 +25,10 @@ def group_yaml_files(group_name: str, generate_dir: str) -> List[str]:
     if not os.path.isdir(generate_dir):
         return []
     safe_group = sanitize_group_name(group_name)
-    tags = {f"{group_name} (Group)", f"{safe_group} (Group)"}
+    # A run is saved under its sanitised name (Scattered_Spider) but its detections are tagged with
+    # the group's own (Scattered Spider), so the spaced form is looked for too
+    spaced = safe_group.replace("_", " ")
+    tags = {f"{group_name} (Group)", f"{safe_group} (Group)", f"{spaced} (Group)"}
     bespoke = re.compile(rf"^threat_groups:\n(?:- .*\n)*?- {re.escape(group_name)}$", re.M)
     named = {os.path.basename(p) for p in glob.glob(os.path.join(generate_dir, f"{safe_group}_*.yaml"))}
     compact = re.sub(r'[^A-Za-z0-9]+', '', group_name)
