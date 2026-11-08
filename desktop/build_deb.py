@@ -59,12 +59,18 @@ StartupWMClass=shikari
 """
 
 
-def fetch_python(machine, dest):
+def fetch_python(machine, dest, cache):
+    """Unpack the pinned CPython into dest, from cache when an earlier build downloaded it there."""
     name, sha256, _ = PYTHON[machine]
-    with urllib.request.urlopen(f"{PYTHON_RELEASE}/{name}", timeout=300) as r:
-        body = r.read()
+    cached = cache / name
+    body = cached.read_bytes() if cached.exists() else b""
     if hashlib.sha256(body).hexdigest() != sha256:
-        sys.exit(f"{name} doesn't match its pinned SHA-256: refusing to bundle it")
+        with urllib.request.urlopen(f"{PYTHON_RELEASE}/{name}", timeout=300) as r:
+            body = r.read()
+        if hashlib.sha256(body).hexdigest() != sha256:
+            sys.exit(f"{name} doesn't match its pinned SHA-256: refusing to bundle it")
+        cache.mkdir(parents=True, exist_ok=True)
+        cached.write_bytes(body)
     # The archive's top folder is python/
     with tarfile.open(fileobj=io.BytesIO(body), mode="r:gz") as tar:
         tar.extractall(dest, filter="tar")
@@ -75,6 +81,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--stage", type=Path, required=True, help="the tree desktop/stage.py staged")
     parser.add_argument("--out", type=Path, default=Path("dist"))
+    parser.add_argument("--cache", type=Path, default=Path.home() / ".cache" / "shikari" / "python",
+                        help="where the downloaded CPython is kept between builds")
     args = parser.parse_args()
 
     machine = platform.machine()
@@ -90,7 +98,7 @@ def main():
     shutil.rmtree(root, ignore_errors=True)
     prefix = root / PREFIX
     prefix.mkdir(parents=True)
-    print(f"Bundling {fetch_python(machine, prefix)}")
+    print(f"Bundling {fetch_python(machine, prefix, args.cache)}")
     python = prefix / "python" / "bin" / "python3"
 
     requirements = [*project["dependencies"], *app["linux"]["requires"]]
