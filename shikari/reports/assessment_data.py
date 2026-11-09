@@ -13,6 +13,7 @@ from collections import Counter, OrderedDict
 from datetime import date
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from shikari.reports.tlp import normalise as tlp_label
 from shikari.reports.assessment_charts import BLUE_OUTCOMES, RED_OUTCOMES, rating_for
 from shikari.visualization.flow_view import TACTIC_ORDER, canonical_tactic
 
@@ -71,7 +72,7 @@ def _pct(n: int, d: int) -> int:
 
 def build(assessment: Dict, results: List[Dict], generate_dir: str,
           lab_runs: Iterable[Tuple[str, Dict]] = (), summary: str = "", conclusion: str = "",
-          today: Optional[date] = None) -> Dict:
+          today: Optional[date] = None, tlp: str = "") -> Dict:
     """Everything the report shows. assessment: name, target, operator, run_date, notes.
     results: technique_id, technique_name, tactic, red_outcome, blue_outcome, detection_file,
     notes, and from the test case procedure, group_name, source."""
@@ -141,7 +142,7 @@ def build(assessment: Dict, results: List[Dict], generate_dir: str,
         ai_sections.update({"Executive Summary", "Recommendations", "Appendices"})
     return {
         "ai_any": ai_findings, "ai_gaps": ai_gaps, "ai_sections": ai_sections,
-        "assessment": assessment,
+        "assessment": assessment, "tlp": tlp_label(tlp),
         "report_date": (today or date.today()).strftime("%d %B %Y").lstrip("0"),
         "summary": (summary or assessment.get("notes") or "").strip(),
         "conclusion": (conclusion or "").strip(),

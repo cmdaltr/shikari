@@ -33,11 +33,16 @@
       </div>
     </div>
     <details class="ad-report-text">
-      <summary>Report text (optional)</summary>
+      <summary>Report text and TLP (optional)</summary>
       <p class="ms-note">Your own paragraphs for the report. Everything else in it comes from the outcomes
         recorded below and the detection library, without AI.</p>
       <label>Executive summary<textarea id="ad-summary" class="form-input" rows="4" maxlength="5000"></textarea></label>
       <label>Conclusion<textarea id="ad-conclusion" class="form-input" rows="4" maxlength="5000"></textarea></label>
+      <label>Shared under
+        <select id="ad-tlp" class="form-input">
+          {% for t in ['TLP:CLEAR', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED'] %}
+          <option value="{{ t }}" {{ 'selected' if t == 'TLP:AMBER' }}>{{ t }}</option>{% endfor %}
+        </select></label>
     </details>
 
     {% if results %}
@@ -103,6 +108,7 @@
     const summary = $('ad-summary').value.trim(), conclusion = $('ad-conclusion').value.trim();
     if (summary) q.set('summary', summary);
     if (conclusion) q.set('conclusion', conclusion);
+    q.set('tlp', $('ad-tlp').value);
     ev.preventDefault();
     location.href = `/api/assessments/${aid}/export?${q}`;
   }));
@@ -129,6 +135,7 @@
   .ad-report-text { margin-top: 10px; }
   .ad-report-text summary { cursor: pointer; color: var(--text-secondary); font-size: 0.9em; }
   .ad-report-text label { display: block; margin-top: 8px; font-size: 0.85em; color: var(--text-secondary); }
+  .ad-report-text select { display: block; margin-top: 4px; }
   .ad-report-text textarea { width: 100%; box-sizing: border-box; margin-top: 4px; font: inherit; }
   .ad-saving { opacity: 0.5; }
   .ad-saved { outline: 2px solid rgba(52,168,83,.5); }

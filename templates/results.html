@@ -2384,6 +2384,7 @@ document.getElementById('generate-report-btn').addEventListener('click', async f
   const format = result.format;
   const hypothesis = result.hypothesis;
   const conclusion = result.conclusion;
+  const tlp = result.tlp;
 
   // Disable button and show loading state
   generateBtn.disabled = true;
@@ -2441,6 +2442,7 @@ document.getElementById('generate-report-btn').addEventListener('click', async f
       group_name: groupName,
       hypothesis: hypothesis,
       conclusion: conclusion,
+      tlp: tlp,
       total_detections: {{ total_detections | default(0) }},
       technique_count: {{ technique_count | default(0) }},
       tactic_count: {{ tactic_count | default(0) }},
@@ -2544,6 +2546,12 @@ async function showFormatSelectionModal() {
         <p id="conclusion-counter" style="margin: 6px 0 0 0; font-size: 0.85em; color: #999; text-align: right;">0 / 300 characters</p>
       </div>
 
+      <label style="display: block; margin: 0 0 18px 0; color: #666; font-weight: 600;">Shared under
+        <select id="tlp-input" style="margin-left: 8px; padding: 6px 8px; border: 2px solid #ddd; border-radius: 6px; font: inherit;">
+          <option>TLP:CLEAR</option><option>TLP:GREEN</option><option selected>TLP:AMBER</option>
+          <option>TLP:AMBER+STRICT</option><option>TLP:RED</option>
+        </select></label>
+
       <p style="margin: 0 0 12px 0; color: #666; font-weight: 600;">Select Format:</p>
       <div style="display: flex; flex-direction: column; gap: 12px;">
         <div style="display: flex; gap: 12px;">
@@ -2620,8 +2628,9 @@ async function showFormatSelectionModal() {
         if (!this.disabled) {
           const hypothesis = hypothesisInput.value.trim();
           const conclusion = conclusionInput.value.trim();
+          const tlp = content.querySelector('#tlp-input').value;
           document.body.removeChild(modal);
-          resolve({format: this.dataset.format, hypothesis: hypothesis, conclusion: conclusion});
+          resolve({format: this.dataset.format, hypothesis: hypothesis, conclusion: conclusion, tlp: tlp});
         }
       });
     });

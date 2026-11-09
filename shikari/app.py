@@ -9570,10 +9570,11 @@ def assessment_delete(assessment_id: int, request: Request, shikari_session: Opt
 
 @app.get("/api/assessments/{assessment_id}/export")
 def assessment_export(assessment_id: int, request: Request, fmt: str = Query("csv"),
-                      summary: str = Query(""), conclusion: str = Query(""),
+                      summary: str = Query(""), conclusion: str = Query(""), tlp: str = Query(""),
                       shikari_session: Optional[str] = Cookie(None)):
     """Download a campaign's outcomes as CSV or an ATT&CK Navigator layer, or its report as Word or
-    PDF (#42); summary and conclusion are the operator's own paragraphs for the report."""
+    PDF (#42); summary and conclusion are the operator's own paragraphs for the report, tlp the
+    label it's shared under (TLP 2.0, AMBER unless given)."""
     from shikari.assessments.export import results_to_csv, results_to_navigator
     from shikari.database.models import Assessment, AssessmentResult
 
@@ -9603,8 +9604,11 @@ def assessment_export(assessment_id: int, request: Request, fmt: str = Query("cs
         from shikari.reports import assessment_data, assessment_report
         from shikari.telemetry import lab
 
-        report = assessment_data.build(meta, results, GENERATE_DIR, lab.runs(), summary=summary[:5000],
-                                       conclusion=conclusion[:5000])
+        try:
+            report = assessment_data.build(meta, results, GENERATE_DIR, lab.runs(), summary=summary[:5000],
+                                           conclusion=conclusion[:5000], tlp=tlp)
+        except ValueError as e:
+            return JSONResponse({"error": str(e)}, status_code=400)
         body = assessment_report.render(report, fmt)
         media = ("application/pdf" if fmt == "pdf" else
                  "application/vnd.openxmlformats-officedocument.wordprocessingml.document")

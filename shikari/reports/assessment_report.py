@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from shikari.reports import assessment_charts as charts
 from shikari.reports import assessment_data as data
+from shikari.reports import tlp as tlp_mod
 
 REPORT_KIND = "Adversary Emulation Assessment"
 SECTIONS = ["Executive Summary", "Scope", "Assumptions", "Findings", "Risks", "Recommendations",
@@ -322,6 +323,18 @@ def to_docx(c: Dict, figs: Optional[Dict[str, bytes]] = None) -> bytes:
                 el.set(qn("w:fldCharType"), kind)
                 run._r.append(el)
 
+    def tlp_badge(p, size):
+        """The TLP label as FIRST shows it: its colour on black."""
+        r = p.add_run(f"\u00a0{c['tlp']}\u00a0")
+        r.font.size, r.font.bold = Pt(size), True
+        r.font.color.rgb = RGBColor(*tlp_mod.colour(c["tlp"]))
+        shd = OxmlElement("w:shd")
+        shd.set(qn("w:val"), "clear")
+        shd.set(qn("w:color"), "auto")
+        shd.set(qn("w:fill"), "000000")
+        r._r.get_or_add_rPr().append(shd)
+        return r
+
     def shade(cell, rgb):
         tcpr = cell._tc.get_or_add_tcPr()
         shd = OxmlElement("w:shd")
@@ -482,7 +495,11 @@ def to_docx(c: Dict, figs: Optional[Dict[str, bytes]] = None) -> bytes:
     title_line(c["report_date"], 13, False, charts.SLATE, before=2, after=2)
     if a.get("operator"):
         title_line(f"Operator: {a['operator']}", 12, False, charts.SLATE, after=2)
-    title_line("CONFIDENTIAL", 12, True, charts.RED, before=170, after=2)
+    badge = doc.add_paragraph()
+    badge.paragraph_format.space_before = Pt(150)
+    badge.paragraph_format.space_after = Pt(3)
+    tlp_badge(badge, 12)
+    title_line(tlp_mod.rule(c["tlp"]), 9.5, False, charts.SLATE, after=10)
     title_line("Prepared with Shikari: automated multi-vendor threat hunting and detection", 9.5, False,
                charts.SLATE, italic=True)
 
@@ -517,9 +534,7 @@ def to_docx(c: Dict, figs: Optional[Dict[str, bytes]] = None) -> bytes:
     fp = body.footer.paragraphs[0]
     own_tabs(fp, (Cm(8.5), WD_TAB_ALIGNMENT.CENTER), (Cm(17.0), WD_TAB_ALIGNMENT.RIGHT))
     border(fp, "top", RULE, size=6, space=4)
-    r = fp.add_run("CONFIDENTIAL")
-    r.font.size, r.font.bold = Pt(8.5), True
-    r.font.color.rgb = RGBColor(*charts.RED)
+    tlp_badge(fp, 8.5)
     r = fp.add_run(f"\t{('Prepared for ' + a['target']) if a.get('target') else 'Shikari'}  ·  {c['report_date']}\tPage ")
     r.font.size = Pt(8.5)
     r.font.color.rgb = RGBColor(*charts.SLATE)
@@ -824,6 +839,7 @@ def to_pdf(c: Dict, figs: Optional[Dict[str, bytes]] = None) -> bytes:
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import cm
     from reportlab.lib.utils import ImageReader
+    from reportlab.pdfbase.pdfmetrics import stringWidth
     from reportlab.pdfgen import canvas as rl_canvas
     from reportlab.platypus import (BaseDocTemplate, Frame, Image, KeepTogether, NextPageTemplate, PageBreak,
                                     PageTemplate, Paragraph, Spacer, Table as RLTable, TableStyle)
@@ -873,6 +889,16 @@ def to_pdf(c: Dict, figs: Optional[Dict[str, bytes]] = None) -> bytes:
     mark = ImageReader(io.BytesIO(figs["wordmark"]))
     mw, mh = mark.getSize()
 
+    def pdf_badge(cv, x, y, size):
+        """The TLP label as FIRST shows it: its colour on black."""
+        label = c["tlp"]
+        w = stringWidth(label, bold, size) + size * 0.8
+        cv.setFillColor(colors.black)
+        cv.rect(x, y - size * 0.3, w, size * 1.25, stroke=0, fill=1)
+        cv.setFillColor(col(tlp_mod.colour(label)))
+        cv.setFont(bold, size)
+        cv.drawString(x + size * 0.4, y, label)
+
     def on_title(cv, _doc):
         cv._kind = "title"
         cv.drawImage(bg, 0, 0, W, H)
@@ -903,12 +929,13 @@ def to_pdf(c: Dict, figs: Optional[Dict[str, bytes]] = None) -> bytes:
         if a.get("operator"):
             cv.setFont(regular, 12)
             cv.drawString(x, y, f"Operator: {a['operator']}")
-        cv.setFillColor(RED)
-        cv.setFont(bold, 12)
-        cv.drawString(x, 3.6 * cm, "CONFIDENTIAL")
+        pdf_badge(cv, x, 4.1 * cm, 12)
         cv.setFillColor(SLATE)
+        cv.setFont(regular, 9.5)
+        for i, line in enumerate(_wrap(tlp_mod.rule(c["tlp"]), regular, 9.5, 11.5 * cm)):
+            cv.drawString(x, 3.45 * cm - i * 0.42 * cm, line)
         cv.setFont(italic, 9.5)
-        cv.drawString(x, 3.0 * cm, "Prepared with Shikari: automated multi-vendor threat hunting and detection")
+        cv.drawString(x, 2.2 * cm, "Prepared with Shikari: automated multi-vendor threat hunting and detection")
 
     def on_body(cv, _doc):
         cv._kind = "body"
@@ -924,9 +951,7 @@ def to_pdf(c: Dict, figs: Optional[Dict[str, bytes]] = None) -> bytes:
         cv.setStrokeColor(col(RULE))
         cv.setLineWidth(0.6)
         cv.line(margin, 1.55 * cm, W - margin, 1.55 * cm)
-        cv.setFont(bold, 8.5)
-        cv.setFillColor(RED)
-        cv.drawString(margin, 1.05 * cm, "CONFIDENTIAL")
+        pdf_badge(cv, margin, 1.05 * cm, 8.5)
         cv.setFont(regular, 8.5)
         cv.setFillColor(SLATE)
         centre = (f"Prepared for {a['target']}" if a.get("target") else "Shikari") + f"  ·  {c['report_date']}"

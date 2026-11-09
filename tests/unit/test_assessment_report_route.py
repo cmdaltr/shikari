@@ -66,3 +66,13 @@ def test_another_users_assessment_is_not_found(client):
 def test_csv_still_the_default(client):
     r = client.get("/api/assessments/1/export")
     assert r.status_code == 200 and r.text.startswith("technique_id,")
+
+
+@pytest.mark.unit
+def test_the_report_carries_its_tlp_label_and_refuses_a_made_up_one(client):
+    from docx import Document
+
+    r = client.get("/api/assessments/1/export", params={"fmt": "docx", "tlp": "red"})
+    doc = Document(io.BytesIO(r.content))
+    assert "TLP:RED" in doc.sections[1].footer.paragraphs[0].text
+    assert client.get("/api/assessments/1/export", params={"fmt": "pdf", "tlp": "SECRET"}).status_code == 400
