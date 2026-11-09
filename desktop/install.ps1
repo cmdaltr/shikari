@@ -6,6 +6,9 @@ Install or upgrade the Shikari desktop app on Windows from a GitHub release (des
     powershell -ExecutionPolicy Bypass -File install.ps1 -File Shikari.msi   an installer already downloaded
     powershell -ExecutionPolicy Bypass -File install.ps1 -NoDotnet         on ARM64, skip the .NET download
     powershell -ExecutionPolicy Bypass -File install.ps1 -Launch           open Shikari when it's installed
+    powershell -ExecutionPolicy Bypass -File install.ps1 -Clean            a clean install: once the new installer is
+                                                                           downloaded and checked, remove the current app and
+                                                                           its data folder (uninstall.ps1 -Yes) first
 
 The repository is private: set GH_TOKEN (or GITHUB_TOKEN) to a token that can read it, or be logged
 in to the gh CLI. The installer is checked against the release's SHA256SUMS before use. It installs
@@ -20,7 +23,8 @@ param(
     [string]$Version = "latest",
     [string]$File,
     [switch]$NoDotnet,
-    [switch]$Launch
+    [switch]$Launch,
+    [switch]$Clean
 )
 $ErrorActionPreference = "Stop"
 # Windows PowerShell's progress bar slows downloads by an order of magnitude
@@ -110,13 +114,23 @@ function Install-DesktopRuntime($dir) {
 
 $tmp = Join-Path ([IO.Path]::GetTempPath()) ("shikari-" + [Guid]::NewGuid())
 New-Item -ItemType Directory $tmp | Out-Null
+# -Clean runs the uninstaller beside this script (the repository's desktop\, or the installed app's
+# seed\). Copied out first: it deletes the app this script may be running from
+if ($Clean) {
+    $uninstaller = Join-Path $PSScriptRoot "uninstall.ps1"
+    if (-not (Test-Path $uninstaller)) {
+        Remove-Item -Recurse -Force $tmp
+        throw "-Clean needs uninstall.ps1 beside install.ps1 (the app's seed folder, or the repository's desktop folder)"
+    }
+    Copy-Item $uninstaller (Join-Path $tmp "uninstall.ps1")
+}
 
 Write-Host ""
 Write-Host "  Shikari: desktop app installer" -ForegroundColor White
 Write-Host "  shi-ka-ri \shi-'kar-e\  a professional big-game hunter or guide" -ForegroundColor DarkGray
 # Find (and download and check) the installer when there's no -File, install it, the ARM64 runtime
 # when it'll be needed, then find what was installed
-$script:steps = $(if ($File) { 2 } else { 5 }) + $(if ($arm -and -not $NoDotnet) { 1 } else { 0 })
+$script:steps = $(if ($File) { 2 } else { 5 }) + $(if ($arm -and -not $NoDotnet) { 1 } else { 0 }) + $(if ($Clean) { 1 } else { 0 })
 
 try {
     if (-not $File) {
@@ -155,6 +169,12 @@ try {
         Done "SHA-256 matches"
     }
     $File = (Resolve-Path $File).Path
+
+    if ($Clean) {
+        Step "Removing the current install and its data folder"
+        & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $tmp "uninstall.ps1") -Yes |
+            Where-Object { $_ -match '^      ' } | ForEach-Object { Write-Host $_ }
+    }
 
     Step "Installing $(Split-Path $File -Leaf)"
     Note "Windows shows its own progress window while it installs"

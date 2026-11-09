@@ -5,6 +5,8 @@
 #   sh install.sh --version v2.1.0   a given release
 #   sh install.sh --file Shikari.dmg  an installer already downloaded (no checksum: you chose the file)
 #   sh install.sh --launch           open Shikari when it's installed
+#   sh install.sh --clean            a clean install: once the new installer is downloaded and checked,
+#                                    remove the current app and its data folder (uninstall.sh --yes) first
 #
 # The repository is private: set GH_TOKEN (or GITHUB_TOKEN) to a token that can read it, or be
 # logged in to the gh CLI. The installer is checked against the release's SHA256SUMS before use.
@@ -14,6 +16,7 @@ REPO="${SHIKARI_REPO:-cmdaltr/shikari}"
 version=latest
 file=
 launch=
+clean=
 started=$(date +%s)
 
 # Numbered steps, so it's clear how far through the install is. Colour only on a terminal.
@@ -31,7 +34,8 @@ while [ $# -gt 0 ]; do
         --version) version="${2:?--version needs a tag}"; shift 2 ;;
         --file) file="${2:?--file needs a path}"; shift 2 ;;
         --launch) launch=1; shift ;;
-        -h|--help) sed -n '2,11p' "$0"; exit 0 ;;
+        --clean) clean=1; shift ;;
+        -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
         *) die "unknown option $1" ;;
     esac
 done
@@ -47,8 +51,16 @@ esac
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-# Find, download and check the installer when there's no --file, install it, done
+# --clean runs the uninstaller beside this script (the repository's desktop/, or the installed app's
+# seed/). Copied out first: it deletes the app this script may be running from
+if [ -n "$clean" ]; then
+    [ -f "$(dirname "$0")/uninstall.sh" ] || die "--clean needs uninstall.sh beside install.sh (the app's seed folder, or the repository's desktop folder)"
+    cp "$(dirname "$0")/uninstall.sh" "$tmp/uninstall.sh"
+fi
+
+# Find, download and check the installer when there's no --file, (clean,) install it, done
 [ -n "$file" ] && steps=1 || steps=4
+[ -n "$clean" ] && steps=$((steps + 1))
 printf '\n  Shikari: desktop app installer\n'
 printf '  %sshi\302\267ka\302\267ri  \\shi-\313\210k\303\244r-\304\223\\  a professional big-game hunter or guide%s\n' "$d" "$o"
 
@@ -108,6 +120,12 @@ if [ -z "$file" ]; then
     file="$tmp/$name"
 fi
 [ -f "$file" ] || die "no such file: $file"
+case "$file" in /*) ;; *) file="$PWD/$file" ;; esac
+
+if [ -n "$clean" ]; then
+    step "Removing the current install and its data folder"
+    sh "$tmp/uninstall.sh" --yes < /dev/null | grep '^      ' || true
+fi
 
 step "Installing $(basename "$file")"
 
@@ -129,7 +147,6 @@ case "$suffix" in
         where="Open it from Launchpad or $dest"
         ;;
     *.deb)
-        case "$file" in /*) ;; *) file="$PWD/$file" ;; esac
         # apt rather than dpkg, so GTK and WebKit come with it
         sudo=""
         if [ "$(id -u)" -ne 0 ]; then
