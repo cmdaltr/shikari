@@ -11497,11 +11497,20 @@ async def save_to_library(request: Request, shikari_session: Optional[str] = Coo
 
         if is_correlation:
             # Save as correlation
-            existing_item = (
-                db.query(LibraryCorrelation)
-                .filter(LibraryCorrelation.user_id == user.id, LibraryCorrelation.title == title)
-                .first()
-            )
+            # Every group's correlation of the same techniques shares a title: only the same correlation
+            # (vendor and the detections it joins) is an update, or one group's save would retag another's
+            existing_item = None
+            for row in (db.query(LibraryCorrelation)
+                        .filter(LibraryCorrelation.user_id == user.id, LibraryCorrelation.title == title)):
+                try:
+                    old = json.loads(row.content)
+                except (TypeError, ValueError):
+                    old = None
+                same = (isinstance(content, dict) and isinstance(old, dict) and content.get("a")
+                        and _correlation_key(old) == _correlation_key(content))
+                if same or not (isinstance(content, dict) and content.get("a")):
+                    existing_item = row
+                    break
 
             is_update = False
             if existing_item:

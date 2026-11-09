@@ -67,3 +67,26 @@ def test_a_group_with_a_space_is_an_attack_group(monkeypatch):
     monkeypatch.setattr(app_module, "check_group_in_mitre", lambda b, g: "Y" if g == "Scattered Spider" else "N")
     assert app_module._is_attack_group("Scattered_Spider")
     assert not app_module._is_attack_group("Report_Something")
+
+
+@pytest.mark.unit
+def test_saving_one_groups_correlation_leaves_anothers_of_the_same_title(db, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    user = db.get(User, 1)
+    monkeypatch.setattr(app_module, "require_auth", lambda request, session: (user, db))
+    monkeypatch.setattr(db, "close", lambda: None)
+    http = TestClient(app_module.app)
+
+    def save(group, a):
+        r = http.post("/api/library/save", json={
+            "title": "Correlation: T1055, T1053", "detection_type": "sole_correlation", "visibility": "private",
+            "platform": "multi", "group": group, "tags": [],
+            "content": {"vendor": "mde", "a": a, "b": ["data/groups/ScheduledTask_kql.yaml"]}})
+        assert r.status_code == 200, r.text
+
+    save("APT29", "data/groups/ProcessInjection_kql.yaml")
+    save("Scattered Spider", "data/groups/ProcessHollowing_kql.yaml")
+    save("APT29", "data/groups/ProcessInjection_kql.yaml")          # the same one again: an update
+    rows = db.query(LibraryCorrelation).filter_by(user_id=1).all()
+    assert sorted(json.loads(r.tags)[0] for r in rows) == ["Group:APT29", "Group:Scattered Spider"]
