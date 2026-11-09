@@ -7915,7 +7915,8 @@ def log_activity(
 
     Args:
         user_id: User ID to log activity for
-        activity_type: Type of activity (generate, correlate, upload, library_save, library_export)
+        activity_type: Type of activity (an ActivityType value: generate, correlate, upload, library_save,
+            library_export, api_token_created, api_token_revoked)
         title: Activity title
         description: Optional activity description
         metadata: Optional metadata dict (will be JSON encoded)

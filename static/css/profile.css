@@ -202,6 +202,14 @@
   stroke: #f57c00;
 }
 
+.timeline-icon.api_token_created, .timeline-icon.api_token_revoked {
+  background: linear-gradient(135deg, #ede7f6 0%, #d1c4e9 100%);
+}
+
+.timeline-icon.api_token_created svg, .timeline-icon.api_token_revoked svg {
+  stroke: #5e35b1;
+}
+
 .timeline-icon.library_export {
   background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%);
 }

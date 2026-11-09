@@ -405,6 +405,8 @@ class ActivityType(str, enum.Enum):
     UPLOAD = "upload"
     LIBRARY_SAVE = "library_save"
     LIBRARY_EXPORT = "library_export"
+    API_TOKEN_CREATED = "api_token_created"
+    API_TOKEN_REVOKED = "api_token_revoked"
 
 
 class ActivityLog(Base):
