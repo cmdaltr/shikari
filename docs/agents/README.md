@@ -129,7 +129,7 @@ Each agent has a turn limit (repair 60, ask 20, triage 25). Hunts that an agent 
 ## MCP: Shikari as tools for any agent
 
 ```bash
-claude mcp add shikari --env SHIKARI_TOKEN=arch_... -- /path/to/shikari/.venv/bin/python -m shikari.mcp_server
+claude mcp add shikari --env SHIKARI_TOKEN=shik_... -- /path/to/shikari/.venv/bin/python -m shikari.mcp_server
 ```
 
 Create the token in Profile → Security → API Tokens. It's shown once, works with MFA, and revoking it signs out whatever uses it; `SHIKARI_EMAIL` and `SHIKARI_PASSWORD` still work for accounts without MFA.

@@ -6,7 +6,7 @@ Sign in with an API token from Profile → Security → API Tokens (works with M
 
 ```bash
 export SHIKARI_URL=http://127.0.0.1:32453
-export SHIKARI_TOKEN=arch_...
+export SHIKARI_TOKEN=shik_...
 ```
 
 ## The console (`shikari console`)
@@ -66,7 +66,7 @@ Every page works through the HTTP API. The full, live reference is at `http://lo
 Gives any MCP client (Claude Code, Claude Desktop, your own agent) Shikari's tools and the six agents' instructions as prompts. Tools that change something are marked so the client asks first. Your AI keys stay on the Shikari server.
 
 ```bash
-claude mcp add shikari --env SHIKARI_TOKEN=arch_... -- shikari mcp
+claude mcp add shikari --env SHIKARI_TOKEN=shik_... -- shikari mcp
 ```
 
 ## Recorded telemetry

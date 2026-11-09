@@ -1,5 +1,5 @@
 """
-Personal API tokens: `Authorization: Bearer arch_...` signs a request in as the token's
+Personal API tokens: `Authorization: Bearer shik_...` signs a request in as the token's
 owner. The app's middleware turns a valid token into an ordinary session cookie for the
 request, so every route accepts tokens without changes.
 
@@ -13,7 +13,8 @@ import threading
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
-PREFIX = "arch_"
+PREFIX = "shik_"
+_LEGACY_PREFIXES = ("arch_",)   # tokens issued before the rename still sign in
 _TOUCH_EVERY = timedelta(minutes=5)
 
 _sessions: Dict[str, str] = {}   # token hash -> session id it maps to
@@ -64,7 +65,7 @@ def session_for(token: str) -> Optional[str]:
     from shikari.database.db import SessionLocal
     from shikari.database.models import ApiToken
 
-    if not token.startswith(PREFIX):
+    if not token.startswith((PREFIX,) + _LEGACY_PREFIXES):
         return None
     digest = _hash(token)
     db = SessionLocal()
