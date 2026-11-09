@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "shared_macros.html" import render_vendor_logo, render_correlation_techniques, render_quality_badges %}
-{% block title %}Shikari - Results{% endblock %}
+{% block title %}Shikari - {{ 'Interim results' if interim else 'Results' }} - {{ group_name.replace('_', ' ') }}{% endblock %}
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
@@ -109,6 +109,12 @@
   to { transform: rotate(360deg); }
 }
 </style>
+<style>
+      .lib-status{margin:4px 0 14px;font-size:0.9em;color:var(--text-secondary);}
+      .lib-status a{margin-left:6px;}
+      .lib-saved{display:inline-block;font-size:0.72em;font-weight:700;border-radius:10px;padding:2px 9px;background:rgba(245,158,11,.16);color:#b45309;white-space:nowrap;}
+      [data-theme="dark"] .lib-saved{color:#fbbf24;}
+</style>
 {% endblock %}
 
 {% block main_class %}page-shell{% endblock %}
@@ -118,7 +124,12 @@
   <div class="results-container" data-cards-collapsed>
     <div class="page-header">
       <h1>{{ group_name.replace('_', ' ') }}</h1>
-      <p>Results: detections, correlations and the attack flow{% if run_view %} for this run{% endif %}</p>
+      {% if interim %}
+      <p><strong>Interim results:</strong> what this run produced. Save what you want to keep to the Library.
+        <a href="/results?group_name={{ group_name|urlencode }}">All results for {{ group_name.replace('_', ' ') }} →</a></p>
+      {% else %}
+      <p><strong>Results:</strong> everything for {{ group_name.replace('_', ' ') }}: briefing, detections, correlations, playbooks and attack flow, across every run.</p>
+      {% endif %}
     </div>
 
     {# Calculate time-related metrics once for use across both Statistics and Metrics sections #}
@@ -132,10 +143,10 @@
     <nav class="run-view" aria-label="Which detections to show">
       <span class="run-view-label">Showing</span>
       <a href="?group_name={{ group_name|urlencode }}&run=latest" class="run-view-opt{% if run_view.active %} is-active{% endif %}"{% if run_view.active %} aria-current="page"{% endif %}>
-        Latest run <span class="run-view-n">{{ run_view.run_count }} files</span>
+        Interim: latest run <span class="run-view-n">{{ run_view.run_count }} files</span>
       </a>
       <a href="?group_name={{ group_name|urlencode }}" class="run-view-opt{% if not run_view.active %} is-active{% endif %}"{% if not run_view.active %} aria-current="page"{% endif %}>
-        All runs <span class="run-view-n">{{ run_view.all_count }} files</span>
+        All results <span class="run-view-n">{{ run_view.all_count }} files</span>
       </a>
       <span class="run-view-when">{% if run_view.completed %}Latest run finished {{ run_view.completed }}.{% endif %}</span>
     </nav>
@@ -536,6 +547,14 @@
       </div>
 
       <div id="detections-section-content" style="transition: all 0.3s ease; overflow: hidden;">
+      {% if detections and user %}
+      {# The Library holds what's been saved; these are what the runs generated #}
+      <p class="lib-status">
+        {% if library_saved_count %}{{ library_saved_count }} of {{ total_detections }} detection{{ 's' if total_detections != 1 }} here {{ 'is' if library_saved_count == 1 else 'are' }} in your Library, marked <span class="lib-saved">In Library</span>.
+        {% else %}None of these detections is in your Library yet: tick what you want and press <strong>Save to Library</strong>.{% endif %}
+        <a href="/library?group={{ library_group|urlencode }}">Open {{ library_group }} in the Library →</a>
+      </p>
+      {% endif %}
       {% if detections %}
         {% for vendor in detections %}
         <div class="vendor-section">
@@ -568,6 +587,8 @@
               <div class="detection-title card-row" style="position: relative;">
                 <div style="display: flex; align-items: center; flex: 1; flex-wrap: wrap; gap: 4px; min-width: 0;">
                   <input type="checkbox" class="detection-checkbox" checked data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}" data-files='{{ detection.files|tojson }}' title="Include in downloads and library saves">
+                  {% set in_lib = (detection.files or [])|select('in', library_saved.get(vendor.name, []))|list|length %}
+                  {% if in_lib %}<span class="lib-saved" title="{{ in_lib }} of {{ (detection.files or [])|length }} file{{ 's' if (detection.files or [])|length != 1 }} already saved to your Library">In Library{% if in_lib < (detection.files or [])|length %} ({{ in_lib }}/{{ (detection.files or [])|length }}){% endif %}</span>{% endif %}
 
                   {# Tactic badge with emoji and color #}
                   {% set tactic = detection.tactic %}
@@ -1131,16 +1152,20 @@
     <!-- Cross-vendor playbooks (#8): a chain's stages re-expressed across SIEMs, with join keys -->
     {% if cross_vendor %}
     <div id="cross-vendor" class="detection-section">
-      <div class="section-header" style="display:flex;align-items:center;gap:12px;">
-        <div class="card-icon correlation" style="width:40px;height:40px;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-        </div>
-        <div>
-          <h2 style="margin:0;">Cross-vendor playbooks</h2>
-          <p style="margin:4px 0 0;color:var(--text-secondary);font-size:0.9em;">A chain whose stages can be followed across SIEMs — run each stage where its telemetry lives and join on the keys. Not one query: different query languages don't splice.</p>
+      <div class="detection-header">
+        <h2 onclick="toggleCrossVendorSection()" style="cursor: pointer; user-select: none;">
+          <div class="card-icon correlation" style="width: 40px; height: 40px; margin-right: 12px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </div>
+          Cross-vendor playbooks
+        </h2>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <span id="cross-vendor-section-toggle" class="expand-btn" style="transition: all 0.3s ease; cursor: pointer;" onclick="toggleCrossVendorSection()">Collapse</span>
         </div>
       </div>
 
+      <div id="cross-vendor-section-content" style="transition: all 0.3s ease; overflow: hidden;">
+      <p class="xv-intro">A chain whose stages can be followed across SIEMs: run each stage where its telemetry lives and join on the keys. Not one query: different query languages don't splice.</p>
       <div class="xv-list">
         {% for pb in cross_vendor %}
         <div class="xv-card">
@@ -1179,8 +1204,10 @@
         </div>
         {% endfor %}
       </div>
+      </div>
     </div>
     <style>
+      .xv-intro{margin:4px 0 0;color:var(--text-secondary);font-size:0.9em;}
       .xv-list{display:flex;flex-direction:column;gap:12px;margin-top:14px;}
       .xv-card{border:1px solid var(--border-color);border-radius:10px;padding:14px 16px;background:var(--bg-secondary);}
       .xv-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;}
@@ -1368,12 +1395,16 @@
           </svg>
           Generate Report
         </button>
-        <button class="btn-action" disabled title="Coming soon: see Build → Emulate for which logs record each technique">
+        {# CALDERA operations (#30): the Lab's planner, with this group or CVE filled in #}
+        {% set emulate_kind = 'cve' if group_name.upper().startswith('CVE-') else ('group' if can_regenerate else '') %}
+        <button class="btn-action" type="button"
+                onclick="location.href='/emulate{% if emulate_kind %}?caldera_{{ emulate_kind }}={{ group_name.replace('_', ' ')|urlencode }}{% endif %}#caldera'"
+                title="Plan a CALDERA operation{% if emulate_kind %} for {{ group_name.replace('_', ' ') }}{% endif %} in Build → Emulate → Lab, then check these detections against what ran">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/>
             <polygon points="10 8 16 12 10 16 10 8"/>
           </svg>
-          Run Emulation <em class="nav-soon">Coming soon</em>
+          Run Emulation
         </button>
         {% if can_regenerate %}
         <button class="btn-action" id="regenerate-btn" type="button"
@@ -2800,6 +2831,15 @@ function toggleDetectionsSection() {
 }
 
 // Toggle Correlations section
+function toggleCrossVendorSection() {
+  const content = document.getElementById('cross-vendor-section-content');
+  const toggleText = document.getElementById('cross-vendor-section-toggle');
+  const isCollapsed = content.style.maxHeight === '0px' || content.style.maxHeight === '';
+  content.style.maxHeight = isCollapsed ? '100000px' : '0px';
+  toggleText.textContent = isCollapsed ? 'Collapse' : 'Expand';
+  localStorage.setItem('crossVendorSectionCollapsed', isCollapsed ? 'false' : 'true');
+}
+
 function toggleCorrelationsSection() {
   const content = document.getElementById('correlations-section-content');
   const toggleText = document.getElementById('correlations-section-toggle');
@@ -2852,6 +2892,14 @@ document.addEventListener('DOMContentLoaded', function() {
     detectionsToggleText.textContent = 'Collapse';
   }
 
+  // Initialize Cross-vendor playbooks state (collapsed unless opened before), like the sections above
+  const crossVendorContent = document.getElementById('cross-vendor-section-content');
+  if (crossVendorContent) {
+    const collapsed = localStorage.getItem('crossVendorSectionCollapsed') !== 'false';
+    crossVendorContent.style.maxHeight = collapsed ? '0px' : '100000px';
+    document.getElementById('cross-vendor-section-toggle').textContent = collapsed ? 'Expand' : 'Collapse';
+  }
+
   // Initialize Correlations section state (collapsed unless opened before)
   const correlationsContent = document.getElementById('correlations-section-content');
   const correlationsToggleText = document.getElementById('correlations-section-toggle');
@@ -2879,7 +2927,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!confirm('Regenerate every detection for ' + group.replace(/_/g, ' ') + '?\n\nQueries edited by hand or by the repair agent are replaced too.')) return;
     btn.disabled = true;
     try {
-      const res = await fetch('/generate', { method: 'POST', body: new URLSearchParams({ group_name: group, regenerate: 'true' }) });
+      const res = await fetch('/generate', { method: 'POST', body: new URLSearchParams({ group_name: group.replace(/_/g, ' '), regenerate: 'true' }) });
       const data = await res.json();
       if (data.redirect_url) {
         // Already confirmed above: skip the leave-page warning

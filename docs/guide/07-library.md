@@ -7,7 +7,7 @@
 | Control | What it does |
 |---|---|
 | Search detections | Matches names, techniques and query text |
-| Groups | Show the detections from particular groups, reports or CVEs |
+| Groups | Show the detections from particular groups, reports or CVEs. With one chosen, **Results →** beside it opens the group's [Results](06-results.md). `/library?group=APT29` opens the Library with it chosen |
 | Vendors | Google SecOps, Defender XDR, Splunk, Elastic |
 | Tactics, Techniques | Narrow to parts of ATT&CK |
 | Active Filters | What's applied; clear any of them here |

@@ -1,8 +1,15 @@
 # Results
 
-Every hunt, report and company-profile run ends on a Results page: its detections, correlations, attack flow and a threat briefing. Later you can open it again from the [Library](07-library.md), [Flows](09-flows.md) or Profile → Timeline.
+Each group, report or CVE has one page in two views:
 
-**Showing: Latest run / All runs** switches between the newest run of this group, report or CVE and every run of it combined.
+| View | When you see it | What it shows |
+|---|---|---|
+| **Interim results** | Where every hunt, report and company-profile run lands | What that run produced, to review and save to the Library. **All results for …** at the top opens the other view |
+| **Results** | From the [Library](07-library.md) (choose a group, then **Results →**), [Flows](09-flows.md), Anatomy, [Campaigns](26-campaigns.md) or Profile → Timeline | Everything the group has across every run: briefing, detections, correlations, playbooks and attack flow |
+
+When a group has had more than one run, **Showing: Interim: latest run / All results** switches between them. The address is `/results?group_name=<group>`; the interim view adds `&run=latest`.
+
+The Library holds what you've saved; this page shows what the runs generated. Detections already in your Library are marked **In Library** (or *In Library (1/3)* when only some of a card's files are), and the top of Detections says how many are saved, with a link to the group in the Library.
 
 ## From top to bottom
 
@@ -165,7 +172,7 @@ Once the run is in your Library, its anatomy is also on [Detections → Anatomy]
 | Download All | A zip of the detections and correlations that are ticked (all of them unless you untick some): `detections/` holds each detection's YAML, `correlations/` each correlation's YAML and the group's index (`<group>.json`), and `attack_flows/` the flow. Files are named for the technique and the table or index (`At_DeviceProcessEvents.yaml`), or the query language where there's one file per SIEM: `UDM`, `KQL`, `SPL` or `ESQL` (`At_UDM.yaml`, `PowerShell_and_At_KQL.yaml`, and a chain's three names: `CloudAccounts_and_ModifyRegistry_and_PowerShell_UDM.yaml`). The Validation checklist must be ticked first |
 | Save to Library | Saves the run's detections and correlations to your [Library](07-library.md), and its attack flow to [Flows](09-flows.md) |
 | Generate Report | A Word, PDF or HTML report of the run |
-| Run Emulation | Coming soon. [Emulate](19-emulate.md) shows which logs record each technique and checks this run's indicators against recorded attacks |
+| Run Emulation | Opens Build → Emulate → Lab with the CALDERA planner filled in for this group or CVE ([CALDERA operations](25-caldera.md)): plan, run on disposable agents, then check these detections against what ran. For a report or technique run it opens the Lab without a target |
 | Regenerate | Runs it again and rewrites every detection, including ones edited by hand or by the repair agent |
 | New Analysis | Back to the Home page |
 

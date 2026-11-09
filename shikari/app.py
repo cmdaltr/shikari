@@ -6359,9 +6359,11 @@ def _latest_run_record(group_name: str):
 
 
 def _is_attack_group(group_name: str) -> bool:
+    # Results pages name a group as its files do ("Scattered_Spider"); ATT&CK names it with spaces
     bundle = getattr(app.state, "bundle", None)
     try:
-        return bool(bundle) and check_group_in_mitre(bundle, group_name) == "Y"
+        return bool(bundle) and any(check_group_in_mitre(bundle, name) == "Y"
+                                    for name in dict.fromkeys((group_name, group_name.replace("_", " "))))
     except Exception:
         return False
 
@@ -6377,6 +6379,40 @@ def _assessment(doc: dict) -> dict:
     except Exception as e:
         print(f"⚠️  Couldn't assess {doc.get('name')}: {e}")
         return {}
+
+
+def library_group_name(group_name: str) -> str:
+    """The group's name in the Library's group filter: its Save to Library tag without the prefix."""
+    from shikari.visualization.flow_layouts import library_tag
+
+    return library_tag(group_name).split(":", 1)[1]
+
+
+def _saved_detection_files(db, user_id: int, group_name: str, detections: list) -> dict:
+    """{vendor: {file, ...}}: the results page's detection files already saved to this user's Library,
+    matched on SIEM, technique and title among the items carrying the group's tag (saved items don't
+    keep their file name)."""
+    from shikari.database.models import LibraryDetection
+    from shikari.visualization.flow_layouts import library_tag
+
+    needle = json.dumps(library_tag(group_name))
+    saved = set()
+    rows = (db.query(LibraryDetection.platform, LibraryDetection.content)
+            .filter(LibraryDetection.user_id == user_id, LibraryDetection.tags.contains(needle, autoescape=True)))
+    for platform, content in rows:
+        try:
+            c = json.loads(content)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(c, dict):
+            saved.add(((platform or "").lower(), str(c.get("technique") or "").upper(), c.get("title") or ""))
+    out = {}
+    for vendor in detections:
+        name = vendor.get("name") or ""
+        for f in vendor.get("all_files") or vendor.get("detections") or []:
+            if (name.lower(), str(f.get("technique") or "").upper(), f.get("title") or "") in saved and f.get("file"):
+                out.setdefault(name, set()).add(f["file"])
+    return {k: sorted(v) for k, v in out.items()}
 
 
 @app.get("/results", response_class=HTMLResponse)
@@ -6768,6 +6804,7 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
         for file_data in files:
             ungrouped_files.append(
                 {
+                    "file": file_data.get("file", ""),
                     "technique": file_data.get("technique", ""),
                     "technique_display": file_data.get(
                         "technique_display", file_data.get("technique", "")
@@ -7373,6 +7410,17 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
             print(f"Error loading validation results: {e}")
 
     # Flow edits persist for a logged-in user once the group's results are in their library
+    # What's already in the Library: the page marks it, and Results links to it there
+    library_saved, library_group = {}, library_group_name(safe_group)
+    if user:
+        db = next(get_db())
+        try:
+            library_saved = _saved_detection_files(db, user.id, safe_group, detections)
+        except Exception as e:
+            print(f"Library status unavailable: {e}")
+        finally:
+            db.close()
+
     flow_layout = {"logged_in": bool(user), "persist": False, "state": None, "group_name": safe_group}
     if user and attack_flow:
         from shikari.visualization.flow_layouts import load_layout, results_in_library
@@ -7428,6 +7476,12 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
             "validation_results": validation_results,
             "validation_summary": validation_summary,
             "run_view": run_view,
+            # Interim results: what the latest run produced, the page a hunt lands on; without run=latest
+            # it's the group's Results, everything it has
+            "interim": run == "latest",
+            "library_saved": library_saved,
+            "library_saved_count": sum(len(v) for v in library_saved.values()),
+            "library_group": library_group,
             # Detections the last run left alone because their query was edited by hand
             "kept_edited": (_latest_run_record(group_name) or {}).get("kept_edited") or [],
             "stack_warnings": (_latest_run_record(group_name) or {}).get("stack_warnings") or [],

@@ -4,6 +4,10 @@
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/library.css') }}?v={{ request.app.state.asset_version }}">
+<style>
+.group-results-link { align-self: center; font-weight: 600; font-size: .9rem; white-space: nowrap; color: #0284C7; text-decoration: none; }
+.group-results-link:hover { text-decoration: underline; }
+</style>
 {% endblock %}
 
 {% block main_class %}page-shell{% endblock %}
@@ -274,6 +278,7 @@
                     <option value="{{ group }}">{{ group }}</option>
                     {% endfor %}
                 </select>
+                <a id="group-results-link" class="group-results-link" hidden>Results →</a>
 
                 <select id="filter-vendor" class="dropdown-styled">
                     <option value="">Vendors</option>
@@ -1245,7 +1250,24 @@ let activeFilters = {
 document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     updateSelectedCount();
+    // ?group=APT29: the results page's "Open in the Library", filtered to that group
+    const wanted = new URLSearchParams(location.search).get('group');
+    const select = document.getElementById('filter-group');
+    if (wanted && [...select.options].some(o => o.value === wanted)) {
+        select.value = wanted;
+        applyFilters();
+    }
 });
+
+// The chosen group's Results page: everything it has, with its briefing, playbooks and Regenerate
+function updateGroupResultsLink(group) {
+    const link = document.getElementById('group-results-link');
+    link.hidden = !group || group === 'Unknown';
+    if (!link.hidden) {
+        link.href = '/results?group_name=' + encodeURIComponent(group.replace(/ /g, '_'));
+        link.title = 'Open ' + group + "'s Results";
+    }
+}
 
 // Setup event listeners
 function setupEventListeners() {
@@ -1314,6 +1336,7 @@ function applyFilters() {
     const vendorFilter = document.getElementById('filter-vendor').value;
     const tacticFilter = document.getElementById('filter-tactic').value;
     const techniqueFilter = document.getElementById('filter-technique').value;
+    updateGroupResultsLink(groupFilter);
 
     activeFilters = {
         search: searchTerm,

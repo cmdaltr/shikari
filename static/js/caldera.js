@@ -138,6 +138,13 @@
     });
   }
 
+  // ?caldera_group=APT29 or ?caldera_cve=CVE-…: the results page's Run Emulation
+  let pendingPlan = (() => {
+    const q = new URLSearchParams(location.search);
+    for (const kind of ['group', 'cve']) if (q.get('caldera_' + kind)) return { kind, value: q.get('caldera_' + kind) };
+    return null;
+  })();
+
   function status() {
     api('/api/lab/caldera/status').then(r => {
       if (!r.ok) { root.hidden = true; return; }  // below the Operational analyst role: the Lab's notice says why
@@ -163,6 +170,8 @@
       const ready = r.configured && !r.error;
       const canP = !!r.can_provision, isP = !!r.provisioned;
       el('caldera-actions').hidden = !ready;         // plan / collect once connected
+      // Run Emulation on a results page: open the planner with its group or CVE filled in, once
+      if (ready && pendingPlan) { const p = pendingPlan; pendingPlan = null; el('caldera').scrollIntoView(); planDialog(p); }
       el('caldera-detonate-grp').hidden = !ready;    // the live-operation button, on its own
       // Provisioning controls: Provision (red) → Re-provision (green) once a lab is up, plus De-provision.
       const pv = el('caldera-provision');
@@ -225,7 +234,7 @@
     return api('/api/lab/machines').then(r => (r && r.machines) || []).catch(() => []);
   }
 
-  function planDialog() {
+  function planDialog(prefill) {
     machines().then(ms => {
       const withOs = ms.filter(m => m.os);
       open('Plan a CALDERA operation', `
@@ -246,6 +255,7 @@
           <button type="button" class="ui-pill" id="cal-preview-btn">Plan</button>
           <button type="button" class="btn-primary lab-danger" id="cal-go" disabled>Run operation</button>
         </div>`);
+      if (prefill) { el('cal-kind').value = prefill.kind; el('cal-value').value = prefill.value; }
       const body = () => {
         const capv = el('cal-capture').value;
         const cap = capv.split('|');
@@ -540,7 +550,7 @@
   }
 
   el('caldera-add-agent').addEventListener('click', addAgentDialog);
-  el('caldera-plan').addEventListener('click', planDialog);
+  el('caldera-plan').addEventListener('click', () => planDialog());
   el('caldera-detonate').addEventListener('click', detonateDialog);
   el('caldera-collect').addEventListener('click', collectDialog);
   el('caldera-steps').addEventListener('click', stepsDialog);
