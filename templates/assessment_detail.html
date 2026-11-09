@@ -28,8 +28,17 @@
       <div class="ad-export">
         <a class="btn-secondary" href="/api/assessments/{{ assessment.id }}/export?fmt=csv">CSV</a>
         <a class="btn-secondary" href="/api/assessments/{{ assessment.id }}/export?fmt=navigator">Navigator layer</a>
+        <a class="btn-secondary ad-report" data-fmt="docx" href="/api/assessments/{{ assessment.id }}/export?fmt=docx">Report (Word)</a>
+        <a class="btn-secondary ad-report" data-fmt="pdf" href="/api/assessments/{{ assessment.id }}/export?fmt=pdf">Report (PDF)</a>
       </div>
     </div>
+    <details class="ad-report-text">
+      <summary>Report text (optional)</summary>
+      <p class="ms-note">Your own paragraphs for the report. Everything else in it comes from the outcomes
+        recorded below and the detection library, without AI.</p>
+      <label>Executive summary<textarea id="ad-summary" class="form-input" rows="4" maxlength="5000"></textarea></label>
+      <label>Conclusion<textarea id="ad-conclusion" class="form-input" rows="4" maxlength="5000"></textarea></label>
+    </details>
 
     {% if results %}
     <table class="ad-table">
@@ -88,6 +97,16 @@
     catch (e) { el.classList.remove('ad-saving'); alert(e.message); }
   }));
 
+  // The report buttons carry the optional paragraphs typed above
+  document.querySelectorAll('.ad-report').forEach(a => a.addEventListener('click', ev => {
+    const q = new URLSearchParams({ fmt: a.dataset.fmt });
+    const summary = $('ad-summary').value.trim(), conclusion = $('ad-conclusion').value.trim();
+    if (summary) q.set('summary', summary);
+    if (conclusion) q.set('conclusion', conclusion);
+    ev.preventDefault();
+    location.href = `/api/assessments/${aid}/export?${q}`;
+  }));
+
   $('ad-add').addEventListener('click', async () => {
     const state = $('ad-add-state'); state.textContent = 'Adding…';
     const body = new FormData(); body.append('tactic', $('ad-tactic').value);
@@ -107,6 +126,10 @@
   .ad-table th { font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); }
   .ad-table select.ad-f, .ad-table input.ad-f { width: 100%; box-sizing: border-box; font: inherit; }
   .ad-links { font-size: 0.78em; margin-top: 4px; color: var(--text-secondary); }
+  .ad-report-text { margin-top: 10px; }
+  .ad-report-text summary { cursor: pointer; color: var(--text-secondary); font-size: 0.9em; }
+  .ad-report-text label { display: block; margin-top: 8px; font-size: 0.85em; color: var(--text-secondary); }
+  .ad-report-text textarea { width: 100%; box-sizing: border-box; margin-top: 4px; font: inherit; }
   .ad-saving { opacity: 0.5; }
   .ad-saved { outline: 2px solid rgba(52,168,83,.5); }
 </style>

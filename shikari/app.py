@@ -9570,8 +9570,10 @@ def assessment_delete(assessment_id: int, request: Request, shikari_session: Opt
 
 @app.get("/api/assessments/{assessment_id}/export")
 def assessment_export(assessment_id: int, request: Request, fmt: str = Query("csv"),
+                      summary: str = Query(""), conclusion: str = Query(""),
                       shikari_session: Optional[str] = Cookie(None)):
-    """Download a campaign's outcomes as CSV or an ATT&CK Navigator layer."""
+    """Download a campaign's outcomes as CSV or an ATT&CK Navigator layer, or its report as Word or
+    PDF (#42); summary and conclusion are the operator's own paragraphs for the report."""
     from shikari.assessments.export import results_to_csv, results_to_navigator
     from shikari.database.models import Assessment, AssessmentResult
 
@@ -9583,14 +9585,31 @@ def assessment_export(assessment_id: int, request: Request, fmt: str = Query("cs
         a = db.query(Assessment).filter(Assessment.id == assessment_id, Assessment.user_id == user.id).first()
         if not a:
             return JSONResponse({"error": "No such assessment"}, status_code=404)
-        results = [{"technique_id": r.technique_id, "technique_name": r.technique_name, "tactic": r.tactic,
-                    "red_outcome": r.red_outcome, "blue_outcome": r.blue_outcome,
-                    "detection_file": r.detection_file, "notes": r.notes}
-                   for r in db.query(AssessmentResult).filter(AssessmentResult.assessment_id == a.id)
-                   .order_by(AssessmentResult.technique_id)]
+        results = []
+        for r in db.query(AssessmentResult).filter(AssessmentResult.assessment_id == a.id) \
+                .order_by(AssessmentResult.technique_id):
+            case = r.test_case
+            results.append({"technique_id": r.technique_id, "technique_name": r.technique_name, "tactic": r.tactic,
+                            "red_outcome": r.red_outcome, "blue_outcome": r.blue_outcome,
+                            "detection_file": r.detection_file, "notes": r.notes,
+                            "procedure": case.procedure if case else None,
+                            "group_name": case.group_name if case else None,
+                            "source": case.source if case else None})
+        meta = {"name": a.name, "target": a.target, "operator": a.operator, "run_date": a.run_date, "notes": a.notes}
         name = sanitize_filename(a.name) or f"assessment_{a.id}"
     finally:
         db.close()
+    if fmt in ("docx", "pdf"):
+        from shikari.reports import assessment_data, assessment_report
+        from shikari.telemetry import lab
+
+        report = assessment_data.build(meta, results, GENERATE_DIR, lab.runs(), summary=summary[:5000],
+                                       conclusion=conclusion[:5000])
+        body = assessment_report.render(report, fmt)
+        media = ("application/pdf" if fmt == "pdf" else
+                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        return Response(content=body, media_type=media,
+                        headers={"Content-Disposition": f'attachment; filename="{name}_report.{fmt}"'})
     if fmt == "navigator":
         return Response(content=results_to_navigator(a.name, results), media_type="application/json",
                         headers={"Content-Disposition": f'attachment; filename="{name}_navigator.json"'})

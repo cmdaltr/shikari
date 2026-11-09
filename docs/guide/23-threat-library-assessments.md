@@ -21,10 +21,24 @@ Record the detection that fired and any notes alongside. Each row links to the l
 
 ## Progress and export
 
-Outcomes export two ways:
+Outcomes export three ways:
 
 - **CSV** — a flat row per technique with both outcomes, the detection and notes.
 - **ATT&CK Navigator layer** — the matrix scored by blue outcome, shading from "not logged" through "logged" and "alerted" to "prevented".
+- **Report (Word or PDF)** — the document to hand the client or the SOC at the end of the campaign (#42).
+
+## The assessment report
+
+**Report (Word)** and **Report (PDF)** build the same report: a title page, then Table of Contents, Executive Summary, Scope, Assumptions, Findings, Risks, Recommendations, Conclusions and Appendices, each page after the title carrying the Shikari header and a numbered footer. It's set in Calibri in the logo's and the bateleur's colours, with charts of the outcomes, the techniques as an ATT&CK matrix, a risk heat map and a card per finding. Word fills in the contents' page numbers when it opens the file (say yes to updating fields).
+
+Everything in it is computed from the recorded outcomes and the detection library; no AI writes it. Two optional paragraphs are yours: open **Report text** above the table and type an executive summary or a conclusion, and they lead those sections.
+
+- **Risk** is likelihood × impact, each 1–3: likelihood from the red outcome (executed 3, failed 2, blocked 1), impact from the blue (not logged 3, logged 2, alerted or prevented 1). Critical is 9, High 6, Medium 3–4, Low 1–2. Tests not run or not assessed aren't rated.
+- **Gaps** are the techniques logged but not alerted on, or not logged at all, each with the library's detections for it, or none. A logged gap with a library detection is ready to close by deploying it; a technique that wasn't logged needs its logging turned on first.
+- **AI-assisted content** is marked †: a library detection written with an AI model (an LLM-written bespoke detection), and every section that cites one. The standard disclaimer for it closes the report.
+- **Lab runs** whose techniques overlap the assessment's are listed in an appendix, with the export-pack command that replays them into a SIEM.
+
+The PDF uses Calibri where the machine has it (Office on macOS or Windows) or Carlito, its metric twin on Linux (`fonts-crosextra-carlito`); without either it falls back to Helvetica. The Word file always names Calibri.
 
 ## Export for MACAT
 
