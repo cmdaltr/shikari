@@ -14,7 +14,7 @@ SHIKARI_PASSWORD also work for accounts without MFA):
 
 Over HTTP, the running server answers MCP itself at /mcp (http_app, mounted by shikari/app.py):
 nothing to install on the client, and each request acts as the owner of its bearer token.
-  claude mcp add --transport http shikari https://shikari.tail180683.ts.net/mcp \
+  claude mcp add --transport http shikari https://<your-shikari-host>/mcp \
     --header "Authorization: Bearer shik_..."
 
 Tools that change something (hunts, saving a query fix) are marked as not read-only, so

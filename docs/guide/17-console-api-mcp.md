@@ -68,7 +68,7 @@ Gives any MCP client (Claude Code, Claude Desktop, your own agent) Shikari's too
 A running Shikari server answers MCP itself at `/mcp`, so a client needs no Shikari install: send an API token (Profile → Security → API tokens) and every call runs as that token's owner. Without a valid token the endpoint answers 401.
 
 ```bash
-claude mcp add --transport http shikari https://shikari.tail180683.ts.net/mcp \
+claude mcp add --transport http shikari https://<your-shikari-host>/mcp \
   --header "Authorization: Bearer shik_..."
 ```
 
