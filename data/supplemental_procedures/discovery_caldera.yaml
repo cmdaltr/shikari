@@ -1,0 +1,30 @@
+# Supplemental (non-MITRE) procedures merged into detection generation.
+#
+# shikari.build.detections.compile_query reads every *.yaml in this directory and
+# merges the indicators below into the ATT&CK-derived identifiers for the matching
+# technique, so site- or tool-specific procedures that are absent from MITRE's
+# procedure examples still appear in the generated query and the extracted
+# indicators on every regeneration (unlike hand-edits to data/groups/, which are
+# generated output and overwritten by `offline hunt`).
+#
+# Format:
+#   <ATT&CK technique id>:
+#     <indicator kind>:        # cmd, api, reg, file, ... (same kinds as op_guidance)
+#       - <literal value>
+#
+# Source below: CALDERA default discovery abilities whose commands are not present
+# in MITRE's procedure examples for these techniques (verified via scripts/telemetry
+# caldera sandbox run — see docs/guide/25-caldera.md).
+
+T1016:            # System Network Configuration Discovery
+  cmd:
+    - nbtstat -n
+
+T1057:            # Process Discovery
+  cmd:
+    - gwmi win32_process
+    - get-process
+
+T1082:            # System Information Discovery
+  cmd:
+    - "[environment]::OSVersion.Version"

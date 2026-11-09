@@ -298,6 +298,63 @@ def lol_enrichment(identifiers, tid, procedure_text, enabled=True):
     return identifiers, refs
 
 
+def load_supplemental_indicators(technique_id, base_dir=None):
+    """Indicators for a technique from the tracked supplemental-procedure files.
+
+    MITRE ATT&CK is the only source of procedure examples the generator sees, so a
+    procedure MITRE does not document (e.g. a CALDERA ability, or a site-specific
+    command) yields no indicators and no query clause. The YAML files under
+    ``data/supplemental_procedures/`` let such procedures be curated and committed:
+    they are merged into the ATT&CK-derived identifiers in :func:`compile_query`, so
+    the extra commands appear in every regeneration instead of being lost (as a
+    hand-edit to the generated ``data/groups/`` output would be).
+
+    Each file maps an ATT&CK technique id to ``{indicator kind: [values]}``; see
+    ``data/supplemental_procedures/discovery_caldera.yaml`` for the format.
+
+    Args:
+        technique_id: ATT&CK id to look up (e.g. "T1016"); case-insensitive.
+        base_dir: directory of supplemental files; defaults to
+            ``<data>/supplemental_procedures``. Overridable for tests.
+
+    Returns:
+        ``{kind: [values]}`` merged across all files (de-duplicated, order kept);
+        empty when nothing supplements this technique.
+    """
+    import yaml
+
+    base = Path(base_dir) if base_dir is not None else (paths.DATA / "supplemental_procedures")
+    if not base.is_dir():
+        return {}
+
+    want = (technique_id or "").strip().upper()
+    merged = {}
+    for path in sorted(list(base.glob("*.yaml")) + list(base.glob("*.yml"))):
+        try:
+            doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        except (OSError, yaml.YAMLError) as exc:
+            print(f"  ⚠️  Could not read supplemental procedures {path.name}: {exc}")
+            continue
+        if not isinstance(doc, dict):
+            continue
+        entry = None
+        for key, val in doc.items():
+            if str(key).strip().upper() == want:
+                entry = val
+                break
+        if not isinstance(entry, dict):
+            continue
+        for kind, values in entry.items():
+            if not isinstance(values, list):
+                values = [values]
+            bucket = merged.setdefault(str(kind), [])
+            for value in values:
+                text = str(value).strip()
+                if text and text not in bucket:
+                    bucket.append(text)
+    return merged
+
+
 def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=False, lol_datasets=True, excluded_vendors=None, use_llm=False, llm_config=None, dry_run=False, siem_filter=None, index_filter=None):
     from shikari.build.queries import is_query_applicable
     from shikari.build.platform_validator_v2 import validate_procedure_for_index
@@ -334,6 +391,21 @@ def compile_query(retrieved_data, osint_enhancement=False, osint_comparison=Fals
         identifiers = red_tool
     else:
         identifiers = {}
+
+    # Merge curated, committed procedures that MITRE does not document (e.g. CALDERA
+    # abilities), so their commands reach both the query and the extracted indicators
+    # on every regeneration. Merged before generic-term filtering so a technique whose
+    # only ATT&CK indicators were generic still gains these real ones.
+    supplemental = load_supplemental_indicators(tid)
+    merged_supplemental = 0
+    for kind, values in supplemental.items():
+        bucket = identifiers.setdefault(kind, [])
+        for value in values:
+            if value not in bucket:
+                bucket.append(value)
+                merged_supplemental += 1
+    if merged_supplemental:
+        print(f"  - Merged {merged_supplemental} supplemental indicator(s) for {tid}")
 
     print(f"  - Final identifiers count: {len(identifiers)}")
 
