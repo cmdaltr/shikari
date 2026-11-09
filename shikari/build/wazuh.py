@@ -10,8 +10,8 @@ and `win.eventdata.<lowerCamel>`. No AI.
 Rule IDs sit in Wazuh's custom range and are remembered in a map file keyed by technique, event and
 field, so a rule keeps its ID from one export to the next and Wazuh's alerts stay comparable.
 
-Checked against a real Wazuh manager in the #41 spike, not yet: the parent rule groups (PARENTS) and
-whether eventchannel fields hold a backslash doubled (BACKSLASH).
+Checked against Wazuh 4.14 in the #41 spike: the parent groups exist as named, and pcre2 fields
+refuse any `(?<` construct (one bad rule stops analysisd loading every rule), so no lookbehinds.
 """
 
 import json
@@ -57,9 +57,9 @@ KIND_FIELDS: Dict[str, List[Tuple[str, str, bool]]] = {
 # The extracted kinds folded into the ones above
 KIND_ALIASES = {"network": "domain", "sha256": "hash", "sha1": "hash", "md5": "hash"}
 
-# Wazuh's eventchannel decoder keeps a Windows backslash escaped in the field, so one backslash
-# in the event is two in the value a rule's regex sees
-BACKSLASH = r"\\\\"
+# Wazuh's eventchannel decoder keeps a Windows backslash escaped in the field (two in the value a
+# rule sees), but the json decoder the practice events go through keeps one: match either
+BACKSLASH = r"\\{1,2}"
 
 _DOMAIN = re.compile(r"^(?=.{4,253}$)(?:[A-Za-z0-9-]{1,63}\.)+[A-Za-z]{2,63}$")
 _IPV4 = re.compile(r"^(?:\d{1,3}\.){3}\d{1,3}$")
@@ -128,7 +128,7 @@ def _bounded(value: str) -> str:
     `.wll` still matches `addin.wll`, as a side that starts or ends on punctuation is left open."""
     lit = _pcre(value)
     if value[:1].isalnum():
-        lit = r"(?<![A-Za-z0-9_])" + lit
+        lit = r"(?:^|[^A-Za-z0-9_])" + lit
     if value[-1:].isalnum():
         lit += r"(?![A-Za-z0-9_])"
     return lit
@@ -201,6 +201,29 @@ def rules(pooled: Dict[str, Dict], ids: RuleIds, attack_names: Optional[Dict[str
                         "description": f"Shikari: {tid} {title}: {field} in {SOURCES[source]['label']}",
                     })
     return out
+
+
+PRACTICE_FIRST_ID = 100000  # below FIRST_ID: the practice parents, never in shikari_rules.xml
+
+
+def practice_xml() -> str:
+    """Parent rules for the lab events alone. A manager decodes a file of them with its json decoder,
+    not windows_eventchannel, so the built-in Sysmon and Security rules never fire and Shikari's rules
+    have nothing to chain from. These give json-decoded events the same groups; an agent's real
+    eventchannel events never pass through them."""
+    lines = ['<group name="shikari_practice,">']
+    for n, (key, src) in enumerate(SOURCES.items()):
+        lines += [
+            f'  <rule id="{PRACTICE_FIRST_ID + n}" level="0">',
+            "    <decoded_as>json</decoded_as>",
+            f'    <field name="win.system.providerName" type="pcre2">^{escape(src["provider"])}$</field>',
+            f'    <field name="win.system.eventID" type="pcre2">^(?:{src["event_id"]})$</field>',
+            f'    <description>Shikari practice: a lab {escape(src["label"])} event</description>',
+            f'    <group>{src["parent"]},</group>',
+            "  </rule>",
+        ]
+    lines.append("</group>")
+    return "\n".join(lines) + "\n"
 
 
 def to_xml(rule_list: List[Dict], header: str = "") -> str:

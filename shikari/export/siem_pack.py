@@ -260,7 +260,6 @@ Or in the dashboard: Server management → Rules → Custom rules → Import fil
 The rules match Windows events from Sysmon (process, network, file, registry, DNS) and Security
 4688 (process creation, with command-line auditing on). They are built from the indicators of
 Shikari's detections, so each technique's rule IDs stay the same from one pack to the next.
-Check a rule against an event with /var/ossec/bin/wazuh-logtest.
 """,
 }
 
@@ -399,7 +398,8 @@ Lab telemetry: {events} events from {run}{shifted}
   Then enable the rules (or open Discover on logs-endpoint.events.*) and look for the run's alerts.
 """,
     "splunk": """
-Lab telemetry: {events} events from {run}{shifted}, written to {targets}
+Lab telemetry: {events} HEC events from {recorded} recorded in {run}{shifted}, written to {targets}
+  (a recorded event goes only to an index whose searches name a field it fills)
   telemetry/<index>-*.json    HEC events carrying the fields these searches use, source={source}
   Install the app first (it creates the indexes and parses these events as JSON), then make an HEC
   token allowed to write to those indexes, and load:
@@ -407,8 +407,15 @@ Lab telemetry: {events} events from {run}{shifted}, written to {targets}
 """,
     "wazuh": """
 Lab telemetry: {events} Windows events from {run}{shifted}
-  telemetry/events.json       one event per line, as Wazuh's eventchannel decoder holds it (win.system,
-                              win.eventdata). Check a rule with /var/ossec/bin/wazuh-logtest.
+  telemetry/events.json       one event per line, win.system and win.eventdata as an agent sends them
+  telemetry/shikari_practice_rules.xml
+                              for a practice manager only. A manager reads events.json with its json
+                              decoder, not windows_eventchannel, so the built-in Sysmon and Security
+                              rules don't fire and Shikari's have no parent. These rules (IDs from
+                              100000) give the json-decoded events the same groups.
+  Install both rule files and restart, then either paste a line into wazuh-logtest, or add to
+  ossec.conf and watch /var/ossec/logs/alerts/alerts.json for rule IDs from 100100:
+    <localfile><log_format>json</log_format><location>/path/to/events.json</location></localfile>
 """,
 }
 
@@ -448,7 +455,7 @@ def _telemetry(siem: str, run_dir: str, rebase: bool, docs: List[Dict], out: Dic
     manifest, events = siem_telemetry.read_run(run_dir)
     run = manifest.get("run") or os.path.basename(run_dir.rstrip("/\\"))
     shift = siem_telemetry.rebase(events) if rebase else None
-    info = {"run": run, "events": 0, "rebased": bool(rebase),
+    info = {"run": run, "events": 0, "recorded": len(events), "rebased": bool(rebase),
             "shifted": f", shifted {shift.total_seconds() / 3600:+.1f} h to end now" if shift else "",
             "source": siem_telemetry.SPLUNK_SOURCE, "targets": "none"}
     if siem == "elastic":
@@ -464,13 +471,16 @@ def _telemetry(siem: str, run_dir: str, rebase: bool, docs: List[Dict], out: Dic
                 out[f"telemetry/{index}-{n // siem_telemetry.CHUNK + 1:03d}.json"] = "".join(
                     json.dumps(e, ensure_ascii=False) + "\n" for e in chunk).encode("utf-8")
         out["telemetry/load.sh"] = LOAD_SH["splunk"].encode("utf-8")
-        info["events"] = len({id(e) for e in events})
+        info["events"] = sum(len(v) for v in by_index.values())
         info["targets"] = ", ".join(f"{i} ({len(v)})" for i, v in sorted(by_index.items())) or "none"
         info["indexes"] = {i: len(v) for i, v in by_index.items()}
     else:
         lines = [json.dumps(w, ensure_ascii=False) for w in map(siem_telemetry.to_wazuh, events) if w]
         out["telemetry/events.json"] = ("\n".join(lines) + "\n" if lines else "").encode("utf-8")
         info["events"] = len(lines)
+        if lines:
+            from shikari.build import wazuh
+            out["telemetry/shikari_practice_rules.xml"] = wazuh.practice_xml().encode("utf-8")
     return info
 
 

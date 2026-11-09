@@ -35,7 +35,10 @@ def test_pool_merges_dedupes_and_cleans():
 
 
 def test_pcre_escaping():
-    assert wazuh._pcre(r"C:\Windows\a.exe") == r"C:\\\\Windows\\\\a\.exe"
+    assert wazuh._pcre(r"C:\Windows\a.exe") == r"C:\\{1,2}Windows\\{1,2}a\.exe"
+    # one backslash (json decoder) or two (eventchannel decoder)
+    for value in (r"C:\Windows\a.exe", r"C:\\Windows\\a.exe"):
+        assert re.search(wazuh._pcre(r"C:\Windows\a.exe"), value)
     assert wazuh._pcre("a(b)|c*") == r"a\(b\)\|c\*"
     assert wazuh._pattern(["10.1.2.3"], exact=True) == r"(?i)^(?:10\.1\.2\.3)$"
 
@@ -87,7 +90,9 @@ def test_xml_is_well_formed_and_chained():
     pattern = cmd.find("field[@name='win.eventdata.commandLine']").text
     assert re.search(pattern.replace("(?i)", ""), "nbtstat -n", re.I)
     reg = next(r for r in rules if r.find("field[@name='win.eventdata.targetObject']") is not None)
-    assert "\\\\\\\\CurrentVersion" in reg.find("field[@name='win.eventdata.targetObject']").text
+    assert "\\\\{1,2}CurrentVersion" in reg.find("field[@name='win.eventdata.targetObject']").text
+    # Wazuh 4.14's pcre2 fields refuse lookbehinds and named groups: one stops every rule loading
+    assert "(?<" not in xml
 
 
 def test_wazuh_pack(tmp_path):
@@ -105,3 +110,12 @@ def test_wazuh_pack(tmp_path):
     assert f"{manifest['rules']} rules over 1 techniques" in files["README.txt"]
     assert json.loads(files["manifest.json"])["siem"] == "wazuh"
     assert (tmp_path / "ids.json").exists()
+
+
+def test_practice_rules_give_json_events_the_parent_groups():
+    root = ET.fromstring(wazuh.practice_xml())
+    rules = root.findall("rule")
+    assert len(rules) == len(wazuh.SOURCES)
+    assert all(int(r.get("id")) < wazuh.FIRST_ID and r.find("decoded_as").text == "json" for r in rules)
+    groups = {r.find("group").text.rstrip(",") for r in rules}
+    assert groups == {s["parent"] for s in wazuh.SOURCES.values()}

@@ -178,7 +178,10 @@ def test_packs_with_telemetry(tmp_path):
     # the two Windows process creations (not the registry and DNS events, though they name a process);
     # the Mac's exec stays out of a Windows index, and os takes only the registry write
     assert manifest["telemetry"]["indexes"] == {"windows_prod": 2, "os": 1}
+    assert manifest["telemetry"]["events"] == 3 and manifest["telemetry"]["recorded"] == 5
+    assert "3 HEC events from 5 recorded" in files["README.txt"]
 
     files, manifest = _pack(tmp_path / "w", "wazuh")
     assert manifest["telemetry"]["events"] == 4  # Windows only
     assert len(files["telemetry/events.json"].splitlines()) == 4
+    assert "<decoded_as>json</decoded_as>" in files["telemetry/shikari_practice_rules.xml"]
