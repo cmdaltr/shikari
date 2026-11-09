@@ -65,6 +65,15 @@ Every page works through the HTTP API. The full, live reference is at `http://lo
 
 Gives any MCP client (Claude Code, Claude Desktop, your own agent) Shikari's tools and the six agents' instructions as prompts. Tools that change something are marked so the client asks first. Your AI keys stay on the Shikari server.
 
+A running Shikari server answers MCP itself at `/mcp`, so a client needs no Shikari install: send an API token (Profile → Security → API tokens) and every call runs as that token's owner. Without a valid token the endpoint answers 401.
+
+```bash
+claude mcp add --transport http shikari https://shikari.tail180683.ts.net/mcp \
+  --header "Authorization: Bearer shik_..."
+```
+
+Or locally over stdio, from a checkout:
+
 ```bash
 claude mcp add shikari --env SHIKARI_TOKEN=shik_... -- shikari mcp
 ```

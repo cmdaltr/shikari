@@ -1176,6 +1176,13 @@ async def api_token_auth(request: Request, call_next):
     return await call_next(request)
 
 
+# MCP over HTTP, as the bearer token's owner (shikari/mcp_server.py)
+from starlette.routing import Route
+
+from shikari.mcp_server import http_app as mcp_http_app
+
+app.router.routes.append(Route("/mcp", endpoint=mcp_http_app, methods=["GET", "POST", "DELETE"]))
+
 # Include validation API router
 app.include_router(get_validation_router())
 

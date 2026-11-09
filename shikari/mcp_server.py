@@ -12,13 +12,20 @@ Claude Code (the token is from Profile → Security → API tokens; SHIKARI_EMAI
 SHIKARI_PASSWORD also work for accounts without MFA):
   claude mcp add shikari --env SHIKARI_TOKEN=shik_... -- /path/to/shikari/.venv/bin/python -m shikari.mcp_server
 
+Over HTTP, the running server answers MCP itself at /mcp (http_app, mounted by shikari/app.py):
+nothing to install on the client, and each request acts as the owner of its bearer token.
+  claude mcp add --transport http shikari https://shikari.tail180683.ts.net/mcp \
+    --header "Authorization: Bearer shik_..."
+
 Tools that change something (hunts, saving a query fix) are marked as not read-only, so
 the client asks before calling them.
 """
 
 import json
 import logging
+import os
 import sys
+from typing import Optional
 
 import anyio
 import mcp.types as types
@@ -29,9 +36,6 @@ from shikari.agents.definitions import AGENTS
 from shikari.agents.tools import ToolContext, build_tools
 from shikari.client import ShikariClient, ShikariError
 
-# stdout is the MCP channel: everything else goes to stderr
-logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
-
 INSTRUCTIONS = """Shikari generates SIEM detections (Google SecOps UDM searches, Defender XDR KQL, Splunk SPL, Elastic) from \
 MITRE ATT&CK groups, CVEs, techniques and threat reports. Read tools look things up (coverage, results, \
 ATT&CK, the library) and check queries; hunt_* tools start runs that take minutes (follow with wait_for_run, \
@@ -39,9 +43,18 @@ then get_run_results); save_query_fix rewrites a query in a detection file (refu
 The prompts repair, ask and triage carry the instructions Shikari's own agents use."""
 
 
-def build_server(client: ShikariClient) -> Server:
+def _request_client(request) -> ShikariClient:
+    """Over HTTP: the server's own routes as the bearer token's owner (the token middleware has checked it)."""
+    port = (request.scope.get("server") or ("", 32453))[1]
+    url = os.getenv("SHIKARI_INTERNAL_URL") or f"http://127.0.0.1:{port}"
+    return ShikariClient(url=url, token=request.headers["authorization"][7:].strip(), timeout=300)
+
+
+def build_server(client: Optional[ShikariClient] = None) -> Server:
+    """client: stdio's one signed-in client; None for HTTP, where each request brings its own."""
     server = Server("shikari", instructions=INSTRUCTIONS)
-    tools = {t.name: t for t in build_tools(ToolContext(client=client))}
+    # definitions only: over HTTP the tools that run are bound to the request's client
+    tools = {t.name: t for t in build_tools(ToolContext(client=client or ShikariClient(url="http://127.0.0.1")))}
 
     @server.list_tools()
     async def list_tools():
@@ -56,6 +69,9 @@ def build_server(client: ShikariClient) -> Server:
         tool = tools.get(name)
         if tool is None:
             raise ValueError(f"No tool named {name}")
+        if client is None:
+            caller = await anyio.to_thread.run_sync(_request_client, server.request_context.request)
+            tool = build_tools(ToolContext(client=caller), names=[name])[0]
         try:
             # Tools make blocking HTTP calls (wait_for_run for up to 30 minutes)
             output = await anyio.to_thread.run_sync(lambda: tool.fn(**(arguments or {})))
@@ -88,7 +104,51 @@ def build_server(client: ShikariClient) -> Server:
     return server
 
 
+_http_server: Optional[Server] = None
+
+
+async def _serve_http(scope, receive, send) -> None:
+    """MCP over streamable HTTP, stateless with JSON responses: one transport per request, so no
+    session state to lose on a restart. A request without an API token is refused."""
+    from starlette.responses import JSONResponse
+    from mcp.server.streamable_http import StreamableHTTPServerTransport
+
+    global _http_server
+    headers = dict(scope.get("headers") or [])
+    if not headers.get(b"authorization", b"").lower().startswith(b"bearer "):
+        await JSONResponse({"error": "Send an API token: Authorization: Bearer shik_... "
+                                     "(Profile → Security → API tokens)"}, status_code=401)(scope, receive, send)
+        return
+    if _http_server is None:
+        _http_server = build_server()
+    transport = StreamableHTTPServerTransport(mcp_session_id=None, is_json_response_enabled=True)
+
+    async def serve(*, task_status=anyio.TASK_STATUS_IGNORED):
+        async with transport.connect() as (read, write):
+            task_status.started()
+            await _http_server.run(read, write, _http_server.create_initialization_options(), stateless=True)
+
+    async with anyio.create_task_group() as tg:
+        await tg.start(serve)
+        try:
+            await transport.handle_request(scope, receive, send)
+        finally:
+            with anyio.CancelScope(shield=True):
+                await transport.terminate()
+
+
+class _HttpApp:
+    # an ASGI app, not a function, so a Starlette Route at /mcp hands it the raw request
+    async def __call__(self, scope, receive, send) -> None:
+        await _serve_http(scope, receive, send)
+
+
+http_app = _HttpApp()
+
+
 def main() -> None:
+    # stdout is the MCP channel: everything else goes to stderr
+    logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
     client = ShikariClient()
     try:
         client.login()  # fail now with a clear message rather than on the first tool call
