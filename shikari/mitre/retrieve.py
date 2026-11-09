@@ -34,6 +34,34 @@ class _BundleIndex:
         return [obj] if obj is not None and obj.get("type") in types else []
 
 
+def builtin_tools(index, technique_ref):
+    """The operating system's own tools ATT&CK attributes this technique to, as process names:
+    nbtstat.exe, ipconfig.exe, arp.exe, route.exe and nltest.exe for T1016.
+
+    A group's detection otherwise only names the tools its own procedures cite, so CALDERA's
+    `nbtstat -n` passed every hunted group's T1016 detection (ATT&CK cites nbtstat for T1016
+    under Turla alone). These are technique-level, not any actor's: ATT&CK's own tool objects
+    (S0102 nbtstat uses T1016). Tools that run anything (cmd, powershell, wmic) are left out,
+    since their process name says nothing about the technique.
+    """
+    from shikari.parsers.command_techniques import _TOO_GENERAL
+    from shikari.visualization.anatomy import BUILT_IN
+
+    names = []
+    for rel in index.uses_by_target.get(technique_ref, []):
+        for tool in index.objects_of(rel.get("source_ref"), "tool"):
+            if tool.get("revoked") or tool.get("x_mitre_deprecated"):
+                continue
+            name = (tool.get("name") or "").lower()
+            if name not in BUILT_IN or name in _TOO_GENERAL:
+                continue
+            platforms = tool.get("x_mitre_platforms") or ["Windows"]   # nbtstat and ipconfig carry none
+            exe = f"{name}.exe" if "Windows" in platforms else name
+            if exe not in names:
+                names.append(exe)
+    return sorted(names)
+
+
 _index_cache = (None, None)
 
 
@@ -631,6 +659,13 @@ def retrieve_procedures(bundle, retrieved_techniques, keep_desc=None, merge_expa
             # This handles cases where software names appear as indicators but shouldn't be used
             if isinstance(red_tools, dict) and "sw" in red_tools:
                 del red_tools["sw"]
+
+            # The built-in tools ATT&CK attributes the technique to, whichever group used them
+            builtin = builtin_tools(index, procedure_ref)
+            if builtin and isinstance(op_guidance, dict):
+                have = op_guidance.get("sw") or []
+                have = list(have) if isinstance(have, list) else [have]
+                op_guidance["sw"] = have + [b for b in builtin if b.lower() not in {h.lower() for h in have}]
 
             procedure_platforms, software_platforms = retrieve_platform_metadata(
                 bundle, procedure_ref, software_refs
