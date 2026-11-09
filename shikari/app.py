@@ -8,6 +8,7 @@ from shikari.build.attack_mapping import rule_name as attack_rule_name
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from typing import List, Optional
+from pydantic import BaseModel
 from shikari import paths
 
 # Before shikari.build.queries is imported: it reads the Splunk schema at import
@@ -9657,6 +9658,129 @@ def assessment_export(assessment_id: int, request: Request, fmt: str = Query("cs
                         headers={"Content-Disposition": f'attachment; filename="{name}_navigator.json"'})
     return Response(content=results_to_csv(results), media_type="text/csv",
                     headers={"Content-Disposition": f'attachment; filename="{name}.csv"'})
+
+
+# ---------------------------------------------------------------- campaign research (from ETHAN)
+
+class CampaignRequest(BaseModel):
+    name: str
+    urls: List[str] = []
+    search_more: bool = False
+    ai_provider: Optional[str] = None
+    ai_model: Optional[str] = None
+
+
+@app.get("/campaigns", response_class=HTMLResponse)
+@app.get("/campaigns/{campaign_slug}", response_class=HTMLResponse)
+def campaigns_page(request: Request, campaign_slug: str = "", shikari_session: Optional[str] = Cookie(None)):
+    """Campaign research: an emerging campaign profiled from the reports about it
+    (shikari.intelligence.campaign), with the saved campaigns listed."""
+    from shikari.intelligence import campaign as campaign_mod
+    from shikari.reports import campaign_report
+
+    auth_result = require_auth(request, shikari_session)
+    if isinstance(auth_result, RedirectResponse):
+        return auth_result
+    user, db = auth_result
+    db.close()
+    chosen = None
+    if campaign_slug:
+        found = campaign_mod.load(campaign_slug)
+        if not found:
+            return RedirectResponse("/campaigns")
+        chosen = campaign_report.context(found, GENERATE_DIR)
+    from shikari.reports import tlp as tlp_mod
+    return templates.TemplateResponse("campaigns.html", {
+        "request": request, "user": user, "campaigns": campaign_mod.all_campaigns(), "campaign": chosen,
+        "tlp_levels": list(tlp_mod.LEVELS), "tlp_default": tlp_mod.DEFAULT,
+        "network_days": campaign_mod.NETWORK_DAYS, "hash_days": campaign_mod.HASH_DAYS})
+
+
+@app.post("/api/campaigns")
+def api_campaign_research(request: Request, body: CampaignRequest, shikari_session: Optional[str] = Cookie(None)):
+    """Research a campaign from its report URLs (and, with search_more, the reports Shikari can find
+    for its name). With an AI provider chosen, a model also writes a profile, marked as AI."""
+    from shikari.intelligence import campaign as campaign_mod
+
+    auth_result = require_auth(request, shikari_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    _, db = auth_result
+    db.close()
+    llm_config = _hunt_llm_args(shikari_session, body.ai_provider, body.ai_model).get("llm_config")
+    try:
+        found = campaign_mod.research(body.name, body.urls[:50], bundle=getattr(request.app.state, "bundle", None),
+                                      search_more=body.search_more, llm_config=llm_config)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    if not found["sources_read"]:
+        return JSONResponse({"error": "None of the sources could be read",
+                             "sources": found["sources"]}, status_code=422)
+    campaign_mod.save(found)
+    return {"slug": found["slug"], "redirect": f"/campaigns/{found['slug']}"}
+
+
+@app.delete("/api/campaigns/{campaign_slug}")
+def api_campaign_delete(request: Request, campaign_slug: str, shikari_session: Optional[str] = Cookie(None)):
+    from shikari.intelligence import campaign as campaign_mod
+
+    auth_result = require_auth(request, shikari_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    auth_result[1].close()
+    if not campaign_mod.delete(campaign_slug):
+        return JSONResponse({"error": "No such campaign"}, status_code=404)
+    return {"deleted": campaign_slug}
+
+
+@app.post("/api/campaigns/{campaign_slug}/extraction")
+def api_campaign_extraction(request: Request, campaign_slug: str, include_burned: bool = False,
+                            shikari_session: Optional[str] = Cookie(None)):
+    """Save the campaign in Upload blog URL's extraction shape, so /blog/generate builds its
+    detections: every technique, and the indicators not triaged as burned (unless include_burned)."""
+    from shikari.intelligence import campaign as campaign_mod
+
+    auth_result = require_auth(request, shikari_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    auth_result[1].close()
+    found = campaign_mod.load(campaign_slug)
+    if not found:
+        return JSONResponse({"error": "No such campaign"}, status_code=404)
+    extraction = campaign_mod.extraction(found, active_only=not include_burned)
+    name = sanitize_group_name(extraction["synthetic_group_name"])
+    extraction["synthetic_group_name"] = name
+    os.makedirs(BLOG_DIR, exist_ok=True)
+    with open(os.path.join(BLOG_DIR, f"{name}_extraction.json"), "w") as fh:
+        json.dump(extraction, fh, indent=2)
+    return {"synthetic_group_name": name, "ttps": len(extraction["ttps"]),
+            "iocs": sum(len(v) for v in extraction["iocs"].values())}
+
+
+@app.get("/api/campaigns/{campaign_slug}/report")
+def api_campaign_report(request: Request, campaign_slug: str, fmt: str = Query("docx"), tlp: str = Query(""),
+                        shikari_session: Optional[str] = Cookie(None)):
+    """The campaign intelligence report in Word or PDF, under a TLP label."""
+    from shikari.intelligence import campaign as campaign_mod
+    from shikari.reports import campaign_report
+
+    auth_result = require_auth(request, shikari_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Log in"}, status_code=401)
+    auth_result[1].close()
+    if fmt not in ("docx", "pdf"):
+        return JSONResponse({"error": "fmt is docx or pdf"}, status_code=400)
+    found = campaign_mod.load(campaign_slug)
+    if not found:
+        return JSONResponse({"error": "No such campaign"}, status_code=404)
+    try:
+        ctx = campaign_report.context(found, GENERATE_DIR, tlp=tlp)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    media = ("application/pdf" if fmt == "pdf" else
+             "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    return Response(content=campaign_report.render(ctx, fmt), media_type=media,
+                    headers={"Content-Disposition": f'attachment; filename="{found["slug"]}_campaign_report.{fmt}"'})
 
 
 @app.get("/catalogue", response_class=HTMLResponse)

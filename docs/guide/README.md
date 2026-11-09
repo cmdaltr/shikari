@@ -27,6 +27,7 @@ Help → **Guide** shows a picture of every page with each part highlighted in t
 | Flows | Detections → Flows | Every saved attack flow: what you can and can't detect | [Flows](09-flows.md) |
 | Anatomy | Detections → Anatomy | Every saved threat group's and CVE's anatomy workflow | [Flows](09-flows.md#anatomy) |
 | Catalogue | Intel → Catalogue | Every organisation profiled so far; opens each one's exposure map | [Company profile](04-company-profile.md#companies-catalogue) |
+| Campaigns | Intel → Campaigns | Profile an emerging campaign from its reports: techniques, triaged indicators, a TLP report | [Campaigns](26-campaigns.md) |
 | Feed | Intel → Feed | This week's threat research, tagged; search all research | [Threat Feed](10-threat-feed.md) |
 | Cyber Powers | Intel → Cyber Powers | National cyber capability, attribution and targeting on a map | [Cyber Powers](11-cyber-powers.md) |
 | Indicator Management | Intel → Indicator Management | Search reputable reporting for an IOC; import STIX, TAXII or MISP intel (incl. a MISP instance) as a hunt input; export a run as a STIX bundle or MISP event | [Indicator Management](21-indicator-management.md) |

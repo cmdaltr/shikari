@@ -67,6 +67,37 @@ def _fetch_public_url(url: str, max_redirects: int = 3, timeout: int = 30) -> re
     raise ValueError(f"Too many redirects (max {max_redirects}).")
 
 
+_PUBLISHED_META = ("article:published_time", "og:published_time", "datePublished", "date", "dc.date",
+                   "pubdate", "publish-date", "sailthru.date", "parsely-pub-date")
+
+
+def published_date(soup) -> str:
+    """The article's publication date (YYYY-MM-DD) from its metadata, or "" when it doesn't say."""
+    import json as _json
+
+    candidates = []
+    for name in _PUBLISHED_META:
+        for tag in soup.find_all("meta", attrs={"property": name}) + soup.find_all("meta", attrs={"name": name}) \
+                + soup.find_all("meta", attrs={"itemprop": name}):
+            candidates.append(tag.get("content") or "")
+    for script in soup.find_all("script", attrs={"type": "application/ld+json"}):
+        try:
+            data = _json.loads(script.string or "")
+        except (ValueError, TypeError):
+            continue
+        for item in data if isinstance(data, list) else [data]:
+            if isinstance(item, dict) and item.get("datePublished"):
+                candidates.append(str(item["datePublished"]))
+    time_tag = soup.find("time", attrs={"datetime": True})
+    if time_tag:
+        candidates.append(time_tag["datetime"])
+    for c in candidates:
+        m = re.match(r"\s*(\d{4}-\d{2}-\d{2})", c or "")
+        if m:
+            return m.group(1)
+    return ""
+
+
 def analyze_blog_post(url: str, include_text: bool = False, timeout: int = 30, bundle=None) -> Dict:
     """
     Analyze a blog post URL and extract threat intelligence.
@@ -182,6 +213,7 @@ def analyze_blog_post(url: str, include_text: bool = False, timeout: int = 30, b
             "tactics": _extract_tactics(text),
             "procedures": _extract_procedures(text),
             "title": _article_title(title),
+            "published": published_date(page_meta),
             "iocs": _drop_citation_links(
                 _drop_publisher_domains(
                     iocs,

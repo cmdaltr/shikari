@@ -272,9 +272,10 @@ def _legend(d: ImageDraw.ImageDraw, scheme, y: int, width: int) -> None:
         x += 70 + _text_w(d, label, f) + 50
 
 
-def coverage_matrix(columns: Dict[str, List[Tuple[str, str]]], width: int = 1800) -> bytes:
+def coverage_matrix(columns: Dict[str, List[Tuple[str, str]]], width: int = 1800, scheme=BLUE_OUTCOMES) -> bytes:
     """An ATT&CK-style matrix of the techniques tested: a column per tactic, each technique a
-    cell coloured by its blue outcome. columns: {tactic: [(technique ID, blue outcome), ...]}."""
+    cell coloured by its blue outcome (or the scheme's key). columns: {tactic: [(technique ID, key), ...]}."""
+    colours = {k: c for k, _, c in scheme}
     tactics = list(columns) or ["No techniques"]
     cols = len(tactics)
     gap, head, cell = 14, 150, 78
@@ -290,10 +291,10 @@ def coverage_matrix(columns: Dict[str, List[Tuple[str, str]]], width: int = 1800
         _wrap_centred(d, tactic, hf, (x, 0, x + cw, head - 16), WHITE)
         for r, (tid, blue) in enumerate(columns.get(tactic, [])):
             y = head + r * (cell + 10)
-            colour = BLUE_COLOUR.get(blue, BLUE_COLOUR["not_assessed"])
+            colour = colours.get(blue, scheme[-1][2])
             d.rounded_rectangle([x, y, x + cw, y + cell], radius=10, fill=colour)
             d.text((x + cw / 2, y + cell / 2), tid, font=cf, fill=_ideal_ink(colour), anchor="mm")
-    _legend(d, BLUE_OUTCOMES, head + rows * (cell + 10) + 50, width)
+    _legend(d, scheme, head + rows * (cell + 10) + 50, width)
     return _png(img)
 
 

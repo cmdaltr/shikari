@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}Shikari - Campaigns{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<style>
+  .cmp-sub { color: var(--text-secondary); margin: 0 0 24px; max-width: 900px; }
+  .cmp-card { border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 22px;
+    background: var(--bg-secondary, var(--bg-primary)); }
+  .cmp-card h2 { margin: 0 0 14px; font-size: 1.2rem; }
+  .cmp-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
+  .cmp-form label { display: block; font-weight: 600; font-size: .9rem; margin-bottom: 6px; }
+  .cmp-form input[type=text], .cmp-form textarea, .cmp-form select, .cmp-actions select {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 6px;
+    background: var(--bg-primary); color: var(--text-primary); font: inherit; box-sizing: border-box; }
+  .cmp-form textarea { min-height: 120px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .85rem; }
+  .cmp-wide { grid-column: 1 / -1; }
+  .cmp-hint { color: var(--text-secondary); font-size: .85rem; margin-top: 4px; }
+  .cmp-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-weight: 600;
+    border: 0; cursor: pointer; text-decoration: none; font-size: .9rem; background: #0284C7; color: #fff; }
+  .cmp-btn:hover { background: #0369A1; }
+  .cmp-btn.alt { background: transparent; color: var(--text-primary); border: 1px solid var(--border-color); }
+  .cmp-btn.danger { background: transparent; color: #B91C1C; border: 1px solid #FCA5A5; }
+  .cmp-btn[disabled] { opacity: .6; cursor: wait; }
+  .cmp-status { margin-left: 12px; color: var(--text-secondary); font-size: .9rem; }
+  .cmp-status.err { color: #B91C1C; }
+  .cmp-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .cmp-stat { font-size: .85rem; padding: 4px 10px; border-radius: 999px; background: var(--bg-primary); border: 1px solid var(--border-color); }
+  .cmp-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .cmp-actions select { width: auto; }
+  .cmp-table { width: 100%; border-collapse: collapse; font-size: .88rem; margin-bottom: 18px; }
+  .cmp-table th { text-align: left; background: #1a2028; color: #fff; padding: 7px 9px; font-weight: 600; }
+  .cmp-table td { padding: 6px 9px; border-bottom: 1px solid var(--border-color); vertical-align: top; word-break: break-word; }
+  .cmp-mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .82rem; }
+  .tri { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: .78rem; font-weight: 700; }
+  .tri-Active { background: #df514e; color: #fff; }
+  .tri-Likely-burned { background: #b3a29b; color: #1a2028; }
+  .tri-Infrastructure-pattern { background: #1a2028; color: #fff; }
+  .tri-Age-unknown { background: #f59e0b; color: #1a2028; }
+  .cov-yes { color: #8f5742; font-weight: 700; } .cov-no { color: var(--text-secondary); }
+  [data-theme="dark"] .cov-yes { color: #f07470; }
+  .cmp-ai { border-left: 3px solid #f59e0b; padding: 2px 0 2px 14px; margin: 0 0 16px; }
+  .cmp-ai-note { color: var(--text-secondary); font-size: .82rem; }
+  .cmp-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .cmp-item { border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .cmp-item.is-open { border-color: #0284C7; }
+  .cmp-item h3 { margin: 0; font-size: 1rem; } .cmp-item h3 a { color: var(--text-primary); text-decoration: none; }
+  .cmp-meta { color: var(--text-secondary); font-size: .85rem; }
+  .cmp-item-actions { margin-top: auto; display: flex; gap: 8px; }
+</style>
+{% endblock %}
+
+{% block main_class %}page-shell{% endblock %}
+
+{% block content %}
+<div class="results-container">
+  <div class="page-header">
+    <h1>Campaigns</h1>
+    <p class="cmp-sub">Profile an emerging campaign that ATT&amp;CK doesn't describe yet from the reports about it:
+      the techniques they describe, the groups they name, a timeline, and the indicators triaged by age.
+      None of that uses AI; choose an AI provider and a model also writes an analyst profile, marked †.</p>
+  </div>
+
+  <div class="cmp-card">
+    <h2>Research a campaign</h2>
+    <form id="cmp-form" class="cmp-form">
+      <div>
+        <label for="cmp-name">Campaign name</label>
+        <input type="text" id="cmp-name" required minlength="3" maxlength="120" placeholder="Shadow Ladder">
+      </div>
+      <div>
+        <label for="cmp-ai">AI analyst profile</label>
+        <select id="cmp-ai"><option value="">No AI (the default)</option></select>
+        <div class="cmp-hint">Optional. Reads the sources and writes a profile; every part it writes is marked †.</div>
+      </div>
+      <div class="cmp-wide">
+        <label for="cmp-urls">Report URLs, one per line</label>
+        <textarea id="cmp-urls" placeholder="https://..."></textarea>
+        <div class="cmp-hint">Up to 10 sources are read. Each is analysed like Upload blog URL.</div>
+      </div>
+      <div class="cmp-wide">
+        <label><input type="checkbox" id="cmp-more"> Also search Shikari's source archive and the news for the name</label>
+      </div>
+      <div class="cmp-wide">
+        <button type="submit" class="cmp-btn" id="cmp-go">Research</button>
+        <span class="cmp-status" id="cmp-status" role="status"></span>
+      </div>
+    </form>
+  </div>
+
+  {% if campaign %}
+  {% set c = campaign %}
+  {% set ai = c.ai and c.profile %}
+  <div class="cmp-card" id="cmp-detail" data-slug="{{ c.slug }}" data-group="{{ c.group }}">
+    <h2>{{ c.name }}</h2>
+    <div class="cmp-stats">
+      <span class="cmp-stat">{{ c.sources_read }} source{{ '' if c.sources_read == 1 else 's' }} read</span>
+      {% if c.first_reported %}<span class="cmp-stat">First reported {{ c.first_reported }}</span>{% endif %}
+      <span class="cmp-stat">{{ c.techniques|length }} technique{{ '' if c.techniques|length == 1 else 's' }}, {{ c.covered }} in the library</span>
+      <span class="cmp-stat">{{ c.indicators|length }} indicators, {{ c.triage_counts['Active'] }} active</span>
+      <span class="cmp-stat">Researched {{ c.researched }}</span>
+    </div>
+    <div class="cmp-actions">
+      <label for="cmp-tlp" class="cmp-meta">TLP</label>
+      <select id="cmp-tlp">{% for l in tlp_levels %}<option{% if l == tlp_default %} selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+      <a class="cmp-btn" href="#" data-report="docx">Report (Word)</a>
+      <a class="cmp-btn" href="#" data-report="pdf">Report (PDF)</a>
+      <button class="cmp-btn alt" type="button" id="cmp-generate">Generate detections</button>
+      <label class="cmp-meta"><input type="checkbox" id="cmp-burned"> include burned indicators</label>
+      <a class="cmp-btn alt" href="/api/detections/code/master-kql?group={{ c.group | urlencode }}&techniques={{ c.techniques | map(attribute='id') | join(',') | urlencode }}"
+         title="Defender XDR: one query over the campaign's detections, once they are generated">Master hunt query (.kql)</a>
+      <span class="cmp-status" id="cmp-gen-status" role="status"></span>
+    </div>
+
+    {% if ai %}
+    <div class="cmp-ai">
+      <p><strong>Analyst profile †</strong> {{ c.profile.summary or '' }}</p>
+      {% if c.profile.actor %}<p><strong>Actor †</strong> {{ c.profile.actor }}</p>{% endif %}
+      {% if c.profile.motivation %}<p><strong>Motivation †</strong> {{ c.profile.motivation }}</p>{% endif %}
+      {% if c.profile.victims and (c.profile.victims.sectors or c.profile.victims.regions) %}
+      <p><strong>Victims †</strong> {{ (c.profile.victims.sectors or []) | join(', ') }}{% if c.profile.victims.regions %} in {{ c.profile.victims.regions | join(', ') }}{% endif %}</p>{% endif %}
+      {% if c.profile.tooling %}<p><strong>Tooling †</strong> {% for t in c.profile.tooling %}{{ t.name }}{% if t.purpose %} ({{ t.purpose }}){% endif %}{{ '; ' if not loop.last }}{% endfor %}</p>{% endif %}
+      <p class="cmp-ai-note">† Written by an AI model{% if c.ai_model %} ({{ c.ai_model }}){% endif %} from the sources. It can be incomplete or wrong: check it against them.</p>
+    </div>
+    {% endif %}
+
+    <h3>Groups the sources name</h3>
+    {% if c.groups %}<p>{% for g in c.groups %}{{ g.name }} ({{ g.sources }}){{ ', ' if not loop.last }}{% endfor %}</p>
+    {% else %}<p class="cmp-meta">None of the sources names an ATT&amp;CK group.</p>{% endif %}
+
+    <h3>Techniques</h3>
+    {% if c.techniques %}
+    <table class="cmp-table">
+      <tr><th>ID</th><th>Technique</th><th>Tactics</th><th>Sources</th><th>In the library</th></tr>
+      {% for t in c.techniques %}
+      <tr><td class="cmp-mono">{{ t.id }}</td><td>{{ t.name or 'Not in ATT&CK' }}</td><td>{{ t.tactics | join(', ') or 'Unmapped' }}</td>
+        <td>{{ t.sources }}</td><td>{% if t.detections %}<span class="cov-yes">{{ t.detections }}{{ ' †' if t.detections_ai }}</span>{% else %}<span class="cov-no">None</span>{% endif %}</td></tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="cmp-meta">The sources don't describe any ATT&amp;CK techniques.</p>{% endif %}
+
+    <h3>Indicators</h3>
+    <p class="cmp-meta">Triaged by the age of the newest source citing each: network indicators older than {{ network_days }} days are
+      likely burned, hashes after {{ hash_days }}; ranges, wildcards and ASNs are infrastructure patterns.</p>
+    {% if c.indicators %}
+    <table class="cmp-table">
+      <tr><th>Indicator</th><th>Type</th><th>Triage</th><th>Newest source</th><th>Sources</th></tr>
+      {% for i in c.indicators | sort(attribute='value') | sort(attribute='triage') %}
+      <tr><td class="cmp-mono">{{ i.value }}</td><td>{{ i.kind }}</td><td><span class="tri tri-{{ i.triage | replace(' ', '-') }}">{{ i.triage }}</span></td>
+        <td>{{ i.last_seen or 'Not given' }}</td><td>{{ i.sources }}</td></tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="cmp-meta">No network or file indicators.</p>{% endif %}
+
+    <h3>Sources</h3>
+    <table class="cmp-table">
+      <tr><th>Source</th><th>Published</th><th>Techniques</th><th>Indicators</th></tr>
+      {% for s in c.sources %}
+      <tr><td><a href="{{ s.url }}" target="_blank" rel="noopener noreferrer">{{ s.title }}</a>{% if not s.success %} <span class="cmp-status err">{{ s.error }}</span>{% endif %}</td>
+        <td>{{ s.published or '' }}</td><td>{{ s.techniques }}</td><td>{{ s.iocs }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% endif %}
+
+  {% if campaigns %}
+  <h2>Saved campaigns</h2>
+  <div class="cmp-list">
+    {% for r in campaigns %}
+    <div class="cmp-item{% if campaign and campaign.slug == r.slug %} is-open{% endif %}">
+      <h3><a href="/campaigns/{{ r.slug }}">{{ r.name }}</a>{% if r.ai %} †{% endif %}</h3>
+      <div class="cmp-meta">{{ r.sources }} source{{ '' if r.sources == 1 else 's' }} · {{ r.techniques }} techniques · {{ r.indicators }} indicators ({{ r.active }} active)</div>
+      <div class="cmp-meta">{% if r.first_reported %}First reported {{ r.first_reported }} · {% endif %}researched {{ r.researched }}</div>
+      <div class="cmp-item-actions">
+        <a class="cmp-btn" href="/campaigns/{{ r.slug }}">Open</a>
+        <button class="cmp-btn danger" type="button" data-delete="{{ r.slug }}">Delete</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  fetch('/api/ai/availability').then(r => r.json()).then(data => {
+    (data.providers || []).forEach(o => $('cmp-ai').appendChild(new Option(o.label + (o.model ? ' / ' + o.model : ''), o.id)));
+  }).catch(() => {});
+
+  $('cmp-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const status = $('cmp-status'), go = $('cmp-go');
+    const urls = $('cmp-urls').value.split(/\s+/).filter(Boolean);
+    go.disabled = true; status.className = 'cmp-status';
+    status.textContent = 'Reading the sources' + ($('cmp-ai').value ? ' and writing the AI profile' : '') + '...';
+    try {
+      const res = await fetch('/api/campaigns', {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: $('cmp-name').value, urls, search_more: $('cmp-more').checked,
+                              ai_provider: $('cmp-ai').value || null})});
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Research failed');
+      location.href = data.redirect;
+    } catch (err) {
+      status.className = 'cmp-status err'; status.textContent = err.message; go.disabled = false;
+    }
+  });
+
+  const detail = $('cmp-detail');
+  if (detail) {
+    const slug = detail.dataset.slug;
+    detail.querySelectorAll('[data-report]').forEach(a => a.addEventListener('click', (e) => {
+      e.preventDefault();
+      location.href = `/api/campaigns/${encodeURIComponent(slug)}/report?fmt=${a.dataset.report}&tlp=${encodeURIComponent($('cmp-tlp').value)}`;
+    }));
+    $('cmp-generate').addEventListener('click', async () => {
+      const status = $('cmp-gen-status');
+      status.className = 'cmp-status'; status.textContent = 'Preparing...';
+      try {
+        let res = await fetch(`/api/campaigns/${encodeURIComponent(slug)}/extraction?include_burned=${$('cmp-burned').checked}`, {method: 'POST'});
+        const ex = await res.json();
+        if (!res.ok) throw new Error(ex.error || 'Failed');
+        const form = new FormData();
+        form.append('synthetic_group_name', ex.synthetic_group_name);
+        res = await fetch('/blog/generate', {method: 'POST', body: form});
+        const gen = await res.json();
+        if (!gen.success) throw new Error(gen.error || gen.message || 'Generation failed');
+        location.href = gen.redirect;
+      } catch (err) {
+        status.className = 'cmp-status err'; status.textContent = err.message;
+      }
+    });
+  }
+
+  document.querySelectorAll('[data-delete]').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Delete this campaign? Its detections stay in the library.')) return;
+    b.disabled = true;
+    const res = await fetch(`/api/campaigns/${encodeURIComponent(b.dataset.delete)}`, {method: 'DELETE'});
+    if (res.ok) location.href = '/campaigns'; else b.disabled = false;
+  }));
+})();
+</script>
+{% endblock %}
