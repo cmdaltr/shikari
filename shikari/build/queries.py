@@ -326,12 +326,14 @@ def _grouped(clause: str) -> str:
     return f"({clause})" if " and " in clause else clause
 
 
-def compile_search_clause(field_value_pairs):
+def compile_search_clause(field_value_pairs, contains=False):
     """
     Compiles field-value pairs into proper | search syntax
 
     Args:
         field_value_pairs: Dict of {field_name: [values]}
+        contains: match single-word values anywhere in the field (*value*), for fields holding a
+            whole command line, where whoami is never the entire value
 
     Returns:
         String for | search command
@@ -346,7 +348,9 @@ def compile_search_clause(field_value_pairs):
       field="value"
     - Bare strings (field=None): just include them
       "Success"
-    - Multi-word groups joined with OR: IN_clause OR (multi_word_group1) OR (multi_word_group2)
+    - Every group joined with OR, a group of several terms in brackets:
+      IN_clause OR (multi_word_group1) OR (multi_word_group2). Splunk binds OR before the implicit
+      AND, so an unbracketed `a OR b c` means (a OR b) AND c: found against a real Splunk in #41
     """
     search_parts = []
 
@@ -373,7 +377,7 @@ def compile_search_clause(field_value_pairs):
                 if ' ' in v:
                     multi_word_values.append(v)
                 else:
-                    single_word_values.append(v)
+                    single_word_values.append(f"*{v}*" if contains and "*" not in v else v)
 
             # Handle single-word values with IN operator
             if len(single_word_values) > 1:
@@ -399,17 +403,9 @@ def compile_search_clause(field_value_pairs):
                         # Middle words: spaces before and after
                         word_conditions.append(f'{field_name}="* {_q(word)} *"')
                 # Join with spaces (implicit AND)
-                word_clause = ' '.join(word_conditions)
-                search_parts.append(f'OR ({word_clause})')
+                search_parts.append(f"({' '.join(word_conditions)})")
 
-    # Join parts with spaces
-    result = ' '.join(search_parts)
-
-    # Clean up: if result starts with "OR ", remove it
-    if result.startswith('OR '):
-        result = result[3:]
-
-    return result
+    return ' OR '.join(search_parts)
 
 
 # Integer columns: a string operator on them ("RemotePort has_all(...)") never means anything
@@ -1014,28 +1010,26 @@ def compile_splunk_queries(
         field_value_pairs = {}
 
         # Add MITRE indicators - validate fields exist in pipeline
+        indicator_fields = []
         for field in fields:
             matched_field = find_matching_field(field, pipeline_fields)
             if matched_field:
                 if matched_field not in field_value_pairs:
                     field_value_pairs[matched_field] = []
+                    indicator_fields.append(matched_field)
                 field_value_pairs[matched_field].extend(indicators_to_use)
 
-        # Add OSINT indicators if enhancement enabled
+        # Add OSINT indicators if enhancement enabled. One keyed by a field the pipeline's | fields
+        # dropped (cmd, when it keeps process_command_line) could never match: it searches the
+        # field this index's indicators of the type use instead, or nowhere
         if osint_indicators:
             for osint_field, osint_values in osint_indicators.items():
                 matched_field = find_matching_field(osint_field, pipeline_fields)
-                if matched_field:
-                    if matched_field not in field_value_pairs:
-                        field_value_pairs[matched_field] = []
-                    field_value_pairs[matched_field].extend(osint_values)
-                else:
-                    if osint_field not in field_value_pairs:
-                        field_value_pairs[osint_field] = []
-                    field_value_pairs[osint_field].extend(osint_values)
+                for target in [matched_field] if matched_field else indicator_fields[:1]:
+                    field_value_pairs.setdefault(target, []).extend(osint_values)
 
         # Compile the search clause
-        search_clause = compile_search_clause(field_value_pairs)
+        search_clause = compile_search_clause(field_value_pairs, contains=indicator_type == "cmd")
 
         # Only generate query if there are actual indicators in the search clause
         if not search_clause or search_clause.strip() == "":
@@ -1103,6 +1097,18 @@ def find_matching_field(osint_field, pipeline_fields):
         # Case-insensitive check
         for field in pipeline_fields:
             if field.lower() == variation.lower():
+                return field
+
+    # Last, the names without a properties. prefix or separators: a mapping's
+    # properties.CommandLine is the pipeline's process_command_line
+    def _bare(name):
+        return re.sub(r"[^a-z0-9]", "", name.rsplit(".", 1)[-1].lower())
+
+    want = _bare(osint_field)
+    if len(want) >= 4:
+        for field in pipeline_fields:
+            have = _bare(field)
+            if have and (want in have or have in want):
                 return field
 
     return None
