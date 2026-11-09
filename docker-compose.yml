@@ -25,6 +25,10 @@ services:
       - ./data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
+      # Behind an HTTPS proxy (the homelab's Caddy) the proxy reaches the container from the Docker
+      # bridge, not 127.0.0.1, and uvicorn ignores X-Forwarded-Proto from anywhere it doesn't trust:
+      # pages then link their CSS and JS over http and browsers block it as mixed content
+      - FORWARDED_ALLOW_IPS=127.0.0.1,::1,172.16.0.0/12
     restart: unless-stopped
     networks:
       - shikari-network
