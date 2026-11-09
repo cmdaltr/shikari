@@ -25,6 +25,45 @@
       <a href="/">home page</a> first, and its exposure map will be here.</p>
   </section>
   {% endif %}
+  {% if manual_queries %}
+  <details class="detection-section mq-panel">
+    <summary><h2>Manual queries</h2><span class="mq-hint">Searches and commands to go further than the profile by hand. Shikari runs none of them.</span></summary>
+    <div class="mq-grid">
+      {% for g in manual_queries %}
+      <div class="mq-group">
+        <h3>{{ g.title }}</h3>
+        <ul>
+          {% for q in g["items"] %}
+          <li>{% if q.url %}<a href="{{ q.url }}" target="_blank" rel="noopener noreferrer">{{ q.text }}</a>{% else %}<code>{{ q.text }}</code>{% endif %}
+            <button type="button" class="mq-copy" data-copy="{{ q.text }}" title="Copy">Copy</button></li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+    </div>
+  </details>
+  <style>
+    .mq-panel summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+    .mq-panel summary::-webkit-details-marker { display: none; }
+    .mq-panel summary h2 { margin: 0; display: inline; }
+    .mq-panel summary h2::before { content: "\25B8  "; color: var(--text-secondary); }
+    .mq-panel[open] summary h2::before { content: "\25BE  "; }
+    .mq-hint { color: var(--text-secondary); font-size: .88rem; }
+    .mq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 16px; margin-top: 16px; }
+    .mq-group h3 { margin: 0 0 8px; font-size: .95rem; }
+    .mq-group ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .mq-group li { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start;
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .8rem; word-break: break-all; }
+    .mq-group li code { background: none; padding: 0; }
+    .mq-copy { flex: 0 0 auto; font-size: .72rem; padding: 2px 8px; border-radius: 4px; cursor: pointer;
+      border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-secondary); }
+  </style>
+  <script>
+    document.querySelectorAll('.mq-copy').forEach(b => b.addEventListener('click', () => {
+      navigator.clipboard.writeText(b.dataset.copy).then(() => { b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy'; }, 1200); });
+    }));
+  </script>
+  {% endif %}
 </div>
 {% if exposure %}<script src="{{ url_for('static', path='js/exposure.js') }}?v={{ request.app.state.asset_version }}"></script>{% endif %}
 {% endblock %}

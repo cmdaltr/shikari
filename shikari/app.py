@@ -8658,11 +8658,12 @@ def exposure_page(request: Request, domain: str, shikari_session: Optional[str] 
             adversaries = rank_adversaries(profile)
         except (OSError, ValueError):
             expo = None
-    from shikari.intelligence import incident_sources
+    from shikari.intelligence import incident_sources, manual_queries
     return templates.TemplateResponse("exposure.html", {"request": request, "user": user,
                                                         "domain": safe, "exposure": expo,
                                                         "adversaries": adversaries, "is_home": is_home,
-                                                        "incident_feeds": incident_sources.status()})
+                                                        "incident_feeds": incident_sources.status(),
+                                                        "manual_queries": manual_queries.queries(safe)})
 
 
 # ---------------------------------------------------------------- STIX / TAXII & MISP (#19)
