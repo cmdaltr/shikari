@@ -28,5 +28,6 @@ EXPOSE 32453
 # Use Python entrypoint to initialize OSINT repos before starting app (cross-platform)
 ENTRYPOINT ["python", "scripts/deployment/docker_entrypoint.py"]
 
-# Run the FastAPI application
-CMD ["uvicorn", "shikari.app:app", "--host", "0.0.0.0", "--port", "32453", "--reload"]
+# Run the FastAPI application. No --reload: a server restarting on any file change under its bind
+# mounts drops requests and hunts in flight. SHIKARI_RELOAD=1 turns it on for development.
+CMD ["uvicorn", "shikari.app:app", "--host", "0.0.0.0", "--port", "32453"]

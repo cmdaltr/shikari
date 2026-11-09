@@ -237,9 +237,11 @@ environment:
      - shikari-data:/app/data  # Named volume instead of bind mount
    ```
 
-2. **Remove --reload flag**
-   ```dockerfile
-   CMD ["uvicorn", "shikari.app:app", "--host", "0.0.0.0", "--port", "32453"]
+2. **Leave hot reload off** (the default). `SHIKARI_RELOAD=1` turns uvicorn's `--reload` on for development;
+   in production a reload on any file change under the bind mounts drops requests and hunts in flight.
+   ```yaml
+   environment:
+     - SHIKARI_RELOAD=1   # development only
    ```
 
 3. **Add health check**

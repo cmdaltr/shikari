@@ -77,6 +77,9 @@ def main():
     if len(sys.argv) > 1:
         # Get the command and arguments
         cmd = sys.argv[1:]
+        # Hot reload for development only (docker compose with SHIKARI_RELOAD=1)
+        if os.environ.get("SHIKARI_RELOAD") == "1" and cmd[0] == "uvicorn" and "--reload" not in cmd:
+            cmd.append("--reload")
         try:
             os.execvp(cmd[0], cmd)
         except Exception as e:
