@@ -3,7 +3,7 @@
 Reset password for an existing admin account.
 
 Usage:
-    python scripts/reset_admin_password.py
+    python scripts/admin/reset_password.py
 """
 
 import sys
@@ -11,7 +11,7 @@ import getpass
 from pathlib import Path
 
 # Add project root to path (parent of scripts directory)
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parents[2]))
 
 from shikari.database.db import init_db, get_db_session
 from shikari.database.models import User

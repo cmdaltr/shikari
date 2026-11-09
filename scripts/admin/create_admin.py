@@ -19,7 +19,7 @@ import getpass
 from pathlib import Path
 
 # Add project root to path (parent of scripts directory)
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parents[2]))
 
 from shikari.database.db import init_db, get_db_session
 from shikari.database.models import User, UserRole
