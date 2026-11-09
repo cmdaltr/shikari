@@ -127,7 +127,7 @@
       <p><strong>Interim results:</strong> what this run produced. Save what you want to keep to the Library.
         <a href="/results?group_name={{ group_name|urlencode }}">All results for {{ group_name.replace('_', ' ') }} →</a></p>
       {% else %}
-      <p><strong>Results:</strong> everything for {{ group_name.replace('_', ' ') }}: briefing, detections, correlations, cross-SIEM pivots and attack flow, across every run.</p>
+      <p><strong>Results:</strong> everything for {{ group_name.replace('_', ' ') }}: briefing, detections, correlations, X-SIEM pivots and attack flow, across every run.</p>
       {% endif %}
     </div>
 
@@ -1147,7 +1147,7 @@
     </div>
 
 
-    <!-- Cross-SIEM pivots (#8): a chain's stages re-expressed across SIEMs, with join keys -->
+    <!-- X-SIEM pivots (#8): a chain's stages re-expressed across SIEMs, with join keys -->
     {% if cross_vendor %}
     <div id="cross-vendor" class="detection-section">
       <div class="detection-header">
@@ -1155,7 +1155,7 @@
           <div class="card-icon pivot" style="width: 40px; height: 40px; margin-right: 12px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>
           </div>
-          Cross-SIEM pivots
+          X-SIEM pivots
         </h2>
         <div style="display: flex; gap: 12px; align-items: center;">
           <span id="cross-vendor-section-toggle" class="expand-btn" style="transition: all 0.3s ease; cursor: pointer;" onclick="toggleCrossVendorSection()">Collapse</span>
@@ -1261,6 +1261,7 @@
             </svg>
             Deselect All
           </button>
+          <span class="expand-btn" id="validation-expand-all" onclick="toggleAllValidationGuidance()">Expand All</span>
           <span class="expand-btn" id="validation-toggle" onclick="toggleValidationChecklist()">Expand</span>
         </div>
       </div>
@@ -2806,6 +2807,16 @@ function toggleValidationChecklist() {
 }
 
 
+// Expand All on Validation: opens the section and every step's guidance; Collapse All closes the guidance
+function toggleAllValidationGuidance(event) {
+  const content = document.getElementById('validation-content');
+  const btn = document.getElementById('validation-expand-all');
+  const guidance = content.querySelectorAll('.validation-step details');
+  const open = btn.textContent === 'Expand All';
+  if (open && content.style.display === 'none') toggleValidationChecklist();
+  guidance.forEach(d => { d.open = open; });
+  btn.textContent = open ? 'Collapse All' : 'Expand All';
+}
 
 // Toggle Detections section
 function toggleDetectionsSection() {
@@ -2888,7 +2899,7 @@ document.addEventListener('DOMContentLoaded', function() {
     detectionsToggleText.textContent = 'Collapse';
   }
 
-  // Initialize Cross-SIEM pivots state (collapsed unless opened before), like the sections above
+  // Initialize X-SIEM pivots state (collapsed unless opened before), like the sections above
   const crossVendorContent = document.getElementById('cross-vendor-section-content');
   if (crossVendorContent) {
     const collapsed = localStorage.getItem('crossVendorSectionCollapsed') !== 'false';

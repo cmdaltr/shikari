@@ -33,7 +33,7 @@
       <button class="cmp-btn alt" type="button" id="cmp-generate">Generate detections</button>
       <label class="cmp-meta"><input type="checkbox" id="cmp-burned"> include burned indicators</label>
       <a class="cmp-btn alt" href="/results?group_name={{ c.group | urlencode }}"
-         title="The campaign's detections, correlations and cross-SIEM pivots, once they are generated">Results</a>
+         title="The campaign's detections, correlations and X-SIEM pivots, once they are generated">Results</a>
       <a class="cmp-btn alt" href="/api/detections/code/master-kql?group={{ c.group | urlencode }}&techniques={{ c.techniques | map(attribute='id') | join(',') | urlencode }}"
          title="Defender XDR: one query over the campaign's detections, once they are generated">Master hunt query (.kql)</a>
       <span class="cmp-status" id="cmp-gen-status" role="status"></span>

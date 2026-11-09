@@ -5,8 +5,8 @@
  * to avoid duplication and maintain consistency.
  */
 
-/* The orange of the K in the wordmark: Validation, the Key and other calls to check something */
-:root { --k-orange: #F59E0B; --k-orange-hover: #D97706; }
+/* The K in the wordmark: its orange (the Key) and its red (Validation) */
+:root { --k-orange: #F59E0B; --k-orange-hover: #D97706; --k-red: #DF514D; --k-red-hover: #C43F3B; }
 
 /* ========== Base HTML Positioning ========== */
 html {

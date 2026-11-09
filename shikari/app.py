@@ -7496,7 +7496,7 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
     no_detection = _no_detection(group_name)
     briefing = briefing_lib.build(attack_flow, no_detection)
 
-    # Cross-SIEM pivots (#8): a chain's stages re-expressed across SIEMs, with join keys
+    # X-SIEM pivots (#8): a chain's stages re-expressed across SIEMs, with join keys
     cross_vendor = []
     if os.path.exists(correlation_file):
         try:

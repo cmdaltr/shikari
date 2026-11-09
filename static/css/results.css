@@ -1168,8 +1168,9 @@
 .page-footer .footer-content { order: 2; flex: 0 0 auto; }
 .page-footer .timestamp { order: 3; }
 
-/* Validation in the K's orange: the checklist and the note on what it unlocks */
-#validation-checklist { --accent: var(--k-orange); --accent-hover: var(--k-orange-hover); }
-#validation-checklist .validation-step summary { color: var(--k-orange) !important; }
-#validation-warning { background: rgba(245, 158, 11, .1) !important; border-color: var(--k-orange) !important; color: #92400e !important; }
-[data-theme="dark"] #validation-warning { color: #fbbf24 !important; }
+/* Validation in the K's red: the checklist and the note on what it unlocks */
+#validation-checklist { --accent: var(--k-red); --accent-hover: var(--k-red-hover); }
+#validation-checklist .card-icon.validation svg { stroke: var(--k-red); }
+#validation-checklist .validation-step summary { color: var(--k-red) !important; }
+#validation-warning { background: rgba(223, 81, 77, .08) !important; border-color: var(--k-red) !important; color: #9f2f2b !important; }
+[data-theme="dark"] #validation-warning { background: rgba(223, 81, 77, .14) !important; color: #f08a86 !important; }

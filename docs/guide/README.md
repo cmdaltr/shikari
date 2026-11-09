@@ -20,7 +20,7 @@ Help → **Guide** shows a picture of every page with each part highlighted in t
 | Profile (company) | Home → Profile | The threat groups likely to target a company, then their detections | [Company profile](04-company-profile.md) |
 | Exposure map | After a profile, or Intel → Catalogue | What OSINT surfaced about a company and how it links back to the domain | [Company profile](04-company-profile.md#exposure-map) |
 | Research | Home → Research | Find groups by keyword and compare their techniques | [Research](05-research.md) |
-| Results | Interim results open after a run; Results from the Library, Flows, Anatomy or Campaigns | A run's output to review and save (interim), or everything a group has: briefing, detections, correlations, cross-SIEM pivots, attack flow | [Results](06-results.md) |
+| Results | Interim results open after a run; Results from the Library, Flows, Anatomy or Campaigns | A run's output to review and save (interim), or everything a group has: briefing, detections, correlations, X-SIEM pivots, attack flow | [Results](06-results.md) |
 | Library | Detections → Library | Everything you've saved, with filters, tags and exports | [Library](07-library.md) |
 | Detections as code | Detections → Detections as code | Commit a run's detections to git and diff two commits | [Detections as code](22-detections-as-code.md) |
 | Coverage | Detections → Coverage | Which techniques the reference queries and your detections cover | [Coverage](08-coverage.md) |
