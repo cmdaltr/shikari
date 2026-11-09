@@ -49,6 +49,13 @@ def begin(group: str, regenerate: bool = False) -> None:
             _regenerate.discard(group)
 
 
+def running() -> List[str]:
+    """Groups whose run has begun and not completed. A run that failed stays here until a restart,
+    so callers asking whether work is under way also look at how recently its progress moved."""
+    with _lock:
+        return sorted(_active)
+
+
 def regenerating(group: Optional[str]) -> bool:
     """True while the group's run rewrites every detection, hand-edited ones included."""
     with _lock:

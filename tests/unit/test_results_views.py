@@ -102,3 +102,28 @@ def test_library_search_finds_saved_detections(db, monkeypatch):
     r = TestClient(app_module.app).post("/api/library/search", json={"query": "Process"})
     assert r.status_code == 200, r.text
     assert [d["title"] for d in r.json()["detections"]] == ["Process discovery"]
+
+
+@pytest.mark.unit
+def test_busy_while_a_run_is_building_and_not_when_it_died(tmp_path, monkeypatch):
+    import os
+    import time
+
+    from fastapi.testclient import TestClient
+
+    from shikari.build import progress, run_files
+
+    monkeypatch.setattr(progress, "PROGRESS_DIR", str(tmp_path))
+    http = TestClient(app_module.app)
+    assert http.get("/api/busy").json() == {"busy": False, "runs": 0}
+
+    run_files.begin("APT29")
+    try:
+        open(progress.progress_path("APT29"), "w").write("{}")
+        assert http.get("/api/busy").json() == {"busy": True, "runs": 1}
+        old = time.time() - 16 * 60      # no progress for 16 minutes: a run that died
+        os.utime(progress.progress_path("APT29"), (old, old))
+        assert http.get("/api/busy").json()["busy"] is False
+    finally:
+        run_files.finish("APT29")
+    assert http.get("/api/busy").json()["busy"] is False

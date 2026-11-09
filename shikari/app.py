@@ -1176,6 +1176,25 @@ async def api_token_auth(request: Request, call_next):
     return await call_next(request)
 
 
+BUSY_STALE_SECONDS = 15 * 60
+
+
+@app.get("/api/busy")
+def busy():
+    """Whether a hunt or Regenerate is building now: homelab pull holds back a rebuild (which restarts
+    the server) until it isn't. Only a count, so it's answered without signing in. A run whose
+    progress hasn't moved for 15 minutes has died, not paused, and doesn't count."""
+    import time
+
+    from shikari.build import run_files
+    from shikari.build.progress import progress_path
+
+    now = time.time()
+    live = [g for g in run_files.running()
+            if os.path.exists(progress_path(g)) and now - os.path.getmtime(progress_path(g)) < BUSY_STALE_SECONDS]
+    return {"busy": bool(live), "runs": len(live)}
+
+
 # MCP over HTTP, as the bearer token's owner (shikari/mcp_server.py)
 from starlette.routing import Route
 
