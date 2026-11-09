@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 import shikari.app as app_module
-from shikari.database.models import Base, DetectionType, LibraryDetection, User
+from shikari.database.models import Base, DetectionType, LibraryCorrelation, LibraryDetection, User
 
 
 @pytest.fixture
@@ -26,6 +26,24 @@ def db(tmp_path):
     s.commit()
     yield s
     s.close()
+
+
+@pytest.mark.unit
+def test_saved_correlations_match_on_vendor_and_detections_not_title(db):
+    corr = {"vendor": "googlesecops", "a": "data/groups/ProcessInjection_UDM.yaml",
+            "b": ["data/groups/ScheduledTask_UDM.yaml", "data/groups/SAM_UDM.yaml"]}
+    for uid, tag, content in [
+        (1, "Group:Scattered Spider", {**corr, "b": list(reversed(corr["b"])), "relevance_score": 3}),
+        (1, "Group:APT29", {**corr, "a": "data/groups/Other_UDM.yaml"}),       # another group's
+        (1, "Group:Scattered Spider", {"name": "Splunk", "correlations": []}),   # a whole vendor, as once saved
+    ]:
+        db.add(LibraryCorrelation(user_id=uid, title="Correlation: T1055, T1053", content=json.dumps(content),
+                                  platform="multi", tags=json.dumps([tag])))
+    db.commit()
+    grouped = [{"name": "Google SecOps", "correlations": [{**corr, "relevance_score": 9},
+                                                          {**corr, "a": "data/groups/Other_UDM.yaml"}]}]
+    assert app_module._saved_correlation_ids(db, 1, "Scattered_Spider", grouped) == ["corr-Google SecOps-1"]
+    assert app_module._saved_correlation_ids(db, 2, "Scattered_Spider", grouped) == []
 
 
 @pytest.mark.unit

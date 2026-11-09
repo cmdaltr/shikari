@@ -891,6 +891,7 @@
 
                 </div>
                 <div class="card-right">
+                  {% if ('corr-' ~ vendor.name ~ '-' ~ loop.index) in library_corrs %}<span class="lib-saved" title="Already saved to your Library">In Library</span>{% endif %}
                   {% if correlation.osint_enriched %}
                   <span class="osint-enhanced-badge" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.8em; font-weight: 600; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">

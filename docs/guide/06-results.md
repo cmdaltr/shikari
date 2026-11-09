@@ -9,7 +9,7 @@ Each group, report or CVE has one page in two views:
 
 When a group has had more than one run, **Showing: Interim: latest run / All results** switches between them. The address is `/results?group_name=<group>`; the interim view adds `&run=latest`.
 
-The Library holds what you've saved; this page shows what the runs generated. Detections already in your Library are marked **In Library** (or *In Library (1/3)* when only some of a card's files are), and the top of Detections says how many are saved, with a link to the group in the Library.
+The Library holds what you've saved; this page shows what the runs generated. Detections already in your Library are marked **In Library** (or *In Library (1/3)* when only some of a card's files are), and so are saved correlations. The top of Detections says how many are saved, with a link to the group in the Library.
 
 ## From top to bottom
 

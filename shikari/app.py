@@ -6422,6 +6422,34 @@ def _saved_detection_files(db, user_id: int, group_name: str, detections: list) 
     return {k: sorted(v) for k, v in out.items()}
 
 
+def _correlation_key(c) -> tuple:
+    """A correlation's identity across the page and the Library: its vendor and the detections it joins
+    (its title is made in the browser and is shared by every group's correlation of the same techniques)."""
+    b = c.get("b")
+    b = sorted(map(str, b)) if isinstance(b, list) else [str(b or "")]
+    return (str(c.get("vendor") or "").lower(), str(c.get("a") or ""), tuple(b))
+
+
+def _saved_correlation_ids(db, user_id: int, group_name: str, grouped_correlations: list) -> list:
+    """The results page's correlation ids (corr-<vendor>-<n>) already in this user's Library for the group."""
+    from shikari.database.models import LibraryCorrelation
+    from shikari.visualization.flow_layouts import library_tag
+
+    needle = json.dumps(library_tag(group_name))
+    saved = set()
+    for (content,) in (db.query(LibraryCorrelation.content)
+                       .filter(LibraryCorrelation.user_id == user_id,
+                               LibraryCorrelation.tags.contains(needle, autoescape=True))):
+        try:
+            c = json.loads(content)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(c, dict) and c.get("a"):
+            saved.add(_correlation_key(c))
+    return [f"corr-{vendor.get('name')}-{i}" for vendor in grouped_correlations
+            for i, c in enumerate(vendor.get("correlations") or [], 1) if _correlation_key(c) in saved]
+
+
 @app.get("/results", response_class=HTMLResponse)
 def results_page(request: Request, group_name: str, run: str = "", shikari_session: Optional[str] = Cookie(None)):
     """
@@ -7418,11 +7446,12 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
 
     # Flow edits persist for a logged-in user once the group's results are in their library
     # What's already in the Library: the page marks it, and Results links to it there
-    library_saved, library_group = {}, library_group_name(safe_group)
+    library_saved, library_corrs, library_group = {}, [], library_group_name(safe_group)
     if user:
         db = next(get_db())
         try:
             library_saved = _saved_detection_files(db, user.id, safe_group, detections)
+            library_corrs = _saved_correlation_ids(db, user.id, safe_group, grouped_correlations)
         except Exception as e:
             print(f"Library status unavailable: {e}")
         finally:
@@ -7487,6 +7516,7 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
             # it's the group's Results, everything it has
             "interim": run == "latest",
             "library_saved": library_saved,
+            "library_corrs": library_corrs,
             "library_saved_count": sum(len(v) for v in library_saved.values()),
             "library_group": library_group,
             # Detections the last run left alone because their query was edited by hand
