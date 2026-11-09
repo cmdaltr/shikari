@@ -8997,6 +8997,44 @@ def detections_code_siem_pack(request: Request, siem: str = Query(...), group: s
                              "X-Shikari-Pack": json.dumps(summary)})
 
 
+@app.get("/api/detections/code/master-kql")
+def detections_code_master_kql(request: Request, group: str = Query(""), techniques: str = Query(""),
+                               per_technique: int = Query(1, ge=0, le=20), lookback: str = Query("30d"),
+                               tlp: str = Query(""), shikari_session: Optional[str] = Cookie(None)):
+    """A master hunt query for Defender XDR (from ETHAN): a run's MDE detections as one KQL query
+    that ranks devices by how many of the run's techniques they show."""
+    from fastapi.responses import Response
+
+    from shikari.build.group_files import group_yaml_files as _group_files
+    from shikari.export import master_kql
+
+    auth = require_auth(request, shikari_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in to export"}, status_code=401)
+    _user, db = auth
+    db.close()
+    safe = sanitize_group_name(group) if group else None
+    if safe and not group_yaml_files(safe, GENERATE_DIR):
+        return JSONResponse({"success": False, "error": f"No detections for {group}. Hunt it first."}, status_code=404)
+    wanted = [t for t in re.split(r"[\s,]+", techniques.upper()) if t]
+    if any(not re.fullmatch(r"T\d{4}(?:\.\d{3})?", t) for t in wanted):
+        return JSONResponse({"success": False, "error": "Techniques are ATT&CK IDs, such as T1016, T1059.001"},
+                            status_code=400)
+    try:
+        text, manifest = master_kql.build(safe, GENERATE_DIR, _group_files, tlp=tlp, lookback=lookback,
+                                          techniques=wanted, per_technique=per_technique)
+    except ValueError as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=400)
+    if not manifest["detections"]:
+        return JSONResponse({"success": False, "error": "No Defender XDR detections to combine"
+                             + (" for those techniques" if wanted else "")}, status_code=404)
+    summary = {"detections": manifest["detections"], "techniques": len(manifest["techniques"]),
+               "capped": manifest["capped"], "excluded": len(manifest["excluded"])}
+    return Response(text, media_type="text/plain; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{master_kql.filename(safe)}"',
+                             "X-Shikari-Master": json.dumps(summary)})
+
+
 @app.get("/api/detections/code/config")
 def detections_code_config_get(request: Request, shikari_session: Optional[str] = Cookie(None)):
     """The detections-as-code repo config (admin only)."""

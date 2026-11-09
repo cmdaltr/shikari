@@ -32,3 +32,16 @@ These were checked against real products in the #41 spike (November 2026):
 - **Splunk needs an x86_64 host.** `splunk/splunk` has no arm64 image, and it doesn't run under emulation on Apple silicon (16 KiB pages).
 - **Wazuh practice events need their own parent rules.** A manager reads `telemetry/events.json` with its json decoder, not `windows_eventchannel`, so the built-in Sysmon rules never fire on it. `telemetry/shikari_practice_rules.xml` (rules 100090–100095) supplies the parent groups; install it on a practice manager only. Replaying the whole file needs `logcollector.queue_size` raised above its default of 1,024 lines, or events are dropped.
 - **Wazuh rules are Windows only.** There's nothing yet for Linux or macOS.
+
+## Master hunt query (Defender XDR)
+
+**Detections as code → Master hunt query**, or `shikari export kql`, combines a run's Defender XDR detections into one advanced hunting query. Each detection becomes a KQL function over a window you choose; the functions are unioned (`isfuzzy`, so a table the tenant lacks doesn't fail the rest), and the result is one row per device and account, ranked by how many of the run's techniques it shows, with the commands behind them. Several of one group's techniques on a device is the campaign signal a single detection can't give. It came from ETHAN, rebuilt from Shikari's own library with no AI.
+
+```
+shikari export kql --group "Sandworm Team" --techniques T1016,T1033,T1057,T1082 --tlp amber
+shikari export kql --all --per-technique 0 --lookback 7d -o hunt.kql
+```
+
+A group's whole library is too much for one query (Sandworm Team: 497 detections, about 400 KB), so each technique keeps one detection by default, from the table most likely to see it (process events first). List a campaign's techniques to scope it, and raise `--per-technique` for more. A detection that fails Shikari's static check, or would break the union (unbalanced quotes or brackets, a backslash escape in an ordinary string), is left out and named in the header. The header also carries the TLP label it's shared under.
+
+It hasn't been run against a live Defender XDR tenant: the KQL is checked by Shikari's own static checker, not Microsoft's parser.

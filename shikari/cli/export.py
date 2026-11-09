@@ -4,6 +4,8 @@ shikari export siem: a SIEM export pack (#41) from the command line.
     shikari export siem --siem elastic --group "Sandworm Team"
     shikari export siem --siem splunk --all --telemetry caldera-shikari-sbx-20261108-103915 -o pack.zip
     shikari export runs        the lab runs --telemetry can take
+    shikari export kql --group "Sandworm Team" --techniques T1016,T1033 --tlp amber
+                               a master hunt query for Defender XDR (shikari.export.master_kql)
 
 The same pack the Detections as code page downloads: see shikari.export.siem_pack.
 """
@@ -70,6 +72,37 @@ def _siem(args) -> int:
     return 0
 
 
+def _kql(args) -> int:
+    from shikari.build.group_files import group_yaml_files
+    from shikari.config import GENERATE_DIR
+    from shikari.export import master_kql
+    from shikari.security.validation import sanitize_group_name
+
+    group = None if args.all else sanitize_group_name(args.group)
+    if group and not group_yaml_files(group, GENERATE_DIR):
+        print(f"error: no detections for {args.group}. Hunt it first.", file=sys.stderr)
+        return 1
+    try:
+        text, manifest = master_kql.build(group, GENERATE_DIR, group_yaml_files, tlp=args.tlp,
+                                          lookback=args.lookback, per_technique=args.per_technique,
+                                          techniques=[t for t in (args.techniques or "").split(",") if t.strip()])
+    except ValueError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+    if args.output == "-":
+        sys.stdout.write(text)
+        return 0
+    out = args.output or master_kql.filename(group)
+    with open(out, "w", encoding="utf-8") as fh:
+        fh.write(text)
+    print(f"{out}: {manifest['detections']} detections over {len(manifest['techniques'])} techniques, {manifest['tlp']}")
+    if manifest["capped"]:
+        print(f"  {manifest['capped']} more not included (--per-technique 0 for all)")
+    if manifest["excluded"]:
+        print(f"  {len(manifest['excluded'])} left out for failing the static check")
+    return 0
+
+
 def _runs(_args) -> int:
     runs = lab_runs()
     if not runs:
@@ -95,8 +128,17 @@ def main(argv=None):
                    help="keep detections whose data source the estate doesn't ingest")
     s.add_argument("-o", "--output", help="the zip to write (default shikari-<siem>-<group>.zip here)")
     sub.add_parser("runs", help="list the recorded lab runs")
+    k = sub.add_parser("kql", help="a master hunt query for Defender XDR advanced hunting")
+    which = k.add_mutually_exclusive_group(required=True)
+    which.add_argument("--group", help="a hunted group, CVE or report run")
+    which.add_argument("--all", action="store_true", help="every detection")
+    k.add_argument("--techniques", help="only these, comma-separated (T1016,T1033)")
+    k.add_argument("--per-technique", type=int, default=1, help="detections per technique (0: all; default 1)")
+    k.add_argument("--lookback", default="30d", help="the window, in hours or days (default 30d)")
+    k.add_argument("--tlp", default="", help="the TLP label it's shared under (default TLP:AMBER)")
+    k.add_argument("-o", "--output", help="the .kql to write, - for stdout (default shikari-master-hunt-<group>.kql)")
     args = p.parse_args(argv)
-    return {"siem": _siem, "runs": _runs}[args.cmd](args)
+    return {"siem": _siem, "runs": _runs, "kql": _kql}[args.cmd](args)
 
 
 if __name__ == "__main__":

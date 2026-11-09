@@ -103,6 +103,37 @@
     {% if not lab_runs %}<p class="ms-note">No lab runs recorded yet: see <code>scripts/telemetry</code>.</p>{% endif %}
   </section>
 
+  <!-- Master hunt query -->
+  <section class="ui-card ms-card">
+    <h2>Master hunt query</h2>
+    <p class="ms-note">A run's Defender XDR detections as one advanced hunting query: each runs over the
+      window you choose, and the result ranks devices by how many of the run's techniques they show,
+      the campaign signal one detection can't give. One detection per technique unless you ask for more;
+      list techniques to scope it to a campaign.</p>
+    <div class="dc-actions">
+      <select id="dc-mq-group" class="dropdown-styled" aria-label="Run">
+        <option value="">All detections</option>
+        {% for g in runs %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+      </select>
+      <input type="text" id="dc-mq-techniques" class="form-input" placeholder="techniques (optional): T1016, T1033"
+             aria-label="Techniques">
+      <select id="dc-mq-per" class="dropdown-styled" aria-label="Detections per technique">
+        <option value="1">1 per technique</option><option value="3">Up to 3</option><option value="0">All</option>
+      </select>
+      <select id="dc-mq-lookback" class="dropdown-styled" aria-label="Window">
+        <option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option>
+        <option value="30d" selected>Last 30 days</option>
+      </select>
+      <select id="dc-mq-tlp" class="dropdown-styled" aria-label="TLP">
+        <option>TLP:CLEAR</option><option>TLP:GREEN</option><option selected>TLP:AMBER</option>
+        <option>TLP:AMBER+STRICT</option><option>TLP:RED</option>
+      </select>
+      <button type="button" class="btn-primary" id="dc-mq">Download .kql</button>
+      <span class="ms-state" id="dc-mq-state" aria-live="polite"></span>
+    </div>
+    <div id="dc-mq-result" class="dc-result" hidden></div>
+  </section>
+
   <!-- Push (dry run) -->
   <section class="ui-card ms-card">
     <h2>Push to a SIEM <span class="dc-badge">dry run</span></h2>
@@ -204,6 +235,28 @@
         + (s.telemetry != null ? `, ${s.telemetry} lab events` : '') + '. The README inside has the import steps.</p>'
         + (s.telemetry === 0 ? '<p class="ms-note">The run has no events these detections match: '
           + 'record with Sysmon and 4688 on (<code>scripts/telemetry/prepare-windows.ps1</code>).</p>' : '');
+      state.textContent = ''; out.hidden = false;
+    } catch (e) { state.textContent = e.message; }
+  });
+
+  $('dc-mq').addEventListener('click', async () => {
+    const state = $('dc-mq-state'), out = $('dc-mq-result');
+    const params = new URLSearchParams({ group: $('dc-mq-group').value, techniques: $('dc-mq-techniques').value,
+      per_technique: $('dc-mq-per').value, lookback: $('dc-mq-lookback').value, tlp: $('dc-mq-tlp').value });
+    state.textContent = 'Building…'; out.hidden = true;
+    try {
+      const r = await fetch('/api/detections/code/master-kql?' + params);
+      if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || ('HTTP ' + r.status)); }
+      const blob = await r.blob();
+      const name = (/filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') || '') || [])[1] || 'master-hunt.kql';
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: name });
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      const s = JSON.parse(r.headers.get('X-Shikari-Master') || '{}');
+      out.innerHTML = `<p class="ms-note">Downloaded <code>${esc(name)}</code>: ${s.detections} detections over `
+        + `${s.techniques} techniques` + (s.capped ? `, ${s.capped} more not included (one per technique)` : '')
+        + (s.excluded ? `, ${s.excluded} left out for failing the static check` : '')
+        + '. Paste it into Defender XDR advanced hunting.</p>';
       state.textContent = ''; out.hidden = false;
     } catch (e) { state.textContent = e.message; }
   });

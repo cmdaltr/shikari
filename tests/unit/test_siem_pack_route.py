@@ -53,3 +53,15 @@ def test_wazuh_all(client):
 def test_refusals(client, params, status):
     r = client.get("/api/detections/code/siem-pack", params=params)
     assert r.status_code == status and r.json()["success"] is False
+
+
+def test_master_kql(client):
+    # The fixture's one detection is Elastic: nothing for Defender XDR to combine
+    r = client.get("/api/detections/code/master-kql", params={"group": "Sandworm_Team"})
+    assert r.status_code == 404 and "No Defender XDR detections" in r.json()["error"]
+
+
+@pytest.mark.parametrize("params", [{"techniques": "T1016; drop"}, {"lookback": "1w"}, {"tlp": "SECRET"}])
+def test_master_kql_refusals(client, params):
+    r = client.get("/api/detections/code/master-kql", params=params)
+    assert r.status_code == 400 and r.json()["success"] is False
