@@ -57,6 +57,25 @@ def _report_detections(group_name, processed, created, total, produced_ids=()):
     })
 
 
+# prune() is skipped when a run produces less than this share of the group's existing detections
+# (and the group has at least PRUNE_GUARD_MIN), so a broken run can't strip the group
+PRUNE_GUARD_RATIO = 0.5
+PRUNE_GUARD_MIN = 20
+
+
+def prune_held_back(group_name, produced, generate_dir):
+    """Why the run's earlier detections shouldn't be pruned, or None. A run that made far less than
+    the group already has is more likely broken than right (9 Nov 2026: Regenerates that produced a
+    few dozen files each pruned ~1,560 detections), so its earlier detections are kept."""
+    from shikari.build.group_files import group_yaml_files
+
+    existing = len(group_yaml_files(group_name, generate_dir))
+    if existing >= PRUNE_GUARD_MIN and len(produced) < existing * PRUNE_GUARD_RATIO:
+        return (f"This run made {len(produced)} detection file(s) but {group_name} has {existing}: its earlier "
+                f"detections were kept rather than pruned. Hunt it again; if it's the same, report it.")
+    return None
+
+
 def _produced(group_name, before):
     """Whether compile_query wrote or tagged a file for the group; True when untracked."""
     after = run_files.touches(group_name)
@@ -120,6 +139,8 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
     # the per-technique handlers would otherwise swallow this N times and report success
     try:
         load_indicator_mappings()
+        from shikari.build.queries import platform_mappings
+        platform_mappings()
     except MappingsError as e:
         safe_progress_update(group_name, {"status": "failed", "stage": "init", "error": str(e)})
         raise
@@ -330,6 +351,12 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
     # only one SIEM or index leaves them alone. A CVE run's own detections count as produced
     # without a technique query (created 0), so its renamed files replace the old ones
     produced = run_files.produced(group_name)
+    if produced and not errors and not (siem_filter or index_filter):
+        held = prune_held_back(group_name, produced, GENERATE_DIR)
+        if held:
+            print(f"🛑 {held}")
+            run_files.warn(group_name, held)
+            produced = None
     if produced and not errors and not (siem_filter or index_filter):
         from shikari.build.group_files import prune
 

@@ -1128,7 +1128,27 @@ def load_platform_mappings():
         return {}
 
 
-PLATFORM_MAPPINGS = load_platform_mappings()
+_platform_cache = {"mtime": None, "mappings": {}}
+
+
+def platform_mappings():
+    """bespoke/mappings/sources/platforms.json, read again whenever it changes. It used to be read once
+    at import: a server that started while the file was being rewritten (a deploy) kept an empty table,
+    every SIEM table failed the platform check, runs made almost nothing, and pruning then stripped the
+    groups' detections (9 Nov 2026). Missing or empty, it stops the run instead."""
+    from shikari.build.detections import MappingsError
+
+    path = paths.BESPOKE / "mappings" / "sources" / "platforms.json"
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        mtime = None
+    if mtime != _platform_cache["mtime"] or not _platform_cache["mappings"]:
+        _platform_cache.update(mtime=mtime, mappings=load_platform_mappings())
+    if not _platform_cache["mappings"]:
+        raise MappingsError(f"The SIEM platform table {path} is missing, empty or unreadable, so no detection "
+                            "could be matched to a SIEM table. Restore it (bespoke/README.md) and run again.")
+    return _platform_cache["mappings"]
 
 
 def get_platforms_for_index(index_name):
@@ -1137,7 +1157,7 @@ def get_platforms_for_index(index_name):
 
     # Find all platforms that include this index
     matching_platforms = []
-    for platform, sources in PLATFORM_MAPPINGS.items():
+    for platform, sources in platform_mappings().items():
         for _, indices in sources.items():
             if clean_index_name in indices:
                 matching_platforms.append(platform)

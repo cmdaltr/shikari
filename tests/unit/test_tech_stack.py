@@ -82,6 +82,7 @@ def test_group_hunt_leaves_out_what_the_stack_cannot_have():
          patch.object(orchestrator, "obtain_technique_descriptions", return_value=[]), \
          patch.object(orchestrator, "check_group_in_mitre", return_value="Y"), \
          patch.object(orchestrator, "load_indicator_mappings"), \
+         patch("shikari.build.queries.platform_mappings"), \
          patch.object(orchestrator, "retrieve_group"), patch.object(orchestrator, "retrieve_techniques"), \
          patch.object(orchestrator, "retrieve_procedures", side_effect=retrieve), \
          patch.object(orchestrator, "compile_query", side_effect=lambda d, **k: compiled.append(d["technique_id"])), \
@@ -106,6 +107,7 @@ def test_explicit_hunt_warns_and_generates(tmp_path):
          patch.object(orchestrator, "obtain_technique_descriptions", return_value=[]), \
          patch.object(orchestrator, "check_group_in_mitre", return_value="N"), \
          patch.object(orchestrator, "load_indicator_mappings"), \
+         patch("shikari.build.queries.platform_mappings"), \
          patch.object(orchestrator, "compile_query", side_effect=lambda d, **k: seen.append(d["technique_id"])), \
          patch.object(orchestrator, "safe_progress_update"):
         run_files.begin("Report_x")
