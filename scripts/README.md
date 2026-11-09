@@ -38,6 +38,9 @@ python scripts/admin/create_admin.py
 
 # Reset password
 python scripts/admin/reset_password.py user@example.com
+
+# Regenerate groups after a change to how detections are built (an API token from Profile → Security)
+SHIKARI_TOKEN=shik_... python scripts/admin/regenerate.py APT29 "Scattered Spider"
 ```
 
 ### Initial Configuration
