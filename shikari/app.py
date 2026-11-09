@@ -11047,7 +11047,7 @@ async def search_library(request: Request, shikari_session: Optional[str] = Cook
         result = []
         for detection in detections:
             creator = db.query(User).filter(User.id == detection.user_id).first()
-            creator_name = creator.username if creator else "Unknown"
+            creator_name = creator.full_name if creator else "Unknown"
 
             # Apply creator filter
             if creator_filter != "all" and creator_name != creator_filter:

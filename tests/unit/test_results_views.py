@@ -90,3 +90,15 @@ def test_saving_one_groups_correlation_leaves_anothers_of_the_same_title(db, mon
     save("APT29", "data/groups/ProcessInjection_kql.yaml")          # the same one again: an update
     rows = db.query(LibraryCorrelation).filter_by(user_id=1).all()
     assert sorted(json.loads(r.tags)[0] for r in rows) == ["Group:APT29", "Group:Scattered Spider"]
+
+
+@pytest.mark.unit
+def test_library_search_finds_saved_detections(db, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    user = db.get(User, 1)
+    monkeypatch.setattr(app_module, "require_auth", lambda request, session: (user, db))
+    monkeypatch.setattr(db, "close", lambda: None)
+    r = TestClient(app_module.app).post("/api/library/search", json={"query": "Process"})
+    assert r.status_code == 200, r.text
+    assert [d["title"] for d in r.json()["detections"]] == ["Process discovery"]
