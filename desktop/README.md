@@ -44,7 +44,7 @@ On Windows on ARM64, `install.ps1` also downloads Microsoft's .NET Desktop Runti
 
 ### Updates
 
-The app checks GitHub for a newer release once a day, in the background, and says so in a small notice: **Update** downloads the installer, checks it against `SHA256SUMS`, closes Shikari, installs it and reopens it (macOS and Windows; on Linux the notice gives the command, since apt needs a password). **Later** hides it until the next launch, **Skip this version** until a newer one. **Help > Check for Updates** asks now, and has the switch that turns the daily check off (or set `SHIKARI_UPDATE_CHECK=0`). The check sends GitHub nothing but the request; while the repository is private it needs `GH_TOKEN` or a logged-in `gh`, and without one it stays quiet. From a terminal, the installed app's `shikari update` (the `.deb`'s command, or `Shikari.app/Contents/MacOS/Shikari update`) does the same, and `shikari update --check` only looks. The app carries the install scripts for this (`seed/install.sh`, `seed/install.ps1`).
+The app checks GitHub for a newer release once a day, in the background, and says so in a small notice: **Update** downloads the installer, checks it against `SHA256SUMS`, closes Shikari, installs it and reopens it (macOS and Windows; on Linux the notice gives the command, since apt needs a password). **Later** hides it until the next launch, **Skip this version** until a newer one. **Help > Check for Updates** asks now, and has the switch that turns the daily check off (or set `SHIKARI_UPDATE_CHECK=0`). The check sends GitHub nothing but the request; while the repository is private it needs `GH_TOKEN` or a logged-in `gh`, and without one it stays quiet. From a terminal, the installed app's `shikari update` (the `.deb`'s command, or `Shikari.app/Contents/MacOS/Shikari update`) does the same, and `shikari update --check` only looks. The app carries the install scripts for this (`seed/install.sh`, `seed/install.ps1`), and the uninstall scripts beside them.
 
 The first launch asks how to use it:
 
@@ -73,6 +73,21 @@ For macOS, the profile's payload is a Custom Settings (`com.apple.ManagedClient.
 
 The app checks a server before opening it: it must answer `/health` as Shikari, over HTTPS with a certificate the operating system trusts. An internal CA works once IT has deployed it to the machines. There's no way to click through a certificate error. A user can't type a plain `http://` address except for this computer; IT's setting and `SHIKARI_SERVER` can, for a server on a trusted network.
 
+## Uninstalling
+
+The app carries its own uninstall script, so it can be removed without the repository:
+
+```bash
+sh /Applications/Shikari.app/Contents/Resources/app/seed/uninstall.sh     # macOS
+sh /usr/lib/shikari/app/seed/uninstall.sh                                 # Linux
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Programs\cmdaltr\Shikari\app\seed\uninstall.ps1"   # Windows
+```
+
+`desktop/uninstall.sh` and `desktop/uninstall.ps1` in the repository are the same scripts. Each quits Shikari, removes the app (on Linux by purging the package, on Windows through Windows Installer, as Settings > Apps would), and on macOS clears what the system keeps per app outside the data folder (its caches, WebKit storage, cookies and saved window state). Then it asks before deleting the data folder below, which holds your database and detections: `--keep-data` (`-KeepData`) keeps it for a reinstall, `--yes` (`-Yes`) deletes it without asking, and without a terminal to ask on it's kept. On macOS a Shikari checkout's own server keeps its files in the same Application Support folder, and its logs in `~/Library/Logs/Shikari`; the script never touches those. GTK and WebKit stay on Linux, since other apps use them.
+
 ## Where Your Data Lives
 
 In local mode (connected to a server, this folder only holds the login session and logs):
@@ -83,7 +98,7 @@ In local mode (connected to a server, this folder only holds the login session a
 | Windows | `%LOCALAPPDATA%\Shikari\home` |
 | Linux | `~/.local/share/shikari/home` |
 
-The folder holds the database, generated detections, caches, logs (`logs/shikari.log`) and `bespoke/`. Uninstalling the app leaves it in place; delete it to start again. Set `SHIKARI_HOME` to use another folder.
+The folder holds the database, generated detections, caches, logs (`logs/shikari.log`) and `bespoke/`. Removing the app any other way leaves it in place; delete it to start again, or use the uninstall script above. Set `SHIKARI_HOME` to use another folder.
 
 The first run fills it from the installer: the reference data in the repository's `data/`, the ATT&CK bundle and the procedures CSV built from it at release time, and generic mappings in `bespoke/mappings/` (Splunk set up for CEF; see `shikari/mappings/defaults/README.md`). Put your organisation's own mappings in `bespoke/mappings/` to replace them: Shikari never overwrites a file that's there.
 

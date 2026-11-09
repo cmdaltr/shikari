@@ -71,7 +71,8 @@ def seed(home, version):
     upgraded = (marker.read_text().strip() if marker.exists() else "") != version
     copied = 0
     for src in SEED.rglob("*"):
-        if not src.is_file() or src in (SEED / "VERSION", SEED / "LICENSE", SEED / "install.sh", SEED / "install.ps1"):
+        if not src.is_file() or src in (SEED / "VERSION", SEED / "LICENSE", SEED / "install.sh", SEED / "install.ps1",
+                                        SEED / "uninstall.sh", SEED / "uninstall.ps1"):
             continue
         dest = home / src.relative_to(SEED)
         if dest.exists() and not upgraded:
