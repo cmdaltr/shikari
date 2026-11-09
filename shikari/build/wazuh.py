@@ -203,7 +203,9 @@ def rules(pooled: Dict[str, Dict], ids: RuleIds, attack_names: Optional[Dict[str
     return out
 
 
-PRACTICE_FIRST_ID = 100000  # below FIRST_ID: the practice parents, never in shikari_rules.xml
+# Below FIRST_ID, never in shikari_rules.xml; clear of 100001, the example rule a manager's
+# local_rules.xml ships with
+PRACTICE_FIRST_ID = 100090
 
 
 def practice_xml() -> str:

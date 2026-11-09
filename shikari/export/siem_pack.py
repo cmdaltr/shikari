@@ -6,7 +6,7 @@ SIEM's own import format with a README of the steps, and a manifest of what went
 API is shikari.export.siem_push. No AI.
 
     elastic  rules.ndjson               Security → Rules → Import: ES|QL rules, created disabled
-    splunk   shikari_detections.tgz     Apps → Install app from file: savedsearches.conf (disabled)
+    splunk   shikari_detections.tgz     Apps → Install app from file: savedsearches.conf (unscheduled)
                                         and indexes.conf for every index the searches name
     wazuh    shikari_rules.xml          the manager's etc/rules: built from the detections'
                                         indicators (shikari.build.wazuh), Windows events only
@@ -165,12 +165,15 @@ def splunk_saved_search(doc: Dict) -> Tuple[str, Dict[str, str]]:
     severity = str(doc.get("severity") or "medium").lower()
     period = _hours(doc.get("queryPeriod"))
     return _stanza(doc), {
-        # A saved search reads $name$ as an argument placeholder (`| savedsearch`, and one level of
-        # substitution on scheduled runs), so a literal $ such as $env:UserName is written $$
+        # A saved search reads $name$ as an argument placeholder, so a literal $ such as
+        # $env:UserName is written $$: Splunk 9.4 runs it as $ by | savedsearch, dispatch and
+        # schedule alike (#41 spike)
         "search": _one_line(doc.get("query")).replace("$", "$$"),
         "description": _one_line(doc.get("description") or doc.get("name") or ""),
-        "disabled": "1",
-        "enableSched": "1",
+        # Enabled but unscheduled: Splunk refuses to run a disabled search at all, even with
+        # | savedsearch or a dispatch, so this way each can be tried by hand before it's scheduled
+        "disabled": "0",
+        "enableSched": "0",
         "cron_schedule": _cron(doc.get("queryFrequency")),
         "dispatch.earliest_time": f"-{period}h",
         "dispatch.latest_time": "now",
@@ -209,7 +212,7 @@ def splunk_app(docs: List[Dict], version: str) -> bytes:
             ("install", {"is_configured": "0"}),
             ("ui", {"is_visible": "0", "label": "Shikari Detections"}),
             ("launcher", {"author": "Shikari", "version": app_version,
-                          "description": "Detections exported from Shikari, disabled until you enable them"}),
+                          "description": "Detections exported from Shikari, unscheduled until you schedule them"}),
             ("package", {"id": SPLUNK_APP}),
         ]),
         "default/savedsearches.conf": _conf(searches),
@@ -246,8 +249,11 @@ Install
   To update from an earlier pack, tick "Upgrade app".
   Or on the server: $SPLUNK_HOME/bin/splunk install app shikari_detections.tgz -update 1, then restart.
 
-The searches arrive disabled: enable them under Settings → Searches, reports, and alerts
-(App: Shikari Detections). The app creates the indexes they search: {indexes}.
+The searches arrive unscheduled, so none runs until you choose: try one with
+  | savedsearch "<name>"
+and schedule the ones you want under Settings → Searches, reports, and alerts (App: Shikari
+Detections) → Edit schedule; each carries a suggested cron. The app creates the indexes they
+search: {indexes}.
 """,
     "wazuh": """Shikari rules for Wazuh: {count} rules over {techniques} techniques{scope}
 
@@ -411,11 +417,15 @@ Lab telemetry: {events} Windows events from {run}{shifted}
   telemetry/shikari_practice_rules.xml
                               for a practice manager only. A manager reads events.json with its json
                               decoder, not windows_eventchannel, so the built-in Sysmon and Security
-                              rules don't fire and Shikari's have no parent. These rules (IDs from
-                              100000) give the json-decoded events the same groups.
-  Install both rule files and restart, then either paste a line into wazuh-logtest, or add to
-  ossec.conf and watch /var/ossec/logs/alerts/alerts.json for rule IDs from 100100:
-    <localfile><log_format>json</log_format><location>/path/to/events.json</location></localfile>
+                              rules don't fire and Shikari's have no parent. These rules (100090 to
+                              100095) give the json-decoded events the same groups.
+  Install both rule files and restart, then paste a line into /var/ossec/bin/wazuh-logtest, or
+  replay the lot: the logcollector's queue holds 1,024 lines, so raise it first or events are lost.
+    echo logcollector.queue_size=8192 >> /var/ossec/etc/local_internal_options.conf
+    add to ossec.conf:
+      <localfile><log_format>json</log_format><location>/tmp/lab.json</location></localfile>
+    restart, then: cat telemetry/events.json >> /tmp/lab.json
+  and watch /var/ossec/logs/alerts/alerts.json for rule IDs from 100100.
 """,
 }
 

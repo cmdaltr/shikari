@@ -116,6 +116,8 @@ def test_practice_rules_give_json_events_the_parent_groups():
     root = ET.fromstring(wazuh.practice_xml())
     rules = root.findall("rule")
     assert len(rules) == len(wazuh.SOURCES)
-    assert all(int(r.get("id")) < wazuh.FIRST_ID and r.find("decoded_as").text == "json" for r in rules)
+    ids = [int(r.get("id")) for r in rules]
+    assert all(i < wazuh.FIRST_ID for i in ids) and 100001 not in ids  # local_rules.xml's example
+    assert all(r.find("decoded_as").text == "json" for r in rules)
     groups = {r.find("group").text.rstrip(",") for r in rules}
     assert groups == {s["parent"] for s in wazuh.SOURCES.values()}

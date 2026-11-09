@@ -105,7 +105,7 @@ def test_splunk_pack(gdir):
     # one line, Windows path intact, no trailing backslash continuation
     assert search == ('search = index=os earliest=-1d sourcetype="cef:sysmon" | search '
                       'cs1="*C:\\\\Windows\\\\System32\\\\nbtstat.exe*" | stats count by dvc')
-    assert "disabled = 1" in saved and "alert.severity = 5" in saved and "cron_schedule = 0 0 * * *" in saved
+    assert "disabled = 0" in saved and "enableSched = 0" in saved and "alert.severity = 5" in saved and "cron_schedule = 0 0 * * *" in saved
     assert "description = Finds it. On two lines." in saved
     assert "[os]\nhomePath = $SPLUNK_DB/os/db" in app["shikari_detections/default/indexes.conf"]
 
