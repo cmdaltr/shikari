@@ -16,7 +16,13 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parents[2]))
+ROOT = Path(__file__).parents[2]
+sys.path.insert(0, str(ROOT))
+
+# Run as ./regenerate.py, env's python3 is whichever is first on PATH: use the repo's venv, Shikari's own Python
+VENV_PYTHON = ROOT / ".venv" / "bin" / "python"
+if VENV_PYTHON.exists() and Path(sys.prefix).resolve() != (ROOT / ".venv").resolve():
+    os.execv(str(VENV_PYTHON), [str(VENV_PYTHON), __file__, *sys.argv[1:]])
 
 from shikari.client import ShikariClient, ShikariError  # noqa: E402
 

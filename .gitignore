@@ -205,3 +205,6 @@ bespoke/llm_references/*
 shikari/contract/docs/01-diagnosis.md
 shikari/contract/docs/05-exemplars.md
 .envrc
+
+# OneDrive File Provider temp files while it syncs a file
+*.fetch
