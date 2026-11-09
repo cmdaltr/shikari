@@ -105,3 +105,12 @@ def test_an_or_at_a_line_end_still_splits_the_conditions():
     from shikari.validation.precision import prune_kql
     pruned = prune_kql(q)[0]
     assert "Protocol" not in pruned and 'RemoteUrl has_any("BeingDebugged")' in pruned
+
+
+def test_verbatim_strings_survive_pruning_as_written():
+    # A trailing backslash in a verbatim string once ran on into the next value:
+    # has_any("C:\Windows\...", "%systemdir%\", @", ", @") — invalid KQL
+    q = ('DeviceProcessEvents\n| where ProcessCommandLine has_any(@"C:\\Windows\\System32\\sethc.exe", '
+         '@"%systemdir%\\", "data", "nbtstat")')
+    out, _ = prune_kql(q)
+    assert 'has_any(@"C:\\Windows\\System32\\sethc.exe", @"%systemdir%\\", "nbtstat")' in out

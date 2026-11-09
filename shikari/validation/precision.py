@@ -41,7 +41,24 @@ NUMERIC_COLUMNS = {"RemotePort", "LocalPort", "ProcessId", "InitiatingProcessId"
                    "DestinationPort", "SourcePort", "Port", "EventId"}
 _STRING_OPS = r"(?:has_any|has_all|has_cs|has|!has|contains|contains_cs|startswith|endswith|matches regex|=~|!~|in~)"
 _NUMERIC_STRING = re.compile(r"\b(" + "|".join(sorted(NUMERIC_COLUMNS, key=len, reverse=True)) + r")\s+" + _STRING_OPS + r"\s*[(\"]")
-_STRING = re.compile(r'@?"((?:[^"\\]|\\.)*)"')
+# A KQL string literal: verbatim (@"C:\\Windows\\", backslashes literal, "" for a quote) or
+# ordinary ("...", backslash escapes). Read as one form, @"%systemdir%\\" ran on into the
+# next value and the list came back as "%systemdir%\\", @", ", @"...
+_STRING = re.compile(r'@"(?:[^"]|"")*"|"(?:[^"\\]|\\.)*"')
+
+
+def _literals(text: str) -> List[str]:
+    """Each string literal in text, as written."""
+    return [m.group(0) for m in _STRING.finditer(text)]
+
+
+def _value(literal: str) -> str:
+    return literal[2:-1].replace('""', '"') if literal.startswith("@") else literal[1:-1]
+
+
+def _strings(text: str) -> List[str]:
+    """Each string literal's value."""
+    return [_value(lit) for lit in _literals(text)]
 _CONDITION_COLUMN = re.compile(r"\b([A-Z]\w+)\s+(?:" + _STRING_OPS + r"|==|!=|in|>=|<=|>|<)(?=[\s(\"@])")
 # Which ATT&CK platforms can produce events in each kind of table
 _TABLE_PLATFORMS = [
@@ -158,7 +175,7 @@ def _clause_findings(clause: str) -> List[Dict]:
     m = _NUMERIC_STRING.search(body)
     if m:
         out.append({"check": "PREC-NUMERIC", "message": f"{m.group(1)} is a number: a string operator on it never matches as meant ({body[:80]})"})
-    for s in _STRING.findall(body):
+    for s in _strings(body):
         if is_placeholder(s):
             out.append({"check": "PREC-PLACEHOLDER", "message": f'"{s}" is a documentation stand-in, not text an event contains'})
     columns = set(_CONDITION_COLUMN.findall(body))
@@ -190,13 +207,13 @@ def check_kql(query: str, technique_platforms: Optional[Iterable[str]] = None) -
                 findings.append({"check": "PREC-DUPLICATE", "message": f"the same condition is repeated: {key[:80]}"})
             seen.add(key)
             # A has_all term only narrows the others; a value that can match alone is the problem
-            for s in _STRING.findall(re.sub(r"\bhas_all\s*\([^()]*\)", "", c)):
+            for s in _strings(re.sub(r"\bhas_all\s*\([^()]*\)", "", c)):
                 if is_generic(s):
                     findings.append({"check": "PREC-GENERIC", "message": f'"{s}" is an ordinary word: it matches far more than the behaviour'})
         columns = set(_CONDITION_COLUMN.findall(query[start:stop]))
         if columns and columns <= {"RemotePort", "LocalPort"}:
             findings.append({"check": "PREC-PORT", "message": "the only condition is a port: it matches all traffic on it"})
-    findings += _whole_part([v for start, stop in _where_bodies(query) for v in _STRING.findall(query[start:stop])])
+    findings += _whole_part([v for start, stop in _where_bodies(query) for v in _strings(query[start:stop])])
     findings += _table_findings(query, technique_platforms)
     return _dedupe(findings)
 
@@ -284,10 +301,10 @@ def check(query: str, siem: Optional[str], technique_platforms: Optional[Iterabl
 def _prune_list(clause: str) -> Optional[str]:
     """Drop generic and placeholder values from has_any(...) lists; None if none are left."""
     def fix(m):
-        values = [v for v in _STRING.findall(m.group(2)) if not is_generic(v) and not is_placeholder(v)]
-        if not values:
+        kept = [lit for lit in _literals(m.group(2)) if not is_generic(_value(lit)) and not is_placeholder(_value(lit))]
+        if not kept:
             return "\0"
-        return f"{m.group(1)}(" + ", ".join(f'"{v}"' for v in values) + ")"
+        return f"{m.group(1)}(" + ", ".join(kept) + ")"   # each value as it was written
     out = re.sub(r"\b(has_any|in~?)\s*\(([^()]*)\)", fix, clause)
     return None if "\0" in out else out
 
@@ -310,7 +327,7 @@ def prune_kql(query: str, technique_platforms: Optional[Iterable[str]] = None) -
                 removed += problems
                 continue
             if not re.search(r"\b(has_any|in~?)\s*\(", body):
-                single = _STRING.findall(body)
+                single = _strings(body)
                 if single and len(single) == 1 and is_generic(single[0]) and re.search(r"\bhas\b|==|=~", body):
                     removed.append({"check": "PREC-GENERIC", "message": f'"{single[0]}" is an ordinary word'})
                     continue
