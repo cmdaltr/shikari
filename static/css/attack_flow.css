@@ -19,9 +19,9 @@
 .af-corner { display: flex; gap: 6px; margin-left: auto; }
 .af-icon-btn {
   display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; box-sizing: border-box;
-  border: 1px solid var(--af-border); border-radius: 8px; background: var(--af-node-bg); color: var(--af-muted); cursor: pointer;
+  border: 1px solid var(--accent); border-radius: 8px; background: var(--af-node-bg); color: var(--accent); cursor: pointer;
 }
-.af-icon-btn:hover, .af-icon-btn.is-on { color: var(--accent); border-color: var(--accent); }
+.af-icon-btn:hover, .af-icon-btn.is-on { color: #fff; background: var(--accent); }
 .af-icon-btn:focus-visible { outline: 2px solid var(--af-focus); outline-offset: 2px; }
 .af-icon-btn svg { width: 18px; height: 18px; }
 .af-icon-btn .af-ico-shrink, .af-icon-btn.is-on .af-ico-expand { display: none; }

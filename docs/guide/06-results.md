@@ -5,7 +5,7 @@ Each group, report or CVE has one page in two views:
 | View | When you see it | What it shows |
 |---|---|---|
 | **Interim results** | Where every hunt, report and company-profile run lands | What that run produced, to review and save to the Library. **All results for …** at the top opens the other view |
-| **Results** | From the [Library](07-library.md) (choose a group, then **Results →**), [Flows](09-flows.md), Anatomy, [Campaigns](26-campaigns.md) or Profile → Timeline | Everything the group has across every run: briefing, detections, correlations, playbooks and attack flow |
+| **Results** | From the [Library](07-library.md) (choose a group, then **Results →**), [Flows](09-flows.md), Anatomy, [Campaigns](26-campaigns.md) or Profile → Timeline | Everything the group has across every run: briefing, detections, correlations, cross-SIEM pivots and attack flow |
 
 When a group has had more than one run, **Showing: Interim: latest run / All results** switches between them. The address is `/results?group_name=<group>`; the interim view adds `&run=latest`.
 
@@ -13,7 +13,7 @@ The Library holds what you've saved; this page shows what the runs generated. De
 
 ## From top to bottom
 
-Every section starts collapsed: click its title to open it, and it stays open next time. The **Key** button at the bottom right opens the key over whatever you're reading.
+Every section starts collapsed: click its title to open it, and it stays open next time. The orange **Key** tab on the right edge of the screen opens the key over whatever you're reading.
 
 | Section | What it shows |
 |---|---|
@@ -66,9 +66,9 @@ Hunting a group again also takes the group off any detection its earlier runs ma
 
 Most correlations are a pair of techniques. A **chain** joins three, shown with `+` between them: all three on the same host within the window, in any order, since ATT&CK tactics are goals rather than steps. Chains are built from pairs that scored (A with B, B with C), and each technique in one has to bring a tactic the other two don't, so a technique with four tactics, such as Cloud Accounts, can't make up the spread on its own. A technique is in at most three chains, and two techniques are together in only one, so the chains aren't the same pair with a different third technique. A chain that adds a tactic the others don't cover comes first, and each tactic the pairs reach is sure of three pairs above the threshold, so the pairs and chains reach further than the few multi-tactic techniques that score highest. Google SecOps and Defender XDR have chains; a chain fires far less often than a pair, so treat one as a high-confidence lead next to its pairs rather than a replacement for them.
 
-## Cross-vendor playbooks
+## Cross-SIEM pivots
 
-A correlation joins detections within one SIEM, because across SIEMs there's no single query — YARA-L, KQL, SPL and ES\|QL don't splice. **Cross-vendor playbooks** take the chains that span two or more of your SIEMs and lay them out as a sequence instead: each stage with the per-SIEM query that detects it, the entity fields to join the stages on (host, user, IP, process hash — named for each SIEM), and the time window. You run each stage where that telemetry actually lives and join on the keys, in a SOAR or by hand — it's a playbook, not a query. Built from the same chains, so no AI and nothing new to tune.
+A correlation joins detections within one SIEM, because across SIEMs there's no single query — YARA-L, KQL, SPL and ES\|QL don't splice. **Cross-SIEM pivots** take the chains that span two or more of your SIEMs and lay them out as a sequence instead: each stage with the per-SIEM query that detects it, the entity fields to join the stages on (host, user, IP, process hash — named for each SIEM), and the time window. You run each stage where that telemetry actually lives and join on the keys, in a SOAR or by hand — it's a playbook, not a query. Built from the same chains, so no AI and nothing new to tune.
 
 ## Precision checks
 

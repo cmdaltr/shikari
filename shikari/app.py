@@ -7496,7 +7496,7 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
     no_detection = _no_detection(group_name)
     briefing = briefing_lib.build(attack_flow, no_detection)
 
-    # Cross-vendor playbooks (#8): a chain's stages re-expressed across SIEMs, with join keys
+    # Cross-SIEM pivots (#8): a chain's stages re-expressed across SIEMs, with join keys
     cross_vendor = []
     if os.path.exists(correlation_file):
         try:
@@ -9782,11 +9782,15 @@ class CampaignRequest(BaseModel):
     ai_model: Optional[str] = None
 
 
-@app.get("/campaigns", response_class=HTMLResponse)
+@app.get("/campaigns")
+def campaigns_list():
+    """Campaigns are a tab of the Catalogue now: the research form and the saved campaigns."""
+    return RedirectResponse("/catalogue?tab=campaigns")
+
+
 @app.get("/campaigns/{campaign_slug}", response_class=HTMLResponse)
-def campaigns_page(request: Request, campaign_slug: str = "", shikari_session: Optional[str] = Cookie(None)):
-    """Campaign research: an emerging campaign profiled from the reports about it
-    (shikari.intelligence.campaign), with the saved campaigns listed."""
+def campaign_page(request: Request, campaign_slug: str, shikari_session: Optional[str] = Cookie(None)):
+    """One campaign profiled from the reports about it (shikari.intelligence.campaign)."""
     from shikari.intelligence import campaign as campaign_mod
     from shikari.reports import campaign_report
 
@@ -9795,15 +9799,12 @@ def campaigns_page(request: Request, campaign_slug: str = "", shikari_session: O
         return auth_result
     user, db = auth_result
     db.close()
-    chosen = None
-    if campaign_slug:
-        found = campaign_mod.load(campaign_slug)
-        if not found:
-            return RedirectResponse("/campaigns")
-        chosen = campaign_report.context(found, GENERATE_DIR)
+    found = campaign_mod.load(campaign_slug)
+    if not found:
+        return RedirectResponse("/catalogue?tab=campaigns")
     from shikari.reports import tlp as tlp_mod
     return templates.TemplateResponse("campaigns.html", {
-        "request": request, "user": user, "campaigns": campaign_mod.all_campaigns(), "campaign": chosen,
+        "request": request, "user": user, "campaign": campaign_report.context(found, GENERATE_DIR),
         "tlp_levels": list(tlp_mod.LEVELS), "tlp_default": tlp_mod.DEFAULT,
         "network_days": campaign_mod.NETWORK_DAYS, "hash_days": campaign_mod.HASH_DAYS})
 
@@ -9898,9 +9899,11 @@ def api_campaign_report(request: Request, campaign_slug: str, fmt: str = Query("
 @app.get("/catalogue", response_class=HTMLResponse)
 def catalogue_page(request: Request, shikari_session: Optional[str] = Cookie(None)):
     """
-    Every organisation profiled so far (data/profiles/*_profile.json), newest first, each linking
-    to its exposure map. Like the Library, but for company OSINT rather than detections.
+    Two tabs. Companies: every organisation profiled so far (data/profiles/*_profile.json), newest
+    first, each linking to its exposure map. Campaigns: the research form and the saved campaigns
+    (shikari.intelligence.campaign), each linking to /campaigns/<slug>.
     """
+    from shikari.intelligence import campaign as campaign_mod
     auth_result = require_auth(request, shikari_session)
     if isinstance(auth_result, RedirectResponse):
         return auth_result
@@ -9939,7 +9942,8 @@ def catalogue_page(request: Request, shikari_session: Optional[str] = Cookie(Non
             })
     # The user's own organisation first (starred), then most-recently profiled
     companies.sort(key=lambda c: (c["is_home"], c["timestamp"] or ""), reverse=True)
-    return templates.TemplateResponse("catalogue.html", {"request": request, "user": user, "companies": companies})
+    return templates.TemplateResponse("catalogue.html", {"request": request, "user": user, "companies": companies,
+                                                         "campaigns": campaign_mod.all_campaigns()})
 
 
 @app.get("/api/adversaries")

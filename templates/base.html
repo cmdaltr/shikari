@@ -109,6 +109,7 @@
 
     <!-- Local LLM Detection Modal -->
     {% include "partials/llm_modal.html" %}
+    {% include "partials/ask_shikari.html" %}
 
     <script src="{{ url_for('static', path='js/common.js') }}?v={{ request.app.state.asset_version }}"></script>
     <script src="{{ url_for('static', path='js/card_collapse.js') }}?v={{ request.app.state.asset_version }}"></script>

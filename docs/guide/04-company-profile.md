@@ -47,7 +47,7 @@ The incident signal merges three reputable, structured feeds — **VCDB** (VERIS
 
 ## Companies Catalogue
 
-**Intel → Catalogue** (`/catalogue`, top of the Intel menu) lists every organisation profiled so far, newest first — a Library for companies. Each card opens that company's exposure map. Set your own organisation's domain in **Profile → Organisation** and Shikari profiles it automatically and **stars** it here (sorted first); its exposure map and Ordered Adversary List then carry a *your organisation* badge.
+The **Companies** tab of **Intel → Catalogue** (`/catalogue`) lists every organisation profiled so far, newest first — a Library for companies. Each card opens that company's exposure map. Set your own organisation's domain in **Profile → Organisation** and Shikari profiles it automatically and **stars** it here (sorted first); its exposure map and Ordered Adversary List then carry a *your organisation* badge.
 
 ## Options
 

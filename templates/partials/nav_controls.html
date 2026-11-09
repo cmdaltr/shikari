@@ -46,9 +46,8 @@
   ]),
   ('Intel', 'intel', [
     ('/feed', 'Feed', true, 'feed', 'The last 7 days of threat research'),
-    ('/campaigns', 'Campaigns', true, 'radar', 'Profile an emerging campaign from its reports'),
     ('/ioc', 'Indicator Management', true, 'ioc', 'Find an IOC and configure STIX/TAXII or MISP'),
-    ('/catalogue', 'Catalogue', true, 'catalogue', 'Profiled organisations and their exposure'),
+    ('/catalogue', 'Catalogue', true, 'catalogue', 'Companies you have profiled and campaigns you have researched'),
     ('/cyber-powers', 'Cyber Powers', false, 'map', 'National cyber capability on a world map'),
     ('/mitresaw', 'MITRESaw', false, 'mitresaw', "ATT&CK procedures and their indicators"),
   ]),
@@ -61,7 +60,7 @@
   ]),
 ] %}
 {% macro svg(name) %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ ICON[name] | safe }}</svg>{% endmacro %}
-{% macro is_here(href) %}{{ 'y' if path == href or (href != '/' and path.startswith(href ~ '/')) else '' }}{% endmacro %}
+{% macro is_here(href) %}{{ 'y' if path == href or (href != '/' and path.startswith(href ~ '/')) or (href == '/catalogue' and path.startswith('/campaigns/')) else '' }}{% endmacro %}
 <nav class="global-nav-controls" aria-label="{{ brand.name }}"{% if user %} data-watch="1"{% endif %}>
     {% if path not in ['/', '/login', '/register', '/forgot-password'] %}<a href="/" class="nav-brand" title="Home"><img class="brand-light" src="{{ url_for('static', path=brand.banner) }}" alt="{{ brand.name }}"><img class="brand-dark" src="{{ url_for('static', path=brand.banner_dark) }}" alt="{{ brand.name }}"></a>{% endif %}
     <div class="nav-tabs">

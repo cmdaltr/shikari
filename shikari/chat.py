@@ -132,8 +132,9 @@ What the Shikari platform itself can do (so you can answer "how do I…" questio
   and how it connects back to the domain: resolved IPs, nameservers, mail (MX) with SPF/DMARC/DKIM
   spoofability, subdomains, technology, historical snapshots, ASNs/announced ranges and hosting country,
   certificates, exposed services (open ports), known CVEs on those services, and a breach-&-leak surface
-  (HIBP breach metadata — names/dates/counts only, never accounts or credentials). The Companies
-  Catalogue (/catalogue, top of the Intel menu) lists every organisation profiled so far.
+  (HIBP breach metadata — names/dates/counts only, never accounts or credentials). The Catalogue
+  (Intel → Catalogue, /catalogue) has two tabs: Companies lists every organisation profiled so far, and
+  Campaigns researches an emerging campaign from its report URLs and lists the saved ones.
 - OSINT sources are mostly keyless (DNS, crt.sh certificate transparency, Wayback, Team Cymru ASN,
   Shodan InternetDB for ports/CVEs, HIBP domain breach metadata). Optional keys (Shodan, SecurityTrails,
   HIBP, GitHub) add coverage and can be added or toggled on/off from the home Profile tab or Profile → API Keys.

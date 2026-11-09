@@ -1,6 +1,6 @@
 # Campaigns
 
-**Intel → Campaigns** (`/campaigns`) profiles an emerging campaign that ATT&CK doesn't describe yet, from the reports about it. Give it the campaign's name and the URLs of a few reports; it reads each one, merges what they say, and saves the result as a campaign you can report on and generate detections for. It replaces ETHAN's campaign research.
+The **Campaigns** tab of **Intel → Catalogue** (`/catalogue?tab=campaigns`) profiles an emerging campaign that ATT&CK doesn't describe yet, from the reports about it. Give it the campaign's name and the URLs of a few reports; it reads each one, merges what they say, and saves the result as a campaign you can report on and generate detections for. It replaces ETHAN's campaign research.
 
 ## Researching a campaign
 

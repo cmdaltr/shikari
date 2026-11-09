@@ -4,7 +4,7 @@ Both need an AI model. Set one up under Profile → API Keys first: a cloud prov
 
 ## Ask Shikari
 
-The **Ask Shikari** button (bottom right of the Home page) opens a chat about ATT&CK techniques, threat groups, SIEM queries and your own detections: "Give me a Splunk query for Scattered Spider", "What does T1003.006 look like in Defender?". **⛶** expands it.
+The **Ask Shikari** button (bottom right of every page) opens a chat about ATT&CK techniques, threat groups, SIEM queries and your own detections: "Give me a Splunk query for Scattered Spider", "What does T1003.006 look like in Defender?". **⛶** expands it.
 
 It uses the provider assigned to Ask Shikari in Profile → API Keys → AI Assignment, and falls back to another configured provider if that one fails. A local model can answer Ask Shikari; for now, detection generation needs a cloud provider.
 

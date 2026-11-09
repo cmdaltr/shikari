@@ -20,14 +20,14 @@ Help → **Guide** shows a picture of every page with each part highlighted in t
 | Profile (company) | Home → Profile | The threat groups likely to target a company, then their detections | [Company profile](04-company-profile.md) |
 | Exposure map | After a profile, or Intel → Catalogue | What OSINT surfaced about a company and how it links back to the domain | [Company profile](04-company-profile.md#exposure-map) |
 | Research | Home → Research | Find groups by keyword and compare their techniques | [Research](05-research.md) |
-| Results | Interim results open after a run; Results from the Library, Flows, Anatomy or Campaigns | A run's output to review and save (interim), or everything a group has: briefing, detections, correlations, playbooks, attack flow | [Results](06-results.md) |
+| Results | Interim results open after a run; Results from the Library, Flows, Anatomy or Campaigns | A run's output to review and save (interim), or everything a group has: briefing, detections, correlations, cross-SIEM pivots, attack flow | [Results](06-results.md) |
 | Library | Detections → Library | Everything you've saved, with filters, tags and exports | [Library](07-library.md) |
 | Detections as code | Detections → Detections as code | Commit a run's detections to git and diff two commits | [Detections as code](22-detections-as-code.md) |
 | Coverage | Detections → Coverage | Which techniques the reference queries and your detections cover | [Coverage](08-coverage.md) |
 | Flows | Detections → Flows | Every saved attack flow: what you can and can't detect | [Flows](09-flows.md) |
 | Anatomy | Detections → Anatomy | Every saved threat group's and CVE's anatomy workflow | [Flows](09-flows.md#anatomy) |
-| Catalogue | Intel → Catalogue | Every organisation profiled so far; opens each one's exposure map | [Company profile](04-company-profile.md#companies-catalogue) |
-| Campaigns | Intel → Campaigns | Profile an emerging campaign from its reports: techniques, triaged indicators, a TLP report | [Campaigns](26-campaigns.md) |
+| Catalogue | Intel → Catalogue, Companies tab | Every organisation profiled so far; opens each one's exposure map | [Company profile](04-company-profile.md#companies-catalogue) |
+| Campaigns | Intel → Catalogue, Campaigns tab | Profile an emerging campaign from its reports: techniques, triaged indicators, a TLP report | [Campaigns](26-campaigns.md) |
 | Feed | Intel → Feed | This week's threat research, tagged; search all research | [Threat Feed](10-threat-feed.md) |
 | Cyber Powers | Intel → Cyber Powers | National cyber capability, attribution and targeting on a map | [Cyber Powers](11-cyber-powers.md) |
 | Indicator Management | Intel → Indicator Management | Search reputable reporting for an IOC; import STIX, TAXII or MISP intel (incl. a MISP instance) as a hunt input; export a run as a STIX bundle or MISP event | [Indicator Management](21-indicator-management.md) |

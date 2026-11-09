@@ -211,5 +211,7 @@ def test_pages_render(client, monkeypatch):
     r = http.get("/campaigns/shadow-ladder")
     assert r.status_code == 200 and "45.77.12.9" in r.text and "tri-Likely-burned" in r.text
     assert "Campaign_Shadow_Ladder" in r.text            # the master hunt query link
-    assert "Shadow Ladder" in http.get("/campaigns").text
+    assert http.get("/campaigns", follow_redirects=False).headers["location"] == "/catalogue?tab=campaigns"
+    listed = http.get("/catalogue").text                 # the Catalogue's Campaigns tab
+    assert "Research a campaign" in listed and 'href="/campaigns/shadow-ladder"' in listed
     assert http.get("/campaigns/nope", follow_redirects=False).status_code in (302, 307)

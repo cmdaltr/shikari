@@ -533,6 +533,7 @@
 
 .card-icon.detection { background: transparent; }
 .card-icon.correlation { background: transparent; }
+.card-icon.pivot { background: transparent; }
 .card-icon.technique { background: transparent; }
 .card-icon.vendor { background: transparent; }
 .card-icon.validation { background: transparent; }
@@ -546,6 +547,7 @@
 
 .card-icon.detection svg { stroke: #4caf50; }
 .card-icon.correlation svg { stroke: #2196f3; }
+.card-icon.pivot svg { stroke: #14b8a6; }
 .card-icon.technique svg { stroke: #ff9800; }
 .card-icon.vendor svg { stroke: #9c27b0; }
 .card-icon.validation svg { stroke: #10b981; }
@@ -1165,3 +1167,9 @@
 .page-footer .footer-gloss { order: 1; flex: 1 1 0; text-align: left; }
 .page-footer .footer-content { order: 2; flex: 0 0 auto; }
 .page-footer .timestamp { order: 3; }
+
+/* Validation in the K's orange: the checklist and the note on what it unlocks */
+#validation-checklist { --accent: var(--k-orange); --accent-hover: var(--k-orange-hover); }
+#validation-checklist .validation-step summary { color: var(--k-orange) !important; }
+#validation-warning { background: rgba(245, 158, 11, .1) !important; border-color: var(--k-orange) !important; color: #92400e !important; }
+[data-theme="dark"] #validation-warning { color: #fbbf24 !important; }

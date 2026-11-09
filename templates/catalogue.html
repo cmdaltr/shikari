@@ -1,9 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Shikari - Companies Catalogue{% endblock %}
+{% block title %}Shikari - Catalogue{% endblock %}
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', path='css/results.css') }}?v={{ request.app.state.asset_version }}">
+<link rel="stylesheet" href="{{ url_for('static', path='css/campaigns.css') }}?v={{ request.app.state.asset_version }}">
 <style>
+  .cat-tabs { display: flex; gap: 8px; margin: 0 0 22px; }
+  .cat-pane[hidden] { display: none; }
   .cat-head { margin: 0 0 6px; }
   .cat-sub { color: var(--text-secondary); margin: 0 0 24px; }
   .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
@@ -43,10 +46,17 @@
 {% block content %}
 <div class="results-container">
   <div class="page-header">
-    <h1 class="cat-head">Companies</h1>
-    <p class="cat-sub">Organisations you have profiled, newest first. Each links to its exposure map.</p>
+    <h1 class="cat-head">Catalogue</h1>
   </div>
 
+  <div class="cat-tabs" role="tablist" aria-label="Catalogue">
+    <button type="button" class="ui-pill" role="tab" data-tab="companies" id="cat-tab-companies" aria-controls="cat-pane-companies">Companies <span class="run-view-n">{{ companies|length }}</span></button>
+    <button type="button" class="ui-pill" role="tab" data-tab="campaigns" id="cat-tab-campaigns" aria-controls="cat-pane-campaigns">Campaigns <span class="run-view-n">{{ campaigns|length }}</span></button>
+  </div>
+
+  <!-- ===== Companies: organisations profiled, the defender's side ===== -->
+  <div class="cat-pane" id="cat-pane-companies" role="tabpanel" aria-labelledby="cat-tab-companies" hidden>
+  <p class="cat-sub">Organisations you have profiled, newest first. Each links to its exposure map.</p>
   {% if companies %}
   <div class="cat-grid">
     {% for c in companies %}
@@ -84,8 +94,113 @@
   {% else %}
   <p class="cat-empty">No organisations profiled yet. Profile a domain on the <a href="/">home page</a> and it will appear here.</p>
   {% endif %}
+  </div>
+
+  <!-- ===== Campaigns: adversary operations researched from their reports ===== -->
+  <div class="cat-pane" id="cat-pane-campaigns" role="tabpanel" aria-labelledby="cat-tab-campaigns" hidden>
+  <p class="cmp-sub">Profile an emerging campaign that ATT&amp;CK doesn't describe yet from the reports about it:
+    the techniques they describe, the groups they name, a timeline, and the indicators triaged by age.
+    None of that uses AI; choose an AI provider and a model also writes an analyst profile, marked †.</p>
+
+  <div class="cmp-card">
+    <h2>Research a campaign</h2>
+    <form id="cmp-form" class="cmp-form">
+      <div>
+        <label for="cmp-name">Campaign name</label>
+        <input type="text" id="cmp-name" required minlength="3" maxlength="120" placeholder="Shadow Ladder">
+      </div>
+      <div>
+        <label for="cmp-ai">AI analyst profile</label>
+        <select id="cmp-ai"><option value="">No AI (the default)</option></select>
+        <div class="cmp-hint">Optional. Reads the sources and writes a profile; every part it writes is marked †.</div>
+      </div>
+      <div class="cmp-wide">
+        <label for="cmp-urls">Report URLs, one per line</label>
+        <textarea id="cmp-urls" placeholder="https://..."></textarea>
+        <div class="cmp-hint">Up to 10 sources are read. Each is analysed like Upload blog URL.</div>
+      </div>
+      <div class="cmp-wide">
+        <label><input type="checkbox" id="cmp-more"> Also search Shikari's source archive and the news for the name</label>
+      </div>
+      <div class="cmp-wide">
+        <button type="submit" class="cmp-btn" id="cmp-go">Research</button>
+        <span class="cmp-status" id="cmp-status" role="status"></span>
+      </div>
+    </form>
+  </div>
+
+  {% if campaigns %}
+  <h2>Saved campaigns</h2>
+  <div class="cmp-list">
+    {% for r in campaigns %}
+    <div class="cmp-item">
+      <h3><a href="/campaigns/{{ r.slug }}">{{ r.name }}</a>{% if r.ai %} †{% endif %}</h3>
+      <div class="cmp-meta">{{ r.sources }} source{{ '' if r.sources == 1 else 's' }} · {{ r.techniques }} techniques · {{ r.indicators }} indicators ({{ r.active }} active)</div>
+      <div class="cmp-meta">{% if r.first_reported %}First reported {{ r.first_reported }} · {% endif %}researched {{ r.researched }}</div>
+      <div class="cmp-item-actions">
+        <a class="cmp-btn" href="/campaigns/{{ r.slug }}">Open</a>
+        <button class="cmp-btn danger" type="button" data-delete="{{ r.slug }}">Delete</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="cat-empty">No campaigns researched yet.</p>
+  {% endif %}
+  </div>
 </div>
 <script>
+(function () {
+  // The tab in ?tab=, else the one used last, else Companies
+  const tabs = document.querySelectorAll('.cat-tabs [data-tab]');
+  function show(name, remember) {
+    tabs.forEach(b => {
+      const on = b.dataset.tab === name;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+      document.getElementById('cat-pane-' + b.dataset.tab).hidden = !on;
+    });
+    if (remember) {
+      try { localStorage.setItem('catalogueTab', name); } catch (e) {}
+      history.replaceState(null, '', '?tab=' + name);
+    }
+  }
+  let first = new URLSearchParams(location.search).get('tab');
+  if (!first) { try { first = localStorage.getItem('catalogueTab'); } catch (e) {} }
+  show(first === 'campaigns' ? 'campaigns' : 'companies', false);
+  tabs.forEach(b => b.addEventListener('click', () => show(b.dataset.tab, true)));
+
+  const $ = (id) => document.getElementById(id);
+  fetch('/api/ai/availability').then(r => r.json()).then(data => {
+    (data.providers || []).forEach(o => $('cmp-ai').appendChild(new Option(o.label + (o.model ? ' / ' + o.model : ''), o.id)));
+  }).catch(() => {});
+
+  $('cmp-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const status = $('cmp-status'), go = $('cmp-go');
+    const urls = $('cmp-urls').value.split(/\s+/).filter(Boolean);
+    go.disabled = true; status.className = 'cmp-status';
+    status.textContent = 'Reading the sources' + ($('cmp-ai').value ? ' and writing the AI profile' : '') + '...';
+    try {
+      const res = await fetch('/api/campaigns', {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: $('cmp-name').value, urls, search_more: $('cmp-more').checked,
+                              ai_provider: $('cmp-ai').value || null})});
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Research failed');
+      location.href = data.redirect;
+    } catch (err) {
+      status.className = 'cmp-status err'; status.textContent = err.message; go.disabled = false;
+    }
+  });
+
+  document.querySelectorAll('[data-delete]').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Delete this campaign? Its detections stay in the library.')) return;
+    b.disabled = true;
+    const res = await fetch(`/api/campaigns/${encodeURIComponent(b.dataset.delete)}`, {method: 'DELETE'});
+    if (res.ok) location.href = '/catalogue?tab=campaigns'; else b.disabled = false;
+  }));
+})();
+
   // Company logo fallback chain: Clearbit -> the site's favicon -> a monogram.
   function catLogoError(img) {
     const fb = img.getAttribute('data-fallback');
