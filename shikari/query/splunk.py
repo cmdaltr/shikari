@@ -1,70 +1,113 @@
 """
 Splunk API client for query execution.
 
-Uses Splunk REST API to execute SPL queries.
+Runs SPL through Splunk's search jobs API (/services/search/jobs) and reads the results back a page
+at a time. Authenticates with a token (Settings > Tokens; sent as a Bearer token) or a username and
+password (a session key from /services/auth/login). Never raises on a failed search: bad SPL, an
+expired token or a busy Splunk come back as {"status": "error", "error": ...}.
 """
 
 import os
-import requests
 import time
-from typing import Dict, List, Optional
-from urllib.parse import urljoin
+from typing import Dict, Optional
+
+import requests
 
 
 class SplunkClient:
     """Splunk REST API client"""
 
+    RETRIES = 3  # for 429 and 503: Splunk's search concurrency and rate limits
+
     def __init__(
         self,
         host: str = None,
-        port: int = 8089,
+        port: int = None,
         username: str = None,
         password: str = None,
         use_https: bool = True,
+        token: str = None,
+        verify: Optional[bool] = None,
     ):
         """
-        Initialize Splunk client.
-
-        Args:
-            host: Splunk server hostname/IP
-            port: Splunk management port (default: 8089)
-            username: Splunk username
-            password: Splunk password
-            use_https: Use HTTPS (default: True)
-
-        Environment variables:
-            SPLUNK_HOST
-            SPLUNK_PORT
-            SPLUNK_USERNAME
-            SPLUNK_PASSWORD
+        Environment variables, for anything not passed:
+            SPLUNK_HOST, SPLUNK_PORT (8089)
+            SPLUNK_TOKEN, or SPLUNK_USERNAME and SPLUNK_PASSWORD
+            SPLUNK_VERIFY=1 to check the management port's certificate (off by default: a lab
+            Splunk's is self-signed)
         """
         self.host = host or os.getenv("SPLUNK_HOST")
-        self.port = port or int(os.getenv("SPLUNK_PORT", "8089"))
+        self.port = int(port or os.getenv("SPLUNK_PORT", "8089"))
+        self.token = token or os.getenv("SPLUNK_TOKEN")
         self.username = username or os.getenv("SPLUNK_USERNAME")
         self.password = password or os.getenv("SPLUNK_PASSWORD")
+        self.verify = verify if verify is not None else os.getenv("SPLUNK_VERIFY", "") in ("1", "true", "yes")
 
-        if not all([self.host, self.username, self.password]):
+        if not self.host or not (self.token or (self.username and self.password)):
             raise ValueError(
-                "Splunk credentials required. Set SPLUNK_HOST, SPLUNK_USERNAME, SPLUNK_PASSWORD"
+                "Splunk credentials required. Set SPLUNK_HOST and SPLUNK_TOKEN, "
+                "or SPLUNK_USERNAME and SPLUNK_PASSWORD"
             )
 
         protocol = "https" if use_https else "http"
         self.base_url = f"{protocol}://{self.host}:{self.port}/services"
         self.session_key = None
+        if not self.verify:
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    def _url(self, path: str) -> str:
+        # Not urljoin: an absolute path would replace /services
+        return f"{self.base_url}/{path.lstrip('/')}"
 
     def _login(self) -> str:
-        """Authenticate and get session key"""
+        """A session key from the username and password"""
         if self.session_key:
             return self.session_key
-
-        url = urljoin(self.base_url, "/auth/login")
-        data = {"username": self.username, "password": self.password, "output_mode": "json"}
-
-        response = requests.post(url, data=data, verify=False)  # Disable cert verification for lab
+        response = requests.post(
+            self._url("auth/login"),
+            data={"username": self.username, "password": self.password, "output_mode": "json"},
+            verify=self.verify, timeout=30,
+        )
         response.raise_for_status()
-
         self.session_key = response.json()["sessionKey"]
         return self.session_key
+
+    def _headers(self) -> Dict[str, str]:
+        if self.token:
+            return {"Authorization": f"Bearer {self.token}"}
+        return {"Authorization": f"Splunk {self._login()}"}
+
+    def _request(self, method: str, path: str, **kwargs) -> requests.Response:
+        """A call that waits out 429 and 503 and logs in again once if a session key expired"""
+        relogged = False
+        for attempt in range(self.RETRIES + 1):
+            response = requests.request(method, self._url(path), headers=self._headers(),
+                                        verify=self.verify, timeout=60, **kwargs)
+            if response.status_code in (429, 503) and attempt < self.RETRIES:
+                time.sleep(float(response.headers.get("Retry-After") or 2 ** attempt))
+                continue
+            if response.status_code == 401 and not self.token and not relogged:
+                self.session_key, relogged = None, True
+                continue
+            return response
+        return response
+
+    @staticmethod
+    def _messages(response: requests.Response) -> str:
+        """Splunk's own words for a failure: {"messages": [{"type": "ERROR", "text": ...}]}"""
+        try:
+            body = response.json()
+        except ValueError:
+            return response.text[:300] or f"HTTP {response.status_code}"
+        texts = [m.get("text", "") for m in body.get("messages", []) if m.get("text")]
+        return "; ".join(dict.fromkeys(texts)) or f"HTTP {response.status_code}"  # Splunk repeats a parser error
+
+    @staticmethod
+    def search_string(query: str) -> str:
+        """A search job needs a leading command: `search` for a bare search, nothing for `| tstats ...`"""
+        q = query.strip()
+        return q if q.startswith("|") or q.lower().startswith("search ") else f"search {q}"
 
     def execute_query(
         self,
@@ -72,85 +115,92 @@ class SplunkClient:
         earliest_time: str = "-24h",
         latest_time: str = "now",
         max_results: int = 1000,
+        page_size: int = 1000,
+        timeout: int = 300,
     ) -> Dict:
         """
-        Execute SPL query against Splunk.
+        Run SPL and read its results back.
 
         Args:
-            query: SPL query string
-            earliest_time: Start time (e.g., "-24h", "-7d", "2024-01-01")
-            latest_time: End time (e.g., "now", "2024-01-02")
-            max_results: Maximum results to return
+            query: SPL; a time term inside it (earliest=-1d) overrides earliest_time
+            earliest_time, latest_time: the search window
+            max_results: how many results to read, 0 for all of them
+            page_size: results per request while paging
+            timeout: seconds to wait for the job
 
         Returns:
-            Dict with 'results' (list of events) and 'stats' (execution metadata)
+            {"status": "success", "results": [...], "stats": {...}} or {"status": "error", "error": "..."}
         """
-        session_key = self._login()
+        try:
+            return self._execute(query, earliest_time, latest_time, max_results, page_size, timeout)
+        except requests.RequestException as e:
+            return {"status": "error", "error": f"Splunk unreachable: {e}"}
+        except (KeyError, ValueError) as e:
+            return {"status": "error", "error": f"Unexpected response from Splunk: {e}"}
 
-        headers = {"Authorization": f"Splunk {session_key}"}
+    def _execute(self, query, earliest_time, latest_time, max_results, page_size, timeout) -> Dict:
+        if not self.token:
+            try:
+                self._login()
+            except requests.HTTPError as e:
+                return {"status": "error", "error": f"Login failed: {self._messages(e.response)}"}
 
-        # Create search job
-        url = urljoin(self.base_url, "/search/jobs")
-        data = {
-            "search": f"search {query}",
-            "earliest_time": earliest_time,
-            "latest_time": latest_time,
-            "output_mode": "json",
-        }
+        response = self._request("POST", "search/jobs", data={
+            "search": self.search_string(query), "earliest_time": earliest_time,
+            "latest_time": latest_time, "output_mode": "json",
+        })
+        if response.status_code == 401:
+            return {"status": "error", "error": f"Not authorised (token expired or wrong?): {self._messages(response)}"}
+        if response.status_code >= 400:
+            # Bad SPL is refused here, at dispatch, with Splunk's parser message
+            return {"status": "error", "error": self._messages(response)}
+        sid = response.json()["sid"]
 
-        response = requests.post(url, headers=headers, data=data, verify=False)
-        response.raise_for_status()
-
-        job_sid = response.json()["sid"]
-
-        # Wait for job to complete
-        job_url = urljoin(self.base_url, f"/search/jobs/{job_sid}")
-        timeout = 300  # 5 minutes
-        start_time = time.time()
-
-        while time.time() - start_time < timeout:
-            response = requests.get(
-                job_url, headers=headers, params={"output_mode": "json"}, verify=False
-            )
-            response.raise_for_status()
-
-            job_status = response.json()["entry"][0]["content"]
-
-            if job_status["isDone"]:
-                # Get results
-                results_url = urljoin(self.base_url, f"/search/jobs/{job_sid}/results")
-                response = requests.get(
-                    results_url,
-                    headers=headers,
-                    params={"output_mode": "json", "count": max_results},
-                    verify=False,
-                )
-                response.raise_for_status()
-
-                results = response.json()["results"]
-
-                return {
-                    "status": "success",
-                    "results": results,
-                    "stats": {
-                        "row_count": len(results),
-                        "scan_count": job_status.get("scanCount", 0),
-                        "event_count": job_status.get("eventCount", 0),
-                        "run_duration": job_status.get("runDuration", 0),
-                    },
-                }
-
+        start = time.time()
+        while True:
+            response = self._request("GET", f"search/jobs/{sid}", params={"output_mode": "json"})
+            if response.status_code >= 400:
+                return {"status": "error", "error": self._messages(response), "sid": sid}
+            job = response.json()["entry"][0]["content"]
+            if job.get("dispatchState") == "FAILED" or job.get("isFailed"):
+                texts = [m.get("text", "") for m in job.get("messages", [])] if isinstance(job.get("messages"), list) else []
+                return {"status": "error", "error": "; ".join(t for t in texts if t) or "Search failed", "sid": sid}
+            if job.get("isDone"):
+                break
+            if time.time() - start > timeout:
+                self._request("POST", f"search/jobs/{sid}/control", data={"action": "cancel"})
+                return {"status": "error", "error": f"Query timeout after {timeout}s", "sid": sid}
             time.sleep(1)
 
-        return {"status": "error", "error": "Query timeout"}
+        results, offset = [], 0
+        total = int(job.get("resultCount", 0))
+        wanted = total if not max_results else min(max_results, total)
+        while offset < wanted:
+            count = min(page_size, wanted - offset)
+            response = self._request("GET", f"search/jobs/{sid}/results",
+                                     params={"output_mode": "json", "count": count, "offset": offset})
+            if response.status_code >= 400:
+                return {"status": "error", "error": self._messages(response), "sid": sid}
+            page = response.json().get("results", [])
+            if not page:
+                break
+            results.extend(page)
+            offset += len(page)
+
+        return {
+            "status": "success",
+            "results": results,
+            "sid": sid,
+            "stats": {
+                "row_count": len(results),
+                "result_count": total,
+                "truncated": len(results) < total,
+                "scan_count": job.get("scanCount", 0),
+                "event_count": job.get("eventCount", 0),
+                "run_duration": job.get("runDuration", 0),
+            },
+        }
 
     def test_connection(self) -> bool:
-        """Test if Splunk API credentials are valid"""
-        try:
-            session_key = self._login()
-            # Simple query to test
-            result = self.execute_query("index=* | head 1")
-            return result["status"] == "success"
-        except Exception as e:
-            print(f"Splunk connection test failed: {e}")
-            return False
+        """Whether the credentials work and a search runs"""
+        return self.execute_query("| makeresults", max_results=1).get("status") == "success"

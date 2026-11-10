@@ -8,42 +8,18 @@ These features may work as intended but require testing and validation before be
 
 ---
 
-## Lab recording (Coming soon)
+## Defender for Endpoint lab export
 
-**Status**: Code written and unit-tested, not yet run on a real lab
+**Status**: Code written and unit-tested, not yet run against a tenant ([#45](https://github.com/cmdaltr/shikari/issues/45))
 
-`scripts/telemetry/record-atomics.ps1` runs Atomic Red Team tests on a Windows, Linux or macOS test machine and saves each test's logs (Windows event logs; auditd and the journal; eslogger, the unified log and launch item plist changes on macOS). `python -m shikari.telemetry --mde-export` fetches each test's Defender for Endpoint rows through Microsoft Graph's Advanced Hunting. Runs copied into `data/telemetry/lab/` appear on the Emulate page as **Your lab**.
-
-Setup, step by step: [Recording a lab](../guide/20-recording-a-lab.md).
+`python -m shikari.telemetry --mde-export data/telemetry/lab/<run>` fetches each recorded test's Defender for Endpoint rows through Microsoft Graph's Advanced Hunting. `record-atomics.ps1` itself has run on Windows 11, Ubuntu 24.04 and macOS (9–10 November 2026: 70, 35 and 19 tests); setup in [Recording a lab](../guide/20-recording-a-lab.md).
 
 ### Known limitations
 
-- The script parses in PowerShell 7 and its macOS plist functions were exercised; no atomic has been run with it
 - `--mde-export` matches devices by the manifest's host name (`DeviceName startswith`), and takes up to 5,000 rows per table per test
 - Running atomics from Shikari itself (`shikari offline emulate`, the console's `emulate`, **Run Emulation** on Results) depended on an `shikari.emulation` package that has been removed; those entry points say Coming soon
 
-## Query Execution
-
-**Status**: Splunk client implemented but not validated against a live Splunk; Defender XDR not implemented
-
-Running a generated query against the SIEM and reading the results back. `shikari/query/splunk.py` (`SplunkClient`) runs SPL through Splunk's search jobs API. Defender XDR execution will be built with hit counts ([#16](https://github.com/cmdaltr/shikari/issues/16)) on Microsoft Graph's `runHuntingQuery` (application permission `ThreatHunting.Read.All`), reusing the token and query code in `shikari/telemetry/mde.py`. The older client for the retiring `api.securitycenter.microsoft.com` API was removed unused.
-
-### Configuration
-
-```bash
-export SPLUNK_HOST=splunk.example.com
-export SPLUNK_USERNAME=admin
-export SPLUNK_PASSWORD=your-password
-```
-
-Needs a Splunk Enterprise or Cloud instance with API access and a user allowed to search. There's no page or CLI command that runs it yet.
-
-### Known Limitations
-
-- Not validated against a live Splunk deployment
-- API rate limits not fully tested
-- Large result sets may require pagination tuning
-- Error handling may need environment-specific adjustments
+Splunk query execution was validated against a live Splunk in [#44](https://github.com/cmdaltr/shikari/issues/44): see [Query Execution](../features/QUERY_EXECUTION.md).
 
 ---
 
@@ -58,16 +34,8 @@ If you test any of these features, please help the community by:
 
 ### What to Test
 
-**Lab recording**:
-- [ ] `record-atomics.ps1` on Windows (events.xml), Ubuntu (audit.log, journal.log) and macOS (es.ndjson, unified.ndjson, plists.ndjson)
+**Defender for Endpoint lab export**:
 - [ ] `--mde-export` against a Defender for Endpoint trial tenant
-- [ ] A run appearing as Your lab, and a group's detections checked against it
-
-**Query Execution**:
-- [ ] Splunk token authentication
-- [ ] Splunk query execution and results
-- [ ] API error handling
-- [ ] Rate limiting behavior
 
 ### Validation Checklist
 

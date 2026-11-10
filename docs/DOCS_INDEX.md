@@ -154,6 +154,7 @@ Plain-language guide to every part of Shikari, one page each: what it's for, how
 | Document | Description |
 |----------|-------------|
 | [UNTESTED.md](other/UNTESTED.md) | Implemented but not validated features |
+| [QUERY_EXECUTION.md](features/QUERY_EXECUTION.md) | Running generated SPL against Splunk and reading results back |
 | [Feature requests](https://github.com/cmdaltr/shikari/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement) | Planned features: tracked only as GitHub issues labelled `enhancement` |
 
 ## Output contract
