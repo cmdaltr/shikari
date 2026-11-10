@@ -80,4 +80,6 @@ The Windows capture is validated when a live run shows all of:
 - the **Check** flips at least one technique to **matched** off the captured logs rather than the command (e.g. T1033 `whoami`), with the evidence source reported as *captured logs*;
 - `captured: true` in the operation manifest.
 
-Until that live Windows run, the C2 capture is validated on Linux and macOS only; see [UNTESTED.md](../other/UNTESTED.md) and the [CALDERA guide](../guide/25-caldera.md).
+### Validated
+
+Against CALDERA 5.2 (the `caldera-lab.sh` build) with a sandcat agent on a Windows 11 Enterprise Evaluation VM (build 26300, Sysmon and 4688 from `prepare-windows.ps1`), driven through the homelab Shikari container, 10 November 2026 ([#43](https://github.com/cmdaltr/shikari/issues/43)). Operation `win-capture-43` ran T1033, T1057 and T1082 on the agent; all three steps finished on host `SHIKARI-W11`, `capture_via_agent` wrote `data/telemetry/lab/caldera-win-capture-43/{T1033-1,T1057-3,T1082-2}/events.xml` over the agent's own C2 channel (`captured: true`), and **Check** flipped all three techniques to **matched** with evidence *captured logs* (T1033 off `whoami.exe` in the captured Sysmon/4688 events). The C2 capture is now validated on Linux, macOS and Windows.
