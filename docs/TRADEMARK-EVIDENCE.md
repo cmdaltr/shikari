@@ -18,6 +18,7 @@
 | 2026-11-07 | Product walkthrough video produced showing the Shikari name and UI | `shikari-walkthrough.mp4` (local), narrated feature tour |
 | 2026-11-08 | **v2.0.0** release prepared under the Shikari name (installers, wordmark) | tag `v2.0.0` → `7bd7643` (GitHub release, currently draft) |
 | 2026-11-10 | **™ first asserted** on the wordmark, README and app, with a trademark notice | commit `b49ffa7` |
+| 2026-11-10 | **Domain `shikari.uk` registered** under the Shikari name | Nominet registration (registrar receipt / account) |
 
 ## Continued / public use
 
@@ -31,7 +32,7 @@
 - [ ] First blog post naming Shikari — *Adventures of Benny and Claude* (date / URL: ____)
 - [ ] First LinkedIn / YouTube post under **@cmdaltr** naming Shikari (date / URL: ____)
 - [ ] Walkthrough video published (date / URL: ____)
-- [ ] Domain registered for Shikari (name / date: ____)
+- [x] Domain registered for Shikari — **shikari.uk**, registered 2026-11-10 (Nominet .uk; WHOIS privacy on)
 
 ## Notes
 
