@@ -1,4 +1,4 @@
-"""Manual OSINT lookups on the exposure map (from PRISM)."""
+"""Manual OSINT lookups on the exposure map."""
 
 import pytest
 

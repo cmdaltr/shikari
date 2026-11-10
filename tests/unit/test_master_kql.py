@@ -1,4 +1,4 @@
-"""The master hunt query for Defender XDR (from ETHAN): shikari.export.master_kql."""
+"""The master hunt query for Defender XDR: shikari.export.master_kql."""
 
 import os
 from datetime import datetime, timezone

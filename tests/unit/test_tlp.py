@@ -1,4 +1,4 @@
-"""TLP 2.0 labels on reports (ETHAN's TLP, folded into Shikari)."""
+"""TLP 2.0 labels on reports."""
 
 import io
 

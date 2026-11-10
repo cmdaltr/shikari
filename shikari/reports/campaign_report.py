@@ -1,5 +1,5 @@
 """
-The campaign intelligence report (from ETHAN): a researched campaign (shikari.intelligence.campaign)
+The campaign intelligence report: a researched campaign (shikari.intelligence.campaign)
 in Word or PDF, in the branded shell, under a TLP label.
 
 Everything is from the campaign's sources and the detection library, except the analyst profile,

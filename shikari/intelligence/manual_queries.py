@@ -1,5 +1,5 @@
 """
-Manual OSINT lookups for a domain (from PRISM): the searches and commands worth running by hand
+Manual OSINT lookups for a domain: the searches and commands worth running by hand
 before an engagement, as links where the service has a search URL and as commands where it doesn't.
 
 Shikari doesn't run any of them; the exposure map shows them beside what the profile found, so the

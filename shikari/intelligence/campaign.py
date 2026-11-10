@@ -1,5 +1,5 @@
 """
-Campaign research (from ETHAN): an emerging campaign ATT&CK doesn't describe yet, profiled from the
+Campaign research: an emerging campaign ATT&CK doesn't describe yet, profiled from the
 reports about it.
 
 Each source URL goes through the same analyser as Upload blog URL, and the results are merged: the

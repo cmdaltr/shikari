@@ -9114,7 +9114,7 @@ def detections_code_siem_pack(request: Request, siem: str = Query(...), group: s
 def detections_code_master_kql(request: Request, group: str = Query(""), techniques: str = Query(""),
                                per_technique: int = Query(1, ge=0, le=20), lookback: str = Query("30d"),
                                tlp: str = Query(""), shikari_session: Optional[str] = Cookie(None)):
-    """A master hunt query for Defender XDR (from ETHAN): a run's MDE detections as one KQL query
+    """A master hunt query for Defender XDR: a run's MDE detections as one KQL query
     that ranks devices by how many of the run's techniques they show."""
     from fastapi.responses import Response
 
@@ -9772,7 +9772,7 @@ def assessment_export(assessment_id: int, request: Request, fmt: str = Query("cs
                     headers={"Content-Disposition": f'attachment; filename="{name}.csv"'})
 
 
-# ---------------------------------------------------------------- campaign research (from ETHAN)
+# ---------------------------------------------------------------- campaign research
 
 class CampaignRequest(BaseModel):
     name: str

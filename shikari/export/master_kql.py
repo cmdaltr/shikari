@@ -1,5 +1,5 @@
 """
-A master hunt query for Defender XDR (from ETHAN): one KQL query that runs every MDE detection a
+A master hunt query for Defender XDR: one KQL query that runs every MDE detection a
 hunt produced and ranks devices by how many of the group's techniques they show.
 
 Each detection becomes a function (let D1 = () { <its query> | extend Technique, Detection };),

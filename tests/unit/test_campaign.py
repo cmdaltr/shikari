@@ -1,4 +1,4 @@
-"""Campaign research (from ETHAN): sources merged, indicators triaged, the optional AI profile, the report and routes."""
+"""Campaign research: sources merged, indicators triaged, the optional AI profile, the report and routes."""
 
 import io
 import json
