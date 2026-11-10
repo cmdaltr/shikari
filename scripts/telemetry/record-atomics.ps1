@@ -51,8 +51,10 @@ $hostName = ([Environment]::MachineName).ToLower()
 $runDir = Join-Path $Out $Run
 New-Item -ItemType Directory -Force -Path $runDir | Out-Null
 $manifest = [ordered]@{ run = $Run; host = $hostName; platform = $platform; started = (Get-Date).ToUniversalTime().ToString('o'); tests = @() }
-# A file of IDs, or a list
+# A file of IDs, or a list. From a shell (sudo pwsh ./record-atomics.ps1 -Techniques A,B) PowerShell hands
+# the list over as one string, "A,B", so split it here
 if ($Techniques.Count -eq 1 -and (Test-Path $Techniques[0])) { $Techniques = Get-Content $Techniques[0] | Where-Object { $_ -match '^T\d{4}' } }
+$Techniques = @($Techniques | ForEach-Object { $_ -split '[,\s]+' } | Where-Object { $_ })
 
 $windowsLogs = 'Security', 'System', 'Application', 'Windows PowerShell', 'Microsoft-Windows-PowerShell/Operational',
     'Microsoft-Windows-Sysmon/Operational', 'Microsoft-Windows-TaskScheduler/Operational',
@@ -113,7 +115,16 @@ foreach ($t in $Techniques) {
         $es = $null
         if ($IsMacOS) {
             $plistsBefore = Get-PlistState
-            $es = Start-Process -FilePath /usr/bin/eslogger -ArgumentList $esEvents -RedirectStandardOutput (Join-Path $dir 'es.ndjson') -PassThru -NoNewWindow
+            # In a process group of its own: eslogger drops every event from its own group, which would
+            # be this script's, and so every test's. And writing its file itself: relayed through this
+            # script, each line written was another write event (hundreds of MB a test), and stopping it
+            # mid-relay crashed PowerShell. macOS has no setsid; perl ships with it
+            $psi = [Diagnostics.ProcessStartInfo]::new('/usr/bin/perl')
+            foreach ($a in @('-e', 'open(STDOUT,">",shift)||die($!);setpgrp(0,0);exec(@ARGV)', (Join-Path $dir 'es.ndjson'), '/usr/bin/eslogger') + $esEvents) {
+                $psi.ArgumentList.Add($a)
+            }
+            $psi.UseShellExecute = $false
+            $es = [Diagnostics.Process]::Start($psi)
             Start-Sleep -Seconds 2
         }
         $start = Get-Date
@@ -138,7 +149,9 @@ foreach ($t in $Techniques) {
             } else { Write-Warning 'auditd not installed or not logging: no audit.log' }
             & journalctl --since $start.ToString('yyyy-MM-dd HH:mm:ss') --until $end.ToString('yyyy-MM-dd HH:mm:ss') -o short --no-pager 2>$null | Set-Content (Join-Path $dir 'journal.log')
         } else {
-            Stop-Process -Id $es.Id -ErrorAction SilentlyContinue
+            # SIGTERM, not Stop-Process's SIGKILL, so eslogger flushes what it has buffered
+            & /bin/kill -TERM $es.Id 2>$null
+            if (-not $es.WaitForExit(15000)) { Stop-Process -Id $es.Id -ErrorAction SilentlyContinue }
             & /usr/bin/log show --start $start.ToString('yyyy-MM-dd HH:mm:ss') --end $end.ToString('yyyy-MM-dd HH:mm:ss') --style ndjson 2>$null | Set-Content (Join-Path $dir 'unified.ndjson')
             Write-PlistChanges $plistsBefore (Get-PlistState) (Join-Path $dir 'plists.ndjson')
         }
