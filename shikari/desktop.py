@@ -60,7 +60,7 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 .gloss{position:fixed;bottom:22px;font-size:14.3px;opacity:.7}
 .title{position:relative}.bird{position:absolute;left:50%;bottom:100%;transform:translateX(calc(-50% - 10px));margin-bottom:28px;width:520px;max-width:90vw;max-height:calc(50vh - 120px);object-fit:contain;object-position:bottom;pointer-events:none}.gloss b{font-weight:600}.gloss i{margin:0 8px;opacity:.8}
 </style></head>
-<body><div class="title">__BIRD__Starting Shikari&hellip;</div><div class="bar"><i></i></div>
+<body><div class="title">__BIRD__Starting Shikari&trade;&hellip;</div><div class="bar"><i></i></div>
 <div class="step"><span id="step">Getting ready</span> &middot; <span id="elapsed">0:00</span></div>
 <p class="note">The first start takes a few minutes while Shikari unpacks MITRE ATT&amp;CK and builds its
 database. After that it starts in seconds.</p>

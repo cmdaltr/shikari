@@ -66,25 +66,34 @@ def k_split(kmask):
     return gold, red
 
 
-def render(ttf, size, bg=None, letter=(255, 255, 255, 255), pad=40, track=0):
+def render(ttf, size, bg=None, letter=(255, 255, 255, 255), pad=40, track=0, tm=True):
     font = ImageFont.truetype(str(ttf), size)
     # layout width with optional tracking
     tmp = Image.new("RGBA", (10, 10)); td = ImageDraw.Draw(tmp)
     widths = [td.textlength(ch, font=font) for ch in WORD]
     total = sum(widths) + track * (len(WORD) - 1)
     asc, desc = font.getmetrics()
-    Wc = int(total) + 2 * pad
+    # A superscript ™ after the last letter, in the letter colour: ~0.3x the caps, set to the cap
+    # line so it reads as a trademark mark without crowding the word. Widen the canvas to hold it.
+    tm_font = ImageFont.truetype(str(ttf), max(8, int(size * 0.30))) if tm else None
+    tm_w = int(td.textlength("™", font=tm_font)) if tm else 0
+    tm_gap = int(size * 0.05) if tm else 0
+    Wc = int(total) + 2 * pad + tm_w + tm_gap
     Hc = asc + desc + 2 * pad
     img = Image.new("RGBA", (Wc, Hc), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     # draw each glyph at tracked positions, white
     x = pad
     kx = None
+    last_right = pad
     for ch, w in zip(WORD, widths):
         d.text((x, pad), ch, font=font, fill=letter)
         if ch == "K" and kx is None:
             kx = x
+        last_right = x + w
         x += w + track
+    if tm:
+        d.text((last_right + tm_gap, pad), "™", font=tm_font, fill=letter)
     # K-only mask at same position
     kimg = Image.new("RGBA", (Wc, Hc), (0, 0, 0, 0))
     ImageDraw.Draw(kimg).text((kx, pad), "K", font=font, fill=(255, 255, 255, 255))

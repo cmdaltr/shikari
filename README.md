@@ -1,12 +1,12 @@
 <div align="center">
 <a href="https://github.com/cmdaltr/shikari">
-<img src="static/images/shikari/shikari-lockup-perched-light.png" alt="Shikari - Automated Multi-Vendor Threat Hunting & Detection Suite" width="620px">
+<img src="static/images/shikari/shikari-lockup-perched-light.png" alt="Shikari™ - Automated Multi-Vendor Threat Hunting & Detection Suite" width="620px">
 </a>
 </div>
 
 <br>
 
-Shikari automates threat hunting and detection engineering from MITRE ATT&CK. Give it a threat group, CVE or threat report and it generates, validates and correlates detections for Google SecOps (YARA-L), Microsoft Defender (KQL) and Elastic (ES\|QL), with coverage mapping, attack flows and MITRESaw procedure intel. AI is optional.
+Shikari™ automates threat hunting and detection engineering from MITRE ATT&CK. Give it a threat group, CVE or threat report and it generates, validates and correlates detections for Google SecOps (YARA-L), Microsoft Defender (KQL) and Elastic (ES\|QL), with coverage mapping, attack flows and MITRESaw procedure intel. AI is optional.
 
 **🧭 How Shikari compares to other detection tooling: [COMPARISON.md](COMPARISON.md)**
 
@@ -337,3 +337,5 @@ Copyright (C) 2025-2026 cmdaltr.
 Shikari is free software under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only): you can use, study, change and share it, and if you change it and let others use it, over a network included, you must make your changed source available to them under the same licence.
 
 Organisations that can't meet the AGPL's terms, for example to keep changes private or to build Shikari into a closed product, can get a commercial licence instead: contact @cmdaltr on GitHub.
+
+**Shikari™** and the Shikari bateleur logo are trademarks of cmdaltr. The AGPL covers the software; it does not grant any right to use the Shikari name or logo, whether to brand a fork or otherwise.
