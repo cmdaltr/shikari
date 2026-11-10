@@ -662,6 +662,6 @@ DELETE /api/admin/users/{user_id}
 
 ---
 
-**Last Updated**: 2025-01-20
+**Last Updated**: 2026-11-02
 **Version**: 1.0
 **Maintained By**: Shikari Development Team

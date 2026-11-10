@@ -2,7 +2,7 @@
 
 > **Status (2026-10-16):** some of what this document names was never built: `scripts/cleanup.py` and `test_osint.py`; the OSINT code is `shikari/build/osint_*.py`, updated by `scripts/data/update_osint.py` and `build_osint_index.py`. What exists: `scripts/config/` (`setup_knowledge_base.py`, `import_community_rules.py`, `build_embeddings.py`, `search_similar_detections.py`, `validate_detections.py`, `quickstart_rag.py`), `scripts/ai/` (`setup_local_llm.py`, `train_ai.py`), `scripts/data/` and `scripts/validation/`: see [SCRIPTS.md](../SCRIPTS.md).
 
-**Last Updated:** 2025-11-14
+**Last Updated:** 2026-11-02
 **Status:** ✅ Fully Operational
 **Version:** 2.0
 
@@ -1022,4 +1022,4 @@ It is especially critical for cloud detections where traditional endpoint IOCs d
 - ✅ Graceful degradation with partial availability
 - ✅ Full integration with correlations and reports
 
-**Last Updated:** 2025-11-14
+**Last Updated:** 2026-11-02

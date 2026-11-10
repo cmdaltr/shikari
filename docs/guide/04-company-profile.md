@@ -28,7 +28,7 @@ Select any node or link for the detail behind it; the CVE node links each CVE to
 
 ### Manual queries
 
-Under the exposure map, **Manual queries** (collapsed) lists the lookups worth doing by hand for the domain, from PRISM: Google dorks for exposed files, admin panels, APIs, people and leaks; crt.sh, VirusTotal, SecurityTrails and Hurricane Electric; Shodan and Censys; and `dig`/`subfinder` commands for DNS and email posture. Links open the search; each has a Copy button. Shikari runs none of them, and they're shown even before the domain is profiled.
+Under the exposure map, **Manual queries** (collapsed) lists the lookups worth doing by hand for the domain: Google dorks for exposed files, admin panels, APIs, people and leaks; crt.sh, VirusTotal, SecurityTrails and Hurricane Electric; Shodan and Censys; and `dig`/`subfinder` commands for DNS and email posture. Links open the search; each has a Copy button. Shikari runs none of them, and they're shown even before the domain is profiled.
 
 ## Ordered Adversary List
 

@@ -526,5 +526,5 @@ cat data/correlate/Group_Name.json | jq '.vendor_correlations[0]'
 
 **For Full Details:** See [CORRELATION_ENGINE.md](CORRELATION_ENGINE.md)
 
-**Version:** 1.5 (March 4, 2025)
+**Version:** 1.5 (November 5, 2026)
 **Parameters:** threshold=40%, per_vendor=60, tech_freq=20

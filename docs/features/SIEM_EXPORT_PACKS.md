@@ -35,7 +35,7 @@ These were checked against real products in the #41 spike (November 2026):
 
 ## Master hunt query (Defender XDR)
 
-**Detections as code → Master hunt query**, or `shikari export kql`, combines a run's Defender XDR detections into one advanced hunting query. Each detection becomes a KQL function over a window you choose; the functions are unioned (`isfuzzy`, so a table the tenant lacks doesn't fail the rest), and the result is one row per device and account, ranked by how many of the run's techniques it shows, with the commands behind them. Several of one group's techniques on a device is the campaign signal a single detection can't give. It came from ETHAN, rebuilt from Shikari's own library with no AI.
+**Detections as code → Master hunt query**, or `shikari export kql`, combines a run's Defender XDR detections into one advanced hunting query. Each detection becomes a KQL function over a window you choose; the functions are unioned (`isfuzzy`, so a table the tenant lacks doesn't fail the rest), and the result is one row per device and account, ranked by how many of the run's techniques it shows, with the commands behind them. Several of one group's techniques on a device is the campaign signal a single detection can't give. It's built from Shikari's own library, with no AI.
 
 ```
 shikari export kql --group "Sandworm Team" --techniques T1016,T1033,T1057,T1082 --tlp amber

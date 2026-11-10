@@ -1,7 +1,7 @@
 # Shikari API Integration Guide
 
 **Version**: 2.1
-**Last Updated**: 2025-03-04
+**Last Updated**: 2026-11-07
 **Base URL**: `http://localhost:32453` (default)
 
 ---

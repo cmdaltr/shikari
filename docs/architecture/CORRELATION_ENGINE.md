@@ -931,6 +931,6 @@ The `individual_queries` field is preserved when correlations are saved to the l
 
 ---
 
-**Last Updated:** March 4, 2025
+**Last Updated:** November 2, 2026
 **Author:** Shikari Development Team
 **Location:** `docs/architecture/CORRELATION_ENGINE.md`

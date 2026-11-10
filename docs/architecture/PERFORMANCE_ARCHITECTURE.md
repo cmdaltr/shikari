@@ -550,6 +550,6 @@ Time = min(Pairs, 10000) × 0.001s
 
 ---
 
-**Last Updated:** 2025-01-30
-**Shikari Version:** 1.0
+**Last Updated:** 2026-11-02
+**Shikari Version:** 2.0.0
 **Author:** CTH Team
