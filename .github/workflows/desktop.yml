@@ -134,6 +134,8 @@ jobs:
         with:
           path: seed
           key: seed-${{ github.run_id }}
+          # Windows caches are partitioned from Unix ones; the build matrix spans both
+          enableCrossOsArchive: true
 
   build:
     needs: [setup, seed]
@@ -158,6 +160,7 @@ jobs:
         with:
           path: seed
           key: seed-${{ github.run_id }}
+          enableCrossOsArchive: true
           fail-on-cache-miss: true
 
       # desktop/stage.py compiles the dependencies with no Windows ARM64 wheel; two are Rust
@@ -183,8 +186,15 @@ jobs:
           if [ "$RUNNER_OS" = Linux ]; then
             # Not Briefcase: its system package runs on the distro's Python. desktop/build_deb.py bundles
             # one; PyGObject and pycairo compile against the distro's GTK headers
-            sudo apt-get update -qq
-            sudo apt-get install -y -qq libcairo2-dev libgirepository1.0-dev pkg-config
+            # GitHub's apt mirror resolves intermittently; retry before giving up
+            ok=
+            for i in 1 2 3; do
+              sudo apt-get update -qq \
+                && sudo apt-get install -y -qq libcairo2-dev libgirepository1.0-dev pkg-config \
+                && { ok=1; break; }
+              echo "apt failed (attempt $i/3), retrying in 15s"; sleep 15
+            done
+            [ -n "$ok" ] || { echo "apt-get failed after 3 attempts"; exit 1; }
             python "$GITHUB_WORKSPACE/desktop/build_deb.py" --stage . --out dist
             exit 0
           fi
@@ -206,6 +216,7 @@ jobs:
         with:
           path: out
           key: pkg-${{ github.run_id }}-${{ matrix.suffix }}
+          enableCrossOsArchive: true
 
   smoke:
     # Install each package on a clean runner and check it serves Shikari in local mode. One platform's
@@ -231,6 +242,7 @@ jobs:
         with:
           path: out
           key: pkg-${{ github.run_id }}-${{ matrix.suffix }}
+          enableCrossOsArchive: true
           fail-on-cache-miss: true
       # Only the install scripts, which install the package as a user would
       - uses: actions/checkout@v4
@@ -267,8 +279,12 @@ jobs:
       - name: Install (Linux)
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq xvfb
+          ok=
+          for i in 1 2 3; do
+            sudo apt-get update -qq && sudo apt-get install -y -qq xvfb && { ok=1; break; }
+            echo "apt failed (attempt $i/3), retrying in 15s"; sleep 15
+          done
+          [ -n "$ok" ] || { echo "apt-get failed after 3 attempts"; exit 1; }
           sh src/desktop/install.sh --file out/*.deb
           echo "APP=shikari" >> "$GITHUB_ENV"
 
@@ -314,22 +330,27 @@ jobs:
         with:
           path: out
           key: pkg-${{ github.run_id }}-macos-arm64
+          enableCrossOsArchive: true
       - uses: actions/cache/restore@v4
         with:
           path: out
           key: pkg-${{ github.run_id }}-macos-x86_64
+          enableCrossOsArchive: true
       - uses: actions/cache/restore@v4
         with:
           path: out
           key: pkg-${{ github.run_id }}-windows-x64
+          enableCrossOsArchive: true
       - uses: actions/cache/restore@v4
         with:
           path: out
           key: pkg-${{ github.run_id }}-linux-amd64
+          enableCrossOsArchive: true
       - uses: actions/cache/restore@v4
         with:
           path: out
           key: pkg-${{ github.run_id }}-linux-arm64
+          enableCrossOsArchive: true
       # What desktop/install.sh and install.ps1 check a download against
       - run: cd out && sha256sum -- * > SHA256SUMS && cat SHA256SUMS
       - uses: softprops/action-gh-release@v2
