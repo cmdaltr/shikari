@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Issue a Shikari licence in one line (licensor only): a wrapper over sign_licence.py.
 #
-#   export SHIKARI_LICENCE_KEY=~/.config/shikari/licence-signing.key   # never commit it
+#   export SHIKARI_LICENCE_KEY=~/.config/shikari/licence-signing-key.pem   # never commit it
 #   ./scripts/admin/issue-licence.sh "Northwind Ltd" services 25
 #   ./scripts/admin/issue-licence.sh "Northwind Ltd" pro unlimited ops@northwind.example 2027-12-31
 #
