@@ -1,6 +1,8 @@
 # The installable desktop app (desktop/README.md): a .dmg and a Windows .msi per architecture, and a
 # Linux .deb, built from a clean checkout so nothing gitignored (bespoke/, data/shikari.db) can
-# reach them. A v* tag attaches them to a GitHub Release; a manual run leaves them as artifacts.
+# reach them. A v* tag attaches them to a GitHub Release; a manual run leaves them in the Actions
+# cache (keyed by run id). Packages pass between jobs through the cache, not Actions-artifact storage,
+# whose 500 MB free quota a busy sibling repo can fill and block every upload here.
 name: Desktop app
 
 on:
@@ -126,11 +128,12 @@ jobs:
           cp "$SHIKARI_HOME/shikari/data/cache/enterprise-attack.json" seed/
           cp "$SHIKARI_HOME"/data/mitre_procedures.* seed/ 2>/dev/null || echo "No procedures CSV: the app works without it, minus threat briefings"
           ls -la seed
-      - uses: actions/upload-artifact@v4
+      # Hand the seed to the build jobs through the Actions cache, not an artifact: cache has its own
+      # 10 GB quota, separate from the 500 MB Actions-artifact storage a busy sibling repo can fill.
+      - uses: actions/cache/save@v4
         with:
-          name: seed
-          path: seed/
-          retention-days: 7
+          path: seed
+          key: seed-${{ github.run_id }}
 
   build:
     needs: [setup, seed]
@@ -151,10 +154,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/cache/restore@v4
         with:
-          name: seed
           path: seed
+          key: seed-${{ github.run_id }}
+          fail-on-cache-miss: true
 
       # desktop/stage.py compiles the dependencies with no Windows ARM64 wheel; two are Rust
       - name: Rust (Windows ARM64)
@@ -197,11 +201,11 @@ jobs:
             mv "$f" "$GITHUB_WORKSPACE/out/${base%.*}-${{ matrix.suffix }}.${base##*.}"
           done
           ls -la "$GITHUB_WORKSPACE/out"
-      - uses: actions/upload-artifact@v4
+      # Pass the built package to smoke and release through the cache, same reason as the seed.
+      - uses: actions/cache/save@v4
         with:
-          name: shikari-${{ matrix.suffix }}
-          path: out/*
-          retention-days: 14
+          path: out
+          key: pkg-${{ github.run_id }}-${{ matrix.suffix }}
 
   smoke:
     # Install each package on a clean runner and check it serves Shikari in local mode. One platform's
@@ -223,10 +227,11 @@ jobs:
       SHIKARI_SERVER: local
       PYWEBVIEW_LOG: debug
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/cache/restore@v4
         with:
-          name: shikari-${{ matrix.suffix }}
-          path: pkg
+          path: out
+          key: pkg-${{ github.run_id }}-${{ matrix.suffix }}
+          fail-on-cache-miss: true
       # Only the install scripts, which install the package as a user would
       - uses: actions/checkout@v4
         with:
@@ -236,7 +241,7 @@ jobs:
       - name: Install (macOS)
         if: runner.os == 'macOS'
         run: |
-          sh src/desktop/install.sh --file pkg/*.dmg
+          sh src/desktop/install.sh --file out/*.dmg
           echo "APP=/Applications/Shikari.app/Contents/MacOS/Shikari" >> "$GITHUB_ENV"
 
       - name: Install (Windows)
@@ -245,7 +250,7 @@ jobs:
         timeout-minutes: 15
         run: |
           # msiexec started from Git Bash never returns, so the script runs from PowerShell, as a user's would
-          powershell -NoProfile -ExecutionPolicy Bypass -File src\desktop\install.ps1 -File (Get-ChildItem pkg\*.msi).FullName
+          powershell -NoProfile -ExecutionPolicy Bypass -File src\desktop\install.ps1 -File (Get-ChildItem out\*.msi).FullName
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           # Per-user install; don't recurse all of Program Files (minutes on ARM64)
           $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Depth 4 -Filter Shikari.exe -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -264,7 +269,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq xvfb
-          sh src/desktop/install.sh --file pkg/*.deb
+          sh src/desktop/install.sh --file out/*.deb
           echo "APP=shikari" >> "$GITHUB_ENV"
 
       - name: Launch in local mode
@@ -302,13 +307,29 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      # Gather every released leg's package from its per-run cache (windows-arm64 is experimental,
+      # not released, so it isn't restored). Each leg saved only its own file under path out/, so the
+      # restores accumulate into one out/ directory. A leg that failed to build simply misses.
+      - uses: actions/cache/restore@v4
         with:
-          pattern: shikari-*
           path: out
-          merge-multiple: true
-      # Experimental builds aren't released
-      - run: rm -f out/*windows-arm64*
+          key: pkg-${{ github.run_id }}-macos-arm64
+      - uses: actions/cache/restore@v4
+        with:
+          path: out
+          key: pkg-${{ github.run_id }}-macos-x86_64
+      - uses: actions/cache/restore@v4
+        with:
+          path: out
+          key: pkg-${{ github.run_id }}-windows-x64
+      - uses: actions/cache/restore@v4
+        with:
+          path: out
+          key: pkg-${{ github.run_id }}-linux-amd64
+      - uses: actions/cache/restore@v4
+        with:
+          path: out
+          key: pkg-${{ github.run_id }}-linux-arm64
       # What desktop/install.sh and install.ps1 check a download against
       - run: cd out && sha256sum -- * > SHA256SUMS && cat SHA256SUMS
       - uses: softprops/action-gh-release@v2
