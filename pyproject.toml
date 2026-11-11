@@ -148,6 +148,7 @@ dependencies = [
     "rpds-py==0.27.1",
     "ruamel.yaml==0.18.15",
     "ruamel.yaml.clib==0.2.14",
+    "samarkand==0.1.0",
     "setuptools==80.9.0",
     "simplejson==3.20.1",
     "six==1.17.0",
