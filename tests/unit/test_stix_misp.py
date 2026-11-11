@@ -93,3 +93,22 @@ def test_stix_import_undoes_escapes_in_patterns():
     iocs = parse_stix_bundle(bundle)["iocs"]
     assert iocs["file"] == ["it's.exe"] and iocs["reg"] == ["HKLM\\Software\\Run"]
 
+
+def test_stix_export_is_marked_stable_and_one_indicator_per_ioc():
+    from datetime import datetime, timezone
+
+    dets = [{"name": "C2", "technique_id": "T1071.001", "siem": "mde", "query": "q",
+             "indicators": {"ip": ["2001:db8::5", "10.0.0.5"], "hash": ["d" * 32]}}]
+    at = datetime(2026, 11, 11, 12, tzinfo=timezone.utc)
+    one, two = (json.loads(run_to_stix("APT29", dets, tlp="green", now=at)) for _ in range(2))
+    assert [o["id"] for o in one["objects"]] == [o["id"] for o in two["objects"]]
+    green = "marking-definition--bab4a63c-aed9-4cf5-a766-dfca5abac2bb"
+    assert all(o.get("object_marking_refs") == [green] for o in one["objects"]
+               if o["type"] not in ("identity", "marking-definition"))
+    patterns = sorted(o["pattern"] for o in one["objects"] if o["type"] == "indicator")
+    assert patterns == ["[file:hashes.'MD5' = '" + "d" * 32 + "']", "[ipv4-addr:value = '10.0.0.5']",
+                        "[ipv6-addr:value = '2001:db8::5']"]
+    report = one["objects"][-1]
+    assert report["type"] == "report"
+    assert {o["id"] for o in one["objects"] if o["type"] in ("x-shikari-detection", "intrusion-set")} \
+        <= set(report["object_refs"])

@@ -1,107 +1,112 @@
 """
 Export a run as a STIX 2.1 bundle (#19).
 
-A run becomes: an identity (Shikari), an intrusion-set for the group, an attack-pattern per
-technique (with its ATT&CK external reference), the detections as x-shikari-detection custom
-objects carrying the SIEM and query, and indicators built from each detection's IOCs — tied
-together with relationships. No AI.
+A run becomes: an identity (Shikari), the TLP 2.0 marking it's shared under, an intrusion-set for the
+group, an attack-pattern per technique (with its ATT&CK external reference), an indicator per IOC
+with its cyber observables, the detections as x-shikari-detection custom objects carrying the SIEM
+and query, and a report referencing them all, tied together with `uses`, `detects` and `indicates`
+relationships. No AI.
+
+The standard objects come from `samarkand.stix.bundle()`, the suite's shared builder: hand-written
+JSON with stable ids (UUIDv5 under Shikari's own namespace, so exporting a run again gives the same
+ids and a newer `modified`) and the TLP marking on every object. The intrusion-set and the
+detections are Shikari's own, added to the same objects list.
 """
 
+import json
+import string
+import uuid
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-import stix2
-from stix2 import v21
-from stix2.properties import ListProperty, ReferenceProperty, StringProperty
+from samarkand import stix
+from samarkand.stix import Kind
 
+# Shikari's STIX namespace: never change it, or every exported id changes with it
+NAMESPACE = uuid.UUID("ad90fcf4-f2c8-4490-bf60-9d46f7697c62")
 SHIKARI_IDENTITY_NAME = "Shikari"
-_ATTACK_URL = "https://attack.mitre.org/techniques/"
+DETECTION_TYPE = "x-shikari-detection"
+DEFAULT_TLP = "amber"  # as Shikari's reports: AMBER unless given
 
-# IOC kind → the STIX observable path a pattern comparison uses
-_PATTERN_PATH = {
-    "ip": "ipv4-addr:value", "domain": "domain-name:value", "hash": "file:hashes.'SHA-256'",
-    "file": "file:name", "cmd": "process:command_line", "reg": "windows-registry-key:key",
-    "sw": "process:name",
+# IOC kind → samarkand's neutral kind (hashes by their length). evt has no STIX observable.
+_KINDS = {
+    "ip": Kind.IP_ADDRESS, "domain": Kind.DOMAIN, "file": Kind.FILE_NAME, "cmd": Kind.PROCESS_COMMAND,
+    "reg": Kind.REGISTRY_KEY, "sw": Kind.PROCESS_NAME,
 }
+_HASHES = {32: Kind.FILE_HASH_MD5, 40: Kind.FILE_HASH_SHA1, 64: Kind.FILE_HASH_SHA256,
+           128: Kind.FILE_HASH_SHA512}
 
 
-@stix2.CustomObject("x-shikari-detection", [
-    ("name", StringProperty(required=True)),
-    ("siem", StringProperty()),
-    ("query", StringProperty()),
-    ("technique_id", StringProperty()),
-    ("created_by_ref", ReferenceProperty(valid_types="identity")),
-    ("object_marking_refs", ListProperty(ReferenceProperty(valid_types="marking-definition"))),
-])
-class ShikariDetection:
-    """A generated Shikari detection, carried in the bundle alongside the standard objects."""
+def _kind(kind: str, value: str) -> Optional[Kind]:
+    if kind == "hash":
+        hexadecimal = all(c in string.hexdigits for c in value)
+        return _HASHES.get(len(value), Kind.FILE_HASH_SHA256) if hexadecimal else Kind.FILE_HASH_SHA256
+    return _KINDS.get(kind)
 
 
-def _escape(value: str) -> str:
-    return str(value).replace("\\", "\\\\").replace("'", "\\'")
-
-
-def _pattern_for(indicators: Dict[str, List[str]]) -> Optional[str]:
-    """A STIX 2.1 pattern OR-ing a few of a detection's IOCs, or None when there are none."""
-    parts = []
-    for kind, path in _PATTERN_PATH.items():
-        for value in (indicators.get(kind) or [])[:5]:
-            value = str(value).strip()
-            if value:
-                parts.append(f"[{path} = '{_escape(value)}']")
-    return " OR ".join(parts) if parts else None
-
-
-def run_to_stix(group_name: str, detections: List[Dict], description: str = "") -> str:
+def run_to_stix(group_name: str, detections: List[Dict], description: str = "", *,
+                tlp: str = DEFAULT_TLP, now: Optional[datetime] = None) -> str:
     """detections: dicts with name, technique_id, query, siem, indicators. Returns the serialized
-    STIX 2.1 bundle (JSON)."""
-    identity = v21.Identity(name=SHIKARI_IDENTITY_NAME, identity_class="system",
-                            description="Shikari — automated multi-SIEM detection generation")
-    objects = [identity]
-    created_by = identity.id
+    STIX 2.1 bundle (JSON), every object marked with `tlp`."""
+    now = now or datetime.now(timezone.utc)
+    key = group_name or "run"
 
-    intrusion = None
+    techniques: Dict[str, str] = {}
+    iocs: Dict[tuple, List[str]] = {}  # (kind, value) → the techniques it indicates
+    for det in detections:
+        tid = str(det.get("technique_id") or "").strip()
+        if tid and tid not in techniques:
+            techniques[tid] = det.get("technique_name") or ""
+        for ioc_kind, values in (det.get("indicators") or {}).items():
+            for value in values or []:
+                value = str(value).strip()
+                kind = _kind(ioc_kind, value) if value else None
+                if kind is None:
+                    continue
+                linked = iocs.setdefault((kind, value), [])
+                if tid and tid not in linked:
+                    linked.append(tid)
+
+    bundle = stix.bundle(stix.Export(
+        namespace=NAMESPACE, key=key, producer=SHIKARI_IDENTITY_NAME, tlp=tlp, created=now,
+        name=f"Shikari run: {group_name}" if group_name else "Shikari run", description=description,
+        techniques=tuple(stix.ExportTechnique(tid, name) for tid, name in techniques.items()),
+        indicators=tuple(stix.ExportIndicator(key=f"{kind.value}|{value}", kind=kind, value=value,
+                                              techniques=tuple(linked))
+                         for (kind, value), linked in iocs.items()),
+    ), now)
+
+    objects = bundle["objects"]
+    report = objects.pop()  # bundle() puts the report last; Shikari's objects go before it
+    identity = objects[0]["id"]
+    props = stix.common(identity, now, now, tlp)
+    patterns = {o["external_references"][0]["external_id"]: o["id"]
+                for o in objects if o["type"] == "attack-pattern"}
+
+    own: List[Dict] = []
     if group_name:
-        intrusion = v21.IntrusionSet(name=group_name, description=description or None, created_by_ref=created_by)
-        objects.append(intrusion)
-
-    attack_patterns: Dict[str, object] = {}
+        intrusion = {"type": "intrusion-set", "id": stix.object_id(NAMESPACE, "intrusion-set", key), **props,
+                     "name": group_name, **({"description": description} if description else {})}
+        own.append(intrusion)
+        for tid, pattern in patterns.items():
+            own.append(stix.relationship_object(stix.object_id(NAMESPACE, "relationship", key, "uses", tid),
+                                                props, "uses", intrusion["id"], pattern))
+    seen: Dict[tuple, int] = {}
     for det in detections:
         tid = str(det.get("technique_id") or "").strip()
-        if tid and tid not in attack_patterns:
-            ap = v21.AttackPattern(
-                name=det.get("technique_name") or tid,
-                created_by_ref=created_by,
-                external_references=[{"source_name": "mitre-attack", "external_id": tid,
-                                      "url": f"{_ATTACK_URL}{tid.replace('.', '/')}/"}],
-            )
-            attack_patterns[tid] = ap
-            objects.append(ap)
-            if intrusion is not None:
-                objects.append(v21.Relationship(relationship_type="uses", source_ref=intrusion.id,
-                                                target_ref=ap.id, created_by_ref=created_by))
+        name = det.get("name") or det.get("query_name") or "detection"
+        siem = det.get("siem") or det.get("connector") or ""
+        n = seen[(name, siem, tid)] = seen.get((name, siem, tid), 0) + 1
+        detection = {"type": DETECTION_TYPE,
+                     "id": stix.object_id(NAMESPACE, DETECTION_TYPE, key, name, siem, tid, n), **props,
+                     "name": name, "siem": siem, "query": det.get("query") or "", "technique_id": tid}
+        own.append(detection)
+        if tid in patterns:
+            own.append(stix.relationship_object(
+                stix.object_id(NAMESPACE, "relationship", key, "detects", detection["id"]),
+                props, "detects", detection["id"], patterns[tid]))
 
-    for det in detections:
-        tid = str(det.get("technique_id") or "").strip()
-        ap = attack_patterns.get(tid)
-        detection = ShikariDetection(
-            name=det.get("name") or det.get("query_name") or "detection",
-            siem=det.get("siem") or det.get("connector") or "",
-            query=det.get("query") or "",
-            technique_id=tid,
-            created_by_ref=created_by,
-        )
-        objects.append(detection)
-        if ap is not None:
-            # source_ref is our custom x-shikari-detection object, so allow_custom is required
-            objects.append(v21.Relationship(relationship_type="detects", source_ref=detection.id,
-                                            target_ref=ap.id, created_by_ref=created_by, allow_custom=True))
-        pattern = _pattern_for(det.get("indicators") or {})
-        if pattern:
-            indicator = v21.Indicator(name=f"IOCs for {det.get('name') or tid}", pattern=pattern,
-                                      pattern_type="stix", created_by_ref=created_by)
-            objects.append(indicator)
-            if ap is not None:
-                objects.append(v21.Relationship(relationship_type="indicates", source_ref=indicator.id,
-                                                target_ref=ap.id, created_by_ref=created_by))
-
-    return stix2.Bundle(objects=objects, allow_custom=True).serialize()
+    objects.extend(own)
+    report["object_refs"] = report["object_refs"] + [o["id"] for o in own]
+    objects.append(report)
+    return json.dumps(bundle, indent=2)
