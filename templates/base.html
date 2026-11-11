@@ -85,6 +85,12 @@
     {% include "partials/nav_controls.html" %}
 
     <div id="container">
+        {% set _notice = licence_notice(user) if user is defined else "" %}
+        {% if _notice %}
+        <div class="licence-notice" role="status" style="margin:.5rem auto;max-width:72rem;padding:.5rem .8rem;border-radius:6px;background:#df514e22;border:1px solid #df514e;font-size:.9rem">
+          ⚠ {{ _notice }} <a href="/settings/report-branding">Licence</a>
+        </div>
+        {% endif %}
         <div id="main-content" class="{% block main_class %}centered{% endblock %}">
           {% block content %}{% endblock %}
         </div>

@@ -259,7 +259,7 @@ Name:           shikari-server
 Version:        {version}
 Release:        1%{{?dist}}
 Summary:        Shikari team server (systemd service)
-License:        AGPL-3.0
+License:        Elastic-2.0
 URL:            https://github.com/cmdaltr/shikari
 BuildArch:      {arch}
 Requires:       shadow-utils, systemd

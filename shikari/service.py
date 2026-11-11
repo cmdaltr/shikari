@@ -676,6 +676,7 @@ HANDOVER = {
     "app": ("shikari.desktop", False),
     "caldera": ("shikari.cli.caldera", False),
     "export": ("shikari.cli.export", False),
+    "licence": ("shikari.cli.licence", False),
 }
 
 

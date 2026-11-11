@@ -24,7 +24,7 @@
 
 - Public repository **github.com/cmdaltr/shikari** — the name, wordmark and bateleur logo throughout the README, `docs/` and the source.
 - Name and logo on every screen of the running application (top-nav wordmark banner, splash, footer notice).
-- The AGPL-3.0 licence file and headers carry the name; a trademark notice in the README reserves the name and logo separately from the copyleft code.
+- The Elastic License 2.0 file carries the name; a trademark notice in the README and `COMMERCIAL-LICENSE.md` reserves the name and logo separately from the source-available code. (Releases up to v2 were AGPL-3.0; the name and notice were carried there too.)
 
 ## To add as it happens (strengthens the record)
 

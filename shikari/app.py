@@ -91,6 +91,24 @@ templates.env.globals["brand"] = branding.active_brand()
 # Attack flow tabs (partials/attack_flow.html): the Cyber Kill Chain and Targeted Attack Lifecycle mappings
 templates.env.globals["flow_frameworks"] = FLOW_FRAMEWORKS
 
+
+def _licence_notice(user) -> str:
+    """The licence warning admins see on every page: during grace (so renewal isn't missed on the one
+    page nobody visits) and while a licence waits for its first day. Others never see it."""
+    from shikari import licensing
+    if user is None or getattr(user, "role", None) != UserRole.ADMIN:
+        return ""
+    st = licensing.status()
+    if st["state"] == "grace":
+        return (f"The {st['edition'].title()} licence for {st['licensee']} expired on {st['expires']} and is "
+                f"in its 30-day grace period until {st['grace_ends']}. Renew it to stay on {st['edition'].title()}.")
+    if st["state"] == "pending":
+        return f"The {st['edition'].title()} licence for {st['licensee']} {st['reason']}; Free edition until then."
+    return ""
+
+
+templates.env.globals["licence_notice"] = _licence_notice
+
 # Data source display name mapping (used for detection titles and correlation displays)
 DATA_SOURCE_DISPLAY_NAMES = {
     "aws cloudtrail": "AWS CloudTrail",
@@ -8565,7 +8583,7 @@ async def register(
                 status_code=400,
             )
 
-        # Seat limit: the free tier is a single operator. More accounts need a Teams licence.
+        # Seat limit: the free tier is FREE_SEATS accounts. More need a Pro or Services licence.
         # Only new accounts are capped; existing ones keep working.
         from shikari import licensing
         active_users = db.query(User).filter(User.is_active.is_(True)).count()
@@ -8574,8 +8592,9 @@ async def register(
             return templates.TemplateResponse(
                 "register.html",
                 {"request": request,
-                 "error": "This Shikari install is single-user. Additional accounts need a Teams "
-                          "licence — an administrator can add one under Report branding → Licence.",
+                 "error": f"This Shikari install allows {licensing.seats_allowed()} accounts. More need a "
+                          "Pro or Services licence with more seats — an administrator can add one under "
+                          "Report branding → Licence.",
                  "csrf_token": next_csrf},
                 status_code=403,
             )
@@ -9252,6 +9271,8 @@ def report_branding_page(request: Request, shikari_session: Optional[str] = Cook
             "show_shikari": bool(prof.get("show_shikari", True)),
             "colours": colours, "logos": logos, "max_logos": rtheme.MAX_LOGOS,
             "licence": licensing.status(),
+            "places_taken": db.query(User).filter(User.is_active.is_(True)).count(),
+            "seats_total": licensing.seats_allowed(),   # None = unlimited
         })
     finally:
         db.close()
@@ -9351,11 +9372,19 @@ def report_branding_reset(request: Request, shikari_session: Optional[str] = Coo
     return JSONResponse({"success": True})
 
 
-@app.post("/api/report-branding/licence")
-async def report_branding_licence_install(request: Request, licence: str = Form(""),
-                                          file: UploadFile = File(None),
-                                          shikari_session: Optional[str] = Cookie(None)):
-    """Install a commercial licence (admin only), pasted as text or uploaded as a file."""
+async def _licence_text(licence: str, file) -> Optional[str]:
+    """The licence line from the form: an uploaded file wins over pasted text. None if unreadable."""
+    if file is not None:
+        try:
+            return (await file.read()).decode("utf-8", "replace")
+        except Exception:
+            return None
+    return licence
+
+
+@app.get("/api/report-branding/licence/terms")
+def report_branding_licence_terms(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """The commercial terms an admin accepts when installing a licence (admin only)."""
     from shikari import licensing
 
     auth = _require_admin(request, shikari_session)
@@ -9363,17 +9392,90 @@ async def report_branding_licence_install(request: Request, licence: str = Form(
         return auth
     user, db = auth
     db.close()
-    data = licence
-    if file is not None:
-        try:
-            data = (await file.read()).decode("utf-8", "replace")
-        except Exception:
-            return JSONResponse({"success": False, "error": "Could not read the licence file"}, status_code=400)
-    if not (data or "").strip():
+    version, text = licensing.terms()
+    return JSONResponse({"success": True, "version": version, "text": text})
+
+
+@app.post("/api/report-branding/licence/check")
+async def report_branding_licence_check(request: Request, licence: str = Form(""),
+                                        file: UploadFile = File(None),
+                                        shikari_session: Optional[str] = Cookie(None)):
+    """What a licence says, so the admin knows whom they're accepting the terms for. Installs nothing."""
+    from shikari import licensing
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    db.close()
+    data = await _licence_text(licence, file)
+    if data is None:
+        return JSONResponse({"success": False, "error": "Could not read the licence file"}, status_code=400)
+    if not data.strip():
         return JSONResponse({"success": False, "error": "Paste a licence or choose a file"}, status_code=400)
-    ok, message = licensing.install(data)
-    return JSONResponse({"success": ok, "message": message, "status": licensing.status()},
-                        status_code=200 if ok else 400)
+    try:
+        lic = licensing.check(licensing.licence_line(data))
+    except licensing.LicenceProblem as exc:
+        return JSONResponse({"success": False, "error": str(exc)}, status_code=422)
+    return JSONResponse({
+        "success": True,
+        "licence_id": lic.licence_id,
+        "licensee": lic.licensee,
+        "edition": lic.edition.value,
+        "seats": lic.seats,             # None = unlimited
+        "features": sorted(licensing.EDITION_FEATURES[lic.edition] | set(lic.features)),
+        "not_before": lic.not_before.isoformat() if lic.not_before else "",
+        "expires": lic.expires.isoformat() if lic.expires else "perpetual",
+        "state": licensing.standing(lic).state,
+        "terms_version": licensing.terms()[0],
+    })
+
+
+@app.post("/api/report-branding/licence")
+async def report_branding_licence_install(request: Request, licence: str = Form(""),
+                                          file: UploadFile = File(None),
+                                          accept_terms: str = Form(""),
+                                          terms_version: str = Form(""),
+                                          shikari_session: Optional[str] = Cookie(None)):
+    """Install a commercial licence (admin only), pasted as text or uploaded as a file. The admin must
+    have accepted the current commercial terms on the licensee's behalf; who, when and which version
+    are kept with it."""
+    from shikari import licensing
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    try:
+        data = await _licence_text(licence, file)
+        if data is None:
+            return JSONResponse({"success": False, "error": "Could not read the licence file"}, status_code=400)
+        if not (data or "").strip():
+            return JSONResponse({"success": False, "error": "Paste a licence or choose a file"}, status_code=400)
+        try:
+            lic = licensing.check(licensing.licence_line(data))
+        except licensing.LicenceProblem as exc:
+            return JSONResponse({"success": False, "error": str(exc)}, status_code=422)
+        problem = licensing.acceptance_problem(lic, accept_terms in ("1", "true", "on", "yes"),
+                                               terms_version or None)
+        if problem:
+            code, reason = problem
+            return JSONResponse({"success": False, "error": reason}, status_code=code)
+        ok, message = licensing.install(data, accepted_by=user.id,
+                                        accepted_by_name=f"{user.full_name} <{user.email}>")
+        if ok:
+            from shikari.database.audit import EVENT_LICENCE_INSTALLED, log_audit_event
+            st = licensing.status()
+            log_audit_event(db, EVENT_LICENCE_INSTALLED, user_id=user.id, email=user.email,
+                            ip_address=request.client.host if request.client else None,
+                            details=json.dumps({"edition": st["edition"], "licensee": st["licensee"],
+                                                "seats": st["seats"], "licence_id": st["licence_id"],
+                                                "expires": st["expires"],
+                                                "terms_version": st["accepted"]["terms_version"]}))
+        return JSONResponse({"success": ok, "message": message, "status": licensing.status()},
+                            status_code=200 if ok else 400)
+    finally:
+        db.close()
 
 
 @app.post("/api/report-branding/licence/remove")
@@ -9385,9 +9487,16 @@ def report_branding_licence_remove(request: Request, shikari_session: Optional[s
     if isinstance(auth, JSONResponse):
         return auth
     user, db = auth
-    db.close()
-    licensing.remove()
-    return JSONResponse({"success": True})
+    try:
+        had = licensing.status()
+        licensing.remove()
+        from shikari.database.audit import EVENT_LICENCE_REMOVED, log_audit_event
+        log_audit_event(db, EVENT_LICENCE_REMOVED, user_id=user.id, email=user.email,
+                        ip_address=request.client.host if request.client else None,
+                        details=json.dumps({"was": had.get("edition"), "licensee": had.get("licensee")}))
+        return JSONResponse({"success": True})
+    finally:
+        db.close()
 
 
 @app.get("/settings/report-branding/sample.pdf")
@@ -13556,13 +13665,13 @@ async def create_user(request: Request, shikari_session: Optional[str] = Cookie(
         if existing_user:
             return {"success": False, "error": "User with this email already exists"}
 
-        # Seat limit: the free tier is a single operator; more accounts need a Teams licence.
+        # Seat limit: the free tier is FREE_SEATS accounts; more need a Pro or Services licence.
         from shikari import licensing
         active_users = db.query(User).filter(User.is_active.is_(True)).count()
         if not licensing.can_add_user(active_users):
             return {"success": False, "requires_licence": "teams",
-                    "error": "This install is single-user. Add a Teams licence to create more "
-                             "accounts (Report branding → Licence)."}
+                    "error": f"This install allows {licensing.seats_allowed()} accounts. Add a Pro or "
+                             "Services licence with more seats to create more (Report branding → Licence)."}
 
         # Create new user
         user_role = UserRole(role)

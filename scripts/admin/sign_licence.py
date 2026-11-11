@@ -1,118 +1,172 @@
-#!/usr/bin/env python3
+"""Issue Shikari licences (licensor only). Run where the signing key is, never on a server.
+
+    sign_licence.py keygen PATH                 a new keypair: the private key to PATH, the public to stdout
+    sign_licence.py public                      the public key to put in shikari.licensing.PUBLIC_KEYS
+    sign_licence.py sign --licensee "Northwind Ltd" --edition services --seats 25 --expires 2027-11-30
+
+The private key comes from SHIKARI_LICENCE_KEY: a path to the key file, or the key itself. Either
+holds a PEM private key or the 32-byte seed as hex or base64. A key file must be readable by its
+owner only. Every product has its own key (docs/LICENSING_MODEL.md).
+
+With LICENCE_LEDGER_DIR set (or --ledger), a signed licence goes into that licensing repo: the line
+to issued/shikari/<licence_id>.licence and a row, with the current terms version, to ledger.csv.
 """
-Sign a Shikari commercial licence (licensor tooling — not for customers).
 
-A licence is a short JSON payload signed with the licensor's Ed25519 private key. The matching
-public key is embedded in ``shikari/licensing.py`` and ships with the product, so a licence
-verifies offline but can't be forged or altered. The private key stays with the licensor and is
-never committed to the repository.
-
-Keep the signing key safe:
-    python scripts/admin/sign_licence.py keygen
-      -> prints a new keypair; put PUBLIC_KEY_HEX in shikari/licensing.py, store the private key
-         (PEM) somewhere safe and point SHIKARI_LICENCE_KEY at it.
-
-Issue a licence:
-    export SHIKARI_LICENCE_KEY=/path/to/signing-key.pem
-    python scripts/admin/sign_licence.py sign \
-        --licensee "Acme Security Ltd" --email ops@acme.example \
-        --features report-branding --expires 2027-12-31 \
-        -o acme-licence.json
-
-The customer drops the file in at Report branding → Licence, or saves it as data/licence.json.
-Omit --expires for a perpetual licence; pass --features pro to unlock every reserved feature.
-"""
+from __future__ import annotations
 
 import argparse
 import base64
-import datetime
-import json
+import binascii
+import csv
 import os
 import sys
-import uuid
+from datetime import date, datetime, timezone
+from pathlib import Path
+
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.serialization import (
+    Encoding,
+    NoEncryption,
+    PrivateFormat,
+    PublicFormat,
+    load_pem_private_key,
+)
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from shikari import licensing  # noqa: E402
+
+KEY_ENV = "SHIKARI_LICENCE_KEY"
+LEDGER_ENV = "LICENCE_LEDGER_DIR"
+LEDGER_FIELDS = (
+    "licence_id", "product", "licensee", "email", "edition", "seats", "features", "issued",
+    "not_before", "expires", "terms_version", "order", "file", "notes",
+)  # fmt: skip
 
 
-def _load_private_key(path):
-    from cryptography.hazmat.primitives import serialization
-
-    if not path:
-        sys.exit("Set SHIKARI_LICENCE_KEY (or pass --key) to the signing key file.")
-    data = open(path, "rb").read()
-    text = data.decode("utf-8", "replace").strip()
-    # Accept a PEM private key or a bare 64-char hex seed.
-    if "PRIVATE KEY" in text:
-        return serialization.load_pem_private_key(data, password=None)
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-    return Ed25519PrivateKey.from_private_bytes(bytes.fromhex(text))
-
-
-def _b64url(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
-
-
-def _canonical(payload: dict) -> bytes:
-    return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
-
-
-def cmd_keygen(_args):
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
-    priv = Ed25519PrivateKey.generate()
-    pub = priv.public_key()
-    pub_raw = pub.public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
-    pem = priv.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
-                             serialization.NoEncryption()).decode()
-    print("PUBLIC_KEY_HEX =", pub_raw.hex())
-    print("\n# Store this private key safely; never commit it. Point SHIKARI_LICENCE_KEY at it.\n")
-    print(pem)
+def _record(ledger: Path, lic: licensing.Licence, line: str) -> Path:
+    """The licence into the licensing repo: its file, and a ledger row."""
+    if not (ledger / "ledger.csv").is_file():
+        sys.exit(f"{ledger} isn't the licensing repo (no ledger.csv).")
+    out = ledger / "issued" / lic.product / f"{lic.licence_id}.licence"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(line + "\n")
+    with (ledger / "ledger.csv").open("a", newline="") as f:
+        csv.DictWriter(f, LEDGER_FIELDS).writerow(
+            {
+                "licence_id": lic.licence_id,
+                "product": lic.product,
+                "licensee": lic.licensee,
+                "email": lic.email,
+                "edition": lic.edition.value,
+                "seats": "unlimited" if lic.seats is None else lic.seats,
+                "features": " ".join(lic.features),
+                "issued": lic.issued.isoformat(),
+                "not_before": lic.not_before.isoformat() if lic.not_before else "",
+                "expires": lic.expires.isoformat() if lic.expires else "perpetual",
+                "terms_version": licensing.terms()[0],
+                "file": str(out.relative_to(ledger)),
+            }
+        )
+    return out
 
 
-def cmd_sign(args):
-    priv = _load_private_key(args.key or os.getenv("SHIKARI_LICENCE_KEY"))
-    features = []
-    for f in args.features:
-        features += [part.strip() for part in f.split(",") if part.strip()]
-    payload = {
-        "licence_id": args.licence_id or uuid.uuid4().hex[:12],
-        "licensee": args.licensee,
-        "email": args.email or "",
-        "features": features or ["report-branding"],
-        "issued": datetime.date.today().isoformat(),
-    }
-    if args.not_before:
-        payload["not_before"] = args.not_before
-    if args.expires:
-        payload["expires"] = args.expires
-    sig = priv.sign(_canonical(payload))
-    licence = {"payload": payload, "sig": _b64url(sig)}
-    out = json.dumps(licence, indent=2)
-    token = _b64url(_canonical(payload)) + "." + _b64url(sig)
-    if args.output:
-        open(args.output, "w").write(out + "\n")
-        print(f"Wrote {args.output}")
-    else:
-        print(out)
-    print("\nCompact token (same bytes, for pasting):\n" + token)
+def _key() -> Ed25519PrivateKey:
+    value = os.environ.get(KEY_ENV, "").strip()
+    if not value:
+        sys.exit(f"Set {KEY_ENV} to the signing key file (or the key itself).")
+    path = Path(value).expanduser()
+    if path.is_file():
+        if path.stat().st_mode & 0o077:
+            sys.exit(f"{path} is readable by others: chmod 600 it first.")
+        value = path.read_text().strip()
+    if value.startswith("-----BEGIN"):
+        key = load_pem_private_key(value.encode(), password=None)
+        if not isinstance(key, Ed25519PrivateKey):
+            sys.exit("That PEM key isn't Ed25519.")
+        return key
+    try:
+        seed = bytes.fromhex(value) if len(value) == 64 else base64.b64decode(value, validate=True)
+    except (ValueError, binascii.Error):
+        sys.exit(f"{KEY_ENV} isn't a PEM key or a 32-byte seed in hex or base64.")
+    return Ed25519PrivateKey.from_private_bytes(seed)
 
 
-def main():
-    ap = argparse.ArgumentParser(description="Sign Shikari commercial licences (licensor only).")
-    sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("keygen", help="generate a new signing keypair")
-    s = sub.add_parser("sign", help="sign a licence")
-    s.add_argument("--licensee", required=True, help="who the licence is for")
-    s.add_argument("--email", default="", help="licensee contact")
-    s.add_argument("--features", nargs="+", default=["report-branding"],
-                   help="feature ids (space- or comma-separated); 'pro' unlocks all")
-    s.add_argument("--expires", default="", help="YYYY-MM-DD; omit for perpetual")
-    s.add_argument("--not-before", default="", help="YYYY-MM-DD; optional start date")
-    s.add_argument("--licence-id", default="", help="override the generated id")
-    s.add_argument("--key", default="", help="signing key file (else SHIKARI_LICENCE_KEY)")
-    s.add_argument("-o", "--output", default="", help="write the licence JSON here")
-    args = ap.parse_args()
-    {"keygen": cmd_keygen, "sign": cmd_sign}[args.cmd](args)
+def _public_hex(key: Ed25519PrivateKey) -> str:
+    return key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw).hex()
+
+
+def _day(text: str):
+    return None if text in ("perpetual", "-") else date.fromisoformat(text)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(prog="sign_licence")
+    do = parser.add_subparsers(dest="command", required=True)
+    gen = do.add_parser("keygen", help="a new signing keypair")
+    gen.add_argument("path", type=Path, help="where to write the private key (PEM); it must not exist")
+    do.add_parser("public", help="the public key, hex, for shikari.licensing.PUBLIC_KEYS")
+    sign = do.add_parser("sign", help="print a licence line for a customer")
+    sign.add_argument("--licensee", required=True, help="the organisation, as reports show it")
+    sign.add_argument("--edition", required=True, choices=["pro", "services"])
+    sign.add_argument("--seats", required=True, help="a number, or 'unlimited'")
+    sign.add_argument("--expires", required=True, help="last day, YYYY-MM-DD, or 'perpetual'")
+    sign.add_argument("--email", default="")
+    sign.add_argument("--not-before", type=date.fromisoformat, help="first day it works, YYYY-MM-DD")
+    sign.add_argument("--features", default="", help="extra feature ids, comma-separated, or '*'")
+    sign.add_argument("--out", type=Path, help="also write to this file")
+    sign.add_argument(
+        "--ledger",
+        type=Path,
+        default=os.environ.get(LEDGER_ENV) or None,
+        help=f"the licensing repo to record it in (default: ${LEDGER_ENV})",
+    )
+    args = parser.parse_args()
+
+    if args.command == "keygen":
+        key = Ed25519PrivateKey.generate()
+        pem = key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
+        fd = os.open(args.path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        os.write(fd, pem)
+        os.close(fd)
+        print(_public_hex(key))  # noqa: T201
+        return 0
+    key = _key()
+    if args.command == "public":
+        print(_public_hex(key))  # noqa: T201
+        return 0
+
+    issued = datetime.now(timezone.utc).date()
+    expires = _day(args.expires)
+    if expires and expires <= issued:
+        sys.exit("The expiry must be after today.")
+    features = tuple(f.strip() for f in args.features.split(",") if f.strip())
+    unknown = set(features) - {*licensing.FEATURES, licensing.WILDCARD}
+    if unknown:
+        sys.exit(f"Unknown feature ids: {', '.join(sorted(unknown))}. Known: {', '.join(licensing.FEATURES)}.")
+    lic = licensing.Licence(
+        licence_id=licensing.new_id(),
+        licensee=args.licensee.strip(),
+        email=args.email.strip(),
+        edition=licensing.Edition(args.edition),
+        seats=None if args.seats == "unlimited" else int(args.seats),
+        features=features,
+        issued=issued,
+        not_before=args.not_before,
+        expires=expires,
+    )
+    line = licensing.sign(key, lic)
+    licensing.parse(line)  # signed by the key Shikari trusts, or this stops here
+    seats = lic.seats or "unlimited"
+    summary = f"{lic.edition.value} for {lic.licensee}, {seats} seats, to {lic.expires or 'no end date'}"
+    if args.ledger:
+        print(f"{lic.licence_id}: {summary} -> {_record(args.ledger.expanduser(), lic, line)}")  # noqa: T201
+    if args.out:
+        args.out.write_text(line + "\n")
+        args.out.chmod(0o600)
+        print(f"{lic.licence_id}: {summary} -> {args.out}")  # noqa: T201
+    print(line)  # noqa: T201
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

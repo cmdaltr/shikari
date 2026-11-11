@@ -330,12 +330,10 @@ Feel free to open issues or submit pull requests to improve Shikari. Because Shi
 ---
 <br>
 
-## 📝 License
+## 📝 Licence
 
-Copyright (C) 2025-2026 cmdaltr.
+Copyright (c) 2026 cmdaltr.
 
-Shikari is free software under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only): you can use, study, change and share it, and if you change it and let others use it, over a network included, you must make your changed source available to them under the same licence.
+Shikari is licensed under the [Elastic License 2.0](LICENSE): you can use, copy and change it for free (the **Free** edition), but you may not provide it to others as a hosted or managed service, or get around its licence key. The **Pro** and **Services** editions add the terms in [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md), switched on by a licence key — Pro for organisations using Shikari for themselves, Services for MSSPs and consultancies running it for clients. Contact @cmdaltr on GitHub. Releases published before this (under the AGPL) keep that licence.
 
-Organisations that can't meet the AGPL's terms, for example to keep changes private or to build Shikari into a closed product, can get a commercial licence instead: contact @cmdaltr on GitHub.
-
-**Shikari™** and the Shikari bateleur logo are trademarks of cmdaltr. The AGPL covers the software; it does not grant any right to use the Shikari name or logo, whether to brand a fork or otherwise.
+**Shikari™** and the Shikari bateleur logo are trademarks of cmdaltr. The licence covers the software; it does not grant any right to use the Shikari name or logo, whether to brand a fork or otherwise.

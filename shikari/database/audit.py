@@ -45,6 +45,8 @@ EVENT_USER_DEACTIVATED = "user_deactivated"
 EVENT_SESSION_REVOKED = "session_revoked"
 EVENT_ACCOUNT_LOCKED = "account_locked"
 EVENT_ACCOUNT_UNLOCKED = "account_unlocked"
+EVENT_LICENCE_INSTALLED = "licence_installed"
+EVENT_LICENCE_REMOVED = "licence_removed"
 
 
 def log_audit_event(

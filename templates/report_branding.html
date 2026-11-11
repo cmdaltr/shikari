@@ -41,27 +41,53 @@
     <h2>Licence</h2>
     {% if licence.valid %}
       <p class="rb-state" style="color:#2e7d32">
-        ✓ Licensed to <strong>{{ licence.licensee }}</strong> ·
-        features: {{ licence.features|join(', ') }} · expires: {{ licence.expires }}</p>
+        ✓ <strong>{{ licence.edition|capitalize }}</strong> edition, licensed to <strong>{{ licence.licensee }}</strong> ·
+        {{ 'unlimited seats' if licence.seats is none else licence.seats ~ ' seats' }} ·
+        {{ 'perpetual' if licence.expires == 'perpetual' else 'expires ' ~ licence.expires }}</p>
+      {% if licence.accepted %}
+        <p class="rb-state" id="rb-lic-accepted">Commercial licence v{{ licence.accepted.terms_version }} accepted by
+          {{ licence.accepted.accepted_by_name }} on {{ (licence.accepted.accepted_at or '')[:10] }}.</p>
+      {% endif %}
+      {% if licence.state == 'grace' %}
+        <p class="rb-state" style="color:#df514e">⚠ This licence expired and is in its 30-day grace period
+          (ends {{ licence.grace_ends }}). Renew it to avoid falling back to the Free edition.</p>
+      {% endif %}
+    {% elif licence.present and licence.state == 'pending' %}
+      <p class="rb-state" style="color:#b26a00">⏳ <strong>{{ licence.edition|capitalize }}</strong> licence for
+        <strong>{{ licence.licensee }}</strong> installed; it {{ licence.reason }}. Free edition until then.</p>
     {% elif licence.present %}
-      <p class="rb-state" style="color:#df514e">⚠ Licence present but not valid — {{ licence.reason }}. Branding will not apply.</p>
+      <p class="rb-state" style="color:#df514e">⚠ Licence present but not active — {{ licence.reason }}.
+        The installation is running as the Free edition.</p>
     {% else %}
-      <p class="rb-state" style="color:#df514e">⚠ No licence installed. Report branding is a commercial (Pro) feature:
-        you can configure it below, but it will not apply to reports until a valid licence is installed.
-        See <code>COMMERCIAL-LICENSE.md</code>, or contact the licensor to obtain one.</p>
+      <p class="rb-state" style="color:#df514e">⚠ No licence installed — Free edition. Report branding is a
+        paid feature: you can configure it below, but it will not apply to reports until a Pro or Services
+        licence is installed. See <code>COMMERCIAL-LICENSE.md</code>, or contact the licensor to obtain one.</p>
     {% endif %}
+    <p class="rb-state">Accounts: <strong>{{ places_taken }}</strong> of
+      {{ 'unlimited' if seats_total is none else seats_total }} seat{{ '' if seats_total == 1 else 's' }}.</p>
+    <!-- Installing accepts the commercial terms for the licensee: check the licence, read the terms,
+         tick, then install (docs/LICENSING_MODEL.md, "Terms and accepting them"). -->
     <div class="rb-row" style="margin-top:.6rem">
-      <input type="file" id="rb-lic-file" accept=".json,.lic,.txt,application/json" aria-label="Licence file">
-      <button type="button" class="btn-secondary" id="rb-lic-upload">Install from file</button>
+      <input type="file" id="rb-lic-file" accept=".licence,.json,.lic,.txt,text/plain,application/json" aria-label="Licence file">
+      <button type="button" class="btn-secondary" id="rb-lic-check">Check licence</button>
       {% if licence.present %}<button type="button" class="btn-secondary" id="rb-lic-remove">Remove licence</button>{% endif %}
     </div>
     <details style="margin-top:.6rem">
       <summary class="rb-state">Paste a licence instead</summary>
       <textarea id="rb-lic-text" class="form-input" rows="4" spellcheck="false"
                 style="width:100%;font-family:ui-monospace,monospace;margin-top:.4rem"
-                placeholder='{"payload": {...}, "sig": "..."}  or a compact token'></textarea>
-      <button type="button" class="btn-secondary" id="rb-lic-paste" style="margin-top:.4rem">Install pasted licence</button>
+                placeholder="shikari-licence-1.…"></textarea>
     </details>
+    <div id="rb-lic-accept" hidden style="margin-top:.8rem">
+      <p class="rb-state" id="rb-lic-preview"></p>
+      <pre id="rb-lic-terms" tabindex="0" aria-label="Commercial licence terms"
+           style="max-height:16rem;overflow:auto;white-space:pre-wrap;font-size:.8rem;padding:.6rem;border:1px solid var(--border, #444);border-radius:6px"></pre>
+      <label class="rb-row" style="margin-top:.4rem">
+        <input type="checkbox" id="rb-lic-tick">
+        <span id="rb-lic-tick-label"></span>
+      </label>
+      <button type="button" class="btn-primary" id="rb-lic-install" disabled style="margin-top:.4rem">Install licence</button>
+    </div>
   </section>
 
   <section class="ui-card">
@@ -197,20 +223,39 @@
     });
   });
 
-  // Licence install / remove
-  const licUpload = $("#rb-lic-upload");
-  if (licUpload) licUpload.addEventListener('click', async () => {
-    const f = $("#rb-lic-file");
-    if (!f.files.length) { say('Choose a licence file first', false); return; }
-    const fd = new FormData(); fd.append('file', f.files[0]);
-    try { const j = await post('/api/report-branding/licence', fd); say(j.message || 'Licence installed.'); setTimeout(() => location.reload(), 700); }
-    catch (e) { say(e.message, false); }
+  // Licence: check -> terms -> tick -> install
+  const licSource = () => {
+    const f = $("#rb-lic-file"), fd = new FormData();
+    if (f.files.length) fd.append('file', f.files[0]);
+    else fd.append('licence', $("#rb-lic-text").value.trim());
+    return fd;
+  };
+  let licTermsVersion = '';
+  const licCheck = $("#rb-lic-check");
+  if (licCheck) licCheck.addEventListener('click', async () => {
+    if (!$("#rb-lic-file").files.length && !$("#rb-lic-text").value.trim()) { say('Choose a licence file or paste one first', false); return; }
+    try {
+      const lic = await post('/api/report-branding/licence/check', licSource());
+      const r = await fetch('/api/report-branding/licence/terms'); const terms = await r.json();
+      if (!r.ok || !terms.success) throw new Error(terms.error || ('HTTP ' + r.status));
+      licTermsVersion = terms.version;
+      const seats = lic.seats === null ? 'unlimited seats' : lic.seats + ' seats';
+      const from = lic.not_before ? 'from ' + lic.not_before + ', ' : '';
+      const to = lic.expires === 'perpetual' ? 'perpetual' : 'to ' + lic.expires;
+      $("#rb-lic-preview").textContent = `${lic.edition[0].toUpperCase() + lic.edition.slice(1)} licence for ${lic.licensee}: ${seats}, ${from}${to}.`;
+      $("#rb-lic-terms").textContent = terms.text;
+      $("#rb-lic-tick-label").textContent = `I accept the Shikari Commercial Licence, version ${terms.version}, on behalf of ${lic.licensee}, and I have authority to do so`;
+      $("#rb-lic-tick").checked = false; $("#rb-lic-install").disabled = true;
+      $("#rb-lic-accept").hidden = false;
+    } catch (e) { say(e.message, false); }
   });
-  const licPaste = $("#rb-lic-paste");
-  if (licPaste) licPaste.addEventListener('click', async () => {
-    const t = $("#rb-lic-text").value.trim();
-    if (!t) { say('Paste a licence first', false); return; }
-    const fd = new FormData(); fd.append('licence', t);
+  const licTick = $("#rb-lic-tick");
+  if (licTick) licTick.addEventListener('change', () => { $("#rb-lic-install").disabled = !licTick.checked; });
+  const licInstall = $("#rb-lic-install");
+  if (licInstall) licInstall.addEventListener('click', async () => {
+    const fd = licSource();
+    fd.append('accept_terms', licTick.checked ? '1' : '');
+    fd.append('terms_version', licTermsVersion);
     try { const j = await post('/api/report-branding/licence', fd); say(j.message || 'Licence installed.'); setTimeout(() => location.reload(), 700); }
     catch (e) { say(e.message, false); }
   });
