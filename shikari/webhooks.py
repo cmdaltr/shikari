@@ -6,33 +6,37 @@ Events
     run.failed       a hunt stopped with an error: {run, status, error}
     watchlist.match  a Threat Feed watchlist found new posts: {user_id, matches: [{query, title, url}]}
 
-Each delivery is {"event", "sent_at", "data"}, with X-Shikari-Event and, when the webhook has a
-secret, X-Shikari-Signature: sha256=<hex HMAC-SHA256 of the raw body>, so the receiver can check
-it came from this server. Deliveries run on a background thread, three tries with backoff; the
-last 20 are kept per webhook for the admin page. Registered webhooks (with their secrets) live in
-data/webhooks.json, which never leaves the install.
+The envelope, its signature, the URL rules and the sending are the suite's shared ones, from
+`samarkand.webhooks`: each delivery is {"event", "sent_at", "data"} (`sent_at` ISO 8601 in UTC), with
+X-Shikari-Event and, when the webhook has a secret, X-Shikari-Signature: sha256=<hex HMAC-SHA256 of
+the raw body>, so the receiver can check it came from this server. https anywhere; plain http only to
+localhost, loopback or an RFC 1918 address; never a link-local address or credentials in the URL.
+Redirects aren't followed. Deliveries run on a background thread, three tries with backoff; the last
+20 are kept per webhook for the admin page. Which events exist, the licence check, and the store are
+Shikari's own: registered webhooks (with their secrets) live in data/webhooks.json, which never
+leaves the install.
 """
 
-import hashlib
-import hmac
 import json
 import os
 import secrets
 import threading
 import time
 from typing import Dict, List, Optional
-from urllib.parse import urlparse
 
-import requests
 from fastapi import APIRouter, Cookie, Request
 from fastapi.responses import JSONResponse
+from samarkand import webhooks as shared
 
 from shikari import paths
 
 EVENTS = ("run.completed", "run.failed", "watchlist.match")
-KEEP_DELIVERIES = 20
-TRIES = 3
+PREFIX = "X-Shikari"
+KEEP_DELIVERIES = shared.KEEP_DELIVERIES
+TRIES = shared.TRIES
 _lock = threading.Lock()
+# How a delivery is POSTed: (url, body, headers, timeout) -> HTTP status. Tests swap it.
+_post = shared.post_sync
 
 
 def _automation_on() -> bool:
@@ -79,13 +83,7 @@ def _public(hook: Dict) -> Dict:
 
 def validate(url: str, events: List[str]) -> Optional[str]:
     """Why a webhook can't be saved, or None."""
-    parsed = urlparse(url or "")
-    if parsed.scheme not in ("http", "https") or not parsed.netloc:
-        return "The URL must be http:// or https://"
-    unknown = set(events or []) - set(EVENTS)
-    if not events or unknown:
-        return f"Choose events from {', '.join(EVENTS)}"
-    return None
+    return shared.url_problem(url) or shared.events_problem(events or [], EVENTS)
 
 
 def add(url: str, events: List[str], secret: Optional[str] = None, description: str = "") -> Dict:
@@ -119,7 +117,8 @@ def remove(hook_id: str) -> bool:
 
 
 def sign(secret: str, body: bytes) -> str:
-    return "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    """The signature header's value for a body: sha256=<hex HMAC-SHA256>."""
+    return shared.sign(secret, body)
 
 
 def _record(hook_id: str, delivery: Dict) -> None:
@@ -139,26 +138,13 @@ def deliver(hook: Dict, event: str, data: Dict, tries: int = TRIES, backoff: flo
         # failed send. The webhook is untouched, so it fires again once a Pro/Services licence is in.
         return {"event": event, "at": time.time(), "ok": False, "status": None,
                 "error": "not sent: webhooks need a Pro or Services licence", "tries": 0, "skipped": True}
-    body = json.dumps({"event": event, "sent_at": time.time(), "data": data}, default=str).encode()
-    headers = {"Content-Type": "application/json", "User-Agent": "Shikari-Webhook/1", "X-Shikari-Event": event}
-    if hook.get("secret"):
-        headers["X-Shikari-Signature"] = sign(hook["secret"], body)
-    result = {"event": event, "at": time.time(), "ok": False, "status": None, "error": None, "tries": 0}
-    for attempt in range(tries):
-        result["tries"] = attempt + 1
-        try:
-            r = requests.post(hook["url"], data=body, headers=headers, timeout=10)
-            result["status"] = r.status_code
-            if r.status_code < 300:
-                result.update(ok=True, error=None)
-                break
-            result["error"] = f"HTTP {r.status_code}"
-            if r.status_code < 500 and r.status_code != 429:
-                break  # the receiver refused it; trying again won't change that
-        except requests.RequestException as e:
-            result["error"] = str(e)[:200]
-        if attempt < tries - 1:
-            time.sleep(backoff * (attempt + 1))
+    sent = shared.send(
+        shared.prepare(hook["url"], event, data, prefix=PREFIX, secret=hook.get("secret") or None),
+        tries=tries, backoff=backoff, post=_post,
+    )
+    # Kept as Shikari has always stored it (the admin page reads `at` as epoch seconds)
+    result = {"event": sent.event, "at": sent.at.timestamp(), "ok": sent.ok, "status": sent.status,
+              "error": sent.error or None, "tries": sent.tries}
     _record(hook["id"], result)
     return result
 
