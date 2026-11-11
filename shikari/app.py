@@ -9196,6 +9196,222 @@ def detections_code_config_test(request: Request, repo_path: str = Form(...), re
     return JSONResponse(repo_config.test_connectivity(repo_path, remote_url))
 
 
+# ── Report branding (Pro): install-wide logos + palette for the three report products ──
+
+def _require_admin(request, shikari_session, json=True):
+    """(user, db) for an admin, or an error Response. Closes db on any rejection."""
+    auth = require_auth(request, shikari_session)
+    if isinstance(auth, RedirectResponse):
+        return (JSONResponse({"error": "Log in"}, status_code=401) if json
+                else RedirectResponse(url="/login", status_code=303))
+    user, db = auth
+    if user.role != UserRole.ADMIN:
+        db.close()
+        return (JSONResponse({"error": "Admin access required"}, status_code=403) if json
+                else RedirectResponse(url="/", status_code=303))
+    return user, db
+
+
+@app.get("/settings/report-branding")
+def report_branding_page(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """The report-branding settings page (admin only)."""
+    from shikari import licensing
+    from shikari.reports import theme as rtheme
+
+    auth = _require_admin(request, shikari_session, json=False)
+    if isinstance(auth, RedirectResponse):
+        return auth
+    user, db = auth
+    try:
+        prof = rtheme.load_profile()
+        stored = prof.get("colours", {})
+        colours = [{"name": name, "label": label,
+                    "value": (stored.get(name) or rtheme.rgb_to_hex(default)),
+                    "default": rtheme.rgb_to_hex(default)}
+                   for name, label, default in rtheme.SLOTS]
+        logos = [rtheme._logo_path(i).exists() for i in range(rtheme.MAX_LOGOS)]
+        return templates.TemplateResponse("report_branding.html", {
+            "request": request, "user": user,
+            "enabled": bool(prof.get("enabled")),
+            "org_name": prof.get("org_name", ""),
+            "show_shikari": bool(prof.get("show_shikari", True)),
+            "colours": colours, "logos": logos, "max_logos": rtheme.MAX_LOGOS,
+            "licence": licensing.status(),
+        })
+    finally:
+        db.close()
+
+
+@app.get("/settings/report-branding/logo/{slot}")
+def report_branding_logo(slot: int, request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """Stream a stored logo (admin only), for the settings-page thumbnails."""
+    from fastapi.responses import Response
+    from shikari.reports import theme as rtheme
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    db.close()
+    p = rtheme._logo_path(slot)
+    if not (0 <= slot < rtheme.MAX_LOGOS and p.exists()):
+        return Response(status_code=404)
+    return Response(content=p.read_bytes(), media_type="image/png",
+                    headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/report-branding")
+async def report_branding_save(request: Request, org_name: str = Form(""),
+                               show_shikari: str = Form(""), enabled: str = Form(""),
+                               shikari_session: Optional[str] = Cookie(None)):
+    """Save the palette and flags (admin only). Colour fields come as primary/secondary/heading/dark."""
+    from shikari.reports import theme as rtheme
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    db.close()
+    form = await request.form()
+    colours = {name: form.get(name, "") for name, _, _ in rtheme.SLOTS}
+    truthy = ("1", "true", "on", "yes")
+    saved = rtheme.save_profile(colours, org_name,
+                                show_shikari in truthy, enabled in truthy)
+    return JSONResponse({"success": True, **saved})
+
+
+@app.post("/api/report-branding/logo")
+async def report_branding_logo_upload(request: Request, slot: int = Form(...),
+                                      logo: UploadFile = File(...),
+                                      shikari_session: Optional[str] = Cookie(None)):
+    """Upload a logo into a slot (0-based; admin only). Stored as PNG with transparency kept."""
+    from shikari.reports import theme as rtheme
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    db.close()
+    if not 0 <= slot < rtheme.MAX_LOGOS:
+        return JSONResponse({"success": False, "error": "Logo slot out of range"}, status_code=400)
+    if not (logo.content_type or "").startswith("image/"):
+        return JSONResponse({"success": False, "error": "The logo must be an image"}, status_code=400)
+    data = await logo.read()
+    if len(data) > 5 * 1024 * 1024:
+        return JSONResponse({"success": False, "error": "The logo must be under 5 MB"}, status_code=400)
+    try:
+        rtheme.save_logo(slot, data)
+    except Exception as exc:
+        return JSONResponse({"success": False, "error": f"Could not read the image: {exc}"}, status_code=400)
+    return JSONResponse({"success": True})
+
+
+@app.post("/api/report-branding/logo/delete")
+def report_branding_logo_delete(request: Request, slot: int = Form(...),
+                                shikari_session: Optional[str] = Cookie(None)):
+    """Remove a logo from a slot (admin only)."""
+    from shikari.reports import theme as rtheme
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    db.close()
+    if 0 <= slot < rtheme.MAX_LOGOS:
+        rtheme.remove_logo(slot)
+    return JSONResponse({"success": True})
+
+
+@app.post("/api/report-branding/reset")
+def report_branding_reset(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """Clear the whole profile and every logo — back to the stock Shikari look (admin only)."""
+    from shikari.reports import theme as rtheme
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    db.close()
+    rtheme.clear()
+    return JSONResponse({"success": True})
+
+
+@app.post("/api/report-branding/licence")
+async def report_branding_licence_install(request: Request, licence: str = Form(""),
+                                          file: UploadFile = File(None),
+                                          shikari_session: Optional[str] = Cookie(None)):
+    """Install a commercial licence (admin only), pasted as text or uploaded as a file."""
+    from shikari import licensing
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    db.close()
+    data = licence
+    if file is not None:
+        try:
+            data = (await file.read()).decode("utf-8", "replace")
+        except Exception:
+            return JSONResponse({"success": False, "error": "Could not read the licence file"}, status_code=400)
+    if not (data or "").strip():
+        return JSONResponse({"success": False, "error": "Paste a licence or choose a file"}, status_code=400)
+    ok, message = licensing.install(data)
+    return JSONResponse({"success": ok, "message": message, "status": licensing.status()},
+                        status_code=200 if ok else 400)
+
+
+@app.post("/api/report-branding/licence/remove")
+def report_branding_licence_remove(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """Remove the installed licence (admin only). Reports fall back to the stock look."""
+    from shikari import licensing
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    db.close()
+    licensing.remove()
+    return JSONResponse({"success": True})
+
+
+@app.get("/settings/report-branding/sample.pdf")
+def report_branding_sample(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """A one-page sample in the saved branding, so the operator can see it before issuing a report."""
+    from fastapi.responses import Response
+    from shikari.reports import branded, theme as rtheme
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    db.close()
+    th = rtheme.active_theme()
+    cover = branded.Cover(kind="Sample Report", title="Branding Preview",
+                          date=datetime.now().strftime("%d %B %Y"), tlp="TLP:GREEN",
+                          prepared_for=(th.org_name or "Your client"),
+                          lines=["This page shows how your logos and palette fall on a report."])
+    blocks = [
+        ("section", "Executive Summary"),
+        ("para", "This is a sample page. The accent, the title underline, the section rules and the "
+                 "table header all follow your palette; risk ratings keep their fixed colours so they "
+                 "stay readable."),
+        ("bullets", ["Up to three logos lead the cover and the running header",
+                     "The chrome takes your colours; severity stays semantic",
+                     "Shikari keeps a co-brand line unless you turn it off"]),
+        ("table", (["Technique", "Tactic", "Result"],
+                   [["T1003", "Credential Access", "Detected"],
+                    ["T1057", "Discovery", "Detected"],
+                    ["T1486", "Impact", "Missed"]],
+                   [6.0, 6.0, 4.0],
+                   {(2, 2): (223, 81, 78)}), "Sample coverage", True),
+        ("note", ["This preview uses the branding saved on this install."]),
+    ]
+    pdf = branded.render(cover, blocks, "pdf", theme=th)
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": 'inline; filename="shikari-branding-sample.pdf"'})
+
+
 @app.get("/api/siem-mappings/availability")
 def siem_availability_get(request: Request, shikari_session: Optional[str] = Cookie(None)):
     """What the estate ingests per SIEM, plus the catalogue of gate-able sources (admin only, #12)."""

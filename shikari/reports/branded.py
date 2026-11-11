@@ -20,6 +20,7 @@ from dataclasses import dataclass, field as dc_field
 from typing import Dict, List, Sequence, Tuple
 
 from shikari.reports import assessment_charts as charts
+from shikari.reports import theme as theme_mod
 from shikari.reports import tlp as tlp_mod
 
 BAND = (247, 244, 242)        # alternate table rows: the wing grey at its palest
@@ -43,17 +44,13 @@ def _hex(rgb: Tuple[int, int, int]) -> str:
     return "%02X%02X%02X" % rgb
 
 
-def _brand() -> Dict[str, bytes]:
-    return {"background": charts.title_background(), "wordmark": charts.wordmark(True, 150)}
-
-
 def sections_of(blocks: Sequence[tuple]) -> List[str]:
     return [b[1] for b in blocks if b[0] == "section"]
 
 
 # ── Word ──────────────────────────────────────────────────────────────────────
 
-def to_docx(cover: Cover, blocks: Sequence[tuple]) -> bytes:
+def to_docx(cover: Cover, blocks: Sequence[tuple], theme: "theme_mod.ReportTheme" = None) -> bytes:
     from docx import Document
     from docx.enum.section import WD_SECTION
     from docx.enum.table import WD_TABLE_ALIGNMENT
@@ -62,7 +59,13 @@ def to_docx(cover: Cover, blocks: Sequence[tuple]) -> bytes:
     from docx.oxml.ns import qn
     from docx.shared import Cm, Pt, RGBColor
 
-    brand = _brand()
+    th = theme or theme_mod.DEFAULT
+    brand = th.brand_assets()
+    # The chrome palette comes from the theme; the neutral greys stay. Severity/rating fills are
+    # passed in per cell by the report, so they're never touched here.
+    INK, GOLD, RED, CHESTNUT = th.dark, th.primary, th.secondary, th.heading
+    WHITE, SLATE, MIST = charts.WHITE, charts.SLATE, charts.MIST
+    head_ink = charts._ideal_ink(INK)   # text that reads on the (possibly recoloured) header fill
     label = tlp_mod.normalise(cover.tlp)
     doc = Document()
     font = "Calibri"
@@ -94,16 +97,16 @@ def to_docx(cover: Cover, blocks: Sequence[tuple]) -> bytes:
             st.font.color.rgb = RGBColor(*colour)
         return st
 
-    normal = style_font("Normal", 10.5, colour=charts.INK)
+    normal = style_font("Normal", 10.5, colour=INK)
     normal.paragraph_format.space_after = Pt(6)
     normal.paragraph_format.line_spacing = 1.12
-    h1 = style_font("Heading 1", 22, True, charts.INK)
+    h1 = style_font("Heading 1", 22, True, INK)
     h1.paragraph_format.space_before = Pt(0)
     h1.paragraph_format.space_after = Pt(10)
-    h2 = style_font("Heading 2", 14, True, charts.CHESTNUT)
+    h2 = style_font("Heading 2", 14, True, CHESTNUT)
     h2.paragraph_format.space_before = Pt(14)
     h2.paragraph_format.space_after = Pt(6)
-    style_font("Heading 3", 12, True, charts.INK)
+    style_font("Heading 3", 12, True, INK)
     for name in ("Caption", "List Bullet", "Title", "Subtitle", "TOC Heading"):
         try:
             style_font(name)
@@ -113,7 +116,7 @@ def to_docx(cover: Cover, blocks: Sequence[tuple]) -> bytes:
     caption.font.size = Pt(9)
     caption.font.italic = True
     caption.font.bold = False
-    caption.font.color.rgb = RGBColor(*charts.SLATE)
+    caption.font.color.rgb = RGBColor(*SLATE)
     for level in (1, 2):
         try:
             st = doc.styles[f"TOC {level}"]
@@ -222,8 +225,8 @@ def to_docx(cover: Cover, blocks: Sequence[tuple]) -> bytes:
         tblpr.append(margins)
         for j, h in enumerate(headers):
             cell = t.rows[0].cells[j]
-            cell_text(cell, h, bold=True, colour=charts.WHITE)
-            shade(cell, charts.INK)
+            cell_text(cell, h, bold=True, colour=head_ink)
+            shade(cell, INK)
             cell.paragraphs[0].paragraph_format.keep_with_next = True   # never alone at the foot of a page
         trpr = t.rows[0]._tr.get_or_add_trPr()
         rep = OxmlElement("w:tblHeader")
@@ -258,7 +261,7 @@ def to_docx(cover: Cover, blocks: Sequence[tuple]) -> bytes:
         shade(head, fill)
         for i, (lab, value, vfill) in enumerate(rows, 1):
             lc, vc = t.rows[i].cells
-            cell_text(lc, lab, bold=True, colour=charts.INK)
+            cell_text(lc, lab, bold=True, colour=INK)
             shade(lc, BAND)
             if vfill:
                 cell_text(vc, value, bold=True, colour=charts._ideal_ink(vfill))
@@ -282,7 +285,7 @@ def to_docx(cover: Cover, blocks: Sequence[tuple]) -> bytes:
         cell.width = Cm(17.0)
         shade(cell, BAND)
         tcb = OxmlElement("w:tcBorders")
-        for side, colour, size in (("left", charts.GOLD, "24"), ("top", RULE, "4"), ("bottom", RULE, "4"),
+        for side, colour, size in (("left", GOLD, "24"), ("top", RULE, "4"), ("bottom", RULE, "4"),
                                    ("right", RULE, "4")):
             el = OxmlElement(f"w:{side}")
             el.set(qn("w:val"), "single")
@@ -296,7 +299,7 @@ def to_docx(cover: Cover, blocks: Sequence[tuple]) -> bytes:
             dp.paragraph_format.space_after = Pt(4)
             r = dp.add_run(text)
             r.font.size = Pt(9)
-            r.font.color.rgb = RGBColor(*charts.SLATE)
+            r.font.color.rgb = RGBColor(*SLATE)
         doc.paragraphs[-1].paragraph_format.space_before = Pt(18)
 
     # ── Section 1: the title page, no header or footer ──
@@ -308,10 +311,10 @@ def to_docx(cover: Cover, blocks: Sequence[tuple]) -> bytes:
     run = anchor_p.add_run()
     run.add_picture(io.BytesIO(brand["background"]), width=Cm(21.0), height=Cm(29.7))
     _float_behind(run, Cm(21.0), Cm(29.7))
-    run.add_picture(io.BytesIO(brand["wordmark"]), height=Cm(1.9))
+    run.add_picture(io.BytesIO(brand["lead"]), height=Cm(1.9))
     anchor_p.paragraph_format.space_after = Pt(0)
 
-    def title_line(text, size, bold=False, colour=charts.INK, before=0, after=4, italic=False):
+    def title_line(text, size, bold=False, colour=INK, before=0, after=4, italic=False):
         p = doc.add_paragraph()
         p.paragraph_format.space_before = Pt(before)
         p.paragraph_format.space_after = Pt(after)
@@ -321,21 +324,22 @@ def to_docx(cover: Cover, blocks: Sequence[tuple]) -> bytes:
         r.font.color.rgb = RGBColor(*colour)
         return p
 
-    title_line(cover.kind.upper(), 13, True, charts.GOLD, before=150, after=6)
-    t = title_line(cover.title, 34, True, charts.INK, after=8)
+    title_line(cover.kind.upper(), 13, True, GOLD, before=150, after=6)
+    t = title_line(cover.title, 34, True, INK, after=8)
     t.paragraph_format.line_spacing = 0.95
-    border(t, "bottom", charts.RED, size=24, space=8)
+    border(t, "bottom", RED, size=24, space=8)
     if cover.prepared_for:
-        title_line(f"Prepared for {cover.prepared_for}", 16, False, charts.CHESTNUT, before=10, after=2)
-    title_line(cover.date, 13, False, charts.SLATE, before=2, after=2)
+        title_line(f"Prepared for {cover.prepared_for}", 16, False, CHESTNUT, before=10, after=2)
+    title_line(cover.date, 13, False, SLATE, before=2, after=2)
     for line in cover.lines:
-        title_line(line, 12, False, charts.SLATE, after=2)
+        title_line(line, 12, False, SLATE, after=2)
     badge = doc.add_paragraph()
     badge.paragraph_format.space_before = Pt(150)
     badge.paragraph_format.space_after = Pt(3)
     tlp_badge(badge, 12)
-    title_line(tlp_mod.rule(label), 9.5, False, charts.SLATE, after=10)
-    title_line(f"Prepared with Shikari: {TAGLINE.lower()}", 9.5, False, charts.SLATE, italic=True)
+    title_line(tlp_mod.rule(label), 9.5, False, SLATE, after=10)
+    if th.show_shikari:
+        title_line(f"Prepared with Shikari: {TAGLINE.lower()}", 9.5, False, SLATE, italic=True)
 
     # ── Section 2 onwards: header, footer, page numbers from 1 ──
     body = doc.add_section(WD_SECTION.NEW_PAGE)
@@ -359,32 +363,33 @@ def to_docx(cover: Cover, blocks: Sequence[tuple]) -> bytes:
 
     hp = body.header.paragraphs[0]
     own_tabs(hp, (Cm(17.0), WD_TAB_ALIGNMENT.RIGHT))
-    hp.add_run().add_picture(io.BytesIO(brand["wordmark"]), height=Cm(0.85))
+    hp.add_run().add_picture(io.BytesIO(brand["lead"]), height=Cm(0.85))
     r = hp.add_run(f"\t{cover.kind}  ·  {cover.title}")
     r.font.size = Pt(9)
-    r.font.color.rgb = RGBColor(*charts.SLATE)
-    border(hp, "bottom", charts.GOLD, size=12, space=4)
+    r.font.color.rgb = RGBColor(*SLATE)
+    border(hp, "bottom", GOLD, size=12, space=4)
 
     fp = body.footer.paragraphs[0]
     own_tabs(fp, (Cm(8.5), WD_TAB_ALIGNMENT.CENTER), (Cm(17.0), WD_TAB_ALIGNMENT.RIGHT))
     border(fp, "top", RULE, size=6, space=4)
     tlp_badge(fp, 8.5)
-    who = f"Prepared for {cover.prepared_for}" if cover.prepared_for else "Shikari"
+    default_who = "Shikari" if th.show_shikari else (th.org_name or "")
+    who = f"Prepared for {cover.prepared_for}" if cover.prepared_for else default_who
     r = fp.add_run(f"\t{who}  ·  {cover.date}\tPage ")
     r.font.size = Pt(8.5)
-    r.font.color.rgb = RGBColor(*charts.SLATE)
-    fld(fp, "PAGE", "1", 8.5, charts.INK, True)
+    r.font.color.rgb = RGBColor(*SLATE)
+    fld(fp, "PAGE", "1", 8.5, INK, True)
     r = fp.add_run(" of ")
     r.font.size = Pt(8.5)
-    r.font.color.rgb = RGBColor(*charts.SLATE)
-    fld(fp, "SECTIONPAGES", "1", 8.5, charts.INK, True)
+    r.font.color.rgb = RGBColor(*SLATE)
+    fld(fp, "SECTIONPAGES", "1", 8.5, INK, True)
 
     # ── Table of Contents (Word fills the page numbers in when it opens the file) ──
     p = doc.add_heading("Table of Contents", level=1)
     p.style = doc.styles["TOC Heading"] if "TOC Heading" in [s.name for s in doc.styles] else p.style
     p.runs[0].font.size, p.runs[0].font.bold = Pt(22), True
-    p.runs[0].font.color.rgb = RGBColor(*charts.INK)
-    border(p, "bottom", charts.GOLD, size=18, space=6)
+    p.runs[0].font.color.rgb = RGBColor(*INK)
+    border(p, "bottom", GOLD, size=18, space=6)
     _toc_field(doc.add_paragraph(), [f"{i}  {s}" for i, s in enumerate(sections_of(blocks), 1)])
     _update_fields_on_open(doc)
 
@@ -395,7 +400,7 @@ def to_docx(cover: Cover, blocks: Sequence[tuple]) -> bytes:
             counters["sub"] = 0
             doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
             doc.paragraphs[-1].paragraph_format.space_after = Pt(0)
-            border(doc.add_heading(f"{counters['sec']}  {b[1]}", level=1), "bottom", charts.GOLD, size=18, space=6)
+            border(doc.add_heading(f"{counters['sec']}  {b[1]}", level=1), "bottom", GOLD, size=18, space=6)
         elif kind == "sub":
             counters["sub"] += 1
             doc.add_heading(f"{counters['sec']}.{counters['sub']}  {b[1]}", level=2)
@@ -420,19 +425,21 @@ def to_docx(cover: Cover, blocks: Sequence[tuple]) -> bytes:
         elif kind == "note":
             note(b[1])
 
-    # Back cover: a section of its own, without the header and footer
+    # Back cover: a section of its own, without the header and footer. It carries the Shikari
+    # co-brand mark, so it's dropped when the install has turned attribution off.
     back = doc.add_section(WD_SECTION.NEW_PAGE)
     for part in (back.header, back.footer):
         part.is_linked_to_previous = False
-    for _ in range(9):
-        doc.add_paragraph()
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p.add_run().add_picture(io.BytesIO(brand["wordmark"]), width=Cm(11.0))
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = p.add_run(TAGLINE)
-    r.font.size, r.font.color.rgb = Pt(12), RGBColor(*charts.SLATE)
+    if th.show_shikari:
+        for _ in range(9):
+            doc.add_paragraph()
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.add_run().add_picture(io.BytesIO(brand["shikari"]), width=Cm(11.0))
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r = p.add_run(TAGLINE)
+        r.font.size, r.font.color.rgb = Pt(12), RGBColor(*SLATE)
 
     buf = io.BytesIO()
     doc.save(buf)
@@ -538,7 +545,7 @@ def _wrap(text: str, font: str, size: float, width: float) -> List[str]:
     return lines + ([line] if line else [])
 
 
-def to_pdf(cover: Cover, blocks: Sequence[tuple]) -> bytes:
+def to_pdf(cover: Cover, blocks: Sequence[tuple], theme: "theme_mod.ReportTheme" = None) -> bytes:
     from reportlab.lib import colors
     from reportlab.lib.enums import TA_CENTER
     from reportlab.lib.pagesizes import A4
@@ -552,7 +559,8 @@ def to_pdf(cover: Cover, blocks: Sequence[tuple]) -> bytes:
     from reportlab.platypus.tableofcontents import TableOfContents
     from xml.sax.saxutils import escape
 
-    brand = _brand()
+    th = theme or theme_mod.DEFAULT
+    brand = th.brand_assets()
     label = tlp_mod.normalise(cover.tlp)
     regular, bold, italic = _pdf_fonts()
     W, H = A4
@@ -560,8 +568,11 @@ def to_pdf(cover: Cover, blocks: Sequence[tuple]) -> bytes:
     def col(rgb):
         return colors.Color(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255)
 
-    INK, GOLD, RED, SLATE, CHESTNUT = (col(charts.INK), col(charts.GOLD), col(charts.RED), col(charts.SLATE),
-                                       col(charts.CHESTNUT))
+    # Chrome palette from the theme; neutral greys stay. head_ink reads on the (possibly
+    # recoloured) table-header fill.
+    INK, GOLD, RED, CHESTNUT = col(th.dark), col(th.primary), col(th.secondary), col(th.heading)
+    SLATE = col(charts.SLATE)
+    head_ink = col(charts._ideal_ink(th.dark))
     st = {
         "body": ParagraphStyle("body", fontName=regular, fontSize=10.5, leading=14, textColor=INK, spaceAfter=6),
         "H1": ParagraphStyle("H1", fontName=bold, fontSize=22, leading=26, textColor=INK, spaceAfter=12),
@@ -592,8 +603,10 @@ def to_pdf(cover: Cover, blocks: Sequence[tuple]) -> bytes:
     frame = Frame(margin, 2.2 * cm, width, H - 4.8 * cm, id="body", leftPadding=0, rightPadding=0)
     cover_frame = Frame(0, 0, W, H, id="cover")
     bg = ImageReader(io.BytesIO(brand["background"]))
-    mark = ImageReader(io.BytesIO(brand["wordmark"]))
-    mw, mh = mark.getSize()
+    lead = ImageReader(io.BytesIO(brand["lead"]))          # cover + header mark (logo strip, or Shikari)
+    lw, lh = lead.getSize()
+    shikari_mark = ImageReader(io.BytesIO(brand["shikari"]))   # the co-brand mark on the back cover
+    sw, sh = shikari_mark.getSize()
 
     def badge(cv, x, y, size):
         """The TLP label as FIRST shows it: its colour on black."""
@@ -607,7 +620,7 @@ def to_pdf(cover: Cover, blocks: Sequence[tuple]) -> bytes:
     def on_title(cv, _doc):
         cv._kind = "title"
         cv.drawImage(bg, 0, 0, W, H)
-        cv.drawImage(mark, 2.4 * cm, H - 4.1 * cm, 1.9 * cm * mw / mh, 1.9 * cm, mask="auto")
+        cv.drawImage(lead, 2.4 * cm, H - 4.1 * cm, 1.9 * cm * lw / lh, 1.9 * cm, mask="auto")
         x, y = 2.4 * cm, H - 9.4 * cm
         cv.setFillColor(GOLD)
         cv.setFont(bold, 13)
@@ -640,14 +653,15 @@ def to_pdf(cover: Cover, blocks: Sequence[tuple]) -> bytes:
         cv.setFont(regular, 9.5)
         for i, line in enumerate(_wrap(tlp_mod.rule(label), regular, 9.5, 11.5 * cm)):
             cv.drawString(x, 3.45 * cm - i * 0.42 * cm, line)
-        cv.setFont(italic, 9.5)
-        cv.drawString(x, 2.2 * cm, f"Prepared with Shikari: {TAGLINE.lower()}")
+        if th.show_shikari:
+            cv.setFont(italic, 9.5)
+            cv.drawString(x, 2.2 * cm, f"Prepared with Shikari: {TAGLINE.lower()}")
 
     def on_body(cv, _doc):
         cv._kind = "body"
         cv.saveState()
         hh = 0.85 * cm
-        cv.drawImage(mark, margin, H - 1.0 * cm - hh, hh * mw / mh, hh, mask="auto")
+        cv.drawImage(lead, margin, H - 1.0 * cm - hh, hh * lw / lh, hh, mask="auto")
         cv.setFont(regular, 9)
         cv.setFillColor(SLATE)
         cv.drawRightString(W - margin, H - 1.0 * cm - hh + 0.2 * cm, f"{cover.kind}  ·  {cover.title}")
@@ -660,7 +674,8 @@ def to_pdf(cover: Cover, blocks: Sequence[tuple]) -> bytes:
         badge(cv, margin, 1.05 * cm, 8.5)
         cv.setFont(regular, 8.5)
         cv.setFillColor(SLATE)
-        who = f"Prepared for {cover.prepared_for}" if cover.prepared_for else "Shikari"
+        default_who = "Shikari" if th.show_shikari else (th.org_name or "")
+        who = f"Prepared for {cover.prepared_for}" if cover.prepared_for else default_who
         cv.drawCentredString(W / 2, 1.05 * cm, f"{who}  ·  {cover.date}")
         cv.restoreState()
 
@@ -668,11 +683,12 @@ def to_pdf(cover: Cover, blocks: Sequence[tuple]) -> bytes:
         cv._kind = "back"
         cv.setFillColor(col(charts.MIST))
         cv.rect(0, 0, W, H, stroke=0, fill=1)
-        w = 11 * cm
-        cv.drawImage(mark, (W - w) / 2, H / 2, w, w * mh / mw, mask="auto")
-        cv.setFont(regular, 12)
-        cv.setFillColor(SLATE)
-        cv.drawCentredString(W / 2, H / 2 - 1.0 * cm, TAGLINE)
+        if th.show_shikari:
+            w = 11 * cm
+            cv.drawImage(shikari_mark, (W - w) / 2, H / 2, w, w * sh / sw, mask="auto")
+            cv.setFont(regular, 12)
+            cv.setFillColor(SLATE)
+            cv.drawCentredString(W / 2, H / 2 - 1.0 * cm, TAGLINE)
 
     class Numbered(rl_canvas.Canvas):
         """Page x of y in the footer, counting from the first page after the title."""
@@ -713,7 +729,7 @@ def to_pdf(cover: Cover, blocks: Sequence[tuple]) -> bytes:
     def table(spec: Table, caption: str, first_col_bold: bool):
         headers, rows, widths, fills = spec
         scale = width / (sum(widths) * cm)
-        cells = [[Paragraph(escape(h), ParagraphStyle("th", parent=st["cellb"], textColor=colors.white))
+        cells = [[Paragraph(escape(h), ParagraphStyle("th", parent=st["cellb"], textColor=head_ink))
                   for h in headers]]
         style = [("BACKGROUND", (0, 0), (-1, 0), INK), ("VALIGN", (0, 0), (-1, -1), "TOP"),
                  ("GRID", (0, 0), (-1, -1), 0.5, col(RULE)), ("TOPPADDING", (0, 0), (-1, -1), 3),
@@ -806,6 +822,9 @@ def to_pdf(cover: Cover, blocks: Sequence[tuple]) -> bytes:
     return buf.getvalue()
 
 
-def render(cover: Cover, blocks: Sequence[tuple], fmt: str) -> bytes:
-    """The report as 'docx' or 'pdf'."""
-    return to_pdf(cover, blocks) if fmt == "pdf" else to_docx(cover, blocks)
+def render(cover: Cover, blocks: Sequence[tuple], fmt: str,
+           theme: "theme_mod.ReportTheme" = None) -> bytes:
+    """The report as 'docx' or 'pdf', in the install's branding (the stock Shikari look when
+    none is set)."""
+    th = theme or theme_mod.active_theme()
+    return to_pdf(cover, blocks, th) if fmt == "pdf" else to_docx(cover, blocks, th)

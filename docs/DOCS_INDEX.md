@@ -80,6 +80,7 @@ Plain-language guide to every part of Shikari, one page each: what it's for, how
 | [OSINT_INTEGRATION.md](features/OSINT_INTEGRATION.md) | OSINT repository integration for indicator enrichment |
 | [PARENT_TECHNIQUE_OPTION.md](features/PARENT_TECHNIQUE_OPTION.md) | Automatic sub-technique expansion |
 | [REPORT_GENERATION.md](features/REPORT_GENERATION.md) | Export detections as Word, PDF, HTML reports |
+| [REPORT_BRANDING.md](features/REPORT_BRANDING.md) | Custom logos + palette on reports (commercial/Pro, signed licence) |
 | [RESPONSE_ACTIONS.md](features/RESPONSE_ACTIONS.md) | Automated response action recommendations |
 | [CALDERA_WINDOWS_CAPTURE.md](features/CALDERA_WINDOWS_CAPTURE.md) | CALDERA endpoint-log capture on a Windows host — how it integrates with Shikari and where each capture's results land |
 | [SIEM_EXPORT_PACKS.md](features/SIEM_EXPORT_PACKS.md) | Export packs for your own Elastic, Splunk or Wazuh: contents, tested versions, known limits |

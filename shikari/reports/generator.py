@@ -23,10 +23,35 @@ BRAND = {
 TAGLINE = "Automated multi-vendor threat hunting and detection"
 
 
-def _rgb(name: str) -> tuple:
-    """Brand colour as an (r, g, b) tuple, by name or raw hex."""
+# The install's report branding (a Pro feature) recolours the chrome: the accent (gold) and
+# the structural dark (ink), and swaps the title/header mark for the uploaded logo. Severity
+# and the per-metric accents stay fixed, so they keep reading as they always have.
+_CHROME = {"gold": "primary", "ink": "dark"}
+
+
+def _theme(th=None):
+    if th is not None:
+        return th
+    from shikari.reports import theme as theme_mod
+    try:
+        return theme_mod.active_theme()
+    except Exception:
+        return theme_mod.DEFAULT
+
+
+def _rgb(name: str, th=None) -> tuple:
+    """Brand colour as an (r, g, b) tuple, by name or raw hex. The accent and dark follow the
+    install's report theme; every other name is the fixed Shikari palette."""
+    slot = _CHROME.get(name)
+    if slot:
+        return getattr(_theme(th), slot)
     h = BRAND.get(name, name).lstrip("#")
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _hexc(name: str, th=None) -> str:
+    """Brand colour as '#rrggbb', theme-aware like :func:`_rgb`."""
+    return "#%02x%02x%02x" % tuple(_rgb(name, th))
 
 
 def _esc(text) -> str:
@@ -35,9 +60,14 @@ def _esc(text) -> str:
     return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def _wordmark_png(height_px: int = 300, with_eagle: bool = True) -> Optional[bytes]:
-    """The ™ wordmark as PNG bytes, from the branded reports' own renderer; None if unavailable."""
+def _wordmark_png(height_px: int = 300, with_eagle: bool = True, th=None) -> Optional[bytes]:
+    """The title/header mark as PNG bytes: the install's uploaded logo strip when report branding
+    is on and a logo was supplied, otherwise the Shikari ™ wordmark. None if unavailable."""
     try:
+        from shikari.reports import theme as theme_mod
+        t = _theme(th)
+        if t.custom and t.logos:
+            return theme_mod.logo_strip(t.logos, height_px=height_px)
         from shikari.reports import assessment_charts as charts
         return charts.wordmark(with_eagle, height_px)
     except Exception:
@@ -494,7 +524,7 @@ class PDFReportGenerator(ReportGenerator):
             'ShikariBrand',
             parent=styles['Heading1'],
             fontSize=40,
-            textColor=self.colors.HexColor('#1a2028'),  # ink
+            textColor=self.colors.HexColor(_hexc("ink")),  # ink
             alignment=self.TA_CENTER,
             spaceAfter=10,
             fontName='Helvetica-Bold'
@@ -514,7 +544,7 @@ class PDFReportGenerator(ReportGenerator):
             'CustomTitle',
             parent=styles['Heading1'],
             fontSize=28,
-            textColor=self.colors.HexColor('#1a2028'),  # ink
+            textColor=self.colors.HexColor(_hexc("ink")),  # ink
             alignment=self.TA_CENTER,
             spaceAfter=30,
             fontName='Helvetica-Bold'
@@ -524,7 +554,7 @@ class PDFReportGenerator(ReportGenerator):
             'CustomHeading',
             parent=styles['Heading2'],
             fontSize=16,
-            textColor=self.colors.HexColor('#1a2028'),  # ink
+            textColor=self.colors.HexColor(_hexc("ink")),  # ink
             spaceAfter=12,
             fontName='Helvetica-Bold'
         )
@@ -535,7 +565,7 @@ class PDFReportGenerator(ReportGenerator):
             fontSize=8,
             leftIndent=20,
             rightIndent=20,
-            textColor=self.colors.HexColor('#1a2028'),
+            textColor=self.colors.HexColor(_hexc("ink")),
             backColor=self.colors.HexColor('#f7f4f2')  # band
         )
 
@@ -569,13 +599,13 @@ class PDFReportGenerator(ReportGenerator):
         info_table = self.Table(info_data, colWidths=[2 * self.inch, 4 * self.inch])
         info_table.setStyle(self.TableStyle([
             ('BACKGROUND', (0, 0), (0, -1), self.colors.HexColor('#f0edeb')),  # mist
-            ('TEXTCOLOR', (0, 0), (-1, -1), self.colors.HexColor('#1a2028')),  # ink
+            ('TEXTCOLOR', (0, 0), (-1, -1), self.colors.HexColor(_hexc("ink"))),  # ink
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
             ('GRID', (0, 0), (-1, -1), 1, self.colors.HexColor('#d6ceca')),  # rule
-            ('BOX', (0, 0), (-1, -1), 2, self.colors.HexColor('#f59e0b'))  # gold frame
+            ('BOX', (0, 0), (-1, -1), 2, self.colors.HexColor(_hexc("gold")))  # gold frame
         ]))
 
         story.append(info_table)
@@ -622,15 +652,15 @@ class PDFReportGenerator(ReportGenerator):
             metrics_table = self.Table(metrics_data, colWidths=[2.5 * self.inch, 3.5 * self.inch])
             metrics_table.setStyle(self.TableStyle([
                 ('BACKGROUND', (0, 0), (0, -1), self.colors.HexColor('#f0edeb')),  # mist
-                ('TEXTCOLOR', (0, 0), (0, -1), self.colors.HexColor('#1a2028')),  # ink labels
+                ('TEXTCOLOR', (0, 0), (0, -1), self.colors.HexColor(_hexc("ink"))),  # ink labels
                 ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
                 ('FONTSIZE', (0, 0), (-1, -1), 10),
                 ('GRID', (0, 0), (-1, -1), 1, self.colors.HexColor('#d6ceca')),  # rule
-                ('BOX', (0, 0), (-1, -1), 2, self.colors.HexColor('#f59e0b')),  # gold frame
+                ('BOX', (0, 0), (-1, -1), 2, self.colors.HexColor(_hexc("gold"))),  # gold frame
                 ('PADDING', (0, 0), (-1, -1), 8),
                 # Brand-coloured values
                 ('TEXTCOLOR', (1, 0), (1, 0), self.colors.HexColor('#f59e0b')),  # gold: detections
-                ('TEXTCOLOR', (1, 1), (1, 1), self.colors.HexColor('#1a2028')),  # ink: techniques
+                ('TEXTCOLOR', (1, 1), (1, 1), self.colors.HexColor(_hexc("ink"))),  # ink: techniques
                 ('TEXTCOLOR', (1, 2), (1, 2), self.colors.HexColor('#8f5742')),  # chestnut: tactics
                 ('TEXTCOLOR', (1, 3), (1, 3), self.colors.HexColor('#df514e')),  # red: correlations
                 ('TEXTCOLOR', (1, 4), (1, -1), self.colors.HexColor('#776458')),  # bark: time/cost
@@ -663,7 +693,7 @@ class PDFReportGenerator(ReportGenerator):
                 corr_table = self.Table(corr_data, colWidths=[1.5 * self.inch, 4.5 * self.inch])
                 corr_table.setStyle(self.TableStyle([
                     ('BACKGROUND', (0, 0), (0, -1), self.colors.HexColor('#f7f4f2')),  # band
-                    ('TEXTCOLOR', (0, 0), (-1, -1), self.colors.HexColor('#1a2028')),  # ink
+                    ('TEXTCOLOR', (0, 0), (-1, -1), self.colors.HexColor(_hexc("ink"))),  # ink
                     ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
                     ('FONTSIZE', (0, 0), (-1, -1), 9),
                     ('GRID', (0, 0), (-1, -1), 0.5, self.colors.HexColor('#d6ceca')),  # rule
@@ -736,12 +766,12 @@ class HTMLReportGenerator(ReportGenerator):
     <title>{group_name} Detection Report</title>
     <style>
         body {{ font-family: 'Calibri', 'Carlito', 'Segoe UI', sans-serif; margin: 40px;
-                line-height: 1.6; color: #1a2028; }}
+                line-height: 1.6; color: {_hexc("ink")}; }}
         .brand {{ text-align: center; margin-bottom: 10px; }}
         .brand img {{ height: 72px; }}
         .brand .tagline {{ color: #776458; font-size: 13px; margin-top: 4px; }}
-        h1 {{ color: #1a2028; border-bottom: 3px solid #f59e0b; padding-bottom: 10px; }}
-        h2 {{ color: #1a2028; margin-top: 30px; }}
+        h1 {{ color: {_hexc("ink")}; border-bottom: 3px solid {_hexc("gold")}; padding-bottom: 10px; }}
+        h2 {{ color: {_hexc("ink")}; margin-top: 30px; }}
         h3 {{ color: #776458; }}
         .metadata {{ background: #f0edeb; padding: 15px; border-radius: 5px; margin: 20px 0; }}
         .metadata table {{ width: 100%; }}
@@ -749,10 +779,10 @@ class HTMLReportGenerator(ReportGenerator):
         .metadata td:first-child {{ font-weight: bold; width: 150px; }}
         .detection {{ border: 1px solid #d6ceca; padding: 15px; margin: 20px 0; border-radius: 5px; }}
         .query {{ background: #f7f4f2; padding: 10px; font-family: 'Courier New', monospace;
-                  font-size: 12px; overflow-x: auto; border-left: 3px solid #f59e0b; }}
+                  font-size: 12px; overflow-x: auto; border-left: 3px solid {_hexc("gold")}; }}
         table {{ border-collapse: collapse; width: 100%; margin: 10px 0; }}
         th, td {{ border: 1px solid #d6ceca; padding: 8px; text-align: left; }}
-        th {{ background-color: #1a2028; color: white; }}
+        th {{ background-color: {_hexc("ink")}; color: white; }}
         .footer {{ margin-top: 50px; padding-top: 20px; border-top: 1px solid #d6ceca;
                    color: #776458; font-size: 12px; }}
     </style>

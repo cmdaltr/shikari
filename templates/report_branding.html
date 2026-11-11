@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}Shikari - Report branding{% endblock %}
+{% block main_class %}page-shell{% endblock %}
+{% block head %}
+{{ super() }}
+<style>
+  .rb-grid { display: grid; gap: 1rem; }
+  .rb-colours { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+  .rb-colour { display: flex; align-items: center; gap: .6rem; }
+  .rb-colour input[type=color] { width: 44px; height: 36px; padding: 0; border: 1px solid var(--rule, #d6ceca);
+                                  border-radius: 6px; background: none; cursor: pointer; flex: none; }
+  .rb-colour .rb-meta { min-width: 0; }
+  .rb-colour .rb-meta label { display: block; font-weight: 600; font-size: .9rem; }
+  .rb-colour .rb-meta small { color: var(--muted, #776458); }
+  .rb-hex { width: 9ch; font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; }
+  .rb-logos { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+  .rb-logo { border: 1px dashed var(--rule, #d6ceca); border-radius: 8px; padding: .8rem; text-align: center; }
+  .rb-logo .rb-thumb { height: 64px; display: flex; align-items: center; justify-content: center;
+                       background: repeating-conic-gradient(#0000 0 25%, #8881 0 50%) 0 0/16px 16px;
+                       border-radius: 6px; margin-bottom: .6rem; }
+  .rb-logo .rb-thumb img { max-height: 60px; max-width: 100%; }
+  .rb-logo .rb-empty { color: var(--muted, #776458); font-size: .85rem; }
+  .rb-row { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; }
+  .rb-actions { display: flex; gap: .8rem; flex-wrap: wrap; align-items: center; }
+  .rb-state { color: var(--muted, #776458); }
+  .rb-disabled { opacity: .55; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="results-container">
+  <div class="page-header">
+    <h1>Report branding <span class="badge" style="vertical-align:middle">Pro</span></h1>
+    <p>Dress the three report products — the adversary-emulation assessment, the campaign-intelligence
+      report and the detection/hunt report — in your own identity. Up to three logos lead the cover and
+      the running header; your palette drives the chrome. Risk ratings keep their fixed colours so they
+      stay readable, and Shikari keeps a co-brand line unless you turn it off. The setting is install-wide.</p>
+  </div>
+
+  <section class="ui-card">
+    <h2>Licence</h2>
+    {% if licence.valid %}
+      <p class="rb-state" style="color:#2e7d32">
+        ✓ Licensed to <strong>{{ licence.licensee }}</strong> ·
+        features: {{ licence.features|join(', ') }} · expires: {{ licence.expires }}</p>
+    {% elif licence.present %}
+      <p class="rb-state" style="color:#df514e">⚠ Licence present but not valid — {{ licence.reason }}. Branding will not apply.</p>
+    {% else %}
+      <p class="rb-state" style="color:#df514e">⚠ No licence installed. Report branding is a commercial (Pro) feature:
+        you can configure it below, but it will not apply to reports until a valid licence is installed.
+        See <code>COMMERCIAL-LICENSE.md</code>, or contact the licensor to obtain one.</p>
+    {% endif %}
+    <div class="rb-row" style="margin-top:.6rem">
+      <input type="file" id="rb-lic-file" accept=".json,.lic,.txt,application/json" aria-label="Licence file">
+      <button type="button" class="btn-secondary" id="rb-lic-upload">Install from file</button>
+      {% if licence.present %}<button type="button" class="btn-secondary" id="rb-lic-remove">Remove licence</button>{% endif %}
+    </div>
+    <details style="margin-top:.6rem">
+      <summary class="rb-state">Paste a licence instead</summary>
+      <textarea id="rb-lic-text" class="form-input" rows="4" spellcheck="false"
+                style="width:100%;font-family:ui-monospace,monospace;margin-top:.4rem"
+                placeholder='{"payload": {...}, "sig": "..."}  or a compact token'></textarea>
+      <button type="button" class="btn-secondary" id="rb-lic-paste" style="margin-top:.4rem">Install pasted licence</button>
+    </details>
+  </section>
+
+  <section class="ui-card">
+    <label class="rb-row" style="font-weight:600">
+      <input type="checkbox" id="rb-enabled" {% if enabled %}checked{% endif %}>
+      Use custom branding on reports
+    </label>
+    <small class="rb-state">Off: reports render in the stock Shikari look. On: your logos and palette apply
+      {% if not licence.valid %}(once a valid licence is installed){% endif %}.</small>
+  </section>
+
+  <div id="rb-body" class="rb-grid {% if not enabled %}rb-disabled{% endif %}">
+    <section class="ui-card">
+      <h2>Palette</h2>
+      <div class="rb-colours">
+        {% for c in colours %}
+        <div class="rb-colour">
+          <input type="color" value="{{ c.value }}" data-name="{{ c.name }}" aria-label="{{ c.label }}">
+          <div class="rb-meta">
+            <label>{{ c.label.split('—')[0].strip() }}</label>
+            <small>{{ c.label.split('—')[1].strip() if '—' in c.label else '' }}</small>
+            <div><input type="text" class="form-input rb-hex" value="{{ c.value }}" data-hex="{{ c.name }}"
+                        maxlength="7" spellcheck="false"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="ui-card">
+      <h2>Logos <small class="rb-state">up to {{ max_logos }}, PNG or SVG with transparency works best</small></h2>
+      <div class="rb-logos">
+        {% for present in logos %}
+        <div class="rb-logo" data-slot="{{ loop.index0 }}">
+          <div class="rb-thumb">
+            {% if present %}<img src="/settings/report-branding/logo/{{ loop.index0 }}?t={{ range(1,99999)|random }}" alt="Logo {{ loop.index }}">
+            {% else %}<span class="rb-empty">No logo {{ loop.index }}</span>{% endif %}
+          </div>
+          <input type="file" accept="image/*" class="rb-file" aria-label="Logo {{ loop.index }} file">
+          <div class="rb-row" style="justify-content:center;margin-top:.5rem">
+            <button type="button" class="btn-secondary rb-upload">Upload</button>
+            <button type="button" class="btn-secondary rb-remove" {% if not present %}disabled{% endif %}>Remove</button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="ui-card">
+      <h2>Options</h2>
+      <div class="rb-row">
+        <label for="rb-org" style="min-width:160px;font-weight:600">Organisation name</label>
+        <input type="text" id="rb-org" class="form-input" style="max-width:320px"
+               value="{{ org_name }}" placeholder="e.g. Acme Security">
+      </div>
+      <small class="rb-state">Shown in the report footer when a report has no named client.</small>
+      <label class="rb-row" style="margin-top:.8rem;font-weight:600">
+        <input type="checkbox" id="rb-shikari" {% if show_shikari %}checked{% endif %}>
+        Keep the Shikari co-brand line and back cover
+      </label>
+    </section>
+  </div>
+
+  <section class="ui-card">
+    <div class="rb-actions">
+      <button type="button" class="btn-primary" id="rb-save">Save</button>
+      <a class="btn-secondary" id="rb-preview" href="/settings/report-branding/sample.pdf" target="_blank" rel="noopener">Preview sample PDF</a>
+      <button type="button" class="btn-secondary" id="rb-reset">Reset to stock</button>
+      <span class="rb-state" id="rb-status" aria-live="polite"></span>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  const $ = (s, r = document) => r.querySelector(s);
+  const status = $("#rb-status");
+  const body = $("#rb-body");
+  const say = (msg, ok = true) => { status.textContent = msg; status.style.color = ok ? "" : "#df514e"; };
+
+  // Colour pickers and their hex text fields stay in sync.
+  document.querySelectorAll('input[type=color][data-name]').forEach(pick => {
+    const hex = $(`input[data-hex="${pick.dataset.name}"]`);
+    pick.addEventListener('input', () => { hex.value = pick.value; });
+    hex.addEventListener('change', () => {
+      const v = hex.value.trim();
+      if (/^#?[0-9a-fA-F]{6}$/.test(v)) { pick.value = v[0] === '#' ? v : '#' + v; hex.value = pick.value; }
+      else { hex.value = pick.value; say('That is not a 6-digit hex colour', false); }
+    });
+  });
+
+  $("#rb-enabled").addEventListener('change', e => body.classList.toggle('rb-disabled', !e.target.checked));
+
+  async function post(url, data) {
+    const r = await fetch(url, { method: 'POST', body: data });
+    let j = {}; try { j = await r.json(); } catch (e) {}
+    if (!r.ok || j.success === false) throw new Error(j.error || ('HTTP ' + r.status));
+    return j;
+  }
+
+  $("#rb-save").addEventListener('click', async () => {
+    const fd = new FormData();
+    document.querySelectorAll('input[type=color][data-name]').forEach(p => fd.append(p.dataset.name, p.value));
+    fd.append('org_name', $("#rb-org").value);
+    fd.append('show_shikari', $("#rb-shikari").checked ? '1' : '0');
+    fd.append('enabled', $("#rb-enabled").checked ? '1' : '0');
+    try { await post('/api/report-branding', fd); say('Saved. New reports use this branding.'); }
+    catch (e) { say('Could not save: ' + e.message, false); }
+  });
+
+  document.querySelectorAll('.rb-logo').forEach(card => {
+    const slot = card.dataset.slot;
+    const file = $(".rb-file", card);
+    $(".rb-upload", card).addEventListener('click', async () => {
+      if (!file.files.length) { say('Choose an image first', false); return; }
+      const fd = new FormData(); fd.append('slot', slot); fd.append('logo', file.files[0]);
+      try {
+        await post('/api/report-branding/logo', fd);
+        const thumb = $(".rb-thumb", card);
+        thumb.innerHTML = `<img src="/settings/report-branding/logo/${slot}?t=${Date.now()}" alt="Logo">`;
+        $(".rb-remove", card).disabled = false;
+        say('Logo uploaded.');
+      } catch (e) { say('Upload failed: ' + e.message, false); }
+    });
+    $(".rb-remove", card).addEventListener('click', async () => {
+      const fd = new FormData(); fd.append('slot', slot);
+      try {
+        await post('/api/report-branding/logo/delete', fd);
+        $(".rb-thumb", card).innerHTML = `<span class="rb-empty">No logo ${Number(slot) + 1}</span>`;
+        $(".rb-remove", card).disabled = true; file.value = '';
+        say('Logo removed.');
+      } catch (e) { say('Could not remove: ' + e.message, false); }
+    });
+  });
+
+  // Licence install / remove
+  const licUpload = $("#rb-lic-upload");
+  if (licUpload) licUpload.addEventListener('click', async () => {
+    const f = $("#rb-lic-file");
+    if (!f.files.length) { say('Choose a licence file first', false); return; }
+    const fd = new FormData(); fd.append('file', f.files[0]);
+    try { const j = await post('/api/report-branding/licence', fd); say(j.message || 'Licence installed.'); setTimeout(() => location.reload(), 700); }
+    catch (e) { say(e.message, false); }
+  });
+  const licPaste = $("#rb-lic-paste");
+  if (licPaste) licPaste.addEventListener('click', async () => {
+    const t = $("#rb-lic-text").value.trim();
+    if (!t) { say('Paste a licence first', false); return; }
+    const fd = new FormData(); fd.append('licence', t);
+    try { const j = await post('/api/report-branding/licence', fd); say(j.message || 'Licence installed.'); setTimeout(() => location.reload(), 700); }
+    catch (e) { say(e.message, false); }
+  });
+  const licRemove = $("#rb-lic-remove");
+  if (licRemove) licRemove.addEventListener('click', async () => {
+    if (!confirm('Remove the installed licence? Reports will fall back to the stock look.')) return;
+    try { await post('/api/report-branding/licence/remove', new FormData()); location.reload(); }
+    catch (e) { say(e.message, false); }
+  });
+
+  $("#rb-reset").addEventListener('click', async () => {
+    if (!confirm('Clear all branding and go back to the stock Shikari look?')) return;
+    try { await post('/api/report-branding/reset', new FormData()); location.reload(); }
+    catch (e) { say('Could not reset: ' + e.message, false); }
+  });
+})();
+</script>
+{% endblock %}

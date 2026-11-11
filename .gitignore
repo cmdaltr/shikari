@@ -50,6 +50,12 @@ data/mitre_procedures.building.csv
 data/mitre_procedures.building.json
 data/*.sqlite
 data/*.sqlite3
+# Per-install commercial licence and report branding (shikari/licensing.py, shikari/reports/theme.py)
+data/licence.json
+data/branding/
+# Licence signing key (licensor only — must never be committed)
+*licence-signing-key*
+*.lic.key
 data/wazuh_rule_ids.json
 # Runtime caches (IOC lookups etc.)
 data/cache/

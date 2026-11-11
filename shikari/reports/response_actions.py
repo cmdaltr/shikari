@@ -255,6 +255,27 @@ class ResponseActionsGenerator:
             },
         }
 
+    @staticmethod
+    def _normalise_indicators(indicators) -> Dict[str, List[str]]:
+        """Coerce indicators into {type: [values]}. Accepts a dict, a list, a
+        single string, or None, so a caller passing the wrong shape can't crash
+        the steps that expect a mapping."""
+        if not indicators:
+            return {}
+        if isinstance(indicators, dict):
+            out = {}
+            for key, values in indicators.items():
+                if isinstance(values, (list, tuple, set)):
+                    out[key] = [str(v) for v in values]
+                elif values is not None:
+                    out[key] = [str(values)]
+            return out
+        if isinstance(indicators, str):
+            return {"other": [indicators]}
+        if isinstance(indicators, (list, tuple, set)):
+            return {"other": [str(v) for v in indicators]}
+        return {}
+
     def generate_response_actions(
         self,
         technique_name: str,
@@ -280,6 +301,11 @@ class ResponseActionsGenerator:
         Returns:
             Dictionary containing response actions
         """
+        # Normalise indicators to the {type: [values]} shape the steps expect.
+        # Callers sometimes hand us a bare list (or a comma string); bucket those
+        # under "other" so nothing downstream calls .values()/.get() on a list.
+        indicators = self._normalise_indicators(indicators)
+
         # Determine response priority based on tactic
         priority = self.TACTIC_PRIORITY.get(tactic, "MEDIUM")
 
