@@ -198,6 +198,21 @@ def active_theme() -> ReportTheme:
     )
 
 
+def theme_for_assessment(brand_id: Optional[str]) -> ReportTheme:
+    """The theme an assessment's reports wear. With the ``brand-library`` licence (Services) and a
+    brand named on the assessment, its reports use that client brand; otherwise they fall back to
+    the installation brand (``active_theme``), then to the stock Shikari look. The licence is checked
+    here, at the render, so a saved choice can't get around it, and losing the licence loses the use
+    of the brand, not the choice."""
+    from shikari import licensing
+    if brand_id and licensing.has_feature(licensing.FEATURE_BRAND_LIBRARY):
+        from shikari.reports import brand_library
+        brand = brand_library.get_brand(brand_id)
+        if brand is not None:
+            return brand_library.theme_for(brand)
+    return active_theme()
+
+
 def save_profile(colours: Dict[str, str], org_name: str, show_shikari: bool, enabled: bool) -> dict:
     """Write the palette and flags. Colours are kept as hex; anything unparseable falls back to the
     Shikari default for that slot so a report can't end up with a broken colour."""

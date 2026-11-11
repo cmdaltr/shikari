@@ -43,6 +43,18 @@
           {% for t in ['TLP:CLEAR', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED'] %}
           <option value="{{ t }}" {{ 'selected' if t == 'TLP:AMBER' }}>{{ t }}</option>{% endfor %}
         </select></label>
+      {% if brand_library %}
+      <label>Client brand
+        <select id="ad-brand" class="form-input">
+          <option value="">Installation brand</option>
+          {% for b in brands %}
+          <option value="{{ b.id }}" {{ 'selected' if b.id == assessment.brand }}>{{ b.name }}</option>{% endfor %}
+        </select></label>
+      <p class="ms-note">Set up brands under Report branding → Client brands.</p>
+      {% elif assessment.brand %}
+      <p class="ms-note">This assessment names a client brand, but a brand per client needs a Services
+        licence; its reports use the installation brand until one is installed.</p>
+      {% endif %}
     </details>
 
     {% if results %}
@@ -101,6 +113,14 @@
       setTimeout(() => el.classList.remove('ad-saved'), 600); }
     catch (e) { el.classList.remove('ad-saving'); alert(e.message); }
   }));
+
+  // The client brand this assessment's reports wear; saved as soon as it's chosen.
+  const brandSel = $('ad-brand');
+  if (brandSel) brandSel.addEventListener('change', async () => {
+    const body = new FormData(); body.append('brand', brandSel.value);
+    const r = await fetch('/api/assessments/' + aid + '/brand', { method: 'POST', body });
+    if (!r.ok) { const j = await r.json().catch(() => ({})); alert(j.error || 'HTTP ' + r.status); }
+  });
 
   // The report buttons carry the optional paragraphs typed above
   document.querySelectorAll('.ad-report').forEach(a => a.addEventListener('click', ev => {

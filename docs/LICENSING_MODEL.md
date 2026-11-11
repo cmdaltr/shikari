@@ -24,11 +24,26 @@ the second is this product's own split (Shikari, below). ostraka is the referenc
 
 | Edition | For | Seats | Always includes |
 |---|---|---|---|
-| **Free** | Individuals and small teams | The product's own free number | The whole core product, unbranded |
-| **Pro** | Organisations using it for themselves | As the licence states, or unlimited | The product's Pro features |
-| **Services** | MSSPs and consultancies working for clients | As the licence states, or unlimited | Pro's features, the product's Services features, and the `managed-service` right |
+| **Free** | Individuals and small teams | The product's own free number | The whole core product: reports in the product's own style, no automation |
+| **Pro** | Organisations using it for themselves | As the licence states, or unlimited | Free, plus `report-branding` and `automation` |
+| **Services** | MSSPs and consultancies working for clients | As the licence states, or unlimited | Pro, plus `brand-library` and the `managed-service` right |
 
-What each edition unlocks is decided per product (below, for ostraka).
+The features are the same in every product (Ben, 11 November 2026); only the free seat number
+differs:
+
+| Feature | Edition | What it is |
+|---|---|---|
+| `report-branding` | Pro | One brand (colours and logos) for the installation's reports, in place of the product's own style |
+| `brand-library` | Services | A brand per client, chosen for each piece of work the report comes from |
+| `automation` | Pro | Signed webhooks: the product calls the customer's systems when something happens. Checked when a webhook is sent, so one configured on Free is kept but doesn't fire |
+| `managed-service` | Services | The right in `COMMERCIAL-LICENSE.md` section 3 to run the product for clients. Not a switch |
+
+Webhooks work the same everywhere, as Shikari's (`shikari/webhooks.py`, the reference for them): an
+admin registers a URL and the events it wants; each delivery is a POST of
+`{"event", "sent_at", "data"}` with `X-<Product>-Event` and, when the webhook has a secret,
+`X-<Product>-Signature: sha256=<hex HMAC-SHA256 of the raw body>`; three tries with backoff; the last
+20 deliveries kept per webhook for the admin page. Webhook bodies pass the same masking as the
+product's other outward messages.
 
 ### The licence
 
@@ -106,23 +121,47 @@ One line: `<product>-licence-1.<payload>.<signature>`.
 ### Individual to each product
 
 Where the licence is stored (ostraka: its database; a product without one: a file); the free seat
-number; feature ids and what each edition unlocks; how "an admin" is spotted for the seat rule.
+number; what a client's brand attaches to (ostraka: an incident); which events send webhooks; how
+"an admin" is spotted for the seat rule.
 
 ## Shikari's split
 
-Confirmed by Ben, 11 November 2026.
+Confirmed by Ben, 11 November 2026. The features are the shared ones; Shikari differs only in the
+free seat number (2) and in what a client brand attaches to (an assessment, Shikari's client
+engagement, as ostraka's attaches to an incident).
 
 | Feature id | Free | Pro | Services | Gated at |
 |---|---|---|---|---|
 | (seats) | 2 (for example an operator and a reviewer) | Licence | Licence | `licensing.can_add_user`, at account creation: public registration and admin create-user |
-| `report-branding` | — | Yes | Yes | `reports/theme.py:active_theme()`, and the licence/brand writes in `app.py` |
-| `teams` | — | Yes | Yes | reserved; the seat limit is live, the rest (RBAC, SSO, audit export) not yet gated |
-| `automation` | — | Yes | Yes | reserved; not yet gated |
+| `report-branding` | — | One brand for the installation | Yes | `reports/theme.py:active_theme()`, when a report is drawn |
+| `brand-library` | — | — | A brand per client, chosen per assessment | `reports/theme.py:theme_for_assessment()`, when an assessment report is drawn |
+| `automation` | — | Yes | Yes | `webhooks.py` — `emit()` / `deliver()`, when a webhook would be sent |
 | `managed-service` | — | — | Yes | A right in COMMERCIAL-LICENSE.md, not a switch |
 
-`EDITION_FEATURES` gives Pro and Services the three paid features and Services the managed-service
-right; `FREE_SEATS` is 2. Raising the free limit from 1 deactivated nobody; it only lets a second
-account be added. Gates for `teams` and `automation` arrive with the features they protect.
+`EDITION_FEATURES` gives Pro `report-branding` and `automation`, and Services those plus
+`brand-library` and `managed-service`; `FREE_SEATS` is 2.
+
+### Webhooks on Free (a change from before)
+
+`automation` is checked at the send, not when a webhook is registered. Registering, editing and
+listing webhooks stay open on every edition, so nothing a Free install set up is deleted — its
+webhooks simply don't fire, and the admin page says so ("Webhooks need Pro or Services; N
+registered, not sending"). Batch hunts, the SSE progress stream and the API stay free. **This
+changes earlier behaviour:** a Free install that had registered webhooks stops sending them until a
+Pro or Services licence is installed.
+
+### The brand library (Services)
+
+Report branding (Pro) dresses every report in one identity, the installation's own, held under
+`data/branding/` (`reports/theme.py`). Services adds a library of client brands
+(`reports/brand_library.py`), stored the same way — a folder, not a table — under
+`data/branding/library/`: `brands.json` indexes them, and each brand's logos are PNGs in its own
+folder. An assessment names a brand (`Assessment.brand`); its reports use that brand when the licence
+includes `brand-library`, else the installation brand, else the stock look. The choice is checked
+only when the report is drawn (`theme_for_assessment`), never when it's saved, so losing the licence
+loses the use of the brand, not the stored choice. Uploaded logos follow ostraka's rule: PNG or JPEG
+only, refused above a pixel limit before the pixels are decoded, scaled down to a sensible size and
+redrawn as a fresh PNG so nothing but the image survives. Brand changes are audited.
 
 ### Where the licence and its acceptance are stored
 
@@ -138,5 +177,5 @@ it identical to the root file. Installs and removals are in the audit log (`lice
 Free on purpose: the detection-generation engine and everything that drives solo adoption — detection
 generation across all SIEMs, ATT&CK coverage, correlation, MITRESaw, the three reports unbranded, the
 SIEM export packs and the Defender XDR master hunt query, the lab, the exposure map, the catalogue and
-feed, and AI with the user's own key. The reports must be good unbranded for branding to be worth
-buying.
+feed, webhooks (registered, though they fire only on Pro and Services), and AI with the user's own
+key. The reports must be good unbranded for branding to be worth buying.

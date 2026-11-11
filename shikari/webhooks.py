@@ -35,6 +35,23 @@ TRIES = 3
 _lock = threading.Lock()
 
 
+def _automation_on() -> bool:
+    """Webhooks fire only while the licence includes `automation` (Pro or Services). Checked here, at
+    the send, not when a webhook is registered: a Free install keeps its webhooks, they just don't
+    fire. See docs/LICENSING_MODEL.md and licence_note()."""
+    from shikari import licensing
+    return licensing.has_feature(licensing.FEATURE_AUTOMATION)
+
+
+def licence_note() -> str:
+    """Why nothing is being sent, for the admin page, or '' when webhooks fire. A Free install can
+    still register, edit and list webhooks; this says they won't be delivered."""
+    if _automation_on():
+        return ""
+    n = len(_load())
+    return f"Webhooks need Pro or Services; {n} registered, not sending."
+
+
 def _path() -> str:
     return str(paths.DATA / "webhooks.json")
 
@@ -117,6 +134,11 @@ def _record(hook_id: str, delivery: Dict) -> None:
 
 def deliver(hook: Dict, event: str, data: Dict, tries: int = TRIES, backoff: float = 2.0) -> Dict:
     """POST one event to one webhook; returns the delivery record (also kept on the webhook)."""
+    if not _automation_on():
+        # Registered but unlicensed: nothing goes out, and the record says why rather than claiming a
+        # failed send. The webhook is untouched, so it fires again once a Pro/Services licence is in.
+        return {"event": event, "at": time.time(), "ok": False, "status": None,
+                "error": "not sent: webhooks need a Pro or Services licence", "tries": 0, "skipped": True}
     body = json.dumps({"event": event, "sent_at": time.time(), "data": data}, default=str).encode()
     headers = {"Content-Type": "application/json", "User-Agent": "Shikari-Webhook/1", "X-Shikari-Event": event}
     if hook.get("secret"):
@@ -142,7 +164,10 @@ def deliver(hook: Dict, event: str, data: Dict, tries: int = TRIES, backoff: flo
 
 
 def emit(event: str, data: Dict) -> int:
-    """Send an event to every enabled webhook that wants it, in the background. Returns how many."""
+    """Send an event to every enabled webhook that wants it, in the background. Returns how many.
+    Nothing is sent without an `automation` licence (Pro or Services)."""
+    if not _automation_on():
+        return 0
     targets = [h for h in _load() if h.get("enabled") and event in h.get("events", [])]
     for hook in targets:
         threading.Thread(target=deliver, args=(hook, event, data), daemon=True, name=f"webhook-{hook['id']}").start()
@@ -188,7 +213,8 @@ def list_webhooks(shikari_session: Optional[str] = Cookie(None)):
     denied = _admin(shikari_session)
     if denied:
         return denied
-    return {"events": list(EVENTS), "webhooks": [_public(h) for h in _load()]}
+    return {"events": list(EVENTS), "webhooks": [_public(h) for h in _load()],
+            "sending": _automation_on(), "licence_note": licence_note()}
 
 
 @router.post("/api/webhooks")

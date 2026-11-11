@@ -47,6 +47,11 @@ EVENT_ACCOUNT_LOCKED = "account_locked"
 EVENT_ACCOUNT_UNLOCKED = "account_unlocked"
 EVENT_LICENCE_INSTALLED = "licence_installed"
 EVENT_LICENCE_REMOVED = "licence_removed"
+EVENT_BRAND_CREATED = "brand_created"
+EVENT_BRAND_UPDATED = "brand_updated"
+EVENT_BRAND_DELETED = "brand_deleted"
+EVENT_BRAND_LOGO_SET = "brand_logo_set"
+EVENT_BRAND_LOGO_REMOVED = "brand_logo_removed"
 
 
 def log_audit_event(

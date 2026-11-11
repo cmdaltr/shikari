@@ -151,6 +151,61 @@
     </section>
   </div>
 
+  {% if brand_library_on %}
+  <section class="ui-card" id="rb-brands">
+    <h2>Client brands <span class="badge" style="vertical-align:middle">Services</span></h2>
+    <p class="rb-state">A brand per client, chosen on each assessment. An assessment with no brand named,
+      or on a non-Services install, uses the installation branding above. Logos must be PNG or JPEG.</p>
+    <div class="rb-row" style="margin:.6rem 0">
+      <input type="text" id="rb-brand-new" class="form-input" style="max-width:320px" placeholder="New client brand name">
+      <button type="button" class="btn-secondary" id="rb-brand-add">Add brand</button>
+    </div>
+    {% for b in brands %}
+    <details class="rb-brand" data-id="{{ b.id }}" style="border:1px solid var(--rule,#d6ceca);border-radius:8px;padding:.6rem;margin-bottom:.6rem">
+      <summary style="font-weight:600;cursor:pointer">{{ b.name }}</summary>
+      <div class="rb-row" style="margin-top:.6rem">
+        <label style="min-width:120px">Name</label>
+        <input type="text" class="form-input rb-brand-name" style="max-width:320px" value="{{ b.name }}">
+      </div>
+      <div class="rb-colours" style="margin-top:.6rem">
+        {% for s in brand_slots %}
+        <div class="rb-colour">
+          <input type="color" class="rb-brand-colour" data-name="{{ s.name }}"
+                 value="{{ b.colours.get(s.name, s.default) }}" aria-label="{{ s.label }}">
+          <div class="rb-meta"><label>{{ s.label }}</label></div>
+        </div>
+        {% endfor %}
+      </div>
+      <label class="rb-row" style="margin-top:.6rem">
+        <input type="checkbox" class="rb-brand-shikari" {% if b.show_shikari %}checked{% endif %}>
+        Keep the Shikari co-brand line and back cover
+      </label>
+      <div class="rb-logos" style="margin-top:.6rem">
+        {% for i in range(max_logos) %}
+        <div class="rb-logo rb-brand-logo" data-slot="{{ i }}">
+          <div class="rb-thumb">
+            <img src="/api/report-branding/brands/{{ b.id }}/logo/{{ i }}?t={{ range(1,99999)|random }}"
+                 alt="Logo {{ i + 1 }}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'rb-empty',textContent:'No logo '+({{ i }}+1)}))">
+          </div>
+          <input type="file" accept="image/png,image/jpeg" class="rb-brand-file" aria-label="Logo {{ i + 1 }} file">
+          <div class="rb-row" style="justify-content:center;margin-top:.5rem">
+            <button type="button" class="btn-secondary rb-brand-upload">Upload</button>
+            <button type="button" class="btn-secondary rb-brand-logo-remove">Remove</button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="rb-actions" style="margin-top:.6rem">
+        <button type="button" class="btn-primary rb-brand-save">Save brand</button>
+        <button type="button" class="btn-secondary rb-brand-delete">Delete brand</button>
+      </div>
+    </details>
+    {% else %}
+    <p class="rb-state">No client brands yet.</p>
+    {% endfor %}
+  </section>
+  {% endif %}
+
   <section class="ui-card">
     <div class="rb-actions">
       <button type="button" class="btn-primary" id="rb-save">Save</button>
@@ -264,6 +319,52 @@
     if (!confirm('Remove the installed licence? Reports will fall back to the stock look.')) return;
     try { await post('/api/report-branding/licence/remove', new FormData()); location.reload(); }
     catch (e) { say(e.message, false); }
+  });
+
+  // Client brands (Services): create, save, delete, and per-brand logos.
+  const brandAdd = $("#rb-brand-add");
+  if (brandAdd) brandAdd.addEventListener('click', async () => {
+    const name = $("#rb-brand-new").value.trim();
+    if (!name) { say('Give the brand a name', false); return; }
+    const fd = new FormData(); fd.append('name', name);
+    try { await post('/api/report-branding/brands', fd); location.reload(); }
+    catch (e) { say('Could not add brand: ' + e.message, false); }
+  });
+  document.querySelectorAll('.rb-brand').forEach(card => {
+    const id = card.dataset.id;
+    $(".rb-brand-save", card).addEventListener('click', async () => {
+      const fd = new FormData();
+      fd.append('name', $(".rb-brand-name", card).value);
+      card.querySelectorAll('.rb-brand-colour').forEach(p => fd.append(p.dataset.name, p.value));
+      fd.append('show_shikari', $(".rb-brand-shikari", card).checked ? '1' : '0');
+      try { await post('/api/report-branding/brands/' + id, fd); say('Brand saved.'); }
+      catch (e) { say('Could not save brand: ' + e.message, false); }
+    });
+    $(".rb-brand-delete", card).addEventListener('click', async () => {
+      if (!confirm('Delete this client brand? Assessments that named it fall back to the installation brand.')) return;
+      try { await post('/api/report-branding/brands/' + id + '/delete', new FormData()); location.reload(); }
+      catch (e) { say('Could not delete: ' + e.message, false); }
+    });
+    card.querySelectorAll('.rb-brand-logo').forEach(slotCard => {
+      const slot = slotCard.dataset.slot, file = $(".rb-brand-file", slotCard);
+      $(".rb-brand-upload", slotCard).addEventListener('click', async () => {
+        if (!file.files.length) { say('Choose an image first', false); return; }
+        const fd = new FormData(); fd.append('slot', slot); fd.append('logo', file.files[0]);
+        try {
+          await post('/api/report-branding/brands/' + id + '/logo', fd);
+          $(".rb-thumb", slotCard).innerHTML = `<img src="/api/report-branding/brands/${id}/logo/${slot}?t=${Date.now()}" alt="Logo">`;
+          say('Logo uploaded.');
+        } catch (e) { say('Upload failed: ' + e.message, false); }
+      });
+      $(".rb-brand-logo-remove", slotCard).addEventListener('click', async () => {
+        const fd = new FormData(); fd.append('slot', slot);
+        try {
+          await post('/api/report-branding/brands/' + id + '/logo/delete', fd);
+          $(".rb-thumb", slotCard).innerHTML = `<span class="rb-empty">No logo ${Number(slot) + 1}</span>`;
+          file.value = ''; say('Logo removed.');
+        } catch (e) { say('Could not remove: ' + e.message, false); }
+      });
+    });
   });
 
   $("#rb-reset").addEventListener('click', async () => {

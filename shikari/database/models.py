@@ -481,6 +481,9 @@ class Assessment(Base):
     operator = Column(String(255), nullable=True)
     run_date = Column(String(20), nullable=True)   # ISO date string
     notes = Column(Text, nullable=True)
+    # The client brand its reports wear (brand_library brand id), when the install has a Services
+    # licence; nullable, so the free/Pro default is the installation brand. Checked at render.
+    brand = Column(String(64), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

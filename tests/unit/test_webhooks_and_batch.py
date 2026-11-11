@@ -13,6 +13,8 @@ from shikari import runs_api, webhooks
 def home(tmp_path, monkeypatch):
     monkeypatch.setattr(webhooks.paths, "DATA", tmp_path)
     monkeypatch.setattr(runs_api.paths, "DATA", tmp_path)
+    # These tests exercise delivery itself; licensing is covered in test_licence_gates_webhook_delivery.
+    monkeypatch.setattr(webhooks, "_automation_on", lambda: True)
     return tmp_path
 
 
@@ -53,6 +55,7 @@ def test_server_errors_are_retried_but_a_refusal_is_not(home, monkeypatch):
 def test_only_webhooks_that_want_the_event_get_it(home, monkeypatch):
     got = []
     monkeypatch.setattr(webhooks, "deliver", lambda hook, event, data: got.append((hook["url"], event)))
+    monkeypatch.setattr(webhooks, "_automation_on", lambda: True)
     monkeypatch.setattr(webhooks.threading, "Thread",
                         lambda target, args, **k: type("T", (), {"start": lambda self: target(*args)})())
     webhooks.add("https://a.example/", ["run.completed"])
@@ -62,6 +65,35 @@ def test_only_webhooks_that_want_the_event_get_it(home, monkeypatch):
     webhooks.emit_run("APT29", {"phase": "complete", "created_yaml": 12})
     webhooks.emit_run("FIN7", {"status": "error", "error": "boom"})
     assert got == [("https://a.example/", "run.completed"), ("https://b.example/", "run.failed")]
+
+
+def test_licence_gates_webhook_delivery_but_not_registration(tmp_path, monkeypatch):
+    """`automation` is checked at the send: a Free install keeps its webhook, it just doesn't fire;
+    a Pro install sends. The webhook survives a lapse back to Free (docs/LICENSING_MODEL.md)."""
+    from shikari import licensing
+
+    monkeypatch.setattr(webhooks.paths, "DATA", tmp_path)  # the real _automation_on runs here
+    posted = []
+    monkeypatch.setattr(webhooks.requests, "post", lambda *a, **k: posted.append(1) or Response(204))
+
+    # Free: registering is open, but the send is held and says why.
+    monkeypatch.setattr(licensing, "has_feature", lambda f: False)
+    hook = webhooks.add("https://hooks.example/x", ["run.completed"])
+    free = webhooks.deliver(hook, "run.completed", {"run": "APT29"})
+    assert free.get("skipped") and not free["ok"] and not posted
+    assert webhooks.emit("run.completed", {"run": "APT29"}) == 0
+    assert webhooks.licence_note().startswith("Webhooks need Pro or Services")
+
+    # Pro: the same, still-registered webhook now fires.
+    monkeypatch.setattr(licensing, "has_feature", lambda f: f == licensing.FEATURE_AUTOMATION)
+    assert webhooks._load() and webhooks._load()[0]["url"] == "https://hooks.example/x"
+    assert webhooks.deliver(hook, "run.completed", {"run": "APT29"})["ok"] and posted
+    assert webhooks.licence_note() == ""
+
+    # Lapsed back to Free: nothing deleted, delivery held again.
+    monkeypatch.setattr(licensing, "has_feature", lambda f: False)
+    assert webhooks._load()[0]["url"] == "https://hooks.example/x"
+    assert webhooks.deliver(hook, "run.completed", {})["skipped"]
 
 
 def test_bad_webhooks_are_refused():

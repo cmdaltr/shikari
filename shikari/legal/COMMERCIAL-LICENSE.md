@@ -1,6 +1,6 @@
 # Shikari Commercial Licence
 
-**Version 1.0**, 11 November 2026
+**Version 1.1**, 11 November 2026
 
 > **Draft for legal review.** Plain-language terms written to be checked by a solicitor before any
 > sale. Governing law: England and Wales.
@@ -22,9 +22,9 @@ the Licensee, edition, seats, any extra features and the term.
 |---|---|---|---|
 | Who it's for | Individuals and small teams | Organisations using Shikari for themselves | MSSPs and consultancies working for clients |
 | People who can sign in | 2, for example an operator and a reviewer | As the licence key states | As the licence key states |
-| Report branding (`report-branding`) | Stock Shikari look | Yes | Yes |
-| Team accounts and governance (`teams`) | | Yes | Yes |
-| Automation and pipeline (`automation`) | | Yes | Yes |
+| Report branding (`report-branding`) | Stock Shikari look | One brand for the installation | Yes |
+| A brand per client (`brand-library`) | | | Chosen per assessment |
+| Webhooks (`automation`) | | Yes | Yes |
 | Run Shikari for clients (`managed-service`) | | | Yes, under section 3 |
 
 A licence key grants its edition's features and any others it names. The Licensor may add features

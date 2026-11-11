@@ -99,7 +99,7 @@ Shikari closes the loop between red and blue: it runs a real adversary and then 
 
 - **Detection Validation** - Every detection carries an AI-free quality grade (A–F), false-positive risk and run cost; optionally test queries against containerised SIEMs with sample events, timed. A CI gate (`python -m shikari.validation.ci`) fails a build on detections below your thresholds ([docs](docs/features/RUNTIME_VALIDATION.md))
 - **Cloud coverage** - ATT&CK's cloud techniques by provider (AWS, Azure, GCP, Identity and SaaS) against your saved detections, with a gaps-only view (Detections → Coverage, `GET /api/coverage/cloud`) ([guide](docs/guide/08-coverage.md#cloud-coverage))
-- **API and automation** - Batch hunts, streamed run progress (SSE) and signed webhooks on run and watchlist events ([guide](docs/features/API_INTEGRATION_GUIDE.md#workflow-11-webhooks))
+- **API and automation** - Batch hunts, streamed run progress (SSE) and signed webhooks on run and watchlist events ([guide](docs/features/API_INTEGRATION_GUIDE.md#workflow-11-webhooks)). Batch hunts, the SSE stream and the API are free; webhooks fire on the **Pro** and **Services** editions. A Free install can still register, edit and list webhooks — they just don't send until a licence is installed, and the admin page says so.
 - **Detection Library** - Save, search, tag, share, and export your generated detections
 - **Company Profiling** - Industry-aware threat landscape analysis for targeted detection
 - **Ordered Adversary List** - The top-10 ATT&CK groups most likely to target an organisation, ranked (no AI) from industry, geography, exposed OSINT and public incidents — VCDB, CISA KEV and ransomware.live merged with your own curated set. Shown on the exposure map; set your own domain in Profile → Organisation to auto-profile and star it ([guide](docs/guide/04-company-profile.md#ordered-adversary-list))
@@ -335,5 +335,7 @@ Feel free to open issues or submit pull requests to improve Shikari. Because Shi
 Copyright (c) 2026 cmdaltr.
 
 Shikari is licensed under the [Elastic License 2.0](LICENSE): you can use, copy and change it for free (the **Free** edition), but you may not provide it to others as a hosted or managed service, or get around its licence key. The **Pro** and **Services** editions add the terms in [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md), switched on by a licence key — Pro for organisations using Shikari for themselves, Services for MSSPs and consultancies running it for clients. Contact @cmdaltr on GitHub. Releases published before this (under the AGPL) keep that licence.
+
+The whole core product is free, for two accounts. **Pro** brands your reports with one installation-wide identity and fires webhooks; **Services** adds a brand per client (chosen on each assessment) and the right to run Shikari for clients as a managed service. See [docs/LICENSING_MODEL.md](docs/LICENSING_MODEL.md).
 
 **Shikari™** and the Shikari bateleur logo are trademarks of cmdaltr. The licence covers the software; it does not grant any right to use the Shikari name or logo, whether to brand a fork or otherwise.

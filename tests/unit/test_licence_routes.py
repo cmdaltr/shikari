@@ -74,7 +74,7 @@ def test_check_says_what_the_licence_is_and_installs_nothing(client, signing_key
     assert r.status_code == 200
     j = r.json()
     assert (j["licensee"], j["edition"], j["seats"], j["expires"]) == ("Northwind Ltd", "pro", 5, "2027-11-30")
-    assert j["terms_version"] == "1.0" and not (tmp_path / "licence.json").exists()
+    assert j["terms_version"] == "1.1" and not (tmp_path / "licence.json").exists()
 
 
 def test_check_refuses_a_damaged_licence(client, signing_key):
@@ -84,12 +84,12 @@ def test_check_refuses_a_damaged_licence(client, signing_key):
 
 def test_the_terms_are_the_shipped_copy(client):
     r = client.get("/api/report-branding/licence/terms")
-    assert r.status_code == 200 and r.json()["version"] == "1.0"
+    assert r.status_code == 200 and r.json()["version"] == "1.1"
     assert r.json()["text"] == L.TERMS.read_text("utf-8")
 
 
 def test_install_without_accepting_the_terms_is_refused(client, signing_key, tmp_path):
-    r = client.post("/api/report-branding/licence", data={"licence": _line(signing_key), "terms_version": "1.0"})
+    r = client.post("/api/report-branding/licence", data={"licence": _line(signing_key), "terms_version": "1.1"})
     assert r.status_code == 422 and "Accept the commercial licence terms for Northwind Ltd" in r.json()["error"]
     assert not (tmp_path / "licence.json").exists()
 
@@ -97,20 +97,20 @@ def test_install_without_accepting_the_terms_is_refused(client, signing_key, tmp
 def test_install_accepting_old_terms_is_refused(client, signing_key, tmp_path):
     r = client.post("/api/report-branding/licence",
                     data={"licence": _line(signing_key), "accept_terms": "1", "terms_version": "0.9"})
-    assert r.status_code == 409 and "now version 1.0" in r.json()["error"]
+    assert r.status_code == 409 and "now version 1.1" in r.json()["error"]
     assert not (tmp_path / "licence.json").exists()
 
 
 def test_install_records_the_acceptance_and_audits_the_version(client, signing_key, db):
     r = client.post("/api/report-branding/licence",
-                    data={"licence": _line(signing_key), "accept_terms": "1", "terms_version": "1.0"})
+                    data={"licence": _line(signing_key), "accept_terms": "1", "terms_version": "1.1"})
     assert r.status_code == 200, r.text
     accepted = r.json()["status"]["accepted"]
     assert (accepted["terms_version"], accepted["accepted_by"], accepted["accepted_by_name"]) == \
-        ("1.0", 1, "Ada Admin <ada@example.org>")
+        ("1.1", 1, "Ada Admin <ada@example.org>")
     entry = db.query(AuditLog).filter(AuditLog.event_type == "licence_installed").one()
     details = json.loads(entry.details)
-    assert details["terms_version"] == "1.0" and details["licence_id"] == "lic_route" and entry.user_id == 1
+    assert details["terms_version"] == "1.1" and details["licence_id"] == "lic_route" and entry.user_id == 1
 
 
 def test_the_page_walks_check_terms_tick_install_and_shows_who_accepted(client, signing_key):
@@ -122,9 +122,9 @@ def test_the_page_walks_check_terms_tick_install_and_shows_who_accepted(client, 
         assert step in page
     assert "accepted by" not in page
     client.post("/api/report-branding/licence",
-                data={"licence": _line(signing_key), "accept_terms": "1", "terms_version": "1.0"})
+                data={"licence": _line(signing_key), "accept_terms": "1", "terms_version": "1.1"})
     page = client.get("/settings/report-branding").text
-    assert "Commercial licence v1.0 accepted by" in page and "Ada Admin &lt;ada@example.org&gt;" in page
+    assert "Commercial licence v1.1 accepted by" in page and "Ada Admin &lt;ada@example.org&gt;" in page
 
 
 def test_admins_see_the_grace_warning_on_every_page(signing_key, client, db):

@@ -136,13 +136,15 @@ def test_grace_ends_thirty_days_after_expiry():
 
 
 def test_an_edition_grants_its_features_and_a_licence_can_add_more():
-    # Interim split: Pro and Services both grant today's three paid features; Services adds the
-    # managed-service right. (docs/LICENSING_MODEL.md — the split is on hold.)
+    # The split (docs/LICENSING_MODEL.md): Pro brands the installation and fires webhooks; Services
+    # adds a brand per client and the managed-service right.
     pro = L.standing(lic("pro"), at(TODAY))
-    assert pro.has(L.FEATURE_REPORT_BRANDING) and pro.has(L.FEATURE_TEAMS)
-    assert not pro.has(L.FEATURE_MANAGED_SERVICE)
+    assert pro.has(L.FEATURE_REPORT_BRANDING) and pro.has(L.FEATURE_AUTOMATION)
+    assert not pro.has(L.FEATURE_BRAND_LIBRARY) and not pro.has(L.FEATURE_MANAGED_SERVICE)
+    assert pro.custom_branding and not pro.brand_library
     services = L.standing(lic("services"), at(TODAY))
-    assert services.has(L.FEATURE_MANAGED_SERVICE)
+    assert services.has(L.FEATURE_BRAND_LIBRARY) and services.has(L.FEATURE_MANAGED_SERVICE)
+    assert services.custom_branding and services.brand_library
     everything = L.standing(lic("pro", features=("*",)), at(TODAY))
     assert everything.has(L.FEATURE_MANAGED_SERVICE) and everything.has("anything-later")
 
@@ -208,7 +210,7 @@ def test_the_terms_shikari_ships_are_the_terms_in_the_repo():
     assert L.TERMS.read_text("utf-8") == open(root, encoding="utf-8").read(), \
         "copy COMMERCIAL-LICENSE.md to shikari/legal/"
     version, text = L.terms()
-    assert version == "1.0" and text.startswith("# Shikari Commercial Licence")
+    assert version == "1.1" and text.startswith("# Shikari Commercial Licence")
 
 
 def test_installing_needs_the_current_terms_accepted(signing_key):
@@ -226,7 +228,7 @@ def test_an_install_records_who_accepted_which_terms_and_when(signing_key, tmp_p
     assert ok
     stored = json.loads((tmp_path / "licence.json").read_text())
     assert stored["licence"].startswith("shikari-licence-1.")
-    assert (stored["terms_version"], stored["accepted_by"], stored["accepted_by_name"]) == ("1.0", 7, ADMIN)
+    assert (stored["terms_version"], stored["accepted_by"], stored["accepted_by_name"]) == ("1.1", 7, ADMIN)
     assert stored["accepted_at"].startswith(str(datetime.now(timezone.utc).date()))
     assert L.status()["accepted"] == {k: stored[k] for k in
                                       ("terms_version", "accepted_by", "accepted_by_name", "accepted_at")}
@@ -272,7 +274,7 @@ def test_the_cli_installs_with_accept_terms_and_audits_it(signing_key, tmp_path,
     assert cli.main(["install", str(f), "--accept-terms", ADMIN]) == 0
     assert L.status()["accepted"]["accepted_by_name"] == ADMIN
     assert logged[0][0] == "licence_installed"
-    assert logged[0][1]["terms_version"] == "1.0" and logged[0][1]["accepted_by"] == ADMIN
+    assert logged[0][1]["terms_version"] == "1.1" and logged[0][1]["accepted_by"] == ADMIN
     assert cli.main(["remove"]) == 0 and logged[1][0] == "licence_removed"
 
 
@@ -297,5 +299,5 @@ def test_signing_into_the_ledger_files_the_licence_and_a_row(signing_key, tmp_pa
     rows = list(csv.DictReader((ledger / "ledger.csv").open()))
     assert rows == [{**dict.fromkeys(tool.LEDGER_FIELDS, ""), "licence_id": "lic_test", "product": "shikari",
                      "licensee": "Northwind Ltd", "edition": "services", "seats": "unlimited",
-                     "issued": "2026-11-11", "expires": "2027-11-30", "terms_version": "1.0",
+                     "issued": "2026-11-11", "expires": "2027-11-30", "terms_version": "1.1",
                      "file": "issued/shikari/lic_test.licence"}]

@@ -1,10 +1,12 @@
 """Which edition this installation runs, from a licence signed with Shikari's private key.
 
-    Free       two people who can sign in; reports in the stock Shikari look
-    Pro        the licence's seats; the product's Pro features
-    Services   the licence's seats; Pro's features, the Services features, and the right to run
-               Shikari for clients as a managed service, which the Elastic License 2.0 otherwise
-               forbids (COMMERCIAL-LICENSE.md)
+    Free       two people who can sign in; the whole core product; reports in the stock Shikari
+               look; webhooks may be registered but don't fire
+    Pro        the licence's seats; one report brand for the installation (report-branding) and
+               webhooks (automation)
+    Services   the licence's seats; Pro, plus a brand per client (brand-library) and the right to
+               run Shikari for clients as a managed service, which the Elastic License 2.0
+               otherwise forbids (COMMERCIAL-LICENSE.md)
 
 This follows the licence format shared by ostraka, Shikari and Rowanholt (docs/LICENSING_MODEL.md).
 A licence is one line, `shikari-licence-1.<payload>.<signature>`: the payload is base64url of
@@ -62,21 +64,24 @@ class Edition(str, Enum):
     SERVICES = "services"
 
 
-# Feature ids: short, kebab-case, stable. docs/LICENSING_MODEL.md says what each gates.
-FEATURE_REPORT_BRANDING = "report-branding"
-FEATURE_TEAMS = "teams"
-FEATURE_AUTOMATION = "automation"
-FEATURE_MANAGED_SERVICE = "managed-service"  # a right in COMMERCIAL-LICENSE.md, not a switch
-FEATURES = (FEATURE_REPORT_BRANDING, FEATURE_TEAMS, FEATURE_AUTOMATION, FEATURE_MANAGED_SERVICE)
+# Feature ids: short, kebab-case, stable. docs/LICENSING_MODEL.md says what each gates. The same
+# ids across ostraka, Shikari and Rowanholt (Ben, 11 November 2026). Seats are the licence's own
+# `seats`, not a feature, so there is no "teams" id.
+FEATURE_REPORT_BRANDING = "report-branding"   # one brand for the whole installation
+FEATURE_BRAND_LIBRARY = "brand-library"       # a brand per client, chosen per assessment
+FEATURE_AUTOMATION = "automation"             # webhooks fire; checked at delivery
+FEATURE_MANAGED_SERVICE = "managed-service"   # a right in COMMERCIAL-LICENSE.md, not a switch
+FEATURES = (FEATURE_REPORT_BRANDING, FEATURE_BRAND_LIBRARY, FEATURE_AUTOMATION, FEATURE_MANAGED_SERVICE)
 WILDCARD = "*"
 
-# Shikari's split (docs/LICENSING_MODEL.md): Pro and Services both grant the three paid features;
-# Services adds the managed-service right. `automation` is reserved: nothing checks it yet.
+# Shikari's split (docs/LICENSING_MODEL.md): Pro brands the installation and fires webhooks;
+# Services adds a brand per client and the managed-service right. The features are the same in
+# every product; only FREE_SEATS differs.
 EDITION_FEATURES = {
     Edition.FREE: frozenset(),
-    Edition.PRO: frozenset({FEATURE_REPORT_BRANDING, FEATURE_TEAMS, FEATURE_AUTOMATION}),
-    Edition.SERVICES: frozenset({FEATURE_REPORT_BRANDING, FEATURE_TEAMS, FEATURE_AUTOMATION,
-                                 FEATURE_MANAGED_SERVICE}),
+    Edition.PRO: frozenset({FEATURE_REPORT_BRANDING, FEATURE_AUTOMATION}),
+    Edition.SERVICES: frozenset({FEATURE_REPORT_BRANDING, FEATURE_AUTOMATION,
+                                 FEATURE_BRAND_LIBRARY, FEATURE_MANAGED_SERVICE}),
 }
 
 INSTALL_PATH = paths.DATA / "licence.json"
@@ -115,6 +120,16 @@ class Standing:
 
     def has(self, feature: str) -> bool:
         return feature in self.features or WILDCARD in self.features
+
+    @property
+    def custom_branding(self) -> bool:
+        """The installation may brand its reports (Pro and Services)."""
+        return self.has(FEATURE_REPORT_BRANDING)
+
+    @property
+    def brand_library(self) -> bool:
+        """The installation may keep a brand per client (Services)."""
+        return self.has(FEATURE_BRAND_LIBRARY)
 
     @property
     def organisation(self) -> str:

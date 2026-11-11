@@ -9250,7 +9250,7 @@ def _require_admin(request, shikari_session, json=True):
 def report_branding_page(request: Request, shikari_session: Optional[str] = Cookie(None)):
     """The report-branding settings page (admin only)."""
     from shikari import licensing
-    from shikari.reports import theme as rtheme
+    from shikari.reports import brand_library, theme as rtheme
 
     auth = _require_admin(request, shikari_session, json=False)
     if isinstance(auth, RedirectResponse):
@@ -9264,6 +9264,8 @@ def report_branding_page(request: Request, shikari_session: Optional[str] = Cook
                     "default": rtheme.rgb_to_hex(default)}
                    for name, label, default in rtheme.SLOTS]
         logos = [rtheme._logo_path(i).exists() for i in range(rtheme.MAX_LOGOS)]
+        brand_slots = [{"name": name, "label": label.split("—")[0].strip(),
+                        "default": rtheme.rgb_to_hex(default)} for name, label, default in rtheme.SLOTS]
         return templates.TemplateResponse("report_branding.html", {
             "request": request, "user": user,
             "enabled": bool(prof.get("enabled")),
@@ -9273,6 +9275,9 @@ def report_branding_page(request: Request, shikari_session: Optional[str] = Cook
             "licence": licensing.status(),
             "places_taken": db.query(User).filter(User.is_active.is_(True)).count(),
             "seats_total": licensing.seats_allowed(),   # None = unlimited
+            # The client-brand library (Services): editable only with the brand-library feature.
+            "brand_library_on": licensing.has_feature(licensing.FEATURE_BRAND_LIBRARY),
+            "brands": brand_library.list_brands(), "brand_slots": brand_slots,
         })
     finally:
         db.close()
@@ -9370,6 +9375,175 @@ def report_branding_reset(request: Request, shikari_session: Optional[str] = Coo
     db.close()
     rtheme.clear()
     return JSONResponse({"success": True})
+
+
+# ── The brand library (Services): a report brand per client, chosen per assessment ──
+
+def _brand_audit(db, request, user, event: str, **details):
+    from shikari.database.audit import log_audit_event
+    log_audit_event(db, event, user_id=user.id, email=user.email,
+                    ip_address=request.client.host if request.client else None,
+                    details=json.dumps(details))
+
+
+def _brand_library_allowed() -> bool:
+    from shikari import licensing
+    return licensing.has_feature(licensing.FEATURE_BRAND_LIBRARY)
+
+
+@app.get("/api/report-branding/brands")
+def brand_library_list(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """The client brands in the library (admin only). `licensed` says whether a Services licence
+    lets them be chosen and used; without it they're read-only and reports fall back."""
+    from shikari.reports import brand_library
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    db.close()
+    return JSONResponse({"success": True, "licensed": _brand_library_allowed(),
+                         "brands": brand_library.list_brands()})
+
+
+@app.post("/api/report-branding/brands")
+async def brand_library_create(request: Request, name: str = Form(...), show_shikari: str = Form(""),
+                               shikari_session: Optional[str] = Cookie(None)):
+    """Add a client brand (admin only; needs a Services licence). Colours come as the palette slots."""
+    from shikari.reports import brand_library, theme as rtheme
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    try:
+        if not _brand_library_allowed():
+            return JSONResponse({"success": False, "error": "A brand per client is part of the Services "
+                                 "edition."}, status_code=402)
+        form = await request.form()
+        colours = {n: form.get(n, "") for n, _, _ in rtheme.SLOTS}
+        brand = brand_library.create_brand(name, colours, show_shikari in ("1", "true", "on", "yes"))
+        _brand_audit(db, request, user, "brand_created", brand=brand["name"], brand_id=brand["id"])
+        return JSONResponse({"success": True, "brand": brand})
+    finally:
+        db.close()
+
+
+@app.post("/api/report-branding/brands/{brand_id}")
+async def brand_library_update(brand_id: str, request: Request, name: str = Form(""),
+                               show_shikari: str = Form(""),
+                               shikari_session: Optional[str] = Cookie(None)):
+    """Change a client brand's palette, name or co-brand flag (admin only; needs Services)."""
+    from shikari.reports import brand_library, theme as rtheme
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    try:
+        if not _brand_library_allowed():
+            return JSONResponse({"success": False, "error": "A brand per client is part of the Services "
+                                 "edition."}, status_code=402)
+        form = await request.form()
+        colours = {n: form.get(n, "") for n, _, _ in rtheme.SLOTS}
+        brand = brand_library.update_brand(brand_id, name=name or None, colours=colours,
+                                           show_shikari=show_shikari in ("1", "true", "on", "yes"))
+        if brand is None:
+            return JSONResponse({"success": False, "error": "No such brand"}, status_code=404)
+        _brand_audit(db, request, user, "brand_updated", brand=brand["name"], brand_id=brand_id)
+        return JSONResponse({"success": True, "brand": brand})
+    finally:
+        db.close()
+
+
+@app.post("/api/report-branding/brands/{brand_id}/delete")
+def brand_library_delete(brand_id: str, request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """Remove a client brand (admin only; needs Services). Assessments that named it fall back."""
+    from shikari.reports import brand_library
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    try:
+        if not _brand_library_allowed():
+            return JSONResponse({"success": False, "error": "A brand per client is part of the Services "
+                                 "edition."}, status_code=402)
+        had = brand_library.get_brand(brand_id)
+        if not brand_library.delete_brand(brand_id):
+            return JSONResponse({"success": False, "error": "No such brand"}, status_code=404)
+        _brand_audit(db, request, user, "brand_deleted", brand=had.get("name") if had else "", brand_id=brand_id)
+        return JSONResponse({"success": True})
+    finally:
+        db.close()
+
+
+@app.post("/api/report-branding/brands/{brand_id}/logo")
+async def brand_library_logo_upload(brand_id: str, request: Request, slot: int = Form(...),
+                                    logo: UploadFile = File(...),
+                                    shikari_session: Optional[str] = Cookie(None)):
+    """Upload a logo into a client brand's slot (0-based; admin only; needs Services). The image is
+    checked and redrawn as a clean PNG (PNG or JPEG only)."""
+    from shikari.reports import brand_library
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    try:
+        if not _brand_library_allowed():
+            return JSONResponse({"success": False, "error": "A brand per client is part of the Services "
+                                 "edition."}, status_code=402)
+        data = await logo.read()
+        try:
+            brand_library.save_logo(brand_id, slot, data)
+        except brand_library.LogoProblem as exc:
+            return JSONResponse({"success": False, "error": str(exc)}, status_code=422)
+        except ValueError as exc:
+            return JSONResponse({"success": False, "error": str(exc)}, status_code=400)
+        _brand_audit(db, request, user, "brand_logo_set", brand_id=brand_id, slot=slot)
+        return JSONResponse({"success": True})
+    finally:
+        db.close()
+
+
+@app.post("/api/report-branding/brands/{brand_id}/logo/delete")
+def brand_library_logo_delete(brand_id: str, request: Request, slot: int = Form(...),
+                              shikari_session: Optional[str] = Cookie(None)):
+    """Remove a logo from a client brand's slot (admin only; needs Services)."""
+    from shikari.reports import brand_library
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    try:
+        if not _brand_library_allowed():
+            return JSONResponse({"success": False, "error": "A brand per client is part of the Services "
+                                 "edition."}, status_code=402)
+        brand_library.remove_logo(brand_id, slot)
+        _brand_audit(db, request, user, "brand_logo_removed", brand_id=brand_id, slot=slot)
+        return JSONResponse({"success": True})
+    finally:
+        db.close()
+
+
+@app.get("/api/report-branding/brands/{brand_id}/logo/{slot}")
+def brand_library_logo(brand_id: str, slot: int, request: Request,
+                       shikari_session: Optional[str] = Cookie(None)):
+    """Stream a client brand's logo (admin only), for the settings-page thumbnails."""
+    from fastapi.responses import Response
+    from shikari.reports import brand_library
+
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, JSONResponse):
+        return auth
+    user, db = auth
+    db.close()
+    p = brand_library._logo_path(brand_id, slot)
+    if not (0 <= slot < brand_library.MAX_LOGOS and p.exists()):
+        return Response(status_code=404)
+    return Response(content=p.read_bytes(), media_type="image/png", headers={"Cache-Control": "no-store"})
 
 
 async def _licence_text(licence: str, file) -> Optional[str]:
@@ -9863,6 +10037,29 @@ def assessment_create(request: Request, name: str = Form(...), target: str = For
     return JSONResponse({"success": True, "id": aid})
 
 
+@app.post("/api/assessments/{assessment_id}/brand")
+def assessment_set_brand(assessment_id: int, request: Request, brand: str = Form(""),
+                         shikari_session: Optional[str] = Cookie(None)):
+    """Name the client brand this assessment's reports should wear (empty = the installation brand).
+    The choice is stored whatever the edition; whether it's used is decided at render time by the
+    `brand-library` licence (Services)."""
+    from shikari.database.models import Assessment
+
+    auth = require_auth(request, shikari_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
+    user, db = auth
+    try:
+        a = db.query(Assessment).filter(Assessment.id == assessment_id, Assessment.user_id == user.id).first()
+        if not a:
+            return JSONResponse({"success": False, "error": "No such assessment"}, status_code=404)
+        a.brand = brand.strip() or None
+        db.commit()
+    finally:
+        db.close()
+    return JSONResponse({"success": True, "brand": brand.strip()})
+
+
 @app.get("/api/threat-library/macat-export")
 def threat_library_macat_export(request: Request, shikari_session: Optional[str] = Cookie(None)):
     """The user's threat-library test cases as a MACATable library TOML (MACAT/VECTR interop)."""
@@ -9966,11 +10163,16 @@ def assessment_detail(assessment_id: int, request: Request, shikari_session: Opt
                 "detection_file": r.detection_file, "notes": r.notes,
                 "detections": len(detection_files_for(GENERATE_DIR, r.technique_id)),
             })
-        meta = {"id": a.id, "name": a.name, "target": a.target, "operator": a.operator, "run_date": a.run_date}
+        meta = {"id": a.id, "name": a.name, "target": a.target, "operator": a.operator,
+                "run_date": a.run_date, "brand": a.brand}
     finally:
         db.close()
+    from shikari import licensing
+    from shikari.reports import brand_library
     return templates.TemplateResponse("assessment_detail.html", {
-        "request": request, "user": user, "assessment": meta, "results": rows})
+        "request": request, "user": user, "assessment": meta, "results": rows,
+        "brand_library": licensing.has_feature(licensing.FEATURE_BRAND_LIBRARY),
+        "brands": brand_library.list_brands()})
 
 
 @app.post("/api/assessments/{assessment_id}/add")
@@ -10089,10 +10291,11 @@ def assessment_export(assessment_id: int, request: Request, fmt: str = Query("cs
                             "source": case.source if case else None})
         meta = {"name": a.name, "target": a.target, "operator": a.operator, "run_date": a.run_date, "notes": a.notes}
         name = sanitize_filename(a.name) or f"assessment_{a.id}"
+        brand_id = a.brand
     finally:
         db.close()
     if fmt in ("docx", "pdf"):
-        from shikari.reports import assessment_data, assessment_report
+        from shikari.reports import assessment_data, assessment_report, theme as rtheme
         from shikari.telemetry import lab
 
         try:
@@ -10100,7 +10303,8 @@ def assessment_export(assessment_id: int, request: Request, fmt: str = Query("cs
                                            conclusion=conclusion[:5000], tlp=tlp)
         except ValueError as e:
             return JSONResponse({"error": str(e)}, status_code=400)
-        body = assessment_report.render(report, fmt)
+        # The assessment's client brand under Services, else the installation brand, else stock.
+        body = assessment_report.render(report, fmt, theme=rtheme.theme_for_assessment(brand_id))
         media = ("application/pdf" if fmt == "pdf" else
                  "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
         return Response(content=body, media_type=media,
@@ -13669,7 +13873,7 @@ async def create_user(request: Request, shikari_session: Optional[str] = Cookie(
         from shikari import licensing
         active_users = db.query(User).filter(User.is_active.is_(True)).count()
         if not licensing.can_add_user(active_users):
-            return {"success": False, "requires_licence": "teams",
+            return {"success": False, "requires_seats": True,
                     "error": f"This install allows {licensing.seats_allowed()} accounts. Add a Pro or "
                              "Services licence with more seats to create more (Report branding → Licence)."}
 

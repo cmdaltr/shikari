@@ -348,6 +348,7 @@ def to_pdf(c: Dict, figs: Optional[Dict[str, bytes]] = None) -> bytes:
     return branded.to_pdf(cover(c), blocks(c, figs if figs is not None else _figures(c)))
 
 
-def render(c: Dict, fmt: str) -> bytes:
-    """The report as 'docx' or 'pdf'."""
-    return branded.render(cover(c), blocks(c, _figures(c)), fmt)
+def render(c: Dict, fmt: str, theme=None) -> bytes:
+    """The report as 'docx' or 'pdf', in the given theme (the assessment's client brand, the
+    installation brand, or the stock look when none is passed)."""
+    return branded.render(cover(c), blocks(c, _figures(c)), fmt, theme=theme)
