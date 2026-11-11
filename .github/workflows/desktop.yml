@@ -186,13 +186,17 @@ jobs:
           if [ "$RUNNER_OS" = Linux ]; then
             # Not Briefcase: its system package runs on the distro's Python. desktop/build_deb.py bundles
             # one; PyGObject and pycairo compile against the distro's GTK headers
-            # GitHub's apt mirror resolves intermittently; retry before giving up
+            # The runner's Azure apt mirror fails DNS for whole jobs ("Temporary failure resolving");
+            # it's broken IPv6 + a flaky mirror. Force IPv4 and use Canonical's archive, then retry.
+            echo 'Acquire::ForceIPv4 "true";' | sudo tee /etc/apt/apt.conf.d/99force-ipv4 >/dev/null
+            sudo sed -i 's|mirror+file:/etc/apt/apt-mirrors.txt|http://archive.ubuntu.com/ubuntu/|g' /etc/apt/sources.list 2>/dev/null || true
+            [ -f /etc/apt/apt-mirrors.txt ] && echo 'http://archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
             ok=
             for i in 1 2 3; do
               sudo apt-get update -qq \
                 && sudo apt-get install -y -qq libcairo2-dev libgirepository1.0-dev pkg-config \
                 && { ok=1; break; }
-              echo "apt failed (attempt $i/3), retrying in 15s"; sleep 15
+              echo "apt failed (attempt $i/3), retrying in 20s"; sleep 20
             done
             [ -n "$ok" ] || { echo "apt-get failed after 3 attempts"; exit 1; }
             python "$GITHUB_WORKSPACE/desktop/build_deb.py" --stage . --out dist
@@ -279,10 +283,15 @@ jobs:
       - name: Install (Linux)
         if: runner.os == 'Linux'
         run: |
+          # Same flaky Azure mirror as the build job; force IPv4 and use Canonical's archive. 24.04
+          # keeps its sources in deb822 (.sources); install.sh's own apt picks up this config too.
+          echo 'Acquire::ForceIPv4 "true";' | sudo tee /etc/apt/apt.conf.d/99force-ipv4 >/dev/null
+          sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+          [ -f /etc/apt/apt-mirrors.txt ] && echo 'http://archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
           ok=
           for i in 1 2 3; do
             sudo apt-get update -qq && sudo apt-get install -y -qq xvfb && { ok=1; break; }
-            echo "apt failed (attempt $i/3), retrying in 15s"; sleep 15
+            echo "apt failed (attempt $i/3), retrying in 20s"; sleep 20
           done
           [ -n "$ok" ] || { echo "apt-get failed after 3 attempts"; exit 1; }
           sh src/desktop/install.sh --file out/*.deb
