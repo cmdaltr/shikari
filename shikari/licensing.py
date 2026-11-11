@@ -8,12 +8,11 @@
                run Shikari for clients as a managed service, which the Elastic License 2.0
                otherwise forbids (COMMERCIAL-LICENSE.md)
 
-This follows the licence format shared by ostraka, Shikari and Rowanholt (docs/LICENSING_MODEL.md).
-A licence is one line, `shikari-licence-1.<payload>.<signature>`: the payload is base64url of
-canonical JSON (sorted keys, compact), and the signature is Ed25519 over the ASCII of everything
-before the last dot, prefix included, so a licence for another product or format version can't be
-passed off as this one. Only public keys ship, so a licence is checked offline and can't be forged
-or edited. Each product has its own key; the private half stays with the licensor
+The licence line, its checking, the editions, the features and grace are the suite's shared ones,
+from `samarkand.licence` (docs/LICENSING_MODEL.md): this module binds them to Shikari's id, public
+keys and free seat number, and keeps Shikari's own parts: where the licence is stored, accepting the
+commercial terms, and the seat rule. Only public keys ship, so a licence is checked offline and can't
+be forged or edited. Each product has its own key; the private half stays with the licensor
 (`scripts/admin/sign_licence.py`). Rotating it means adding the new public half to PUBLIC_KEYS.
 
 What a licence grants is its edition's features (EDITION_FEATURES) plus any it names; "*" grants
@@ -29,60 +28,47 @@ shikari/legal/, whose version terms() reads from the text) on the licensee's beh
 file, `data/licence.json` (or the path in SHIKARI_LICENCE), keeps the line with that acceptance:
 {"licence", "terms_version", "accepted_by", "accepted_by_name", "accepted_at"}. A file holding only
 the bare line, as earlier builds wrote, still reads, with no acceptance recorded. It is read back
-through an mtime cache. The storage is Shikari's own; the format and behaviour are shared.
+through an mtime cache.
 """
 
 from __future__ import annotations
 
-import base64
-import binascii
 import json
 import re
 import uuid
-from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta, timezone
-from enum import Enum
+from dataclasses import dataclass, fields
+from datetime import date, datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Optional, Tuple
+
+from samarkand import licence as shared
 
 from shikari import paths
 
 PRODUCT = "shikari"
-FORMAT = f"{PRODUCT}-licence-1"
+NAME = "Shikari"
 # The free tier: two accounts, so an operator and a reviewer can work together. More seats need a Pro or Services licence; the licence's own
 # `seats` field sets how many. The limit applies only to creating new accounts (never retroactively).
 FREE_SEATS = 2
-GRACE = timedelta(days=30)
+GRACE = shared.GRACE
 # Raw Ed25519 public keys, hex (a tuple, so a key can be rotated by adding the new one). The matching
 # private key is held by the licensor and never ships.
 PUBLIC_KEYS: Tuple[str, ...] = ("e499f52ec803749de5d97429a632e140d98f81b8b528f61540dac3c8b3ecb282",)
 
+Edition = shared.Edition
+Standing = shared.Standing
+LicenceProblem = shared.LicenceProblem
 
-class Edition(str, Enum):
-    FREE = "free"
-    PRO = "pro"
-    SERVICES = "services"
-
-
-# Feature ids: short, kebab-case, stable. docs/LICENSING_MODEL.md says what each gates. The same
-# ids across ostraka, Shikari and Rowanholt (Ben, 11 November 2026). Seats are the licence's own
-# `seats`, not a feature, so there is no "teams" id.
-FEATURE_REPORT_BRANDING = "report-branding"   # one brand for the whole installation
-FEATURE_BRAND_LIBRARY = "brand-library"       # a brand per client, chosen per assessment
-FEATURE_AUTOMATION = "automation"             # webhooks fire; checked at delivery
-FEATURE_MANAGED_SERVICE = "managed-service"   # a right in COMMERCIAL-LICENSE.md, not a switch
-FEATURES = (FEATURE_REPORT_BRANDING, FEATURE_BRAND_LIBRARY, FEATURE_AUTOMATION, FEATURE_MANAGED_SERVICE)
-WILDCARD = "*"
-
-# Shikari's split (docs/LICENSING_MODEL.md): Pro brands the installation and fires webhooks;
-# Services adds a brand per client and the managed-service right. The features are the same in
-# every product; only FREE_SEATS differs.
-EDITION_FEATURES = {
-    Edition.FREE: frozenset(),
-    Edition.PRO: frozenset({FEATURE_REPORT_BRANDING, FEATURE_AUTOMATION}),
-    Edition.SERVICES: frozenset({FEATURE_REPORT_BRANDING, FEATURE_AUTOMATION,
-                                 FEATURE_BRAND_LIBRARY, FEATURE_MANAGED_SERVICE}),
-}
+# Feature ids, the same in every product (docs/LICENSING_MODEL.md says what each gates). Seats are
+# the licence's own `seats`, not a feature, so there is no "teams" id.
+FEATURE_REPORT_BRANDING = shared.REPORT_BRANDING   # one brand for the whole installation
+FEATURE_BRAND_LIBRARY = shared.BRAND_LIBRARY       # a brand per client, chosen per assessment
+FEATURE_AUTOMATION = shared.AUTOMATION             # webhooks fire; checked at delivery
+FEATURE_MANAGED_SERVICE = shared.MANAGED_SERVICE   # a right in COMMERCIAL-LICENSE.md, not a switch
+FEATURES = shared.FEATURES
+WILDCARD = shared.WILDCARD
+EDITION_FEATURES = shared.EDITION_FEATURES
 
 INSTALL_PATH = paths.DATA / "licence.json"
 # The terms an admin accepts on install. Packaged with the code (not read from the repo root) because
@@ -90,164 +76,43 @@ INSTALL_PATH = paths.DATA / "licence.json"
 TERMS = Path(__file__).parent / "legal" / "COMMERCIAL-LICENSE.md"
 
 
-class LicenceProblem(ValueError):
-    """A licence that can't be used, with a reason an admin can act on."""
-
-
 @dataclass(frozen=True)
-class Licence:
-    licence_id: str
-    licensee: str
-    edition: Edition
-    seats: Optional[int]          # None: unlimited
-    issued: date
-    expires: Optional[date]       # None: perpetual
-    email: str = ""
-    features: Tuple[str, ...] = ()   # beyond the edition's own
-    not_before: Optional[date] = None
+class Licence(shared.Licence):
+    """samarkand's licence, naming Shikari unless told otherwise."""
+
     product: str = PRODUCT
 
 
-@dataclass(frozen=True)
-class Standing:
-    """What the installation may do now."""
-
-    edition: Edition
-    seats: Optional[int]          # None: unlimited
-    state: str                    # "free", "pending", "active", "grace", "lapsed"
-    licence: Optional[Licence] = None
-    features: frozenset = field(default_factory=frozenset)
-
-    def has(self, feature: str) -> bool:
-        return feature in self.features or WILDCARD in self.features
-
-    @property
-    def custom_branding(self) -> bool:
-        """The installation may brand its reports (Pro and Services)."""
-        return self.has(FEATURE_REPORT_BRANDING)
-
-    @property
-    def brand_library(self) -> bool:
-        """The installation may keep a brand per client (Services)."""
-        return self.has(FEATURE_BRAND_LIBRARY)
-
-    @property
-    def organisation(self) -> str:
-        return self.licence.licensee if self.licence and self.state in ("active", "grace") else ""
+@lru_cache(maxsize=4)
+def _bound(keys: Tuple[str, ...], free_seats: int) -> shared.Rules:
+    return shared.Rules(PRODUCT, keys, free_seats=free_seats, name=NAME)
 
 
-def _b64(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
-
-
-def _unb64(text: str) -> bytes:
-    return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
-
-
-def _day(value: Optional[str]) -> Optional[date]:
-    return date.fromisoformat(value) if value else None
-
-
-def payload_of(licence: Licence) -> dict:
-    """The signed fields. Optional ones are left out rather than sent empty."""
-    out: dict = {
-        "licence_id": licence.licence_id,
-        "product": licence.product,
-        "licensee": licence.licensee,
-        "edition": licence.edition.value,
-        "seats": licence.seats,
-        "issued": licence.issued.isoformat(),
-        "expires": licence.expires.isoformat() if licence.expires else None,
-    }
-    if licence.email:
-        out["email"] = licence.email
-    if licence.features:
-        out["features"] = sorted(licence.features)
-    if licence.not_before:
-        out["not_before"] = licence.not_before.isoformat()
-    return out
+def _rules() -> shared.Rules:
+    """Shikari's rules, bound to PUBLIC_KEYS and FREE_SEATS as they are now (tests swap the keys)."""
+    return _bound(tuple(PUBLIC_KEYS), FREE_SEATS)
 
 
 def sign(private_key, licence: Licence) -> str:
-    """The licence as a line to send to the customer."""
-    canonical = json.dumps(payload_of(licence), sort_keys=True, separators=(",", ":"))
-    head = f"{licence.product}-licence-1.{_b64(canonical.encode())}"
-    return f"{head}.{_b64(private_key.sign(head.encode()))}"
+    """The licence as a line to send to the customer (the licensor's admin script only)."""
+    head = shared.head_of(licence)
+    return shared.line_of(head, private_key.sign(head.encode()))
 
 
 def parse(text: str) -> Licence:
     """A licence, once its signature checks out against one of PUBLIC_KEYS. Raises LicenceProblem."""
-    from cryptography.exceptions import InvalidSignature
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-
-    parts = (text or "").strip().split(".")
-    if len(parts) != 3 or not parts[0].endswith("-licence-1"):
-        raise LicenceProblem("That isn't a Shikari licence. Paste the whole line you were sent.")
-    if parts[0] != FORMAT:
-        product = parts[0].removesuffix("-licence-1")
-        raise LicenceProblem(f"That's a licence for {product}, not Shikari.")
-    head = f"{parts[0]}.{parts[1]}"
-    try:
-        signature = _unb64(parts[2])
-        payload = json.loads(_unb64(parts[1]))
-    except (binascii.Error, ValueError) as exc:
-        raise LicenceProblem("That licence is damaged. Paste the whole line you were sent.") from exc
-    for key in PUBLIC_KEYS:
-        try:
-            Ed25519PublicKey.from_public_bytes(bytes.fromhex(key)).verify(signature, head.encode())
-            break
-        except InvalidSignature:
-            continue
-    else:
-        raise LicenceProblem("That licence wasn't issued for Shikari, or has been altered.")
-    try:
-        licence = Licence(
-            licence_id=str(payload["licence_id"]),
-            product=str(payload["product"]),
-            licensee=str(payload["licensee"]),
-            email=str(payload.get("email", "")),
-            edition=Edition(payload["edition"]),
-            seats=None if payload["seats"] is None else int(payload["seats"]),
-            features=tuple(str(f) for f in payload.get("features", [])),
-            issued=date.fromisoformat(payload["issued"]),
-            not_before=_day(payload.get("not_before")),
-            expires=_day(payload["expires"]),
-        )
-    except (KeyError, ValueError, TypeError) as exc:
-        raise LicenceProblem(
-            "That licence is from a newer version of Shikari. Update, then try again."
-        ) from exc
-    if licence.product != PRODUCT:
-        raise LicenceProblem(f"That's a licence for {licence.product}, not Shikari.")
-    if licence.edition is Edition.FREE or (licence.seats is not None and licence.seats < 1):
-        raise LicenceProblem("That licence grants nothing beyond the free edition.")
-    return licence
+    found = _rules().parse(text)
+    return Licence(**{f.name: getattr(found, f.name) for f in fields(found)})
 
 
 def standing(licence: Optional[Licence], now: Optional[datetime] = None) -> Standing:
     """The edition a licence (or none) gives at `now`. A licence runs from the start of its
     not_before day to the end of its expiry day, then 30 days' grace, then Free."""
-    free = Standing(Edition.FREE, FREE_SEATS, "free")
-    if licence is None:
-        return free
-    now = now or datetime.now(timezone.utc)
-    midnight = datetime.min.time()
-    if licence.not_before and now < datetime.combine(licence.not_before, midnight, timezone.utc):
-        return Standing(Edition.FREE, FREE_SEATS, "pending", licence)
-    granted = EDITION_FEATURES[licence.edition] | frozenset(licence.features)
-    paid = Standing(licence.edition, licence.seats, "active", licence, granted)
-    if licence.expires is None:
-        return paid
-    ends = datetime.combine(licence.expires + timedelta(days=1), midnight, timezone.utc)
-    if now < ends:
-        return paid
-    if now < ends + GRACE:
-        return Standing(licence.edition, licence.seats, "grace", licence, granted)
-    return Standing(Edition.FREE, FREE_SEATS, "lapsed", licence)
+    return _rules().standing(licence, now)
 
 
 def grace_ends(licence: Licence) -> Optional[date]:
-    return licence.expires + GRACE if licence.expires else None
+    return shared.grace_ends(licence)
 
 
 def new_id() -> str:
@@ -266,10 +131,7 @@ def terms() -> Tuple[str, str]:
 def check(text: str) -> Licence:
     """A licence that may be installed now: genuine and not already lapsed. Raises LicenceProblem.
     The admin page shows what it says before anyone accepts the terms for its licensee."""
-    licence = parse(text)
-    if standing(licence).state == "lapsed":
-        raise LicenceProblem(f"That licence ran out on {licence.expires.isoformat()}.")
-    return licence
+    return shared.check_installable(parse(text))
 
 
 def acceptance_problem(licence: Licence, accept_terms: bool, terms_version: Optional[str]) -> Optional[Tuple[int, str]]:
