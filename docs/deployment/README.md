@@ -20,7 +20,7 @@ For a single-user machine, `shikari start` or the desktop app is enough — you 
 Both run a single uvicorn worker. Shikari keeps session, lab-job and in-browser-console state
 in-process, so **more than one worker breaks reconnect and job polling** — don't raise it.
 
-The table shows the checkout + `install.sh`/`install-service.ps1` route. Both platforms also have a
+The table shows the checkout + `deploy/linux/install.sh` / `deploy/windows/install-service.ps1` route. Both platforms also have a
 self-contained native package that bundles its own Python and installs a real service — see
 [Native packages](#native-packages-deb--rpm) (Linux) and
 [Self-contained Windows bundle](#self-contained-windows-bundle-first-class-service).
@@ -97,7 +97,7 @@ sudo firewall-cmd --reload
 
 ### SELinux (Rocky / RHEL)
 
-`install.sh` labels the Shikari port as `http_port_t` when SELinux is enforcing and `semanage` is present.
+`deploy/linux/install.sh` labels the Shikari port as `http_port_t` when SELinux is enforcing and `semanage` is present.
 If you let the proxy reach `127.0.0.1:32453`, also allow proxy egress:
 
 ```bash
@@ -128,7 +128,7 @@ nssm set Shikari Start SERVICE_AUTO_START
 
 - **Linux:** pull a new checkout and re-run `sudo deploy/linux/install.sh` — it syncs code, updates
   dependencies and restarts, leaving `/var/lib/shikari` (database, `bespoke/`, telemetry) untouched.
-- **Windows:** re-run `install-service.ps1` from the new checkout.
+- **Windows:** re-run `deploy/windows/install-service.ps1` from the new checkout.
 
 Take a backup first.
 
@@ -154,7 +154,7 @@ does the same on Windows.
 
 ## Native packages (`.deb` / `.rpm`)
 
-As an alternative to the checkout + `install.sh` route above, `deploy/packaging/build_server_pkg.py` builds
+As an alternative to the checkout + `deploy/linux/install.sh` route above, `deploy/packaging/build_server_pkg.py` builds
 a native package carrying its **own** Python — a SHA-256-pinned standalone CPython (python-build-standalone),
 the same mechanism as the desktop `.deb`. No system Python, no venv, no checkout on the server. It installs
 as `shikari-server` and puts the `shikari` CLI on `PATH`. It can't be installed alongside the desktop
