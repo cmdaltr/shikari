@@ -336,6 +336,8 @@ Copyright (c) 2026 cmdaltr.
 
 Shikari is licensed under the [Elastic License 2.0](LICENSE): you can use, copy and change it for free (the **Free** edition), but you may not provide it to others as a hosted or managed service, or get around its licence key. The **Pro** and **Services** editions add the terms in [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md), switched on by a licence key — Pro for organisations using Shikari for themselves, Services for MSSPs and consultancies running it for clients. Contact @cmdaltr on GitHub. Releases published before this (under the AGPL) keep that licence.
 
+**By downloading, installing or using Shikari, you agree to the [Elastic License 2.0](LICENSE) — and, where you install a Pro or Services licence key, to the terms in [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md). If you do not agree, do not install or use the software.** This is why the installers don't stop to ask: the terms ship with every package (the `.deb`/`.rpm` `copyright` file, and in-app under Help → Licence), and use is what signifies acceptance.
+
 The whole core product is free, for two accounts. **Pro** brands your reports with one installation-wide identity and fires webhooks; **Services** adds a brand per client (chosen on each assessment) and the right to run Shikari for clients as a managed service. See [docs/LICENSING_MODEL.md](docs/LICENSING_MODEL.md).
 
 **Shikari™** and the Shikari bateleur logo are trademarks of cmdaltr. The licence covers the software; it does not grant any right to use the Shikari name or logo, whether to brand a fork or otherwise.

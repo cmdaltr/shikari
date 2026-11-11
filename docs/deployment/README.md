@@ -193,6 +193,15 @@ alone afterwards, and `/var/lib/shikari` is untouched. A full purge (`apt purge 
 then manual cleanup) removes the data and the user. TLS, firewall and monitoring are exactly as above — the
 package only changes how the code and Python get onto the box.
 
+> **Built by hand for now (possible future CI job).** The release workflow
+> (`.github/workflows/desktop.yml`) builds the desktop installers (`.dmg`/`.msi`/`.deb`) but not these
+> server packages — build them locally with the commands above, on the oldest distro you support.
+> Adding the `.rpm` (and the server `.deb`) to the release as their own CI jobs is a deliberate
+> *later* step, worth doing once a Rocky/RHEL customer wants a native package rather than
+> `deploy/linux/install.sh` — which already installs the same systemd service on RHEL 9 from a
+> checkout. Deferred on purpose: a `rockylinux:9` `rpmbuild` job plus the per-arch pinned
+> standalone-CPython SHAs are maintenance a not-yet-existent RHEL customer doesn't justify.
+
 The package ships the ATT&CK STIX bundle and seeds it into `SHIKARI_HOME` on install, so the server **starts
 without network** on first boot and refreshes when it can reach MITRE. On a host with no egress (air-gapped,
 or SELinux denying the service outbound), the server still starts on the seeded data; the parts that need
