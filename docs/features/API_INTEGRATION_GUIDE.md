@@ -731,7 +731,7 @@ curl -X POST http://127.0.0.1:32453/api/webhooks -H "Authorization: Bearer $ADMI
 # returns the webhook with its secret: the only time the secret is shown
 ```
 
-The body is `{"event", "sent_at", "data"}` with an `X-Shikari-Event` header and `X-Shikari-Signature: sha256=<hex>`, an HMAC-SHA256 of the raw body under the webhook's secret. Check it before trusting a delivery:
+The body is `{"event", "sent_at", "data"}`, `sent_at` in ISO 8601 UTC (`2026-11-11T12:00:00+00:00`; builds before samarkand sent epoch seconds), with an `X-Shikari-Event` header and `X-Shikari-Signature: sha256=<hex>`, an HMAC-SHA256 of the raw body under the webhook's secret. Check it before trusting a delivery:
 
 ```python
 import hashlib, hmac
@@ -739,7 +739,7 @@ expected = "sha256=" + hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdi
 assert hmac.compare_digest(expected, request.headers["X-Shikari-Signature"])
 ```
 
-Deliveries are tried three times with backoff (a 4xx other than 429 isn't retried), and the last 20 per webhook show in `GET /api/webhooks`. `POST /api/webhooks/<id>/test` sends a test event and returns the result; `PATCH` changes `url`, `events`, `enabled` or `description`; `DELETE` removes it. Set `SHIKARI_PUBLIC_URL` (e.g. `https://shikari.example.com`) to make `results_url` absolute. Webhooks and their secrets are stored in `data/webhooks.json`, never in git.
+The URL must be `https://`, or plain `http://` to localhost, a loopback or an RFC 1918 address; link-local addresses (cloud metadata) and credentials in the URL are refused, and redirects aren't followed, so a redirect is recorded as a failure. Deliveries are tried three times with backoff (a 4xx other than 429 isn't retried), and the last 20 per webhook show in `GET /api/webhooks`. `POST /api/webhooks/<id>/test` sends a test event and returns the result; `PATCH` changes `url`, `events`, `enabled` or `description`; `DELETE` removes it. Set `SHIKARI_PUBLIC_URL` (e.g. `https://shikari.example.com`) to make `results_url` absolute. Webhooks and their secrets are stored in `data/webhooks.json`, never in git.
 
 ---
 

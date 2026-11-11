@@ -24,7 +24,7 @@ Record the detection that fired and any notes alongside. Each row links to the l
 Outcomes export three ways:
 
 - **CSV** — a flat row per technique with both outcomes, the detection and notes.
-- **ATT&CK Navigator layer** — the matrix scored by blue outcome, shading from "not logged" through "logged" and "alerted" to "prevented".
+- **ATT&CK Navigator layer** — the matrix scored by blue outcome, shading from "not logged" through "logged" and "alerted" to "prevented". The layer names the ATT&CK release Shikari has loaded and lists every Enterprise platform, so cloud-only techniques aren't filtered out of sight.
 - **Report (Word or PDF)** — the document to hand the client or the SOC at the end of the campaign (#42).
 
 ## The assessment report

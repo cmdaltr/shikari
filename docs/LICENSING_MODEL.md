@@ -2,7 +2,9 @@
 
 ostraka, Shikari and Rowanholt share one licensing model (Ben, 11 November 2026). The first part of
 this file is that shared specification, kept identical in each product's `docs/LICENSING_MODEL.md`;
-the second is this product's own split (Shikari, below). ostraka is the reference implementation.
+the second is this product's own split (Shikari, below). The reference implementation of the
+licence line and the webhooks is samarkand (`samarkand.licence`, `samarkand.webhooks`), the package
+all three products use for them; each binds it to its own id, public keys and free seat number.
 
 ## Shared across ostraka, Shikari and Rowanholt
 
@@ -38,12 +40,13 @@ differs:
 | `automation` | Pro | Signed webhooks: the product calls the customer's systems when something happens. Checked when a webhook is sent, so one configured on Free is kept but doesn't fire |
 | `managed-service` | Services | The right in `COMMERCIAL-LICENSE.md` section 3 to run the product for clients. Not a switch |
 
-Webhooks work the same everywhere, as Shikari's (`shikari/webhooks.py`, the reference for them): an
-admin registers a URL and the events it wants; each delivery is a POST of
-`{"event", "sent_at", "data"}` with `X-<Product>-Event` and, when the webhook has a secret,
-`X-<Product>-Signature: sha256=<hex HMAC-SHA256 of the raw body>`; three tries with backoff; the last
-20 deliveries kept per webhook for the admin page. Webhook bodies pass the same masking as the
-product's other outward messages.
+Webhooks work the same everywhere, through `samarkand.webhooks` (the reference for them): an admin
+registers a URL and the events it wants; each delivery is a POST of `{"event", "sent_at", "data"}`
+(`sent_at` ISO 8601 in UTC) with `X-<Product>-Event` and, when the webhook has a secret,
+`X-<Product>-Signature: sha256=<hex HMAC-SHA256 of the raw body>`; three tries with backoff; the
+last 20 deliveries kept per webhook for the admin page; https anywhere, plain http only to this
+machine or a private address, never a link-local address or credentials in the URL, and redirects
+not followed. Webhook bodies pass the same masking as the product's other outward messages.
 
 ### The licence
 

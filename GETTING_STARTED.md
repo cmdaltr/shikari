@@ -10,7 +10,7 @@ Installing Shikari, signing in, and the configuration it needs before its querie
 
 ## Capabilities and dependencies
 
-Shikari's core runs on Python alone, or in Docker, with nothing optional added: hunts, report analysis, company profiles and exposure maps, research, SIEM query generation for all four platforms, ATT&CK traversal and MITRESaw, Coverage, Flows, the Library, Detections as code, the threat feed, Cyber Powers, and IOC search with STIX, TAXII and MISP import and export. The maps render as server-side SVG and geolocate over a public HTTP service, and STIX/MISP are handled with `stix2` and `requests` — all core dependencies, so none of this needs an extra.
+Shikari's core runs on Python alone, or in Docker, with nothing optional added: hunts, report analysis, company profiles and exposure maps, research, SIEM query generation for all four platforms, ATT&CK traversal and MITRESaw, Coverage, Flows, the Library, Detections as code, the threat feed, Cyber Powers, and IOC search with STIX, TAXII and MISP import and export. The maps render as server-side SVG and geolocate over a public HTTP service, and STIX, TAXII and MISP are handled with `samarkand` and `requests` — all core dependencies, so none of this needs an extra.
 
 Everything else is opt-in. Each capability below is simply unavailable when its tool is missing; nothing breaks the app.
 
