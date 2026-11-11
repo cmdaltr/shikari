@@ -22,7 +22,7 @@ in-process, so **more than one worker breaks reconnect and job polling** — don
 
 The table shows the checkout + `deploy/linux/install.sh` / `deploy/windows/install-service.ps1` route. Both platforms also have a
 self-contained native package that bundles its own Python and installs a real service — see
-[Native packages](#native-packages-deb--rpm) (Linux) and
+[Native server packages](#native-server-packages) (Linux `.deb`/`.rpm`) and
 [Self-contained Windows bundle](#self-contained-windows-bundle-first-class-service).
 
 ## Linux (Ubuntu / Debian / Rocky / RHEL 9)
@@ -152,7 +152,7 @@ On Windows, archive `%ProgramData%\Shikari` while the task is stopped.
 `http://127.0.0.1:<port>/health` on the box). systemd restarts the service on failure; the Scheduled Task
 does the same on Windows.
 
-## Native packages (`.deb` / `.rpm`)
+## Native server packages
 
 As an alternative to the checkout + `deploy/linux/install.sh` route above, `deploy/packaging/build_server_pkg.py` builds
 a native package carrying its **own** Python — a SHA-256-pinned standalone CPython (python-build-standalone),
