@@ -364,6 +364,31 @@ def bundle_version(bundle_path: Optional[Path] = None) -> str:
     return _bundle_version_cache["version"]
 
 
+_bundle_release_cache: Dict = {"mtime": None, "release": None}
+
+
+def bundle_release(bundle_path: Optional[Path] = None):
+    """The ATT&CK release in Shikari's cached bundle, as Navigator layers need it: its version and
+    each domain's platforms (a `samarkand.navigator.Release`). None without a readable bundle. Cached
+    on the file's mtime, since reading the bundle takes a moment."""
+    from samarkand import navigator
+
+    path = Path(bundle_path) if bundle_path is not None else _SHIKARI_BUNDLE
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        return None
+    if _bundle_release_cache["mtime"] != (path, mtime):
+        release = None
+        try:
+            with open(path, encoding="utf-8") as fh:
+                release = navigator.release_of(json.load(fh))
+        except (OSError, ValueError, AttributeError):
+            pass
+        _bundle_release_cache.update(mtime=(path, mtime), release=release)
+    return _bundle_release_cache["release"]
+
+
 def built_version(csv_path: Optional[Path] = None) -> str:
     """The ATT&CK version the procedures CSV was built from (its .meta.json); "" if unknown."""
     meta = _read_meta(Path(csv_path) if csv_path is not None else _DEFAULT_CSV) or {}

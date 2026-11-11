@@ -60,3 +60,18 @@ def test_navigator_scores_by_blue():
     assert scores["T1059.001"] == 3 and scores["T1003.001"] == 1
     assert layer["domain"] == "enterprise-attack"
     assert "Red: executed" in layer["techniques"][0]["comment"]
+
+
+def test_navigator_names_the_loaded_attack_release(tmp_path, monkeypatch):
+    from shikari.mitre import procedures
+
+    bundle = tmp_path / "enterprise-attack.json"
+    bundle.write_text(json.dumps({"type": "bundle", "objects": [
+        {"type": "x-mitre-collection", "x_mitre_version": "18.1"},
+        {"type": "attack-pattern", "x_mitre_domains": ["enterprise-attack"], "x_mitre_platforms": ["Windows", "IaaS"]},
+    ]}))
+    monkeypatch.setattr(procedures, "_SHIKARI_BUNDLE", bundle)
+    layer = json.loads(results_to_navigator("Camp", [{"technique_id": "T1059.001", "blue_outcome": "alerted"}]))
+    assert layer["versions"]["attack"] == "18"
+    assert layer["filters"]["platforms"] == ["IaaS", "Windows"]
+    assert layer["gradient"]["maxValue"] == 4
