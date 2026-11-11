@@ -81,6 +81,7 @@ Plain-language guide to every part of Shikari, one page each: what it's for, how
 | [PARENT_TECHNIQUE_OPTION.md](features/PARENT_TECHNIQUE_OPTION.md) | Automatic sub-technique expansion |
 | [REPORT_GENERATION.md](features/REPORT_GENERATION.md) | Export detections as Word, PDF, HTML reports |
 | [REPORT_BRANDING.md](features/REPORT_BRANDING.md) | Custom logos + palette on reports (commercial/Pro, signed licence) |
+| [LICENSING_MODEL.md](LICENSING_MODEL.md) | Open-core split — what's free vs paid, reserved feature ids |
 | [RESPONSE_ACTIONS.md](features/RESPONSE_ACTIONS.md) | Automated response action recommendations |
 | [CALDERA_WINDOWS_CAPTURE.md](features/CALDERA_WINDOWS_CAPTURE.md) | CALDERA endpoint-log capture on a Windows host — how it integrates with Shikari and where each capture's results land |
 | [SIEM_EXPORT_PACKS.md](features/SIEM_EXPORT_PACKS.md) | Export packs for your own Elastic, Splunk or Wazuh: contents, tested versions, known limits |

@@ -176,6 +176,32 @@ def test_wildcard_grants_everything(test_key, tmp_path, monkeypatch):
     assert licensing.has_feature("anything-at-all") is True
 
 
+# ── teams tier: seat limit ──
+
+def test_seat_limit_without_teams_licence(monkeypatch):
+    monkeypatch.setattr(licensing, "has_feature", lambda f: False)
+    assert licensing.seats_allowed() == licensing.FREE_SEATS
+    assert licensing.can_add_user(0) is True       # first account is free
+    assert licensing.can_add_user(1) is False      # a second needs teams
+
+
+def test_teams_licence_lifts_the_seat_limit(monkeypatch):
+    monkeypatch.setattr(licensing, "has_feature", lambda f: f == "teams")
+    assert licensing.seats_allowed() is None
+    assert licensing.can_add_user(0) is True
+    assert licensing.can_add_user(50) is True
+
+
+def test_teams_granted_by_signed_licence(test_key, tmp_path, monkeypatch):
+    monkeypatch.setattr(licensing, "INSTALL_PATH", tmp_path / "licence.json")
+    monkeypatch.setattr(licensing, "_cache", {"path": None, "mtime": None, "parsed": None})
+    monkeypatch.delenv("SHIKARI_LICENCE", raising=False)
+    monkeypatch.setattr(licensing.paths, "HOME", tmp_path)
+    licensing.install(test_key(_payload(features=["teams"])))
+    assert licensing.seats_allowed() is None
+    assert licensing.has_feature("report-branding") is False   # teams only; not a wildcard
+
+
 # ── the response-actions indicator-shape fix ──
 
 @pytest.mark.parametrize("indicators", [None, ["whoami", "net.exe"], {"cmd": ["a"], "sw": ["b"]},

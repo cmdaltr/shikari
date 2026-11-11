@@ -8565,6 +8565,21 @@ async def register(
                 status_code=400,
             )
 
+        # Seat limit: the free tier is a single operator. More accounts need a Teams licence.
+        # Only new accounts are capped; existing ones keep working.
+        from shikari import licensing
+        active_users = db.query(User).filter(User.is_active.is_(True)).count()
+        if not licensing.can_add_user(active_users):
+            record_attempt(rate_limit_key)
+            return templates.TemplateResponse(
+                "register.html",
+                {"request": request,
+                 "error": "This Shikari install is single-user. Additional accounts need a Teams "
+                          "licence — an administrator can add one under Report branding → Licence.",
+                 "csrf_token": next_csrf},
+                status_code=403,
+            )
+
         # Create new user
         new_user = User(
             email=email,
@@ -13540,6 +13555,14 @@ async def create_user(request: Request, shikari_session: Optional[str] = Cookie(
         existing_user = db.query(User).filter(User.email == email).first()
         if existing_user:
             return {"success": False, "error": "User with this email already exists"}
+
+        # Seat limit: the free tier is a single operator; more accounts need a Teams licence.
+        from shikari import licensing
+        active_users = db.query(User).filter(User.is_active.is_(True)).count()
+        if not licensing.can_add_user(active_users):
+            return {"success": False, "requires_licence": "teams",
+                    "error": "This install is single-user. Add a Teams licence to create more "
+                             "accounts (Report branding → Licence)."}
 
         # Create new user
         user_role = UserRole(role)

@@ -31,8 +31,16 @@ from shikari import paths
 _PUBLIC_KEY_HEX = "e499f52ec803749de5d97429a632e140d98f81b8b528f61540dac3c8b3ecb282"
 
 # Feature ids a licence may grant. "pro" / "all" grant every reserved feature at once.
+# See docs/LICENSING_MODEL.md for what each one gates and why.
 FEATURE_REPORT_BRANDING = "report-branding"
+FEATURE_TEAMS = "teams"              # more than one account, RBAC, JIT elevation, SSO, audit export
+FEATURE_AUTOMATION = "automation"    # scheduled runs, detections-as-code push/CI, webhooks, bulk API
+RESERVED_FEATURES = (FEATURE_REPORT_BRANDING, FEATURE_TEAMS, FEATURE_AUTOMATION)
 _WILDCARDS = {"pro", "all", "*"}
+
+# The single-operator free tier: one account. More seats need a `teams` licence. Existing accounts
+# are never disabled by this — it only caps new ones (enforced where accounts are created).
+FREE_SEATS = 1
 
 INSTALL_PATH = paths.DATA / "licence.json"
 
@@ -176,6 +184,19 @@ def has_feature(feature: str) -> bool:
         return False
     granted = {str(f).lower() for f in parsed["payload"].get("features", [])}
     return feature.lower() in granted or bool(granted & _WILDCARDS)
+
+
+def seats_allowed() -> Optional[int]:
+    """How many user accounts this install may hold. None means unlimited (a `teams` licence);
+    otherwise the single-operator free tier."""
+    return None if has_feature(FEATURE_TEAMS) else FREE_SEATS
+
+
+def can_add_user(active_count: int) -> bool:
+    """Whether another account may be created, given how many active accounts there are now.
+    Call this with the current active-user count at the point of creation."""
+    limit = seats_allowed()
+    return limit is None or active_count < limit
 
 
 def install(data) -> Tuple[bool, str]:

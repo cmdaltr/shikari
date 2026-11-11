@@ -22,9 +22,14 @@ they remain inactive and the software behaves as the stock open-source build.
 | Feature id | What it unlocks |
 |---|---|
 | `report-branding` | Custom logos and colour palette on the assessment, campaign-intelligence and detection/hunt reports |
+| `teams` | More than one user account, plus role-based access, just-in-time role elevation, single sign-on and audit-log export |
+| `automation` | Scheduled/automated runs, detections-as-code repository push and CI, webhooks, and bulk/API-driven generation |
 
 `pro` (or `all`) in a licence unlocks every reserved feature. The Licensor may add features to this
 list in later versions; a licence grants only the feature ids named in it (or a wildcard).
+
+Without a `teams` licence an install is limited to a single operator account (the free tier). The
+limit applies only to creating new accounts; existing accounts continue to work.
 
 ## 2. Grant
 
