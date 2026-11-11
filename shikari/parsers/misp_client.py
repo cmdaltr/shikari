@@ -2,8 +2,9 @@
 Pull events from a MISP instance (#19).
 
 A minimal MISP client over requests — no pymisp dependency. Queries the instance's
-``/events/restSearch`` with the operator's API key, then hands each event to the MISP importer and
-merges the techniques and IOCs, so a live MISP instance can be used as an Analyse input the same way
+``/events/restSearch`` with the operator's API key, reads the answer with ``samarkand.misp.events_of``
+(the suite's shared reader), then hands each event to the MISP importer and merges the techniques
+and IOCs, so a live MISP instance can be used as an Analyse input the same way
 a TAXII collection can. The API key is used for this request only; nothing is stored. No AI.
 """
 
@@ -12,14 +13,9 @@ from typing import Dict, List
 from urllib.parse import urlparse
 
 import requests
+from samarkand import misp
 
 from shikari.parsers.misp_import import parse_misp_event
-
-
-def _events(payload) -> List[dict]:
-    """restSearch returns {"response": [ {"Event": {...}}, ... ]} on current MISP, a bare list on older."""
-    body = payload.get("response", payload) if isinstance(payload, dict) else payload
-    return body if isinstance(body, list) else []
 
 
 def import_events(base_url: str, api_key: str, *, last: str = "30d", limit: int = 200,
@@ -40,14 +36,14 @@ def import_events(base_url: str, api_key: str, *, last: str = "30d", limit: int 
 
     r = requests.post(url, json=query, headers=headers, timeout=timeout, verify=verify_tls)
     r.raise_for_status()
-    events = _events(r.json())
+    events = misp.events_of(r.json())  # {"response": [...]} on current MISP, a bare list on older
 
     iocs: Dict[str, List[str]] = defaultdict(list)
     techniques: List[str] = []
     group_name = ""
     parsed = 0
     for wrapped in events:
-        ev = wrapped.get("Event", wrapped) if isinstance(wrapped, dict) else {}
+        ev = wrapped.get("Event", wrapped)
         res = parse_misp_event({"Event": ev})
         if not res.get("success"):
             continue

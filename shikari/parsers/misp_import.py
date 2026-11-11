@@ -2,9 +2,9 @@
 Import a MISP event as an Analyse input (#19).
 
 MISP event JSON (the standard export: {"Event": {...}} or a bare event) → the blog_analyzer
-extraction shape. Attributes map to IOCs by type, MITRE galaxies/tags to ATT&CK techniques, and
-a threat-actor galaxy or the event tags to the group name. Parsed directly from the JSON — no
-pymisp dependency. No AI.
+extraction shape. The event is read by `samarkand.misp.parse`, the suite's shared reader (plain
+JSON, no pymisp); this module maps its attributes to Shikari's IOC kinds by type, MITRE galaxies and
+tags to ATT&CK techniques, and a threat-actor galaxy to the group name. No AI.
 """
 
 import json
@@ -12,6 +12,8 @@ import re
 from collections import defaultdict
 from typing import Dict, List, Union
 from urllib.parse import urlparse
+
+from samarkand import misp
 
 _TID = re.compile(r"\bT\d{4}(?:\.\d{3})?\b")
 
@@ -41,75 +43,44 @@ def _add(iocs, kind, value):
         iocs[kind].append(value)
 
 
-def _attribute(iocs: Dict[str, List[str]], attr: Dict):
-    atype = str(attr.get("type", ""))
-    value = str(attr.get("value", "")).strip()
-    if not value:
+def _attribute(iocs: Dict[str, List[str]], attr: misp.ParsedAttribute):
+    # Composite types (filename|md5, domain|ip, regkey|value) carry both halves in `parts`
+    if attr.composite:
+        left, right = attr.parts
+        if attr.type == "domain|ip":
+            _add(iocs, "domain", left.value), _add(iocs, "ip", right.value)
+        elif attr.type.startswith("filename|"):
+            _add(iocs, "file", left.value), _add(iocs, "hash", right.value)
+        elif attr.type == "regkey|value":
+            _add(iocs, "reg", left.value)
         return
-    # Composite types (filename|md5, domain|ip, regkey|value) carry two values split by | —
-    # handled before the simple-kind lookup, since the composite type isn't in _ATTR_KIND.
-    if "|" in atype and "|" in value:
-        left, right = value.split("|", 1)
-        if atype == "domain|ip":
-            _add(iocs, "domain", left), _add(iocs, "ip", right)
-        elif atype.startswith("filename|"):
-            _add(iocs, "file", left), _add(iocs, "hash", right)
-        elif atype == "regkey|value":
-            _add(iocs, "reg", left)
-        return
-    kind = _ATTR_KIND.get(atype)
-    if not kind:
-        return
-    _add(iocs, kind, _host(value) if kind == "domain" and ("://" in value) else value)
-
-
-def _techniques_from_tags(tags: List, out: List[str]):
-    for tag in tags or []:
-        name = tag.get("name", "") if isinstance(tag, dict) else str(tag)
-        if "mitre" in name.lower() or "attack-pattern" in name.lower():
-            for tid in _TID.findall(name):
-                if tid not in out:
-                    out.append(tid)
+    kind = _ATTR_KIND.get(attr.type)
+    if kind:
+        _add(iocs, kind, _host(attr.value) if kind == "domain" and "://" in attr.value else attr.value)
 
 
 def parse_misp_event(data: Union[str, bytes, dict]) -> Dict:
     """A MISP event (JSON) → the blog_analyzer extraction shape."""
-    if isinstance(data, (str, bytes)):
-        data = json.loads(data)
-    event = data.get("Event", data) if isinstance(data, dict) else {}
-    if not isinstance(event, dict):
+    try:
+        event = misp.parse(data)
+    except misp.NotAnEvent:
         return {"success": False, "error": "Not a MISP event"}
 
     iocs: Dict[str, List[str]] = defaultdict(list)
-    techniques: List[str] = []
-    group_name = ""
-
-    # Attributes (top level and inside objects)
-    for attr in event.get("Attribute", []) or []:
+    for attr in event.attributes:  # top level, then inside objects
         _attribute(iocs, attr)
-    for obj in event.get("Object", []) or []:
-        for attr in obj.get("Attribute", []) or []:
-            _attribute(iocs, attr)
+    # Techniques from any tag naming mitre or attack-pattern, and from attack-pattern galaxies
+    techniques = [tid for tag in event.tags if "mitre" in tag.lower() or "attack-pattern" in tag.lower()
+                  for tid in _TID.findall(tag)]
+    techniques += [tid for cluster in event.attack_patterns
+                   for tid in _TID.findall(cluster.value + " " + json.dumps(cluster.meta))]
+    group_name = event.threat_actors[0].split(" - ")[0] if event.threat_actors else ""
 
-    # Techniques and threat actor from galaxies and tags
-    _techniques_from_tags(event.get("Tag"), techniques)
-    for galaxy in event.get("Galaxy", []) or []:
-        gtype = str(galaxy.get("type", ""))
-        for cluster in galaxy.get("GalaxyCluster", []) or []:
-            value = str(cluster.get("value", ""))
-            if "mitre-attack-pattern" in gtype or "attack-pattern" in gtype:
-                for tid in _TID.findall(value + " " + json.dumps(cluster.get("meta", {}))):
-                    if tid not in techniques:
-                        techniques.append(tid)
-            elif "threat-actor" in gtype or "intrusion-set" in gtype:
-                group_name = group_name or value.split(" - ")[0]
-
-    info = str(event.get("info", ""))
     return {
         "success": True,
         "group_name": group_name,
-        "group_desc": info[:500],
-        "title": info or group_name,
+        "group_desc": event.info[:500],
+        "title": event.info or group_name,
         "techniques": sorted(set(techniques)),
         "tactics": [],
         "procedures": [],
