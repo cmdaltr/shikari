@@ -5,28 +5,18 @@ attack-pattern objects → ATT&CK technique IDs, indicator patterns and cyber-ob
 intrusion-set / threat-actor → the group name, report → the title. The result is the same
 extraction shape blog_analyzer produces, so it flows through the existing generation pipeline.
 
-Parsed from the raw JSON rather than through python-stix2's strict loader: MISP- and vendor-
-exported bundles carry custom properties and objects that the strict loader rejects. No AI.
+The bundle is read by `samarkand.stix.parse`, the suite's shared reader (raw JSON, not python-stix2's
+strict loader, so MISP- and vendor-exported bundles with custom properties import cleanly); this
+module maps its neutral indicators to Shikari's IOC kinds. Escaped quotes and backslashes in pattern
+strings are undone (`'it\\'s.exe'` reads as it's.exe), and of two objects with one id (a newer
+version) only the last is read. No AI.
 """
 
-import json
-import re
 from collections import defaultdict
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
 
-_TID = re.compile(r"\bT\d{4}(?:\.\d{3})?\b")
-# objtype(:path)? = 'value'  — the comparisons inside a STIX pattern
-_PATTERN_CMP = re.compile(r"([a-z0-9][a-z0-9-]*)(?::([^\s=<>!]+))?\s*(?:=|LIKE|MATCHES)\s*'([^']*)'", re.IGNORECASE)
-
-# IOC kinds Shikari uses: cmd, reg, evt, sw, ip, domain, hash, file
-_OBS_KIND = {
-    "ipv4-addr": "ip", "ipv6-addr": "ip",
-    "domain-name": "domain", "url": "domain",
-    "windows-registry-key": "reg",
-    "process": "cmd",
-    "software": "sw",
-}
+from samarkand import stix
 
 
 def _host(value: str) -> str:
@@ -43,98 +33,55 @@ def _add(iocs: Dict[str, List[str]], kind: str, value: str):
         iocs[kind].append(value)
 
 
-def _ioc_from_observable(iocs: Dict[str, List[str]], obj: Dict):
-    """A STIX cyber-observable (SCO) object → an IOC."""
-    t = obj.get("type")
-    if t in ("ipv4-addr", "ipv6-addr") and obj.get("value"):
-        _add(iocs, "ip", obj["value"])
-    elif t == "domain-name" and obj.get("value"):
-        _add(iocs, "domain", obj["value"])
-    elif t == "url" and obj.get("value"):
-        _add(iocs, "domain", _host(obj["value"]))
-    elif t == "file":
-        for h in (obj.get("hashes") or {}).values():
-            _add(iocs, "hash", h)
-        if obj.get("name"):
-            _add(iocs, "file", obj["name"])
-    elif t == "process" and obj.get("command_line"):
-        _add(iocs, "cmd", obj["command_line"])
-    elif t == "windows-registry-key" and obj.get("key"):
-        _add(iocs, "reg", obj["key"])
+def _kind(item: stix.Indicator) -> Optional[Tuple[str, str]]:
+    """A value read from a bundle → (Shikari IOC kind, value), or None for one Shikari doesn't use.
+    IOC kinds: cmd, reg, evt, sw, ip, domain, hash, file."""
+    t, path = item.stix_type, item.stix_path
+    if t in ("ipv4-addr", "ipv6-addr"):
+        return "ip", item.value
+    if t == "domain-name":
+        return "domain", item.value
+    if t == "url":
+        return "domain", _host(item.value)
+    if t == "windows-registry-key":
+        return "reg", item.value
+    if item.object_type == "indicator":
+        # A pattern comparison, by the observable type and property it names
+        if t == "file":
+            return ("hash" if "hashes" in path.lower() else "file"), item.value
+        if t == "process":
+            return ("cmd" if "command_line" in path else "sw"), item.value
+        if t == "software":
+            return "sw", item.value
+        return None
+    # A cyber-observable object
+    if t == "file":
+        return ("hash" if path.startswith("hashes") else "file"), item.value
+    if t == "process":
+        return "cmd", item.value
+    return None
 
 
-def _ioc_from_pattern(iocs: Dict[str, List[str]], pattern: str):
-    """A STIX indicator pattern string → IOCs, by the observable type each comparison names."""
-    for objtype, path, value in _PATTERN_CMP.findall(pattern or ""):
-        objtype = objtype.lower()
-        value = value.strip()
-        if not value:
-            continue
-        if objtype in ("ipv4-addr", "ipv6-addr"):
-            _add(iocs, "ip", value)
-        elif objtype == "domain-name":
-            _add(iocs, "domain", value)
-        elif objtype == "url":
-            _add(iocs, "domain", _host(value))
-        elif objtype == "file":
-            _add(iocs, "hash" if "hashes" in (path or "").lower() else "file", value)
-        elif objtype == "process":
-            _add(iocs, "cmd" if "command_line" in (path or "") else "sw", value)
-        elif objtype == "windows-registry-key":
-            _add(iocs, "reg", value)
-        elif objtype in ("software",):
-            _add(iocs, "sw", value)
-
-
-def _techniques_from_attack_pattern(obj: Dict) -> List[str]:
-    out = []
-    for ref in obj.get("external_references") or []:
-        if str(ref.get("source_name", "")).lower() in ("mitre-attack", "mitre attack"):
-            ext = str(ref.get("external_id") or "")
-            if _TID.fullmatch(ext):
-                out.append(ext)
-    # Fall back to a T-code in the name/description
-    if not out:
-        out += _TID.findall(obj.get("name", "") + " " + (obj.get("description") or ""))
-    return out
-
-
-def parse_stix_bundle(data: Union[str, bytes, dict]) -> Dict:
+def parse_stix_bundle(data: Union[str, bytes, dict, list]) -> Dict:
     """A STIX 2.1 bundle (or a bare list of objects) → the blog_analyzer extraction shape."""
-    if isinstance(data, (str, bytes)):
-        data = json.loads(data)
-    objects = data.get("objects") if isinstance(data, dict) else data
-    if not isinstance(objects, list):
-        return {"success": False, "error": "Not a STIX bundle (no 'objects' list)"}
+    try:
+        parsed = stix.parse(data)
+    except stix.NotABundle as exc:
+        return {"success": False, "error": str(exc)}
 
     iocs: Dict[str, List[str]] = defaultdict(list)
-    techniques: List[str] = []
-    group_name = ""
-    title = ""
-    description = ""
-
-    for obj in objects:
-        if not isinstance(obj, dict):
-            continue
-        t = obj.get("type")
-        if t == "attack-pattern":
-            for tid in _techniques_from_attack_pattern(obj):
-                if tid not in techniques:
-                    techniques.append(tid)
-        elif t == "indicator":
-            _ioc_from_pattern(iocs, obj.get("pattern", ""))
-            # An indicator may also reference a technique in a kill_chain or name
-            for tid in _TID.findall(obj.get("name", "")):
-                if tid not in techniques:
-                    techniques.append(tid)
-        elif t in ("intrusion-set", "threat-actor"):
-            group_name = group_name or obj.get("name", "")
-            description = description or (obj.get("description") or "")
-        elif t == "report":
-            title = title or obj.get("name", "")
-            description = description or (obj.get("description") or "")
-        elif t in _OBS_KIND or t == "file":
-            _ioc_from_observable(iocs, obj)
+    for item in parsed.indicators:
+        mapped = _kind(item)
+        if mapped:
+            _add(iocs, *mapped)
+    # Every attack-pattern in the bundle, and any T-number an indicator's name gives
+    techniques = [tid for t in parsed.techniques for tid in t.ids]
+    techniques += [tid for item in parsed.indicators if item.object_type == "indicator"
+                   for tid in item.named_techniques]
+    described = sorted([*parsed.groups, *parsed.reports], key=lambda o: o.position)
+    group_name = parsed.groups[0].name if parsed.groups else ""
+    title = parsed.reports[0].name if parsed.reports else ""
+    description = next((o.description for o in described if o.description), "")
 
     return {
         "success": True,

@@ -83,3 +83,13 @@ def test_stix_roundtrip_techniques():
     bundle = run_to_stix("APT29", dets)
     back = parse_stix_bundle(bundle)
     assert "T1558.003" in back["techniques"] and "1.2.3.4" in back["iocs"]["ip"]
+
+
+def test_stix_import_undoes_escapes_in_patterns():
+    # samarkand's reader (its docs/DIFFERENCES.md, STIX): \' and \\ in a pattern string are escapes
+    bundle = {"type": "bundle", "objects": [
+        {"type": "indicator", "id": "indicator--1", "pattern_type": "stix",
+         "pattern": r"[file:name = 'it\'s.exe'] OR [windows-registry-key:key = 'HKLM\\Software\\Run']"}]}
+    iocs = parse_stix_bundle(bundle)["iocs"]
+    assert iocs["file"] == ["it's.exe"] and iocs["reg"] == ["HKLM\\Software\\Run"]
+
