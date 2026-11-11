@@ -315,3 +315,6 @@ jobs:
         with:
           files: out/*
           generate_release_notes: true
+          # Land assets on a draft release; publishing is a deliberate manual step, never automatic
+          # on a tag push (so re-pointing a tag to rebuild can't put a release live by itself).
+          draft: true
