@@ -18,10 +18,9 @@ from samarkand import navigator
 logger = logging.getLogger(__name__)
 
 # Only when Shikari has no ATT&CK data at all (no cached bundle, no built procedures CSV): the
-# release and Enterprise platforms a layer then names
+# release a layer then names. The platforms are samarkand's (navigator.PLATFORMS, every Enterprise
+# platform ATT&CK 20.1 names); samarkand has no fallback version, so this one stays Shikari's.
 FALLBACK_ATTACK_VERSION = "17"
-FALLBACK_PLATFORMS = ("Containers", "ESXi", "IaaS", "Identity Provider", "Linux", "Network Devices",
-                      "Office Suite", "PRE", "SaaS", "Windows", "macOS")
 
 # Blue outcome -> (Navigator score, colour). Red is carried in the comment.
 _BLUE_SCORE = {
@@ -52,11 +51,12 @@ def _attack_data() -> tuple:
 
     release = procedures.bundle_release()
     if release is not None:
-        return release.version, release.platforms.get(navigator.ENTERPRISE) or list(FALLBACK_PLATFORMS)
+        platforms = release.platforms.get(navigator.ENTERPRISE) or navigator.PLATFORMS[navigator.ENTERPRISE]
+        return release.version, list(platforms)
     version = procedures.built_version()
     if not version:
         logger.warning("No ATT&CK data loaded: the Navigator layer names ATT&CK %s", FALLBACK_ATTACK_VERSION)
-    return version or FALLBACK_ATTACK_VERSION, list(FALLBACK_PLATFORMS)
+    return version or FALLBACK_ATTACK_VERSION, list(navigator.PLATFORMS[navigator.ENTERPRISE])
 
 
 def results_to_navigator(name: str, results: List[Dict], attack_version: Optional[str] = None,

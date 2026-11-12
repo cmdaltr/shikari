@@ -33,7 +33,7 @@ def signing_key(monkeypatch):
 
 
 def lic(edition="pro", seats=10, expires=date(2027, 11, 30), **extra) -> L.Licence:
-    return L.Licence("lic_test", "Northwind Ltd", L.Edition(edition), seats, TODAY, expires, **extra)
+    return L.rules().licence("lic_test", "Northwind Ltd", L.Edition(edition), seats, TODAY, expires, **extra)
 
 
 ADMIN = "Ada Admin <ada@example.org>"

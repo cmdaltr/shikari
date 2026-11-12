@@ -66,7 +66,7 @@ def client(db, tmp_path, monkeypatch):
 
 
 def _line(key, expires=date(2027, 11, 30)):
-    return L.sign(key, L.Licence("lic_route", "Northwind Ltd", L.Edition.PRO, 5, date(2026, 11, 11), expires))
+    return L.sign(key, L.rules().licence("lic_route", "Northwind Ltd", L.Edition.PRO, 5, date(2026, 11, 11), expires))
 
 
 def test_check_says_what_the_licence_is_and_installs_nothing(client, signing_key, tmp_path):

@@ -75,3 +75,16 @@ def test_navigator_names_the_loaded_attack_release(tmp_path, monkeypatch):
     assert layer["versions"]["attack"] == "18"
     assert layer["filters"]["platforms"] == ["IaaS", "Windows"]
     assert layer["gradient"]["maxValue"] == 4
+
+
+def test_navigator_without_attack_data_names_samarkands_platforms(monkeypatch):
+    """No bundle and no built CSV: the fallback release, and every Enterprise platform ATT&CK 20.1
+    names (samarkand.navigator.PLATFORMS, which replaced Shikari's own copy of the list)."""
+    from shikari.mitre import procedures
+
+    monkeypatch.setattr(procedures, "bundle_release", lambda *a, **k: None)
+    monkeypatch.setattr(procedures, "built_version", lambda *a, **k: "")
+    layer = json.loads(results_to_navigator("Camp", [{"technique_id": "T1059.001", "blue_outcome": "alerted"}]))
+    assert layer["versions"]["attack"] == "17"
+    assert layer["filters"]["platforms"] == ["Containers", "ESXi", "IaaS", "Identity Provider", "Linux",
+                                             "Network Devices", "Office Suite", "PRE", "SaaS", "Windows", "macOS"]

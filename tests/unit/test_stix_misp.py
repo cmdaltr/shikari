@@ -112,3 +112,29 @@ def test_stix_export_is_marked_stable_and_one_indicator_per_ioc():
     assert report["type"] == "report"
     assert {o["id"] for o in one["objects"] if o["type"] in ("x-shikari-detection", "intrusion-set")} \
         <= set(report["object_refs"])
+
+
+def test_stix_export_is_byte_for_byte_what_samarkand_0_1_0_gave():
+    """Building Shikari's own objects through bundle(extra_objects=...) changes nothing on the wire:
+    the same run gives the bundle captured on samarkand 0.1.0, when the report was popped and put back."""
+    from datetime import datetime
+    from pathlib import Path
+
+    case = json.loads((Path(__file__).parent / "fixtures" / "stix-export-0.1.0.json").read_text())
+    made = run_to_stix(case["group"], case["detections"], case["description"], tlp=case["tlp"],
+                       now=datetime.fromisoformat(case["now"]))
+    assert made == json.dumps(case["bundle"], indent=2)
+
+
+def test_stix_export_hash_types_by_length():
+    """samarkand's digest_of names a hash by its length; one it can't name is still SHA-256."""
+    from datetime import datetime, timezone
+
+    hashes = ["a" * 32, "b" * 40, "c" * 64, "d" * 128, "e" * 50, "not-hex"]
+    dets = [{"name": "H", "technique_id": "T1204.002", "siem": "mde", "indicators": {"hash": hashes}}]
+    bundle = json.loads(run_to_stix("", dets, now=datetime(2026, 11, 12, tzinfo=timezone.utc)))
+    patterns = [o["pattern"] for o in bundle["objects"] if o["type"] == "indicator"]
+    assert patterns == [f"[file:hashes.'{algo}' = '{value}']" for algo, value in zip(
+        ("MD5", "SHA-1", "SHA-256", "SHA-512", "SHA-256", "SHA-256"), hashes)]
+    assert bundle["objects"][-1]["type"] == "report"
+    assert not any(o["type"] == "intrusion-set" for o in bundle["objects"])

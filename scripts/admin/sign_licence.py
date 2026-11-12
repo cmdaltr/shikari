@@ -143,7 +143,7 @@ def main() -> int:
     unknown = set(features) - {*licensing.FEATURES, licensing.WILDCARD}
     if unknown:
         sys.exit(f"Unknown feature ids: {', '.join(sorted(unknown))}. Known: {', '.join(licensing.FEATURES)}.")
-    lic = licensing.Licence(
+    lic = licensing.rules().licence(
         licence_id=licensing.new_id(),
         licensee=args.licensee.strip(),
         email=args.email.strip(),

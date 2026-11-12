@@ -36,7 +36,6 @@ from __future__ import annotations
 import json
 import re
 import uuid
-from dataclasses import dataclass, fields
 from datetime import date, datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -57,6 +56,8 @@ GRACE = shared.GRACE
 PUBLIC_KEYS: Tuple[str, ...] = ("e499f52ec803749de5d97429a632e140d98f81b8b528f61540dac3c8b3ecb282",)
 
 Edition = shared.Edition
+# samarkand's licence; rules().licence() builds one naming Shikari
+Licence = shared.Licence
 Standing = shared.Standing
 LicenceProblem = shared.LicenceProblem
 
@@ -76,19 +77,12 @@ INSTALL_PATH = paths.DATA / "licence.json"
 TERMS = Path(__file__).parent / "legal" / "COMMERCIAL-LICENSE.md"
 
 
-@dataclass(frozen=True)
-class Licence(shared.Licence):
-    """samarkand's licence, naming Shikari unless told otherwise."""
-
-    product: str = PRODUCT
-
-
 @lru_cache(maxsize=4)
 def _bound(keys: Tuple[str, ...], free_seats: int) -> shared.Rules:
     return shared.Rules(PRODUCT, keys, free_seats=free_seats, name=NAME)
 
 
-def _rules() -> shared.Rules:
+def rules() -> shared.Rules:
     """Shikari's rules, bound to PUBLIC_KEYS and FREE_SEATS as they are now (tests swap the keys)."""
     return _bound(tuple(PUBLIC_KEYS), FREE_SEATS)
 
@@ -101,14 +95,13 @@ def sign(private_key, licence: Licence) -> str:
 
 def parse(text: str) -> Licence:
     """A licence, once its signature checks out against one of PUBLIC_KEYS. Raises LicenceProblem."""
-    found = _rules().parse(text)
-    return Licence(**{f.name: getattr(found, f.name) for f in fields(found)})
+    return rules().parse(text)
 
 
 def standing(licence: Optional[Licence], now: Optional[datetime] = None) -> Standing:
     """The edition a licence (or none) gives at `now`. A licence runs from the start of its
     not_before day to the end of its expiry day, then 30 days' grace, then Free."""
-    return _rules().standing(licence, now)
+    return rules().standing(licence, now)
 
 
 def grace_ends(licence: Licence) -> Optional[date]:

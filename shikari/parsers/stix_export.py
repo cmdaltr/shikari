@@ -10,11 +10,11 @@ relationships. No AI.
 The standard objects come from `samarkand.stix.bundle()`, the suite's shared builder: hand-written
 JSON with stable ids (UUIDv5 under Shikari's own namespace, so exporting a run again gives the same
 ids and a newer `modified`) and the TLP marking on every object. The intrusion-set and the
-detections are Shikari's own, added to the same objects list.
+detections are Shikari's own, built from the ids bundle() gives the identity and each technique's
+attack-pattern and passed in as its extra_objects, so the report (still last) names them too.
 """
 
 import json
-import string
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
@@ -28,19 +28,18 @@ SHIKARI_IDENTITY_NAME = "Shikari"
 DETECTION_TYPE = "x-shikari-detection"
 DEFAULT_TLP = "amber"  # as Shikari's reports: AMBER unless given
 
-# IOC kind → samarkand's neutral kind (hashes by their length). evt has no STIX observable.
+# IOC kind → samarkand's neutral kind (hashes by their length, below). evt has no STIX observable.
 _KINDS = {
     "ip": Kind.IP_ADDRESS, "domain": Kind.DOMAIN, "file": Kind.FILE_NAME, "cmd": Kind.PROCESS_COMMAND,
     "reg": Kind.REGISTRY_KEY, "sw": Kind.PROCESS_NAME,
 }
-_HASHES = {32: Kind.FILE_HASH_MD5, 40: Kind.FILE_HASH_SHA1, 64: Kind.FILE_HASH_SHA256,
-           128: Kind.FILE_HASH_SHA512}
 
 
 def _kind(kind: str, value: str) -> Optional[Kind]:
     if kind == "hash":
-        hexadecimal = all(c in string.hexdigits for c in value)
-        return _HASHES.get(len(value), Kind.FILE_HASH_SHA256) if hexadecimal else Kind.FILE_HASH_SHA256
+        # A hash whose length names no algorithm (or that isn't hex) is still exported, as SHA-256
+        digest = stix.digest_of(value)
+        return digest.kind if digest else Kind.FILE_HASH_SHA256
     return _KINDS.get(kind)
 
 
@@ -67,21 +66,16 @@ def run_to_stix(group_name: str, detections: List[Dict], description: str = "", 
                 if tid and tid not in linked:
                     linked.append(tid)
 
-    bundle = stix.bundle(stix.Export(
+    export = stix.Export(
         namespace=NAMESPACE, key=key, producer=SHIKARI_IDENTITY_NAME, tlp=tlp, created=now,
         name=f"Shikari run: {group_name}" if group_name else "Shikari run", description=description,
         techniques=tuple(stix.ExportTechnique(tid, name) for tid, name in techniques.items()),
         indicators=tuple(stix.ExportIndicator(key=f"{kind.value}|{value}", kind=kind, value=value,
                                               techniques=tuple(linked))
                          for (kind, value), linked in iocs.items()),
-    ), now)
-
-    objects = bundle["objects"]
-    report = objects.pop()  # bundle() puts the report last; Shikari's objects go before it
-    identity = objects[0]["id"]
-    props = stix.common(identity, now, now, tlp)
-    patterns = {o["external_references"][0]["external_id"]: o["id"]
-                for o in objects if o["type"] == "attack-pattern"}
+    )
+    props = stix.common(export.identity_ref, now, now, tlp)
+    patterns = {tid: export.attack_pattern_ref(tid) for tid in techniques}
 
     own: List[Dict] = []
     if group_name:
@@ -106,7 +100,4 @@ def run_to_stix(group_name: str, detections: List[Dict], description: str = "", 
                 stix.object_id(NAMESPACE, "relationship", key, "detects", detection["id"]),
                 props, "detects", detection["id"], patterns[tid]))
 
-    objects.extend(own)
-    report["object_refs"] = report["object_refs"] + [o["id"] for o in own]
-    objects.append(report)
-    return json.dumps(bundle, indent=2)
+    return json.dumps(stix.bundle(export, now, extra_objects=own), indent=2)
