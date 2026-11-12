@@ -82,6 +82,8 @@ Plain-language guide to every part of Shikari, one page each: what it's for, how
 | [REPORT_GENERATION.md](features/REPORT_GENERATION.md) | Export detections as Word, PDF, HTML reports |
 | [REPORT_BRANDING.md](features/REPORT_BRANDING.md) | Custom logos + palette on reports (commercial/Pro, signed licence) |
 | [LICENSING_MODEL.md](LICENSING_MODEL.md) | Elastic License 2.0 and the editions — the shared model, and what Free/Pro/Services each unlock |
+| [TRADEMARK-EVIDENCE.md](TRADEMARK-EVIDENCE.md) | Dated record of first and continued use of the Shikari™ mark |
+| [TRADEMARK-CLEARANCE.md](TRADEMARK-CLEARANCE.md) | Preliminary knock-out search (classes 9 and 42), filing shortlist and fees, for the attorney |
 | [RESPONSE_ACTIONS.md](features/RESPONSE_ACTIONS.md) | Automated response action recommendations |
 | [CALDERA_WINDOWS_CAPTURE.md](features/CALDERA_WINDOWS_CAPTURE.md) | CALDERA endpoint-log capture on a Windows host — how it integrates with Shikari and where each capture's results land |
 | [SIEM_EXPORT_PACKS.md](features/SIEM_EXPORT_PACKS.md) | Export packs for your own Elastic, Splunk or Wazuh: contents, tested versions, known limits |

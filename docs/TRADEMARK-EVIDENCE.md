@@ -37,5 +37,5 @@
 ## Notes
 
 - ™ (used here) signals a claimed, unregistered mark — no registration required.
-- Registration (UKIPO / EUIPO / USPTO, classes 9 + 42) gives stronger, enforceable rights — see the separate clearance note. Preliminary clearance (TMView, 2026-11-10) found the name clear in the software classes in the UK, US and EU.
+- Registration (UKIPO / EUIPO / USPTO, classes 9 + 42) gives stronger, enforceable rights — see the clearance note, [TRADEMARK-CLEARANCE.md](TRADEMARK-CLEARANCE.md). Preliminary clearance (TMView, 2026-11-10) found the name clear in the software classes in the UK, US and EU.
 - This document is a record of use to support a later application or a passing-off / common-law position. It is not legal advice and not a registration.
