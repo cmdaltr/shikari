@@ -198,19 +198,19 @@ ABOUT = """<!doctype html><html><head><meta charset="utf-8">""" + _HELP_STYLE + 
 <p class="gloss"><b>shi&middot;ka&middot;ri</b><i>\\shi-&#712;k&auml;r-&#275;\\</i>a professional big-game hunter or guide</p>
 <p>Automated multi-vendor threat hunting and detection.</p>
 <p><a href="https://github.com/cmdaltr" target="_blank">@cmdaltr</a> on GitHub</p>
-<p class="muted">Free software under the GNU Affero General Public License v3.0; a commercial licence is
-available for organisations that can't meet its terms. See Help &rarr; Licence.</p>
+<p class="muted">Licensed under the Elastic License 2.0; the Pro and Services editions add a commercial
+licence. See Help &rarr; Licence.</p>
 <footer>Splunk&reg;, Microsoft&reg;, Google&reg; and Elastic&reg; names and logos are trademarks of their
 respective companies.</footer></main></body></html>"""
 
 LICENCE = """<!doctype html><html><head><meta charset="utf-8">""" + _HELP_STYLE + """</head><body><main>
 <h1>Licence</h1>
-<p>Shikari is free software under the GNU Affero General Public License v3.0 (AGPL-3.0-only): you can use,
-study, change and share it, and if you change it and let others use it, over a network included, you must
-make your changed source available to them under the same licence.</p>
-<p>Organisations that can't meet the AGPL's terms, for example to keep changes private or to build Shikari
-into a closed product, can get a commercial licence instead: contact
-<a href="https://github.com/cmdaltr" target="_blank">@cmdaltr</a> on GitHub.</p>
+<p>Shikari is licensed under the Elastic License 2.0, below: you can use, copy and change it for free
+(the Free edition), but you may not provide it to others as a hosted or managed service, or get around
+its licence key.</p>
+<p>The Pro and Services editions add the terms in COMMERCIAL-LICENSE.md, switched on by a licence key:
+contact <a href="https://github.com/cmdaltr" target="_blank">@cmdaltr</a> on GitHub. Releases published
+before this, under the AGPL, keep that licence.</p>
 <pre>__TEXT__</pre></main></body></html>"""
 
 

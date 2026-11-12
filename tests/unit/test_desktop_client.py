@@ -191,3 +191,12 @@ def test_bundled_git_comes_after_an_installed_one(tmp_path, monkeypatch):
     monkeypatch.setenv("PATH", "installed")
     desktop_app.bundled_git()
     assert os.environ["PATH"] == os.pathsep.join(["installed", str(tmp_path / "mingit" / "cmd")])
+
+
+def test_the_help_windows_name_the_licence_shikari_ships_under():
+    # Shikari moved from the AGPL to the Elastic License 2.0. Help -> Licence shows LICENSE's ELv2 text
+    # beneath this wording, so the wording mustn't still describe the AGPL.
+    from shikari import desktop_app
+    for page in (desktop_app.ABOUT, desktop_app.LICENCE):
+        assert "Elastic License 2.0" in page
+        assert "Affero" not in page and "free software" not in page.lower()

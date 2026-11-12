@@ -1,12 +1,12 @@
 # Licensing model
 
-ostraka, Shikari and Rowanholt share one licensing model (Ben, 11 November 2026). The first part of
+Ostraka, Shikari and Rowanholt share one licensing model (Ben, 11 November 2026). The first part of
 this file is that shared specification, kept identical in each product's `docs/LICENSING_MODEL.md`;
 the second is this product's own split (Shikari, below). The reference implementation of the
 licence line and the webhooks is samarkand (`samarkand.licence`, `samarkand.webhooks`), the package
 all three products use for them; each binds it to its own id, public keys and free seat number.
 
-## Shared across ostraka, Shikari and Rowanholt
+## Shared across Ostraka, Shikari and Rowanholt
 
 ### Code licence and notices
 
@@ -50,7 +50,9 @@ not followed. Webhook bodies pass the same masking as the product's other outwar
 
 ### The licence
 
-One line: `<product>-licence-1.<payload>.<signature>`.
+One line: `<product>-licence-1.<payload>.<signature>`, read and checked by `samarkand.licence` (the
+reference for it, with its test vectors), which each product binds with its own id, public keys and
+free seat number. samarkand has no signing code: issuing stays in each product's admin script.
 
 - `payload` is base64url (no padding) of canonical JSON: sorted keys, compact separators.
 - `signature` is Ed25519, base64url, over the ASCII bytes of `<product>-licence-1.<payload>`, so
@@ -67,7 +69,7 @@ One line: `<product>-licence-1.<payload>.<signature>`.
 - `COMMERCIAL-LICENSE.md` states its version on the line after its title (`**Version 1.0**, date`).
   The licensor is "Ben Smith, trading as cmdaltr (cmdaltr.com)" until there's a company. An order
   wins over the terms, the terms over ELv2.
-- The product ships a copy of the terms where its server can read them (ostraka:
+- The product ships a copy of the terms where its server can read them (Ostraka:
   `backend/ostraka/legal/`), and a test keeps the copy identical to the root file.
 - **Installing a licence needs an admin to accept the current terms on the licensee's behalf.** The
   admin page checks the licence first (showing the licensee, edition, seats and dates), shows the
@@ -123,15 +125,15 @@ One line: `<product>-licence-1.<payload>.<signature>`.
 
 ### Individual to each product
 
-Where the licence is stored (ostraka: its database; a product without one: a file); the free seat
-number; what a client's brand attaches to (ostraka: an incident); which events send webhooks; how
+Where the licence is stored (Ostraka: its database; a product without one: a file); the free seat
+number; what a client's brand attaches to (Ostraka: an incident); which events send webhooks; how
 "an admin" is spotted for the seat rule.
 
 ## Shikari's split
 
 Confirmed by Ben, 11 November 2026. The features are the shared ones; Shikari differs only in the
 free seat number (2) and in what a client brand attaches to (an assessment, Shikari's client
-engagement, as ostraka's attaches to an incident).
+engagement, as Ostraka's attaches to an incident).
 
 | Feature id | Free | Pro | Services | Gated at |
 |---|---|---|---|---|
@@ -162,7 +164,7 @@ Report branding (Pro) dresses every report in one identity, the installation's o
 folder. An assessment names a brand (`Assessment.brand`); its reports use that brand when the licence
 includes `brand-library`, else the installation brand, else the stock look. The choice is checked
 only when the report is drawn (`theme_for_assessment`), never when it's saved, so losing the licence
-loses the use of the brand, not the stored choice. Uploaded logos follow ostraka's rule: PNG or JPEG
+loses the use of the brand, not the stored choice. Uploaded logos follow Ostraka's rule: PNG or JPEG
 only, refused above a pixel limit before the pixels are decoded, scaled down to a sensible size and
 redrawn as a fresh PNG so nothing but the image survives. Brand changes are audited.
 
