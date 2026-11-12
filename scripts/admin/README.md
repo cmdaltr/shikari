@@ -16,10 +16,11 @@ running app and are never invoked by it.
 `sign_licence.py` and `issue-licence.sh` mint Pro/Services licences. They are in the public repo on
 purpose and expose no secret:
 
-- The licence format is signed, not encrypted, and the signing primitive (`sign()`) lives in the
-  shipped `shikari/licensing.py` alongside `verify()` — one module so the two can't drift, and one
-  round-trip test (`tests/test_licensing.py`) proves they stay compatible. These scripts are thin
-  CLI wrappers over that function.
+- The licence format is signed, not encrypted. Reading and checking a line is `samarkand.licence`
+  (the suite's shared package); the signing primitive (`sign()`) in the shipped
+  `shikari/licensing.py` signs samarkand's `head_of` and joins it with `line_of`, so the two can't
+  drift, and a round-trip test (`tests/test_licensing.py`) proves they stay compatible. These
+  scripts are thin CLI wrappers over that function.
 - The only secret is the **private key**, which never lives in the repo. It is read from
   `SHIKARI_LICENCE_KEY` (a path or the key itself), defaulting to `~/.config/shikari/licence-signing-key.pem`
   (keep it `chmod 600`). The matching public key is embedded in `shikari/licensing.PUBLIC_KEYS`, so
