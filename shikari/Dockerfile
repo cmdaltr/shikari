@@ -10,6 +10,9 @@ RUN apt-get update && \
 
 # Copy requirements first for better caching
 COPY requirements.txt .
+# CPU-only torch: from PyPI, torch on Linux brings about 2.5 GB of CUDA wheels that no Shikari server
+# uses (the embeddings run on the CPU), as in the desktop workflow
+ENV PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
