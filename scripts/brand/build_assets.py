@@ -15,6 +15,7 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
+from PIL.PngImagePlugin import PngInfo
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
@@ -43,15 +44,15 @@ def tight(img):
     return img.crop(bb)
 
 
-def wordmark(ink, width):
-    wm = tight(WM.render(TTF, 560, bg=None, letter=ink))
+def wordmark(ink, width, tm_scale=None):
+    wm = tight(WM.render(TTF, 560, bg=None, letter=ink, tm_scale=tm_scale))
     s = width / wm.width
     return wm.resize((round(wm.width * s), round(wm.height * s)))
 
 
 def banner(ink, bird_h=560, gap=80, pad=30):
     """Compact nav lockup: perched eagle left, two-tone-K word right, no tagline."""
-    wm = wordmark(ink, 1200)
+    wm = wordmark(ink, 1980, tm_scale=WM.BANNER_TM_SCALE)  # the word leads; the bird beside it, not over it
     bird = tight(Image.open(BIRDS[NAV_POSE]).convert("RGBA"))
     s = bird_h / bird.height
     bird = bird.resize((round(bird.width * s), round(bird.height * s)))
@@ -78,20 +79,13 @@ def main():
     banner(DARK_INK).save(out / "shikari-wordmark-light.png")
     banner(WHITE).save(out / "shikari-wordmark-dark.png")
 
-    # video master: horizontal perched-eagle + two-tone-K word, NO tagline, dark ink, transparent.
-    # The video card() adds the tagline itself, so this must not carry one.
-    wm = wordmark(DARK_INK, 2400)
-    bird = tight(Image.open(BIRDS["branch"]).convert("RGBA"))
-    bh = int(wm.height * 2.4)
-    s = bh / bird.height
-    bird = bird.resize((round(bird.width * s), round(bird.height * s)))
-    gap, pad = 150, 60
-    Wm = bird.width + gap + wm.width + 2 * pad
-    Hm = max(bird.height, wm.height) + 2 * pad
-    master = Image.new("RGBA", (Wm, Hm), (0, 0, 0, 0))
-    master.alpha_composite(bird, (pad, (Hm - bird.height) // 2))
-    master.alpha_composite(wm, (pad + bird.width + gap, (Hm - wm.height) // 2))
-    master.save(out / "shikari-lockup.png")
+    # video master: the perched hero lockup itself (word, rule and tagline aligned to SHIKARI, the ™
+    # overhanging) without its card, on transparent, for the video's light title and end cards. The
+    # word's edges and the tagline's foot go in the PNG's text so the end card can centre under them.
+    master = LK.build("light", "branch")
+    meta = PngInfo()
+    meta.add_text("word", master.info["word"])
+    master.save(out / "shikari-lockup.png", pnginfo=meta)
 
     # hexagon + favicons
     MK.build(1197).save(out / "shikari-bateleur-hexagon.png")

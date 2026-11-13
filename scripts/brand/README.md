@@ -28,6 +28,6 @@ python scripts/brand/build_assets.py --out /tmp/preview   # preview without touc
 
 Source cutouts come from `static/images/shikari/shikari-bateleur-perched.png` (perched eagle) and
 `static/images/bateleur/_src/bateleur-{profile,screech}.png`. The video pipeline consumes
-`shikari-lockup.png` (horizontal master, no tagline — `make_video.py` adds the tagline itself).
+`shikari-lockup.png` (the perched hero lockup without its card, word/tagline edges in its PNG text).
 
 Fonts under `fonts/` are Rajdhani (SIL OFL, see `fonts/OFL.txt`).

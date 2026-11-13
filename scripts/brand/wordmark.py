@@ -66,16 +66,22 @@ def k_split(kmask):
     return gold, red
 
 
-def render(ttf, size, bg=None, letter=(255, 255, 255, 255), pad=40, track=0, tm=True):
+# The ™'s size as a share of the word's point size: small but legible on the lockups and cards. The
+# nav banner, shown about 40px tall, keeps a larger one (BANNER_TM_SCALE) or it shrinks to a speck.
+TM_SCALE = 0.20
+BANNER_TM_SCALE = 0.30
+
+
+def render(ttf, size, bg=None, letter=(255, 255, 255, 255), pad=40, track=0, tm=True, tm_scale=None):
     font = ImageFont.truetype(str(ttf), size)
     # layout width with optional tracking
     tmp = Image.new("RGBA", (10, 10)); td = ImageDraw.Draw(tmp)
     widths = [td.textlength(ch, font=font) for ch in WORD]
     total = sum(widths) + track * (len(WORD) - 1)
     asc, desc = font.getmetrics()
-    # A superscript ™ after the last letter, in the letter colour: ~0.3x the caps, set to the cap
-    # line so it reads as a trademark mark without crowding the word. Widen the canvas to hold it.
-    tm_font = ImageFont.truetype(str(ttf), max(8, int(size * 0.30))) if tm else None
+    # A superscript ™ after the last letter, in the letter colour, its top on the cap line so it reads
+    # as a trademark mark without crowding the word. Widen the canvas to hold it.
+    tm_font = ImageFont.truetype(str(ttf), max(8, int(size * (tm_scale or TM_SCALE)))) if tm else None
     tm_w = int(td.textlength("™", font=tm_font)) if tm else 0
     tm_gap = int(size * 0.05) if tm else 0
     Wc = int(total) + 2 * pad + tm_w + tm_gap
@@ -93,7 +99,8 @@ def render(ttf, size, bg=None, letter=(255, 255, 255, 255), pad=40, track=0, tm=
         last_right = x + w
         x += w + track
     if tm:
-        d.text((last_right + tm_gap, pad), "™", font=tm_font, fill=letter)
+        cap_top = font.getbbox("S")[1]
+        d.text((last_right + tm_gap, pad + cap_top - tm_font.getbbox("™")[1]), "™", font=tm_font, fill=letter)
     # K-only mask at same position
     kimg = Image.new("RGBA", (Wc, Hc), (0, 0, 0, 0))
     ImageDraw.Draw(kimg).text((kx, pad), "K", font=font, fill=(255, 255, 255, 255))

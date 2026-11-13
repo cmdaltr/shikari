@@ -28,6 +28,9 @@ THEMES = {
                       ink=(255, 255, 255, 255), tag=(150, 176, 206, 255), rule=(74, 92, 116, 255)),
     "dark":      dict(card=None, border=None,
                       ink=(255, 255, 255, 255), tag=(150, 176, 206, 255), rule=(74, 92, 116, 255)),
+    # lightcard's lockup without the card, for a light ground of its own (the video's title/end cards)
+    "light":     dict(card=None, border=None,
+                      ink=(26, 32, 40, 255), tag=(96, 104, 117, 255), rule=(198, 204, 212, 255)),
 }
 
 
@@ -86,16 +89,20 @@ def build(version, pose="branch"):
 
     # wordmark (two-tone K), to the right of the bird
     wm = tight(WM.render(TTF, 520, bg=None, letter=t["ink"]))
+    # The word alone (no ™) sets the size and the width the rule and tagline match; the ™ overhangs
+    # to the right of that alignment rather than stretching it.
+    word_w = tight(WM.render(TTF, 520, bg=None, letter=t["ink"], tm=False)).width
     block_x = M + 40 + int(CW * 0.20) + int(CW * 0.045)   # after the left column, fixed across poses
     avail_w = CW - block_x - M - 30
-    # scale wordmark to a target width within available space
+    # scale the word to a target width within available space
     target_w = min(avail_w, int(CW * 0.60))
-    s = target_w / wm.width
+    s = target_w / word_w
     wm = wm.resize((round(wm.width * s), round(wm.height * s)))
+    word_w = round(word_w * s)
     # vertical block: wordmark, rule, tagline — centred in the card
     tag_font = ImageFont.truetype(str(TTF), 112)
     tagimg = tint(tracked(TAGLINE, tag_font, 10), t["tag"])
-    tag_target_w = wm.width
+    tag_target_w = word_w
     ts = tag_target_w / tagimg.width
     tagimg = tagimg.resize((round(tagimg.width * ts), round(tagimg.height * ts)))
     gap1, gap2 = 46, 40
@@ -104,8 +111,10 @@ def build(version, pose="branch"):
     top = (CH - block_h) // 2
     canvas.alpha_composite(wm, (block_x, top))
     ry = top + wm.height + gap1
-    d.rectangle([block_x, ry, block_x + wm.width, ry + rule_h], fill=t["rule"])
+    d.rectangle([block_x, ry, block_x + word_w, ry + rule_h], fill=t["rule"])
     canvas.alpha_composite(tagimg, (block_x, ry + rule_h + gap2))
+    # Where the word and tagline sit, for anything laid out under them (the video's end-card lines)
+    canvas.info["word"] = f"{block_x},{block_x + word_w},{ry + rule_h + gap2 + tagimg.height}"
     return canvas
 
 
