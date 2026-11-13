@@ -41,18 +41,38 @@ _CSV = paths.DATA / "mitre_procedures.csv"
 
 # ── Dimension weights (max points each can add to a group's raw score) ──────────
 W_INDUSTRY = 38      # the org's sector is in the group's target sectors
+W_INDUSTRY_SECONDARY = 26  # only one of the org's other sectors is (a bank that also counts as Technology)
 W_REGION = 22        # the org's region is in the group's target regions
 W_REGION_GLOBAL = 10 # the group targets "Global" but not the org's region specifically
+# Focus: on top of a sector or region match, up to this much more for a group whose targeting is
+# narrow (a bank is a likelier target of a group that hits two sectors than of one that hits eight).
+# Small, so it separates groups the steps above tie without changing what a band means.
+W_SECTOR_FOCUS = 6
+W_REGION_FOCUS = 4
 W_EXPOSURE_TECH = 7  # per matched initial-access technique the org actually exposes (capped below)
 W_EXPOSURE_TECH_CAP = 26
 W_PRODUCT = 4        # per exposed product named in the group's description (capped below)
 W_PRODUCT_CAP = 12
 W_INCIDENT_DIRECT = 22   # a curated public incident names this organisation
 W_INCIDENT_SECTOR = 10   # a curated public incident hit a sector peer (competitor)
-W_ACTIVITY_CAMPAIGN = 6  # the group has named ATT&CK campaigns (demonstrated operations)
+W_ACTIVITY_CAMPAIGN = 6  # most for named ATT&CK campaigns (demonstrated operations): 3, +1 per campaign
 W_ACTIVITY_RECENT = 4    # the group has been active within _RECENT_YEARS
 W_INCIDENTS_CAP = 28
 _RECENT_YEARS = 3        # "recent" = active no longer ago than this many years
+
+
+def actor_icon(g: Dict) -> Tuple[str, str]:
+    """The group's icon and its tooltip, as Research's tag chips show them: the flag of the country
+    it's attributed to, else a money bag for a financially motivated group, else a generic actor."""
+    nexus = (g.get("nexus") or "").strip()
+    if nexus:
+        from shikari.intelligence.cyber_powers import countries
+        iso = next((c["iso"] for c in countries() if nexus in (c["map"], c["name"])), "")
+        if len(iso) == 2:
+            return "".join(chr(0x1F1E6 + ord(ch) - ord("A")) for ch in iso.upper()), f"Attributed to {nexus}"
+    if "Financial" in (g.get("primary_objectives") or "") or "Criminal" in (g.get("sponsor") or ""):
+        return "\U0001F4B0", "Financially motivated"
+    return "\U0001F479", "No public attribution"
 
 _INCIDENTS_FILE = paths.ROOT / "bespoke" / "mappings" / "incidents.json"
 
@@ -243,6 +263,12 @@ def match_sectors(text: str) -> set:
     return {label for label, kws in _SECTOR_SYNONYMS.items() if any(k in t for k in kws)}
 
 
+def _org_primary_sectors(profile: Dict) -> List[str]:
+    """The metadata sector labels the org's own sector (and subsector) map to, not its other sectors."""
+    ind = ((profile.get("threat_profile") or {}).get("industry")) or {}
+    return list(match_sectors(" ".join(filter(None, [ind.get("sector") or "", ind.get("subsector") or ""]))))
+
+
 def _org_sectors(profile: Dict) -> List[str]:
     """The metadata sector labels the org's detected sector maps to."""
     ind = ((profile.get("threat_profile") or {}).get("industry")) or {}
@@ -355,6 +381,7 @@ def rank_adversaries(profile: Dict, limit: int = 10) -> List[Dict]:
     import datetime
 
     org_sectors = set(_org_sectors(profile))
+    primary_sectors = set(_org_primary_sectors(profile)) or org_sectors
     org_region = _org_region(profile)
     exposure = _exposure_techniques(profile)
     products = _exposed_products(profile)
@@ -386,12 +413,13 @@ def rank_adversaries(profile: Dict, limit: int = 10) -> List[Dict]:
         # Industry
         hit_sectors = org_sectors & g_sectors
         if hit_sectors:
-            breakdown["industry"] = W_INDUSTRY
+            base = W_INDUSTRY if hit_sectors & primary_sectors else W_INDUSTRY_SECONDARY
+            breakdown["industry"] = base + round(W_SECTOR_FOCUS * len(hit_sectors) / len(g_sectors))
             reasons.append("Targets " + ", ".join(sorted(hit_sectors)))
 
         # Geography
         if org_region and org_region in g_regions:
-            breakdown["geography"] = W_REGION
+            breakdown["geography"] = W_REGION + round(W_REGION_FOCUS / len(g_regions))
             reasons.append(f"Targets {org_region}")
         elif "Global" in g_regions and (org_region or org_sectors):
             breakdown["geography"] = W_REGION_GLOBAL
@@ -435,10 +463,11 @@ def rank_adversaries(profile: Dict, limit: int = 10) -> List[Dict]:
         # Demonstrated-activity amplifier: named ATT&CK campaigns lift an actor that is already
         # relevant to this org (never one with no other signal — that would just be a busy group).
         relevant = breakdown["industry"] + breakdown["geography"] + breakdown["exposure"] + breakdown["incidents"]
-        campaigns = (g.get("campaigns") or "").strip()
+        campaigns = [c.strip() for c in (g.get("campaigns") or "").split(";") if c.strip()]
         if relevant > 0 and campaigns:
-            breakdown["incidents"] = min(W_INCIDENTS_CAP, breakdown["incidents"] + W_ACTIVITY_CAMPAIGN)
-            reasons.append("Named campaign: " + campaigns.split(";")[0].strip())
+            pts = min(W_ACTIVITY_CAMPAIGN, 2 + len(campaigns))
+            breakdown["incidents"] = min(W_INCIDENTS_CAP, breakdown["incidents"] + pts)
+            reasons.append("Named campaign: " + campaigns[0] + (f" (+{len(campaigns) - 1} more)" if len(campaigns) > 1 else ""))
 
         raw = breakdown["industry"] + breakdown["geography"] + breakdown["exposure"] + breakdown["incidents"]
         if raw <= 0:
@@ -449,8 +478,10 @@ def rank_adversaries(profile: Dict, limit: int = 10) -> List[Dict]:
         # demonstrated incident is High. So "High" means the org's own attack surface is in play.
         band = "High" if likelihood >= 78 else "Medium" if likelihood >= 55 else "Low"
         sources = [k for k, v in breakdown.items() if v > 0]
+        icon, icon_title = actor_icon(g)
         scored.append({
             "name": name, "group_id": gid, "nexus": g.get("nexus") or "",
+            "icon": icon, "icon_title": icon_title,
             "likelihood": likelihood, "band": band, "breakdown": breakdown,
             "sources": sources, "reasons": reasons[:3],
         })

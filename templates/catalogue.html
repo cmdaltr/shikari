@@ -34,9 +34,11 @@
   .cat-risk.low { color: #0D9488; } .cat-risk.med { color: #D97706; } .cat-risk.high { color: #B91C1C; }
   [data-theme="dark"] .cat-risk.low { color: #2DD4BF; } [data-theme="dark"] .cat-risk.med { color: #FBBF24; } [data-theme="dark"] .cat-risk.high { color: #F87171; }
   .cat-actions { margin-top: auto; display: flex; gap: 10px; }
-  .cat-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-weight: 600;
+  .cat-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-weight: 600; white-space: nowrap;
     text-decoration: none; font-size: .9rem; background: #0284C7; color: #fff; }
   .cat-btn:hover { background: #0369A1; }
+  .cat-btn.ghost { background: transparent; color: #0284C7; border: 1px solid #0284C7; }
+  .cat-btn.ghost:hover { background: rgba(2, 132, 199, .08); }
   .cat-empty { color: var(--text-secondary); padding: 40px 0; }
 </style>
 {% endblock %}
@@ -56,7 +58,7 @@
 
   <!-- ===== Companies: organisations profiled, the defender's side ===== -->
   <div class="cat-pane" id="cat-pane-companies" role="tabpanel" aria-labelledby="cat-tab-companies" hidden>
-  <p class="cat-sub">Organisations you have profiled, newest first. Each links to its exposure map.</p>
+  <p class="cat-sub">Organisations you have profiled, newest first. Each opens its review, where you can generate detections for its likely adversaries, and its exposure map.</p>
   {% if companies %}
   <div class="cat-grid">
     {% for c in companies %}
@@ -68,7 +70,7 @@
                onerror="catLogoError(this)">
           <span class="cat-logo-mono" hidden>{{ (c.name or c.domain)[:1]|upper }}</span>
         </span>
-        <h3><a href="/exposure?domain={{ c.domain | urlencode }}">{{ c.name }}</a></h3>
+        <h3><a href="/review?domain={{ c.domain | urlencode }}">{{ c.name }}</a></h3>
         {% if c.is_home %}<span class="cat-home-star" title="Your organisation">★</span>{% endif %}
       </div>
       <div class="cat-meta">
@@ -86,7 +88,8 @@
       </div>
       {% if c.hosting %}<div class="cat-meta">Hosted in {{ c.hosting | join(', ') }}</div>{% endif %}
       <div class="cat-actions">
-        <a class="cat-btn" href="/exposure?domain={{ c.domain | urlencode }}">Exposure map →</a>
+        <a class="cat-btn" href="/review?domain={{ c.domain | urlencode }}" title="The profile, its likely adversaries, and detections for them">Review →</a>
+        <a class="cat-btn ghost" href="/exposure?domain={{ c.domain | urlencode }}">Exposure map</a>
       </div>
     </div>
     {% endfor %}

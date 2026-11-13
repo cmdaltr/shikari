@@ -156,6 +156,28 @@ class TuneAgentModule(AgentModule):
     }
 
 
+
+class BriefAgentModule(AgentModule):
+    name = "agent/brief"
+    description = "Agent: brief on a threat group or a profiled organisation: likely TTPs, coverage gaps, next hunts"
+    author = "Shikari Team"
+    agent = "brief"
+    fields = {
+        "TARGET": ModuleOption(name="TARGET", description="Threat group or profiled domain (e.g. FIN7, example.com)",
+                               required=True),
+    }
+
+
+class InvestigateAgentModule(AgentModule):
+    name = "agent/investigate"
+    description = "Agent: pivot from an indicator through recent reporting to actors, techniques and hunts"
+    author = "Shikari Team"
+    agent = "investigate"
+    fields = {
+        "INDICATOR": ModuleOption(name="INDICATOR", description="IP, domain, URL, hash, email, CVE or an organisation's domain",
+                                  required=True),
+    }
+
 class AgentHistoryModule(ServerModule):
     name = "agent/history"
     description = "Recent agent runs (kept across restarts); SESSION shows one, CONTINUE carries it on"

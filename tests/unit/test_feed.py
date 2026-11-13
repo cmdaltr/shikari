@@ -189,3 +189,16 @@ def test_custom_sources_are_checked_before_they_are_added(tmp_path, monkeypatch)
     assert ("Mine", "https://example.com/rss") in feed.all_sources()
     assert feed.remove_source("https://example.com/rss") and not feed.custom_sources()
     assert not feed.remove_source(feed.SOURCES[0][1])  # built-ins stay
+
+
+def test_background_refresh_waits_for_the_interval_it_is_given(monkeypatch):
+    import time
+
+    started = []
+    monkeypatch.setattr(feed, "_load", lambda: {"last_refresh": time.time() - 2 * 3600})
+    monkeypatch.setattr(feed, "refresh", lambda bundle, meta: started.append(True))
+    monkeypatch.setattr(feed, "_refreshing", False)
+    assert feed.refresh_in_background(None, {}) is False  # two hours old, the default is six
+    assert feed.refresh_in_background(None, {}, every=4 * 3600) is False
+    assert feed.refresh_in_background(None, {}, every=3600) is True
+    assert feed.refresh_in_background(None, {}, force=True, every=24 * 3600) is True

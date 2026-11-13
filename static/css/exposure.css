@@ -65,9 +65,10 @@
    OSINT and demonstrated activity. Shares the exposure page's section chrome. */
 .adv-section .adv-home { margin-left: 10px; font-size: .6em; font-weight: 600; vertical-align: 3px;
   color: #f59e0b; border: 1px solid rgba(245, 158, 11, .4); border-radius: 999px; padding: 2px 9px; }
-.adv-note { color: var(--text-secondary); margin: 0 0 16px; max-width: 70ch; line-height: 1.5; }
-.adv-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.adv-item { display: grid; grid-template-columns: 34px 1fr 128px; align-items: center; gap: 14px;
+.adv-note { color: var(--text-secondary); margin: 0 0 16px; line-height: 1.5; }
+.adv-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 1100px) { .adv-list { grid-template-columns: 1fr; } }
+.adv-item { display: grid; grid-template-columns: 34px 1fr 96px; align-items: center; gap: 14px;
   padding: 14px 16px; border: 1px solid var(--border-color); border-left: 4px solid var(--border-color);
   border-radius: 10px; background: var(--bg-secondary); }
 .adv-band-high { border-left-color: #ef4444; }
@@ -78,7 +79,7 @@
 .adv-name { font-size: 1.08em; font-weight: 600; color: var(--text-primary); text-decoration: none; }
 .adv-name:hover { text-decoration: underline; }
 .adv-nexus { font-size: .82em; color: var(--text-secondary); }
-.adv-nexus::before { content: "◈ "; color: var(--text-tertiary); }
+.adv-icon { font-size: 1.15em; line-height: 1; }
 .adv-id { font-size: .76em; color: var(--text-tertiary); font-family: ui-monospace, monospace; }
 .adv-sources { display: flex; gap: 6px; flex-wrap: wrap; margin: 7px 0 2px; }
 .adv-chip { font-size: .72em; font-weight: 600; padding: 2px 9px; border-radius: 999px;
@@ -114,3 +115,8 @@
 .adv-feed.is-off { color: var(--text-tertiary); opacity: .7; }
 .adv-feed-note { flex: 1 1 100%; color: var(--text-tertiary); font-weight: 400; }
 .adv-feed-note code { font-size: .92em; }
+
+/* Review: a checkbox per group, over its rank, to choose what Generate detections runs */
+.adv-pick { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+.adv-pick input { width: 18px; height: 18px; margin: 0; cursor: pointer; accent-color: var(--accent, #d4a017); }
+.adv-selectable:has(.rv-group-cb:checked) { background: rgba(212, 160, 23, .06); box-shadow: 0 0 0 1px rgba(212, 160, 23, .45); }

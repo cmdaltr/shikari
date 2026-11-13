@@ -2,6 +2,8 @@
 {% block title %}Shikari - Manual{% endblock %}
 {% block head %}
 {{ super() }}
+<!-- tabs.css: the Additional Options panel's look, as on the Hunt tab -->
+<link rel="stylesheet" href="{{ url_for('static', path='css/tabs.css') }}?v={{ request.app.state.asset_version }}">
 <link rel="stylesheet" href="{{ url_for('static', path='css/manual.css') }}?v={{ request.app.state.asset_version }}">
 <style>
 /* Ensure consistent positioning across all browsers */
@@ -15,6 +17,7 @@ html, body {
 {% block main_class %}page-shell{% endblock %}
 
 {% block content %}
+{% from "partials/hunt_options.html" import additional_options %}
 <div class="results-container mn-page">
   <div class="page-header">
     <h1>Manual</h1>
@@ -23,6 +26,8 @@ html, body {
 
   <!-- Group name (shown if provided or after the first Append) -->
   <div id="group-name" class="mn-group" {% if not group_name %}hidden{% endif %}>{{ group_name | default('', true) }}</div>
+
+  {% if error_message %}<div class="mn-error" role="alert">{{ error_message }}</div>{% endif %}
 
   <div id="manual-content" class="mn-grid">
     <section class="mn-card mn-entry">
@@ -54,12 +59,49 @@ html, body {
       </div>
 
       <div class="mn-field">
+        <span class="section-label">Platforms</span>
+        <div class="mn-tactics mn-platforms">
+          {% for platform in platforms %}
+          <label class="option-item"><input type="checkbox" name="platforms" value="{{ platform }}"> <span class="option-label">{{ platform }}</span></label>
+          {% endfor %}
+        </div>
+        <div class="platforms-help">Ticked from the technique's ATT&amp;CK platforms when you choose one; change them to where you saw it.</div>
+      </div>
+
+      <div class="mn-field">
         <label for="procedures" class="section-label">Procedures</label>
         <textarea name="procedures" id="procedures" rows="6" required></textarea>
-        <div class="procedures-help">List one per line.</div>
+        <div class="procedures-help">The attack examples: the commands or behaviour seen, one per line.</div>
+      </div>
+
+      <div class="mn-field">
+        <label for="indicators" class="section-label">Indicators</label>
+        <textarea name="indicators" id="indicators" rows="4" spellcheck="false" placeholder="rundll32.exe C:\ProgramData\svc.dll,Start&#10;HKCU\Software\Microsoft\Windows\CurrentVersion\Run\Updater&#10;evil[.]com"></textarea>
+        <div class="indicators-help">What the queries should match, one per line: commands, file names and paths, registry keys, tool names, hashes, domains and IPs. Defanged is fine (hxxp, [.]). Each becomes a condition in the queries, except a hash, which goes into an IOC sweep with the domains and IPs.</div>
+      </div>
+
+      <div class="mn-field">
+        <label for="references" class="section-label">References</label>
+        <textarea name="references" id="references" rows="3" placeholder="https://"></textarea>
+        <div class="references-help">Where the procedures come from: one http:// or https:// URL per line. Saved with the detections as their sources.</div>
+      </div>
+
+      <div class="mn-options">
+        {{ additional_options({"auto_validate": "mn-auto-validate", "lol_datasets": "mn-lol-datasets",
+                               "osint_enhancement": "mn-osint-enhancement", "osint_comparison": "mn-osint-comparison"}) }}
       </div>
 
       <div class="mn-actions">
+        <!-- A Hunt always correlates; a manual entry may be too small to, so it's a choice here -->
+        <label class="option-item mn-corr">
+          <input type="checkbox" name="run_correlation" value="true" id="mn-run-correlation" checked>
+          <span class="option-label">
+            Generate correlations
+            <span class="option-info-icon">i
+              <span class="option-info-tooltip">After the detections, pair techniques that follow one another into multi-event correlation rules for each SIEM, and draw the attack flow.</span>
+            </span>
+          </span>
+        </label>
         <button type="button" id="append-btn" class="btn ghost">Append</button>
         <button type="submit" id="submit-btn" class="btn">Submit</button>
       </div>
@@ -69,5 +111,8 @@ html, body {
 
   <div id="technique-list" class="mn-list"></div>
 </div>
+<script id="mn-technique-platforms" type="application/json">{{ technique_platforms | tojson }}</script>
+{% include "partials/ai_prompt.html" %}
+<script src="{{ url_for('static', path='js/auto_validate.js') }}?v={{ request.app.state.asset_version }}"></script>
 <script src="{{ url_for('static', path='js/manual.js') }}?v={{ request.app.state.asset_version }}" defer></script>
 {% endblock %}

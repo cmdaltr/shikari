@@ -2,7 +2,7 @@
 <style>
   #ask-shikari-btn {
     position: fixed;
-    bottom: 64px;
+    bottom: calc(64px + var(--asb-lift, 0px));
     right: 24px;
     z-index: 9000;
     border-radius: 45px;
@@ -30,7 +30,7 @@
 
   #ask-shikari-panel {
     position: fixed;
-    bottom: 116px;
+    bottom: calc(116px + var(--asb-lift, 0px));
     right: 24px;
     z-index: 8999;
     width: 638px;
@@ -121,8 +121,32 @@
   const send   = document.getElementById('aap-send');
   const provEl = document.getElementById('aap-provider');
 
+  // Rise above the footer as it scrolls into view, so the button never sits on it, whatever its height
+  const footer = document.querySelector('.page-footer');
+  if (btn && footer) {
+    const lift = () => {
+      const z = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+      const shown = (innerHeight - footer.getBoundingClientRect().top) / z;
+      document.documentElement.style.setProperty('--asb-lift', Math.max(0, shown + 16 - 64) + 'px');
+    };
+    document.addEventListener('scroll', lift, { passive: true, capture: true });  // pages scroll in an inner element too
+    addEventListener('resize', lift);
+    new ResizeObserver(lift).observe(document.body);
+    lift();
+  }
+
   // Ask Shikari is for authenticated users only — leave the locked button inert.
   if (!btn || btn.classList.contains('is-locked')) { if (panel) panel.style.display = 'none'; return; }
+
+  // No model linked: grey the button out, like a guest's, so nothing can be sent to a provider
+  fetch('/api/ask/status').then(r => r.json()).then(d => {
+    if (d.available) return;
+    btn.classList.add('is-locked');
+    btn.disabled = true;
+    btn.title = 'Link an AI model in Profile to use Ask Shikari';
+    btn.setAttribute('aria-label', 'Ask Shikari (link an AI model in Profile to use)');
+    setOpen(false);
+  }).catch(() => {});
 
   function setOpen(open) {
     panel.classList.toggle('open', open);

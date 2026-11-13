@@ -105,7 +105,7 @@ def build(group: Optional[str], generate_dir: str, group_files: Callable, tlp: s
     techniques = sorted({u["technique"] for u in used})
     header = [
         "// " + "=" * 74,
-        "// Shikari master hunt query: Microsoft Defender XDR advanced hunting",
+        "// Shikari master hunt query: Defender XDR advanced hunting",
         f"// Scope     : {group.replace('_', ' ') if group else 'every detection in the library'}",
         f"// Generated : {stamp}",
         f"// {label}  {tlp_mod.rule(label)}",

@@ -8,6 +8,11 @@ from shikari.build.malware_iocs import enrich_indicators_with_iocs, log_ioc_enri
 from shikari import paths
 
 
+# What marks a value as written syntax rather than a sentence: a switch, a path or URL separator, a
+# file name's extension, a variable, a pipe or redirection
+_COMMAND_SYNTAX = re.compile(r"(?:^|\s)[-/]\w|[\\/]|\w\.[A-Za-z]\w{0,4}\b|%\w+%|\$\w|[|<>=]")
+
+
 def validate_and_clean_indicators(indicators: list, indicator_type: str = "cmd") -> list:
     """
     Validate and clean indicators before using them in queries.
@@ -75,13 +80,12 @@ def validate_and_clean_indicators(indicators: list, indicator_type: str = "cmd")
         if len(indicator) < 3:
             continue
 
-        # Skip if it matches citation patterns
-        is_citation = False
-        for pattern in CITATION_PATTERNS:
-            if re.search(pattern, indicator, re.IGNORECASE):
-                is_citation = True
-                break
-        if is_citation:
+        # Skip if it matches citation patterns. Those after the first are words and shapes of
+        # ATT&CK's prose: in a value written as command syntax (a switch, path, file name, URL or
+        # port) they're its own text, as "dump" is in procdump -ma lsass.exe and 4444 in nc -lvp 4444
+        syntax = bool(_COMMAND_SYNTAX.search(indicator))
+        if any(re.search(pattern, indicator, re.IGNORECASE)
+               for pattern in (CITATION_PATTERNS[:1] if syntax else CITATION_PATTERNS)):
             continue
 
         # Skip generic single words

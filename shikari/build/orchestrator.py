@@ -218,9 +218,10 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                     # CVE-specific technique without MITRE data (synthetic technique)
                     retrieved_data["technique_description"] = f"CVE exploitation technique: {technique}"
 
-                # Get platforms from STIX bundle directly
-                technique_platforms = []
-                for obj in bundle.objects:
+                # An entry's own platforms (the Manual page's, which default to ATT&CK's) win;
+                # otherwise the technique's from the STIX bundle
+                technique_platforms = list(tech_info.get("technique_platforms") or [])
+                for obj in ([] if technique_platforms else bundle.objects):
                     if obj.get("type") == "attack-pattern":
                         external_refs = obj.get("external_references", [])
                         for ref in external_refs:
@@ -239,6 +240,8 @@ def process_group(group_name, output_dir=None, hypothesis=None, manual_data=None
                 # For CVEs, op_guidance is the IOC dict, detect_guidance is the description string
                 retrieved_data["activity_desc"] = (tech_info.get("activity_desc") or tech_info.get("detect_guidance", "")
                                                    or f"Detection for {technique}")
+                # Reset per entry: retrieved_data carries over from the previous one
+                retrieved_data["procedure"] = tech_info.get("procedure", "")
 
                 # Build detection queries and YAML
                 _report_technique(group_name, technique, retrieved_data["technique"])

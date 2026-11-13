@@ -204,6 +204,16 @@ def analyze_blog_post(url: str, include_text: bool = False, timeout: int = 30, b
 
             techniques = sorted(set(techniques) | set(techniques_for_commands(iocs["cmd"])))
 
+        # Judge the publisher by where we landed, not the link we were given
+        landed = response.url if isinstance(response.url, str) else url
+        found_domains = list(iocs.get("domain") or [])
+        # Full page text: contact addresses usually sit in the stripped footer
+        iocs = _drop_publisher_domains(iocs, landed, full_text, page_meta)
+        left_out = [d for d in found_domains if d not in (iocs.get("domain") or [])]
+        identity = publisher_identity(landed, page_meta)
+        site_name = page_meta.find("meta", attrs={"property": "og:site_name"})
+        site_name = (site_name.get("content") or "").strip() if site_name else ""
+
         # Extract intelligence
         result = {
             "success": True,
@@ -214,18 +224,14 @@ def analyze_blog_post(url: str, include_text: bool = False, timeout: int = 30, b
             "procedures": _extract_procedures(text),
             "title": _article_title(title),
             "published": published_date(page_meta),
-            "iocs": _drop_citation_links(
-                _drop_publisher_domains(
-                    iocs,
-                    # Judge the publisher by where we landed, not the link we were given
-                    response.url if isinstance(response.url, str) else url,
-                    # Full page text: contact addresses usually sit in the stripped footer
-                    full_text,
-                    page_meta,
-                ),
-                # Full page text: reference lists often sit in stripped sections too
-                full_text,
-            ),
+            # Full page text: reference lists often sit in stripped sections too
+            "iocs": _drop_citation_links(iocs, full_text),
+            # Shown on Analyse's review screen: whose domains were left out
+            "publisher": {
+                "name": site_name or min(identity["domains"]),
+                "domains": sorted(identity["domains"]),
+                "dropped": left_out,
+            } if identity["domains"] else None,
         }
 
         from shikari.build.ioc_flow import ioc_mentions
@@ -499,7 +505,9 @@ def _vendor_email_domains(text: str, publisher: Dict[str, set]) -> List[str]:
     return sorted(vendor)
 
 
-def _drop_publisher_domains(iocs: Dict[str, List[str]], page_url: str, text: str = "", soup=None) -> Dict[str, List[str]]:
+def _drop_publisher_domains(iocs: Dict[str, List[str]], page_url: str, text: str = "", soup=None,
+                            publisher: Optional[Dict[str, set]] = None,
+                            keep_defanged: bool = False) -> Dict[str, List[str]]:
     """
     Remove the publisher's own domains from extracted domain IOCs.
 
@@ -507,8 +515,14 @@ def _drop_publisher_domains(iocs: Dict[str, List[str]], page_url: str, text: str
     never indicators for the activity being reported. Removed: anything on the
     publisher's registrable domains, plus vendor email domains (see
     _vendor_email_domains) and their subdomains.
+
+    publisher: an identity already worked out (document_publisher) in place of
+    the page's. keep_defanged: keep a domain the text writes defanged other than
+    in an email address, as a report marks an indicator; a vendor defanging its
+    own contact address (CISA's contact[at]cisa[.]dhs[.]gov) still goes. Off for
+    a page, whose publisher is certain.
     """
-    publisher = publisher_identity(page_url, soup)
+    publisher = publisher or publisher_identity(page_url, soup)
     if not publisher["domains"] or not iocs.get("domain"):
         return iocs
 
@@ -516,11 +530,168 @@ def _drop_publisher_domains(iocs: Dict[str, List[str]], page_url: str, text: str
 
     def is_vendor(d: str) -> bool:
         d = _refang(d)
-        return (_registrable_domain(d) in publisher["domains"]
-                or any(d == v or d.endswith("." + v) for v in vendor_email))
+        return ((_registrable_domain(d) in publisher["domains"]
+                 or any(d == v or d.endswith("." + v) for v in vendor_email))
+                and not (keep_defanged and _written_defanged(d, text, addresses=False, subdomains=False)))
 
     iocs["domain"] = [d for d in iocs["domain"] if not is_vendor(d)]
     return iocs
+
+
+# A document has no URL, so its publisher is inferred from what it says about itself.
+# Metadata fields by weight: Author, Creator and Company name the organisation; Title and
+# Subject often name other vendors' products; Producer is usually the PDF software
+_META_WEIGHTS = {"author": 2, "creator": 2, "company": 2, "title": 1, "subject": 1, "producer": 1}
+_COPYRIGHT = re.compile(
+    r"(?:©|\(c\)|(?i:\bcopyright\b))(?:[ \t]*(?:©|\(c\)))?[ \t]*(?:\d{4}(?:[ \t]*[-–][ \t]*\d{4})?)?[, \t]*(?:by[ \t]+)?"
+    r"([A-Z][\w&'-]*(?:[ \t]+[A-Z0-9][\w&'-]*){0,4})"
+)
+# "Trellix, Inc. All Rights Reserved": the name stops at the company form
+_COMPANY_FORM = re.compile(r"\b(?:Inc|LLC|Ltd|Limited|Corp|Corporation|Incorporated|plc|GmbH|AG|All)\b.*", re.I)
+_ROLE_MAILBOX = re.compile(
+    r"(?<![\w.+-])(?:info|contact|press|media|pr|news|intel|intelligence|research|threatintel|cti|labs?|"
+    r"support|sales|marketing|security|soc|cert|csirt|ir|incident|reports?|hello|enquiries|inquiries|"
+    r"feedback|advisories)@((?:[\w-]+\.)+[a-z]{2,})", re.I)
+_PLAIN_DOMAIN = re.compile(r"(?<![\w.@-])((?:[a-z0-9][a-z0-9-]*\.)+[a-z]{2,})(?![\w-])", re.I)
+_URL_HOST = re.compile(r"https?://([\w.-]+)", re.I)
+# Feed hosts that aren't the vendor's own domain
+_FEED_HOSTS = {"feedburner.com"}
+
+
+def _word_runs(name: str) -> set:
+    """'Palo Alto Networks Unit 42' -> {'palo', 'paloalto', 'paloaltonetworks', ..., 'unit42'}."""
+    words = re.findall(r"[a-z0-9]+", name.lower())
+    return {"".join(words[i:j]) for i in range(len(words)) for j in range(i + 1, min(i + 4, len(words) + 1))}
+
+
+def _label(domain: str) -> str:
+    """paloaltonetworks for paloaltonetworks.com, redcanary for red-canary.com."""
+    return re.sub(r"[^a-z0-9]", "", domain.split(".", 1)[0])
+
+
+def _research_vendors() -> List[tuple]:
+    """(name key, registrable domain) for the Feed page's research sources: 'unit42' -> paloaltonetworks.com."""
+    from urllib.parse import urlparse
+
+    from shikari.intelligence.feed import all_sources
+
+    vendors = []
+    for name, url in all_sources():
+        domain = _registrable_domain(urlparse(url).hostname or "")
+        if not domain or domain in _FEED_HOSTS:
+            continue
+        words = re.findall(r"[a-z0-9]+", _NAME_SUFFIXES.sub(" ", name.lower()))
+        # The first word alone too ("Kaspersky" for Kaspersky Securelist), unless it's short
+        # enough to be an ordinary word ("Unit", "Red")
+        keys = {"".join(words)} | ({words[0]} if words and len(words[0]) >= 5 else set())
+        vendors += [(k, domain) for k in keys if len(k) >= 4]
+    return vendors
+
+
+def document_publisher(text: str, domains: Optional[List[str]] = None, metadata: Optional[Dict] = None,
+                       pages: Optional[List[str]] = None) -> Optional[Dict]:
+    """
+    The publisher of an uploaded report, inferred from the document: {name, domains,
+    names} in publisher_identity's shape (plus a display name), or None.
+
+    Each candidate domain (the extracted domains, contact addresses, header, footer
+    and link hosts) scores from the signals that point at it:
+      2  named by the metadata Author, Creator or Company, or a copyright line
+         ("© 2025 Trellix"), by the domain's first label (trellix.com) or the Feed
+         sources' vendor table (Unit 42 -> paloaltonetworks.com)
+      2  in a page header or footer (first or last two lines) on most pages
+      1  named only by the metadata Title, Subject or Producer
+      1  a role mailbox written plain (press@, intel@, info@ ...)
+      1  the host of plain links on most pages
+    A domain needs 2: one strong signal, or two weak ones agreeing. Page signals
+    need three pages or more.
+    """
+    from urllib.parse import urlparse
+
+    text = text or ""
+    names = [(v, _META_WEIGHTS[k.lower().lstrip("/")]) for k, v in (metadata or {}).items()
+             if isinstance(v, str) and v.strip() and k.lower().lstrip("/") in _META_WEIGHTS]
+    names += [(_COMPANY_FORM.sub("", m.group(1)).strip(" .,"), 2) for m in _COPYRIGHT.finditer(text)]
+    names = [(n, w) for n, w in names if n]
+
+    score: Dict[str, int] = {}
+    named_by: Dict[str, str] = {}
+
+    def add(domain: str, points: int, name: str = "") -> None:
+        if domain:
+            score[domain] = score.get(domain, 0) + points
+            if name and domain not in named_by:
+                named_by[domain] = name
+
+    candidates = {_registrable_domain(_refang(d)) for d in domains or []}
+    candidates |= {_registrable_domain(m.group(1)) for m in _ROLE_MAILBOX.finditer(text)}
+    for m in _ROLE_MAILBOX.finditer(text):
+        add(_registrable_domain(m.group(1)), 1)
+
+    pages = [p for p in pages or [] if p and p.strip()]
+    if len(pages) >= 3:
+        needed = max(2, -(-len(pages) * 3 // 5))
+        edges, links = {}, {}
+        for page in pages:
+            lines = [ln for ln in page.splitlines() if ln.strip()]
+            for d in {_registrable_domain(m.group(1)) for ln in lines[:2] + lines[-2:] for m in _PLAIN_DOMAIN.finditer(ln)}:
+                edges[d] = edges.get(d, 0) + 1
+            for d in {_registrable_domain(m.group(1)) for m in _URL_HOST.finditer(page)}:
+                links[d] = links.get(d, 0) + 1
+        for d, n in edges.items():
+            if n >= needed:
+                candidates.add(d)
+                add(d, 2)
+        for d, n in links.items():
+            if n >= needed:
+                candidates.add(d)
+                add(d, 1)
+
+    # A domain scores for its strongest name only: Title and Producer together are still weak
+    strongest: Dict[str, tuple] = {}
+    vendors = _research_vendors() if names else []
+    for name, weight in names:
+        runs = _word_runs(name)
+        named = {d for d in candidates if d and len(_label(d)) >= 3 and _label(d) in runs}
+        named |= {d for key, d in vendors if key in runs}
+        for d in named:
+            if weight > strongest.get(d, (0, ""))[0]:
+                strongest[d] = (weight, name)
+    for d, (weight, name) in strongest.items():
+        add(d, weight, name)
+
+    found = {d for d, s in score.items() if d and s >= 2}
+    if not found:
+        return None
+    best = max(found, key=lambda d: (d in named_by, score[d]))
+    return {"name": named_by.get(best, best), "domains": found, "names": {d.split(".", 1)[0] for d in found}}
+
+
+_ADDRESS_AT = re.compile(r"[\w.+-]\s*(?:@|\[@\]|\(@\)|\[at\]|\(at\))\s*(?:[\w-]+(?:\[\.\]|\(\.\)|\[dot\]|\.))*$", re.I)
+
+
+_DEFANG_DOT = re.compile(r"\[\.\]|\(\.\)|\[dot\]", re.I)
+_DEFANGED_SCHEME = re.compile(r"(?:hxxps?|https?\[:\]|hxxps?\[:\])//(?:[\w-]+(?:\[\.\]|\(\.\)|\[dot\]|\.))*$", re.I)
+
+
+def _written_defanged(domain: str, text: str, addresses: bool = True, subdomains: bool = True) -> bool:
+    """
+    Whether the text writes this (refanged) domain defanged anywhere: evil[.]com,
+    c2.evil(.)com, hxxps://evil.com. addresses=False ignores a defanged email
+    address's domain; subdomains=False, a defanged subdomain's (login.evil[.]com
+    for evil.com).
+    """
+    if not text:
+        return False
+    edge = r"(?<![\w-])" if subdomains else r"(?<![\w.-])(?<!\[\.\])(?<!\(\.\))(?<!\[dot\])"
+    written = edge + r"\s*(?:\[\.\]|\(\.\)|\[dot\]|\.)\s*".join(re.escape(p) for p in domain.split("."))
+    for m in re.finditer(written, text, re.I):
+        before = text[max(0, m.start() - 80):m.start()]
+        if not (_DEFANG_DOT.search(m.group(0)) or _DEFANGED_SCHEME.search(before)):
+            continue
+        if addresses or not _ADDRESS_AT.search(before):
+            return True
+    return False
 
 
 _URL_HOST_PREFIX = re.compile(r"https?://(?:[\w-]+\.)*$", re.I)
@@ -547,8 +718,7 @@ def _drop_citation_links(iocs: Dict[str, List[str]], text: str) -> Dict[str, Lis
 
     def is_citation(domain: str) -> bool:
         d = _refang(domain)
-        defanged = r"\s*(?:\[\.\]|\(\.\)|\[dot\])\s*".join(re.escape(p) for p in d.split("."))
-        if re.search(defanged, text, re.I):
+        if _written_defanged(d, text):
             return False
         mentions = list(re.finditer(re.escape(d), text, re.I))
         return bool(mentions) and all(_URL_HOST_PREFIX.search(text[max(0, m.start() - 80):m.start()])

@@ -128,6 +128,7 @@ DATA_SOURCE_DISPLAY_NAMES = {
     "device_process_events": "DeviceProcessEvents",
     "gcp_audit": "GCP Audit Logs",
     "microsoft defender": "Defender XDR",
+    "microsoft defender xdr": "Defender XDR",
     "microsoft_defender": "Defender XDR",
     "edr_events": "Defender XDR",
     "mde": "Defender XDR",
@@ -136,6 +137,14 @@ DATA_SOURCE_DISPLAY_NAMES = {
     "microsoft_o365": "M365",
     "splunk": "Splunk",
     "unix": "Unix",
+    # Query languages, which title case would turn into "Udm"
+    "udm": "UDM",
+    "yara l": "YARA-L",
+    "yaral": "YARA-L",
+    "kql": "KQL",
+    "spl": "SPL",
+    "esql": "ES|QL",
+    "eql": "EQL",
 }
 # Names for the organisation's own products (WAFs, proxies, IPS) stay out of the code:
 # bespoke/mappings/sources/display_names.json (gitignored) adds or overrides entries
@@ -1515,7 +1524,7 @@ def load_mitre_data():
 
         keep_current(_all_stacks)
 
-        # Watchlists need collections nobody asks for: every REFRESH_EVERY while any exist
+        # Watchlists need collections nobody asks for: at the shortest interval their owners chose
         from shikari.intelligence.watchlists import keep_collecting
 
         keep_collecting(lambda: (getattr(app.state, "bundle", None), getattr(app.state, "group_metadata", {}) or {}))
@@ -2743,6 +2752,107 @@ import json
 import os
 
 
+def _auto_validate(group_name: str, excluded_vendors=None) -> None:
+    """Auto-validate (Hunt and Manual): test the run's detections against sample events in a
+    containerised SIEM, for every SIEM the run generated for. Needs Docker; silent without it."""
+    # Vendor keys as process_group excludes them; the validation SIEMs name SecOps "secops"
+    excluded = {"secops" if v == "googlesecops" else v for v in excluded_vendors or []}
+    try:
+        from shikari.validation import check_docker_available
+        from shikari.validation.orchestrator import get_orchestrator
+
+        docker_available, _ = check_docker_available()
+        if docker_available:
+            print(f"Auto-validating detections for {group_name}...")
+            write_progress(group_name, {"stage": "validating"})
+
+            orchestrator = get_orchestrator()
+            validation_results = {}
+
+            # Load generated detections from build folder
+            build_dir = Path("data/build") / group_name.replace(" ", "_")
+            if build_dir.exists():
+                for yaml_file in build_dir.glob("*.yaml"):
+                    try:
+                        import yaml
+                        with open(yaml_file) as f:
+                            detection_data = yaml.safe_load(f)
+
+                        if not detection_data:
+                            continue
+
+                        # Determine vendor from file name or content
+                        vendor = None
+                        filename = yaml_file.stem.lower()
+                        if "splunk" in filename or "spl" in filename:
+                            vendor = "splunk"
+                        elif "elastic" in filename or "eql" in filename:
+                            vendor = "elastic"
+                        elif "secops" in filename or "yaral" in filename:
+                            vendor = "secops"
+                        elif "mde" in filename or "kql" in filename:
+                            vendor = "mde"
+
+                        if vendor and vendor not in excluded:
+                            # Get query from detection
+                            query = detection_data.get("query") or detection_data.get("detection", {}).get("query")
+                            technique_id = detection_data.get("technique_id", "Unknown")
+                            technique_name = detection_data.get("technique_name", "Unknown")
+
+                            if query:
+                                # Create validation session
+                                session = orchestrator.create_session(
+                                    technique_id=technique_id,
+                                    technique_name=technique_name,
+                                    query=query,
+                                    vendor=vendor,
+                                )
+
+                                # Start SIEM (uses docker-compose if available)
+                                siem_result = orchestrator.start_siem(session.session_id)
+
+                                if siem_result.get("success"):
+                                    # Generate sample events
+                                    indicators = detection_data.get("indicators", {"cmd": [], "sw": []})
+                                    events_result = orchestrator.generate_events(
+                                        session_id=session.session_id,
+                                        indicators=indicators,
+                                        malicious_count=5,
+                                        benign_count=10,
+                                    )
+
+                                    if events_result.get("success"):
+                                        # Test detection
+                                        test_result = orchestrator.test_detection(session.session_id)
+
+                                        if test_result.get("success"):
+                                            validation_results[yaml_file.stem] = {
+                                                "vendor": vendor,
+                                                "technique_id": technique_id,
+                                                "passed": test_result["result"]["passed"],
+                                                "f1_score": test_result["result"].get("f1_score", 0),
+                                                "precision": test_result["result"].get("precision", 0),
+                                                "recall": test_result["result"].get("recall", 0),
+                                            }
+
+                                # Stop session (releases but doesn't stop compose containers)
+                                orchestrator.stop_session(session.session_id)
+
+                    except Exception as e:
+                        print(f"Validation error for {yaml_file.name}: {e}")
+
+            # Store validation results
+            if validation_results:
+                validation_file = build_dir / "validation_results.json"
+                import json
+                with open(validation_file, "w") as f:
+                    json.dump(validation_results, f, indent=2)
+                print(f"Validation complete: {len(validation_results)} detections validated")
+
+    except Exception as e:
+        print(f"Auto-validation error: {e}")
+
+
 @app.post("/generate")
 async def generate(
     request: Request,
@@ -2843,100 +2953,7 @@ async def generate(
 
                 # Auto-validate detections if requested
                 if auto_validate == "true":
-                    try:
-                        from shikari.validation import check_docker_available
-                        from shikari.validation.orchestrator import get_orchestrator
-
-                        docker_available, _ = check_docker_available()
-                        if docker_available:
-                            print(f"Auto-validating detections for {group_name}...")
-                            write_progress(group_name, {"stage": "validating"})
-
-                            orchestrator = get_orchestrator()
-                            validation_results = {}
-
-                            # Load generated detections from build folder
-                            build_dir = Path("data/build") / group_name.replace(" ", "_")
-                            if build_dir.exists():
-                                for yaml_file in build_dir.glob("*.yaml"):
-                                    try:
-                                        import yaml
-                                        with open(yaml_file) as f:
-                                            detection_data = yaml.safe_load(f)
-
-                                        if not detection_data:
-                                            continue
-
-                                        # Determine vendor from file name or content
-                                        vendor = None
-                                        filename = yaml_file.stem.lower()
-                                        if "splunk" in filename or "spl" in filename:
-                                            vendor = "splunk"
-                                        elif "elastic" in filename or "eql" in filename:
-                                            vendor = "elastic"
-                                        elif "secops" in filename or "yaral" in filename:
-                                            vendor = "secops"
-                                        elif "mde" in filename or "kql" in filename:
-                                            vendor = "mde"
-
-                                        if vendor and vendor not in excluded:
-                                            # Get query from detection
-                                            query = detection_data.get("query") or detection_data.get("detection", {}).get("query")
-                                            technique_id = detection_data.get("technique_id", "Unknown")
-                                            technique_name = detection_data.get("technique_name", "Unknown")
-
-                                            if query:
-                                                # Create validation session
-                                                session = orchestrator.create_session(
-                                                    technique_id=technique_id,
-                                                    technique_name=technique_name,
-                                                    query=query,
-                                                    vendor=vendor,
-                                                )
-
-                                                # Start SIEM (uses docker-compose if available)
-                                                siem_result = orchestrator.start_siem(session.session_id)
-
-                                                if siem_result.get("success"):
-                                                    # Generate sample events
-                                                    indicators = detection_data.get("indicators", {"cmd": [], "sw": []})
-                                                    events_result = orchestrator.generate_events(
-                                                        session_id=session.session_id,
-                                                        indicators=indicators,
-                                                        malicious_count=5,
-                                                        benign_count=10,
-                                                    )
-
-                                                    if events_result.get("success"):
-                                                        # Test detection
-                                                        test_result = orchestrator.test_detection(session.session_id)
-
-                                                        if test_result.get("success"):
-                                                            validation_results[yaml_file.stem] = {
-                                                                "vendor": vendor,
-                                                                "technique_id": technique_id,
-                                                                "passed": test_result["result"]["passed"],
-                                                                "f1_score": test_result["result"].get("f1_score", 0),
-                                                                "precision": test_result["result"].get("precision", 0),
-                                                                "recall": test_result["result"].get("recall", 0),
-                                                            }
-
-                                                # Stop session (releases but doesn't stop compose containers)
-                                                orchestrator.stop_session(session.session_id)
-
-                                    except Exception as e:
-                                        print(f"Validation error for {yaml_file.name}: {e}")
-
-                            # Store validation results
-                            if validation_results:
-                                validation_file = build_dir / "validation_results.json"
-                                import json
-                                with open(validation_file, "w") as f:
-                                    json.dump(validation_results, f, indent=2)
-                                print(f"Validation complete: {len(validation_results)} detections validated")
-
-                    except Exception as e:
-                        print(f"Auto-validation error: {e}")
+                    _auto_validate(group_name, siem_args.get("excluded_vendors"))
 
             except Exception as e:
                 try:
@@ -3877,11 +3894,89 @@ def regex_page(request: Request, shikari_session: Optional[str] = Cookie(None)):
     return templates.TemplateResponse("regex.html", {"request": request, "user": user})
 
 
+_manual_platform_cache: dict = {}
+
+
+def attack_platforms_by_technique(bundle) -> dict:
+    """{technique ID: its ATT&CK platforms} for current techniques: what a Manual entry defaults to."""
+    if bundle is None:
+        return {}
+    key = id(bundle)
+    if key not in _manual_platform_cache:
+        objects = bundle.objects if hasattr(bundle, "objects") else bundle.get("objects", [])
+        index = {}
+        for obj in objects:
+            if obj.get("type") != "attack-pattern" or obj.get("revoked") or obj.get("x_mitre_deprecated"):
+                continue
+            for ref in obj.get("external_references", []):
+                if ref.get("source_name") == "mitre-attack" and ref.get("external_id"):
+                    index[ref["external_id"].upper()] = list(obj.get("x_mitre_platforms") or [])
+        _manual_platform_cache.clear()
+        _manual_platform_cache[key] = index
+    return _manual_platform_cache[key]
+
+
+_manual_tactic_cache: dict = {}
+
+
+def attack_tactics_by_technique(bundle) -> dict:
+    """{technique ID: its ATT&CK tactic names} for current techniques, named as the tactics' own
+    objects name them (Manual's checkboxes), for an entry saved with no tactic ticked."""
+    if bundle is None:
+        return {}
+    key = id(bundle)
+    if key not in _manual_tactic_cache:
+        objects = bundle.objects if hasattr(bundle, "objects") else bundle.get("objects", [])
+        names = {o.get("x_mitre_shortname"): o.get("name") for o in objects if o.get("type") == "x-mitre-tactic"}
+        index = {}
+        for obj in objects:
+            if obj.get("type") != "attack-pattern" or obj.get("revoked") or obj.get("x_mitre_deprecated"):
+                continue
+            tactics = [names[p["phase_name"]] for p in obj.get("kill_chain_phases") or []
+                       if p.get("kill_chain_name") == "mitre-attack" and names.get(p.get("phase_name"))]
+            for ref in obj.get("external_references", []):
+                if ref.get("source_name") == "mitre-attack" and ref.get("external_id"):
+                    index[ref["external_id"].upper()] = tactics
+        _manual_tactic_cache.clear()
+        _manual_tactic_cache[key] = index
+    return _manual_tactic_cache[key]
+
+
+def manual_platform_choices() -> list:
+    """Enterprise ATT&CK's platforms as the cached bundle names them, the endpoint operating
+    systems first: most entries are on one of them. PRE is left out: it maps to no log source, so
+    an entry on PRE alone could never become a detection (Reconnaissance covers that tradecraft)."""
+    from samarkand import navigator
+    from shikari.assessments.export import FALLBACK_PLATFORMS
+    from shikari.mitre.procedures import bundle_release
+
+    release = bundle_release()
+    names = (release.platforms.get(navigator.ENTERPRISE) if release else None) or list(FALLBACK_PLATFORMS)
+    names = [p for p in names if p != "PRE"]
+    first = [p for p in ("Windows", "Linux", "macOS") if p in names]
+    return first + [p for p in names if p not in first]
+
+
+def _manual_page(request: Request, group_name: str = "", user=None, error_message: str = ""):
+    tactics, techniques = get_mitre_lists()
+    return templates.TemplateResponse(
+        "manual.html",
+        {
+            "request": request,
+            "user": user,
+            "group_name": group_name,
+            "tactics": tactics,
+            "techniques": techniques,
+            "platforms": manual_platform_choices(),
+            "technique_platforms": attack_platforms_by_technique(getattr(app.state, "bundle", None)),
+            "render_time": datetime.utcnow().isoformat() + "Z",
+            **({"error_message": error_message} if error_message else {}),
+        },
+    )
+
+
 @app.get("/manual", response_class=HTMLResponse)
 def manual(request: Request, group_name: str = "", shikari_session: Optional[str] = Cookie(None)):
-    tactics, techniques = get_mitre_lists()
-    render_time = datetime.utcnow().isoformat() + "Z"
-
     # Guests may use this page; resolve a session if present so the header reflects it
     user = None
     if shikari_session:
@@ -3891,17 +3986,7 @@ def manual(request: Request, group_name: str = "", shikari_session: Optional[str
         finally:
             db.close()
 
-    return templates.TemplateResponse(
-        "manual.html",
-        {
-            "request": request,
-            "user": user,
-            "group_name": group_name,
-            "tactics": tactics,
-            "techniques": techniques,
-            "render_time": render_time,
-        },
-    )
+    return _manual_page(request, group_name, user)
 
 
 @app.get("/health")
@@ -3968,13 +4053,153 @@ async def load_draft(
         return JSONResponse({"ok": False}, status_code=500)
 
 
-# Handler for manual submission of appended techniques
+_MANUAL_TECHNIQUE = re.compile(r"\s*(T\d{4}(?:\.\d{3})?)\s*(?::\s*(.*))?", re.I)
+
+
+def _lines(value) -> list:
+    """A textarea's lines, or a list's items, stripped and without blanks."""
+    items = value.split("\n") if isinstance(value, str) else (value or [])
+    return [str(v).strip() for v in items if str(v).strip()]
+
+
+def manual_references(value) -> tuple:
+    """(http/https URLs, everything else) from a Manual entry's References, one per line."""
+    good, bad = [], []
+    for line in _lines(value):
+        url = urlparse(line)
+        if url.scheme.lower() in ("http", "https") and url.netloc and not re.search(r"\s", line):
+            if line not in good:
+                good.append(line)
+        else:
+            bad.append(line)
+    return good, bad
+
+
+# A domain-shaped line ending in one of these is a file name (lsass.dmp, net.exe), not a host:
+# the IOC classifier's domain pattern accepts any alphabetic last label (COMMON_EXTENSIONS, plus these)
+_MANUAL_FILE_EXTENSIONS = {
+    "dmp", "dit", "hta", "msi", "scr", "jar", "so", "dylib", "elf", "bin", "iso", "img", "vhd", "vhdx",
+    "rar", "7z", "gz", "tar", "cab", "wsf", "vbe", "jse", "psm1", "psd1", "hive", "kirbi", "ccache",
+    "sh", "py", "pl", "rb", "php", "aspx", "jsp", "lua", "plist", "conf", "service", "desktop"}
+
+
+def _manual_file_extension(value: str) -> bool:
+    from shikari.build.indicator_hygiene import COMMON_EXTENSIONS
+
+    ext = value.rsplit(".", 1)[-1].lower()
+    return ext in COMMON_EXTENSIONS or ext in _MANUAL_FILE_EXTENSIONS
+
+
+def manual_indicators(value) -> tuple:
+    """
+    (identifiers, atomic IOCs) from a Manual entry's Indicators, one per line, defanged or not.
+
+    identifiers is the {kind: [values]} a Hunt detection gets from its ATT&CK procedure text, so
+    each line becomes a condition in every SIEM's query: a registry key is "reg"; a domain, IP or
+    URL (and the URL's host) is "network"; a line in backticks would have gone through
+    extract_commands, so it does here (cmd, or a cloud "api" call, or a Windows API Defender
+    records as an "api_event"); anything else is "cmd", which the compilers match as a substring
+    of the command line. Hashes go nowhere in a technique's query (no mapped log source has a hash
+    column under any kind), so they, with the domains and IPs, are the atomic IOCs for an IOC sweep.
+    """
+    from shikari.build.ioc_flow import refang
+    from shikari.build.secops import _REGISTRY_PATH
+    from shikari.intelligence import ioc
+    from shikari.mitre.extract import extract_commands
+
+    identifiers, atomic = {}, {}
+
+    def add(store, kind, item):
+        bucket = store.setdefault(kind, [])
+        if item and item not in bucket:
+            bucket.append(item)
+
+    for line in _lines(value):
+        kind, normal = ioc.classify(line)
+        if kind == "domain" and _manual_file_extension(normal):
+            kind = None
+        if kind in ("sha256", "sha1", "md5"):
+            add(atomic, "hash", normal)
+            continue
+        if kind in ("ipv4", "ipv6", "domain", "url"):
+            host = re.sub(r"(?i)^[a-z][a-z0-9+.-]*://", "", normal).split("/")[0].split(":")[0] if kind == "url" else normal
+            add(identifiers, "network", host)
+            add(identifiers, "network", normal)
+            if kind in ("ipv4", "ipv6") or (kind == "url" and re.fullmatch(r"[\d.]+|[0-9a-f:]+", host, re.I)):
+                add(atomic, "ip", host)
+            else:
+                add(atomic, "domain", host.lower())
+            continue
+        # classify's refang also turns " at " into "@": a command keeps its words, with only the bracketed forms undone
+        text = refang(line).strip()
+        if _REGISTRY_PATH.match(text):
+            add(identifiers, "reg", text)
+            continue
+        # A backtick or "<" in the line ends extract_commands' match early: the line as written
+        found = {} if ("`" in text or "<" in text) else extract_commands(f"`{text}`")
+        kinds = [k for k in ("cmd", "api", "api_event") if found.get(k)]
+        for k in kinds:
+            for item in found[k]:
+                add(identifiers, k, item)
+        # Nothing it would keep (a one-word tool name, "Rubeus", reads as an ordinary word there): typed, so kept
+        if not kinds:
+            add(identifiers, "cmd", text)
+    return identifiers, atomic
+
+
+def manual_entry(ent: dict, technique_platforms: dict, choices: list) -> dict:
+    """
+    process_group's technique entry for one Manual entry. Platforms are the user's when any were
+    ticked, else the technique's own ATT&CK ones (entries saved before the field existed); the
+    generator keys log sources and the technology-stack warning off them. References become links
+    in the description, where a Hunt detection's ATT&CK procedure carries its sources, so the
+    Results and Library pages show them the same way. Indicators (manual_indicators) are the
+    op_guidance a Hunt detection's procedure gives it; an entry without them passes the procedures
+    text, as before the field existed, which builds no query without AI or the LOL datasets.
+    """
+    raw = str(ent.get("technique") or "")
+    m = _MANUAL_TECHNIQUE.fullmatch(raw)
+    tid, name = (m.group(1).upper(), (m.group(2) or "").strip() or m.group(1).upper()) if m else (raw.strip(), raw.strip())
+    procedures = _lines(ent.get("procedures"))
+    canonical = {c.lower(): c for c in choices}
+    platforms = list(dict.fromkeys(canonical[p.lower()] for p in _lines(ent.get("platforms")) if p.lower() in canonical))
+    platforms = platforms or list(technique_platforms.get(tid, []))
+    references, _ = manual_references(ent.get("references"))
+    text = "\n".join(procedures)
+    # Brackets would end the markdown link early (markdown_links_to_html stops at ")")
+    links = [u.translate(str.maketrans({"(": "%28", ")": "%29", "[": "%5B", "]": "%5D"})) for u in references]
+    description = text + ("\n\nReferences:\n" + "\n".join(f"[{u.split('://', 1)[1]}]({u})" for u in links)
+                          if links else "")
+    identifiers, atomic = manual_indicators(ent.get("indicators"))
+    return {
+        "technique": tid,
+        "name": name,
+        "op_guidance": identifiers or text,
+        "iocs": atomic,
+        "red_tool": "",
+        "detect_guidance": "",
+        "activity_desc": description,
+        # The text the platform checks and the AI read: the procedures without the reference URLs
+        "procedure": text,
+        "procedure_platforms": platforms,
+        "technique_platforms": platforms,
+        "references": references,
+    }
+
+
 @app.post("/manual_submit")
 async def manual_submit(
     request: Request,
     group_name: str = Form("manual"),
     group_desc: str = Form(""),
     technique_entries: str = Form(""),
+    ai_provider: str = Form(None),
+    ai_model: str = Form(None),
+    run_correlation: str = Form(None),
+    osint_enhancement: str = Form(None),
+    osint_comparison: str = Form(None),
+    lol_datasets: str = Form(None),
+    auto_validate: str = Form(None),
     shikari_session: Optional[str] = Cookie(None),
 ):
     """
@@ -3987,70 +4212,59 @@ async def manual_submit(
     - group_name: the name supplied on the previous page
     - group_desc: optional description/hypothesis
     - technique_entries: JSON string of appended technique objects
+      ({technique, tactics, platforms, procedures, indicators, references}; platforms, indicators
+      and references optional)
+    - the Hunt tab's options, read as /generate reads them so the defaults match: correlations,
+      OSINT Enhancement and LOL datasets on unless "false", OSINT Comparison and Auto-validate off
+      unless "true", and the AI prompt's ai_provider/ai_model (none: no AI)
 
-    Returns: RedirectResponse to /progress on success, or re-renders the
-    manual form with an error message on validation failure.
+    Returns: RedirectResponse to /progress on success (JSON {redirect_url} to manual.js), or
+    re-renders the manual form with an error message on validation failure (JSON {message}).
     """
+    xhr = request.headers.get("x-requested-with", "").lower() == "xmlhttprequest"
+
+    def refuse(message):
+        if xhr:
+            return JSONResponse({"message": message}, status_code=400)
+        return _manual_page(request, group_name, error_message=message)
+
     try:
         entries = json.loads(technique_entries) if technique_entries else []
     except Exception:
         entries = []
+    if not isinstance(entries, list):
+        entries = []
+    group_name = (group_name or "").strip() or "manual"
 
     # Server-side validation: require at least one entry and each must have technique and procedures
     if not entries:
-        # Re-render manual page with an error message
-        tactics, techniques = get_mitre_lists()
-        render_time = datetime.utcnow().isoformat() + "Z"
-        return templates.TemplateResponse(
-            "manual.html",
-            {
-                "request": request,
-                "group_name": group_name,
-                "tactics": tactics,
-                "techniques": techniques,
-                "render_time": render_time,
-                "error_message": "Please append at least one technique before submitting.",
-            },
-        )
-
-    invalid = False
+        return refuse("Please append at least one technique before submitting.")
+    if any(not isinstance(ent, dict) or not ent.get("technique") or not _lines(ent.get("procedures")) for ent in entries):
+        return refuse("Each appended technique must include a technique name and procedures.")
     for ent in entries:
-        if not ent.get("technique") or not ent.get("procedures"):
-            invalid = True
-            break
-    if invalid:
-        tactics, techniques = get_mitre_lists()
-        render_time = datetime.utcnow().isoformat() + "Z"
-        return templates.TemplateResponse(
-            "manual.html",
-            {
-                "request": request,
-                "group_name": group_name,
-                "tactics": tactics,
-                "techniques": techniques,
-                "render_time": render_time,
-                "error_message": "Each appended technique must include a technique name and procedures.",
-            },
-        )
+        _, bad = manual_references(ent.get("references"))
+        if bad:
+            return refuse(f"References must be http:// or https:// URLs, one per line ({ent.get('technique')}: "
+                          f"{', '.join(bad[:3])}).")
 
     # Group techniques by tactic to match process_group expected schema
+    bundle = getattr(app.state, "bundle", None)
+    by_technique = attack_platforms_by_technique(bundle)
+    choices = manual_platform_choices()
     tactic_map = {}
+    atomic = {}
     for ent in entries:
-        tech = ent.get("technique")
-        tactics = ent.get("tactics") or []
-        procedures = ent.get("procedures", "")
-        # If no tactics were selected, put under a generic 'Unknown' tactic
-        if not tactics:
-            tactics = ["Unknown"]
+        info = manual_entry(ent, by_technique, choices)
+        for kind, values in info["iocs"].items():
+            atomic.setdefault(kind, []).extend(v for v in values if v not in atomic.get(kind, []))
+        # None ticked: the technique's own ATT&CK tactics, and 'Unknown' only for one ATT&CK doesn't have
+        tactics = _lines(ent.get("tactics")) or attack_tactics_by_technique(bundle).get(info["technique"]) or ["Unknown"]
         for tac in tactics:
-            tactic_map.setdefault(tac, []).append(
-                {
-                    "technique": tech,
-                    "op_guidance": procedures,
-                    "red_tool": "",
-                    "detect_guidance": "",
-                }
-            )
+            # Its own indicators per tactic: compile_query merges supplemental ones into the dict it's given
+            item = dict(info)
+            if isinstance(info["op_guidance"], dict):
+                item["op_guidance"] = {k: list(v) for k, v in info["op_guidance"].items()}
+            tactic_map.setdefault(tac, []).append(item)
 
     manual_data = []
     for tac, techs in tactic_map.items():
@@ -4078,20 +4292,36 @@ async def manual_submit(
         # non-fatal: if we can't write the draft, continue processing
         pass
 
+    # The AI chosen in the prompt before Submit, resolved as a Hunt resolves it
+    genai_mode = _apply_ai_provider_choice(ai_provider, ai_model) or "semantic"
+    llm_args = _hunt_llm_args(shikari_session, ai_provider, ai_model)
+
     # Call the orchestrator to process the manual data in background
     def _bg_manual():
         try:
-            # Use the modified wrapper instead of direct process_group
-            # Note: manual submissions don't currently pass genai_mode or run_correlation from UI
+            siem_args = _siem_args(shikari_session)
+            # Hashes, domains and IPs aren't a technique's behaviour: one sweep per SIEM, as for a report
+            if atomic:
+                from shikari.build.ioc_sweep import write_ioc_sweeps
+
+                sweeps = write_ioc_sweeps(group_name, atomic, "Manual entries", GENERATE_DIR,
+                                          excluded_vendors=siem_args.get("excluded_vendors"))
+                write_progress(group_name, {"ioc_sweeps": len(sweeps)})
             modified_process_group_wrapper(
                 group_name,
                 hypothesis,
                 manual_data=manual_data,
-                genai_mode=None,
-                run_correlation=False,
-                **_siem_args(shikari_session),
+                genai_mode=genai_mode,
+                run_correlation=(run_correlation != "false"),
+                osint_enhancement=(osint_enhancement != "false"),
+                osint_comparison=(osint_comparison == "true"),
+                lol_datasets=(lol_datasets != "false"),
+                **siem_args,
+                **llm_args,
                 **_stack_args(shikari_session),
             )
+            if auto_validate == "true":
+                _auto_validate(group_name, siem_args.get("excluded_vendors"))
         except Exception:
             try:
                 write_progress(group_name, {"status": "failed"})
@@ -4100,13 +4330,15 @@ async def manual_submit(
 
     # Fresh record first, so the thread's own updates land after it
     try:
-        start_progress(group_name, {"status": "started", "stage": "queued", "created_yaml": 0})
+        start_progress(group_name, {"status": "started", "stage": "queued", "created_yaml": 0,
+                                    "auto_validate_enabled": (auto_validate == "true")})
     except Exception:
         pass
     threading.Thread(target=_bg_manual, daemon=True).start()
 
     # Redirect user to progress page
-    return RedirectResponse(url=f"/progress?group_name={quote(group_name)}", status_code=303)
+    url = f"/progress?group_name={quote(group_name)}"
+    return JSONResponse({"redirect_url": url}) if xhr else RedirectResponse(url=url, status_code=303)
 
 
 @app.get("/progress_status")
@@ -4244,6 +4476,23 @@ def cloud_coverage_json(request: Request, shikari_session: Optional[str] = Cooki
         return JSONResponse({"error": "Not authenticated"}, status_code=401)
     auth_result[1].close()
     return cloud_coverage(GENERATE_DIR, _attack_techniques())
+
+
+@app.get("/api/coverage/siem-gaps")
+def siem_gaps_json(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """Techniques the detection library covers in some of the user's SIEMs (Profile; none chosen
+    means all four) but not others, and which lack each (shikari.build.siem_gaps)."""
+    from shikari.build.siem_gaps import siem_gaps
+
+    auth_result = require_auth(request, shikari_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    try:
+        chosen = _user_siems(user)
+    finally:
+        db.close()
+    return siem_gaps(GENERATE_DIR, _attack_techniques(), chosen)
 
 
 @functools.lru_cache(maxsize=1)
@@ -4835,6 +5084,8 @@ async def upload_file(
             "ttps_count": len(ttps),
             "iocs_count": sum(len(v) for v in iocs.values()),
             "auto_generate_requested": auto_generate == "true",
+            # Whose own domains were left out of the indicators (document_publisher)
+            "publisher": result.get("publisher"),
         }
 
         # Log upload activity
@@ -5039,6 +5290,13 @@ def analyze_blog(
             ttps = sorted(set(ttps) | set(llm_extract_ttps(result["text"], llm_config)))
             for kind, found in llm_extract_iocs(result["text"], llm_config).items():
                 iocs[kind] = sorted(set(iocs.get(kind) or []) | set(found))
+            # The AI reads the whole page, so it finds the publisher's own domains again: leave them out
+            publisher = result.get("publisher") or {}
+            if publisher.get("domains") and iocs.get("domain"):
+                from shikari.parsers.blog_analyzer import _refang, _registrable_domain
+
+                own = set(publisher["domains"])
+                iocs["domain"] = [d for d in iocs["domain"] if _registrable_domain(_refang(d)) not in own]
         procedures = result.get("procedures", [])
 
         # Create a synthetic group name for tracking if not found
@@ -5093,6 +5351,7 @@ def analyze_blog(
                 "ttps_count": len(ttps),
                 "iocs_count": sum(len(v) for v in iocs.values()),
                 "auto_generate_requested": auto_generate == "true",
+                "publisher": result.get("publisher"),
             }
         )
 
@@ -7520,6 +7779,8 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
         try:
             with open(correlation_file, encoding="utf-8") as fh:
                 cross_vendor = json.load(fh).get("cross_vendor_correlations", []) or []
+            from shikari.correlation.cross_vendor import relabel
+            cross_vendor = relabel(cross_vendor)
         except (OSError, ValueError):
             cross_vendor = []
 
@@ -10670,7 +10931,9 @@ def review_page(request: Request, domain: str, shikari_session: Optional[str] = 
     tp = profile.get("threat_profile") or {}
     ind = tp.get("industry") or {}
     geo = tp.get("geography") or {}
-    details = profile.get("recommended_group_details")
+    # Generate from the same ranked groups the page lists as most likely, so the two always agree;
+    # a profile too thin to rank falls back to the groups it was saved with
+    details = adversaries or profile.get("recommended_group_details")
     if not details:  # older profiles have only the flat name list
         details = [{"name": g, "likelihood": None, "band": None, "sources": []}
                    for g in (profile.get("recommended_groups") or [])]
@@ -12646,6 +12909,40 @@ async def set_profile_industries(request: Request, shikari_session: Optional[str
         return {"success": True, "industries": json.loads(user.industries)}
     finally:
         db.close()
+
+
+@app.get("/api/profile/watch-interval")
+def get_profile_watch_interval(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """Hours between this user's watchlist checks, and the choices."""
+    from shikari.intelligence import watchlists
+
+    auth_result = require_auth(request, shikari_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    db.close()
+    return {"hours": watchlists.interval_for(user.id), "choices": list(watchlists.INTERVALS),
+            "default": watchlists.DEFAULT_INTERVAL}
+
+
+@app.post("/api/profile/watch-interval")
+async def set_profile_watch_interval(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """Body: {"hours": 1} (one of the choices from GET)."""
+    from shikari.intelligence import watchlists
+
+    auth_result = require_auth(request, shikari_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    db.close()
+    try:
+        body = await request.json()
+    except ValueError:
+        body = None
+    try:
+        return {"success": True, "hours": watchlists.set_interval(user.id, (body or {}).get("hours") if isinstance(body, dict) else None)}
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
 
 
 @app.get("/api/profile/stack")

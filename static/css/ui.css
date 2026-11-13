@@ -18,7 +18,6 @@
 .industries h3,
 .ag-history h2,
 .briefing h2,
-.gap-section h3,
 .tactic-section-title,
 .hiw-section-title {
   display: flex !important;
@@ -39,7 +38,6 @@
 .industries h3 svg,
 .ag-history h2 svg,
 .briefing h2 svg,
-.gap-section h3 svg,
 .tactic-section-title svg,
 .hiw-section-title svg {
   width: 24px !important;

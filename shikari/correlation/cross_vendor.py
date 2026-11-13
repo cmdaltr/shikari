@@ -17,8 +17,22 @@ from typing import Dict, List
 
 # Engine's vendor keys, SecOps first (the primary platform).
 VENDOR_ORDER = ["googlesecops", "mde", "splunk", "elastic"]
-VENDOR_LABELS = {"googlesecops": "Google SecOps", "mde": "Microsoft Defender XDR",
+VENDOR_LABELS = {"googlesecops": "Google SecOps", "mde": "Defender XDR",
                  "splunk": "Splunk", "elastic": "Elastic"}
+# Labels saved correlation files written before the rename still carry.
+_OLD_LABELS = {"Microsoft Defender XDR": "Defender XDR", "Microsoft Defender": "Defender XDR"}
+
+
+def relabel(playbooks: List[Dict]) -> List[Dict]:
+    """Saved playbooks with their SIEM labels in today's wording (older files said "Microsoft Defender XDR")."""
+    for pb in playbooks or []:
+        if isinstance(pb.get("vendor_labels"), list):
+            pb["vendor_labels"] = [_OLD_LABELS.get(v, v) for v in pb["vendor_labels"]]
+        for st in pb.get("stages") or []:
+            for v in (st.get("vendors") or {}).values():
+                if isinstance(v, dict) and "label" in v:
+                    v["label"] = _OLD_LABELS.get(v["label"], v["label"])
+    return playbooks
 
 # The field each SIEM joins on, per normalised entity. This is what the playbook tells the analyst.
 JOIN_FIELDS = {

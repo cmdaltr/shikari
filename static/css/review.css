@@ -1,7 +1,6 @@
 /* Review page: branding, profile summary and the recommended-group selector with likelihoods.
    Reuses the detection-section card shell from results.css; themes via the app's CSS variables. */
 
-.rv-page { max-width: 1100px; }
 
 /* Branding header */
 .rv-brand {
@@ -25,8 +24,9 @@
 [data-theme="dark"] .rv-risk-n { color: #f87171; }
 
 /* Summary */
-.rv-summary h2, .rv-groups h2 { margin-top: 0; }
-.rv-sum-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px 28px; margin: 0; }
+.rv-groups h2 { margin-top: 0; }
+.ex-lead { margin: 4px 0 18px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color, rgba(100,116,139,.25)); }
+.rv-sum-grid { display: grid; grid-template-columns: repeat(var(--rv-sum-cols, 3), minmax(0,1fr)); gap: 8px 28px; margin: 0; }
 .rv-sum-grid > div { min-width: 0; }
 .rv-sum-wide { grid-column: 1 / -1; }
 .rv-sum-grid dt { font-weight: 700; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em;
@@ -50,6 +50,7 @@
 .rv-group:hover { border-color: rgba(13,148,136,.5); }
 .rv-group-cb { flex: 0 0 auto; }
 .rv-group-name { flex: 1 1 auto; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.rv-group-icon { margin-right: 7px; }
 .rv-band-high { border-left-color: #dc2626; }
 .rv-band-medium { border-left-color: #d97706; }
 .rv-band-low { border-left-color: #94a3b8; }

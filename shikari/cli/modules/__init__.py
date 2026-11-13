@@ -7,8 +7,9 @@ from .hunts import CveHuntModule, GroupHuntModule, TechniqueHuntModule
 from .intel import CompanyModule, FeedModule, ReportModule
 from .research import ResearchModule
 from .ai import AISettingsModule, AskModule, BriefingModule, ResultsModule
-from .agents import (AgentHistoryModule, AskAgentModule, AuditAgentModule, RepairAgentModule,
-                     SweepAgentModule, TriageAgentModule, TuneAgentModule)
+from .agents import (AgentHistoryModule, AskAgentModule, AuditAgentModule, BriefAgentModule,
+                     InvestigateAgentModule, RepairAgentModule, SweepAgentModule, TriageAgentModule,
+                     TuneAgentModule)
 from .lab import CalderaModule
 from shikari.config import EMULATION_ENABLED
 
@@ -37,6 +38,8 @@ MODULE_REGISTRY = {
     "agent/sweep": SweepAgentModule,
     "agent/audit": AuditAgentModule,
     "agent/tune": TuneAgentModule,
+    "agent/brief": BriefAgentModule,
+    "agent/investigate": InvestigateAgentModule,
     "agent/history": AgentHistoryModule,
 }
 

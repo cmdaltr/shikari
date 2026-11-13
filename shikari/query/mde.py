@@ -1,6 +1,6 @@
 """Defender XDR query execution for hit counts (#16).
 
-Runs a detection's KQL read-only against Microsoft Defender XDR Advanced Hunting (Microsoft Graph
+Runs a detection's KQL read-only against Defender XDR Advanced Hunting (Microsoft Graph
 ``runHuntingQuery``) and reports how many rows it returns — a false-positive signal before the rule is
 deployed. Reuses the app-registration token and the Graph call already in ``shikari.telemetry.mde``
 (same ``ThreatHunting.Read.All`` application permission and ``SHIKARI_MDE_*`` environment), so there is

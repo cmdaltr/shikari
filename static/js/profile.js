@@ -909,6 +909,26 @@ document.head.appendChild(style);
 })();
 
 
+// How often the user's watchlists are checked (Environment tab)
+(function () {
+  const select = document.getElementById('watch-interval-select');
+  if (!select) return;
+  const status = document.getElementById('watch-interval-status');
+  fetch('/api/profile/watch-interval').then(r => r.json()).then(data => {
+    if (data.hours) select.value = String(data.hours);
+  });
+  document.getElementById('watch-interval-save').addEventListener('click', async () => {
+    const hours = Number(select.value);
+    const res = await fetch('/api/profile/watch-interval', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hours }),
+    });
+    const data = await res.json().catch(() => ({}));
+    status.textContent = res.ok ? `Saved: every ${hours === 1 ? 'hour' : hours + ' hours'}` : (data.error || 'Not saved');
+    status.className = 'industries-status ' + (res.ok ? 'is-ok' : 'is-error');
+  });
+})();
+
+
 // Technology stack (Profile tab): products by category, and the ATT&CK platforms they bring
 (function () {
   const grid = document.getElementById('tech-stack-grid');

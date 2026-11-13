@@ -811,6 +811,14 @@ function showExtractionResults(data) {
 
   var html = '<h2 style="margin-top:0;">Extraction Results - Select Items to Process</h2>';
   html += '<p style="color:#666;margin-bottom:1.5em;">Filename: <strong>' + escapeHtml(data.filename || 'Unknown') + '</strong></p>';
+  // The report's publisher, whose own domains aren't indicators
+  if (data.publisher && data.publisher.name) {
+    var left = (data.publisher.dropped && data.publisher.dropped.length) ? data.publisher.dropped : [];
+    html += '<p id="extraction-publisher" style="color:#666;margin:-1em 0 1.5em;">Publisher: <strong>' + escapeHtml(data.publisher.name) + '</strong>';
+    html += left.length ? ' (its domains left out: <span style="font-family:monospace;">' + escapeHtml(left.join(', ')) + '</span>)'
+                        : ' (none of its domains were among the indicators)';
+    html += '</p>';
+  }
 
   // TTPs section with loading placeholder
   html += '<h3 style="color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:0.5em;">';

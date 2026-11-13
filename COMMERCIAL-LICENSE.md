@@ -20,7 +20,7 @@ the Licensee, edition, seats, any extra features and the term.
 
 | | Free | Pro | Services |
 |---|---|---|---|
-| Who it's for | Individuals and small teams | Organisations using Shikari for themselves | MSSPs and consultancies working for clients |
+| Who it's for | Individuals and organisations of up to two people | Organisations using Shikari for themselves | MSSPs and consultancies working for clients |
 | People who can sign in | 2, for example an operator and a reviewer | As the licence key states | As the licence key states |
 | Report branding (`report-branding`) | Stock Shikari look | One brand for the installation | Yes |
 | A brand per client (`brand-library`) | | | Chosen per assessment |

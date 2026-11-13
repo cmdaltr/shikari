@@ -20,9 +20,10 @@
 .ag-field-wide { grid-column: 1 / -1; }
 .ag-field input, .ag-field textarea { width: 100%; min-width: 0; }
 .ag-field textarea { resize: vertical; }
-.ag-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
-/* In the fields grid, beside the last field, centred on its input */
-.ag-approve { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: .9em; align-self: end; min-height: var(--ag-input-h, 48px); }
+/* In the fields grid, beside the last field, the approval box and Start on the inputs' line */
+.ag-submit { display: flex; align-items: center; justify-content: space-between; gap: 12px; align-self: end; min-height: var(--ag-input-h, 48px); flex-wrap: wrap; }
+.ag-approve { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: .9em; }
+.ag-submit .ag-start { margin-left: auto; }
 .ag-stop, .ag-approval-actions button {
   font: inherit; font-weight: 600; padding: 10px 22px; border-radius: 6px; cursor: pointer; border: 2px solid var(--ag-accent);
   background: var(--ag-accent); color: #fff;

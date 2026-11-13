@@ -10,7 +10,10 @@ not seen before is new until its owner marks it seen. With email on and SMTP con
 (EMAIL_ENABLED, shikari.auth.email), the owner gets one email per collection listing the
 new matches.
 
-Stored per user in data/feed/watchlists/<user id>.json.
+Each user picks how often their watchlists are checked (Profile → Environment). The feed is
+shared, so the collector runs at the shortest interval chosen by anyone with a watchlist.
+
+Stored per user in data/feed/watchlists/<user id>.json, the check interval included.
 """
 
 import json
@@ -27,6 +30,8 @@ WATCH_DIR = os.path.join(DATA_DIR, "feed", "watchlists")
 MAX_WATCHLISTS = 25
 MAX_MATCHES = 100  # kept per watchlist, newest first
 MAX_SEEN = 2000
+INTERVALS = (1, 4, 6, 12, 24)  # hours a user can choose between checks
+DEFAULT_INTERVAL = 6
 
 _lock = threading.Lock()
 
@@ -229,10 +234,43 @@ def any_watchlists() -> bool:
     return os.path.isdir(WATCH_DIR) and any(re.fullmatch(r"\d+\.json", n) for n in os.listdir(WATCH_DIR))
 
 
+def _interval(data: Dict) -> int:
+    hours = data.get("interval")
+    return hours if hours in INTERVALS else DEFAULT_INTERVAL
+
+
+def interval_for(user_id) -> int:
+    """Hours between this user's watchlist checks."""
+    return _interval(_load(user_id))
+
+
+def set_interval(user_id, hours: int) -> int:
+    if isinstance(hours, bool) or hours not in INTERVALS:  # True == 1 would otherwise pass
+        raise ValueError(f"Choose one of {', '.join(map(str, INTERVALS))} hours")
+    with _lock:
+        data = _load(user_id)
+        data["interval"] = hours
+        _save(user_id, data)
+    return hours
+
+
+def collection_interval() -> Optional[int]:
+    """
+    Seconds between collections: the shortest interval of any user with a watchlist, since one
+    collection serves everyone. None when nobody has one (a file can outlive its watchlists).
+    """
+    if not os.path.isdir(WATCH_DIR):
+        return None
+    hours = [_interval(d) for d in (_load(int(n[:-5])) for n in os.listdir(WATCH_DIR) if re.fullmatch(r"\d+\.json", n))
+             if d.get("watchlists")]
+    return min(hours) * 3600 if hours else None
+
+
 def keep_collecting(state, poll: int = 900) -> None:
     """
     Collect the feed on schedule while any watchlist exists, so new matches (and emails)
     don't wait for someone to open the Feed. state() returns (bundle, group metadata).
+    The poll only needs to be well under the shortest interval (an hour).
     """
     from shikari.intelligence import feed
 
@@ -240,8 +278,9 @@ def keep_collecting(state, poll: int = 900) -> None:
         while True:
             time.sleep(poll)
             try:
-                if any_watchlists():
-                    feed.refresh_in_background(*state())  # a no-op until REFRESH_EVERY has passed
+                every = collection_interval()
+                if every:
+                    feed.refresh_in_background(*state(), every=every)  # a no-op until every has passed
             except Exception as e:
                 print(f"Watchlist collection failed: {e}")
 

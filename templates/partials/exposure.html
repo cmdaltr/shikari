@@ -22,13 +22,14 @@
           <path d="M11 7.5L6 15.5M13 7.5l5 8M7.5 18h9"/>
         </svg>
       </div>
-      Exposure Map
+      {{ exposure_title or "Exposure Map" }}
     </h2>
   </div>
+  {% if exposure_lead %}<div class="ex-lead">{{ exposure_lead }}</div>{% endif %}
 
   <p class="af-stats">
     What profiling <strong>{{ domain }}</strong> surfaced from public sources, and how each piece links back to the domain &mdash;
-    the attack surface a threat actor can see before acting. Nothing is harvested.
+    the attack surface a threat actor can collate from public sources while preparing an attack. Nothing is harvested.
   </p>
 
   <div class="af-body">

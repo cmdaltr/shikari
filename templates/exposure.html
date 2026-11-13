@@ -14,7 +14,7 @@
 <div class="results-container af-standalone">
   <div class="page-header">
     <h1>{{ domain }}</h1>
-    <p>Organisation exposure map{% if exposure %} · <a href="/">New profile →</a>{% endif %}</p>
+    <p>Organisation exposure map{% if exposure %} · <a href="/review?domain={{ domain | urlencode }}">Review and generate detections →</a> · <a href="/">New profile →</a>{% endif %}</p>
   </div>
   {% if exposure %}
     {% include "partials/exposure.html" %}

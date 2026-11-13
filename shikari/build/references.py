@@ -144,22 +144,42 @@ class ReferenceQueryLoader:
         Returns:
             List of MDE reference query dictionaries.
         """
-        if "mde" in self._cache:
-            return self._cache["mde"]
+        return self._load_folder("mde", "MDE")
 
-        mde_dir = self.base_dir / "MDE"
-        if not mde_dir.exists():
+    def load_secops_references(self) -> List[Dict[str, Any]]:
+        """Google SecOps (YARA-L / UDM search) reference queries, from GoogleSecOps/."""
+        return self._load_folder("secops", "GoogleSecOps")
+
+    def load_elastic_references(self) -> List[Dict[str, Any]]:
+        """Elastic (ES|QL / EQL / KQL) reference queries, from Elastic/."""
+        return self._load_folder("elastic", "Elastic")
+
+    def _load_folder(self, key: str, dirname: str) -> List[Dict[str, Any]]:
+        """Every query in a vendor's folder: one per YAML file, or a list of them in one file."""
+        if key in self._cache:
+            return self._cache[key]
+        folder = self.base_dir / dirname
+        if not folder.exists():
             return []
-
         queries = []
-        for yaml_file in mde_dir.glob("*.yaml"):
+        for yaml_file in sorted(folder.glob("*.yaml")):
             with open(yaml_file, "r") as f:
-                query_data = yaml.safe_load(f)
-                if query_data:
-                    queries.append(query_data)
-
-        self._cache["mde"] = queries
+                data = yaml.safe_load(f)
+            if isinstance(data, list):
+                queries.extend(q for q in data if isinstance(q, dict))
+            elif isinstance(data, dict):
+                queries.append(data)
+        self._cache[key] = queries
         return queries
+
+    # The folder-per-SIEM vendors beyond Splunk: (loader, the vendor name the Coverage page shows,
+    # the names a caller may filter on)
+    def _folder_vendors(self):
+        return [
+            (self.load_mde_references, "MDE", ("mde", "kql")),
+            (self.load_secops_references, "Google SecOps", ("google secops", "googlesecops", "secops", "udm", "yaral", "yara-l")),
+            (self.load_elastic_references, "Elastic", ("elastic", "esql", "es|ql")),
+        ]
 
     def get_queries_by_technique(
         self, technique_id: str, vendor: str = None
@@ -192,12 +212,12 @@ class ReferenceQueryLoader:
                             query["vendor"] = "Splunk"
                             matches.append(query)
 
-        if vendor is None or vendor.lower() in ["mde", "kql"]:
-            mde_refs = self.load_mde_references()
-            for query in mde_refs:
-                if query.get("technique_id") == technique_id:
-                    query["vendor"] = "MDE"
-                    matches.append(query)
+        for load, name, aliases in self._folder_vendors():
+            if vendor is None or vendor.lower() in aliases:
+                for query in load():
+                    if query.get("technique_id") == technique_id:
+                        query["vendor"] = name
+                        matches.append(query)
 
         return matches
 
@@ -278,12 +298,13 @@ class ReferenceQueryLoader:
                         if query not in examples:
                             examples.append(query)
 
-            elif vendor.lower() in ["mde", "kql"]:
-                mde_refs = self.load_mde_references()
-                for query in mde_refs[: count - len(examples)]:
-                    query["vendor"] = "MDE"
-                    if query not in examples:
-                        examples.append(query)
+            else:
+                for load, name, aliases in self._folder_vendors():
+                    if vendor.lower() in aliases:
+                        for query in load()[: count - len(examples)]:
+                            query["vendor"] = name
+                            if query not in examples:
+                                examples.append(query)
 
         return examples[:count]
 
@@ -533,6 +554,34 @@ class ReferenceQueryLoader:
             "count": len(mde_refs),
         }
 
+        # Google SecOps and Elastic: a query's platform is what it names, else the SIEM itself
+        for load, vendor_name, _aliases in self._folder_vendors()[1:]:
+            refs = load()
+            techniques, platforms = set(), set()
+            for query in refs:
+                tech_id = query.get("technique_id", "Unknown")
+                platform = query.get("platform") or query.get("log_source") or vendor_name
+                coverage["summary"]["total_queries"] += 1
+                coverage["summary"]["techniques_covered"].add(tech_id)
+                coverage["summary"]["platforms_covered"].add(platform)
+                techniques.add(tech_id)
+                platforms.add(platform)
+                entry = coverage["by_technique"].setdefault(tech_id, {
+                    "vendors": set(), "platforms": set(), "queries": [], "count": 0,
+                    "tactics": tech_tactics.get(tech_id, []), "name": query.get("name", tech_id),
+                })
+                entry["vendors"].add(vendor_name)
+                entry["platforms"].add(platform)
+                entry["queries"].append({"name": query.get("name", "Unknown"), "vendor": vendor_name,
+                                         "platform": platform, "log_source": query.get("log_source", platform)})
+                entry["count"] += 1
+                by_platform = coverage["by_platform"].setdefault(platform, {"techniques": set(), "vendors": set(), "count": 0})
+                by_platform["techniques"].add(tech_id)
+                by_platform["vendors"].add(vendor_name)
+                by_platform["count"] += 1
+            coverage["by_vendor"][vendor_name] = {"techniques": list(techniques), "platforms": list(platforms),
+                                                  "count": len(refs)}
+
         # Find gaps
         all_techniques = coverage["summary"]["techniques_covered"]
         coverage["gaps"]["techniques_without_splunk"] = list(all_techniques - splunk_techniques)
@@ -563,6 +612,8 @@ class ReferenceQueryLoader:
         coverage["summary"]["vendors"] = {
             "Splunk": coverage["by_vendor"].get("Splunk", {}).get("count", 0),
             "MDE": coverage["by_vendor"].get("MDE", {}).get("count", 0),
+            "Google SecOps": coverage["by_vendor"].get("Google SecOps", {}).get("count", 0),
+            "Elastic": coverage["by_vendor"].get("Elastic", {}).get("count", 0),
         }
 
         for tech_id in coverage["by_technique"]:
@@ -632,8 +683,9 @@ def get_references(
                 if category in splunk_refs:
                     results.extend(splunk_refs[category])
 
-        if vendor is None or vendor.lower() in ["mde", "kql"]:
-            results.extend(loader.load_mde_references())
+        for load, _name, aliases in loader._folder_vendors():
+            if vendor is None or vendor.lower() in aliases:
+                results.extend(load())
 
         return results
 

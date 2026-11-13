@@ -378,6 +378,24 @@
               </section>
             </div>
 
+            <!-- How often this user's watchlists are checked (shikari.intelligence.watchlists) -->
+            <section class="industries" id="watch-interval">
+              <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Watchlist checks</h3>
+              <p class="industries-hint">A major incident may warrant hourly checks of your <a href="/feed#fd-watch">watchlists</a>. The feed is shared, so it's collected at the shortest interval anyone has chosen.</p>
+              <div class="industries-actions watch-interval-actions">
+                <label for="watch-interval-select">Check watchlists every</label>
+                <select class="form-input watch-interval-select" id="watch-interval-select">
+                  <option value="1">1 hour</option>
+                  <option value="4">4 hours</option>
+                  <option value="6" selected>6 hours</option>
+                  <option value="12">12 hours</option>
+                  <option value="24">24 hours</option>
+                </select>
+                <button type="button" class="btn-primary" id="watch-interval-save">Save interval</button>
+                <span class="industries-status" id="watch-interval-status" role="status"></span>
+              </div>
+            </section>
+
             <!-- Products the organisation runs (shikari.intelligence.tech_stack): group hunts leave out what can't happen there -->
             <section class="industries tech-stack" id="tech-stack">
               <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Technology stack</h3>
@@ -1240,7 +1258,7 @@
                   <select id="sfm-siem" class="form-input" style="max-width:220px;">
                     <option value="splunk">Splunk (SPL)</option>
                     <option value="elastic">Elastic (ES|QL / ECS)</option>
-                    <option value="mde">Microsoft Defender XDR (KQL)</option>
+                    <option value="mde">Defender XDR (KQL)</option>
                     <option value="secops">Google SecOps (UDM)</option>
                   </select>
                   <span id="sfm-state" style="font-size:0.85em;color:var(--text-secondary);"></span>
@@ -2518,13 +2536,8 @@
         <div class="spacer"></div>
       </div>
 
-      <!-- Timestamp and Attribution -->
+      <a class="footer-legal" href="https://github.com/cmdaltr/shikari/blob/main/TRADEMARKS.md" target="_blank" rel="noopener noreferrer" title="Shikari™ and the bateleur logo are trademarks of cmdaltr; other names and logos are their owners'"><img src="/static/images/shikari/shikari-favicon-32.png" alt="" width="20" height="20"><span>Trademarks &amp; copyright</span></a>
       <div class="footer-gloss"><span class="fg-word">shi·ka·ri</span><span class="fg-ipa">\shi-ˈkär-ē\</span><span class="fg-def">a professional big-game hunter or guide</span></div>
-      <div class="timestamp">
-        <span style="font-size: 0.85em; opacity: 0.7; display: block;">
-          Vendor logos are stylized representations. Splunk®, Microsoft®, Google® and Elastic® are registered trademarks of their respective companies.
-        </span>
-      </div>
     </footer>
 
     <script src="{{ url_for('static', path='js/common.js') }}?v={{ request.app.state.asset_version }}"></script>
@@ -2849,7 +2862,7 @@
                 const bodyEl = document.getElementById('avail-body');
                 if (!bodyEl) return;  // not admin
                 const statusEl = document.getElementById('avail-status');
-                const LABEL = { mde: 'Microsoft Defender XDR tables', secops: 'Google SecOps UDM event types' };
+                const LABEL = { mde: 'Defender XDR tables', secops: 'Google SecOps UDM event types' };
                 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
                 function note(msg, ok) {
                     statusEl.style.display = 'block';

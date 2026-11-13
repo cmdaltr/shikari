@@ -504,83 +504,6 @@
             border-left-color: #17a2b8;
         }
 
-        /* Footer Styling */
-        .page-footer {
-            margin-top: 60px;
-            margin-left: calc(-50vw + 50%);
-            margin-right: calc(-50vw + 50%);
-            margin-bottom: 0 !important;
-            padding: 30px 0 30px 0;
-            background: linear-gradient(135deg, #1f2d35 0%, #2a3a44 100%);
-            border-top: 3px solid #C53030;
-            text-align: center;
-            width: 100vw;
-            box-sizing: border-box;
-        }
-
-        .page-footer .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .page-footer .github-link {
-            flex: 1;
-            min-width: 200px;
-            text-align: left;
-        }
-
-        .page-footer .github-link a {
-            color: #8B9AA3;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.95em;
-            transition: color 0.2s;
-        }
-
-        .page-footer .github-link a:hover {
-            color: #C53030;
-        }
-
-        .page-footer .timestamp {
-            color: #8B9AA3;
-            font-size: 0.85em;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid rgba(139, 154, 163, 0.2);
-        }
-
-        .page-footer .quote {
-            flex: 2;
-            min-width: 300px;
-            text-align: center;
-        }
-
-        .page-footer .quote p {
-            color: #a8b5bd;
-            font-style: italic;
-            font-size: 0.95em;
-            margin: 0;
-            line-height: 1.5;
-        }
-
-        .page-footer .quote span {
-            font-size: 0.9em;
-            color: #8B9AA3;
-        }
-
-        .page-footer .spacer {
-            flex: 1;
-            min-width: 200px;
-        }
-
         /* FAQ Styling */
         .faq-item {
             background: var(--bg-primary);
@@ -742,7 +665,7 @@
             <!-- Overview Tab -->
             <div class="tab-pane active" id="tab-overview">
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                Shikari turns MITRE ATT&CK threat intelligence into detection queries for <strong>Microsoft Defender XDR,
+                Shikari turns MITRE ATT&CK threat intelligence into detection queries for <strong>Defender XDR,
                 Google SecOps, Splunk and Elastic</strong>. Point it at a threat group, a CVE, a report or a company and it
                 generates coverage for every technique involved, chains the detections into correlations, and checks them
                 before you keep them. It is open source and self-hosted, and <strong>works without AI by default</strong> —
@@ -781,7 +704,7 @@
                         <li>Off by default — never in the critical path</li>
                         <li>Local Ollama or a cloud provider</li>
                         <li>Ask Shikari, grounded in your data</li>
-                        <li>Six agents (repair, ask, triage, sweep, audit, tune)</li>
+                        <li>Eight agents (repair, ask, triage, sweep, audit, tune, brief, investigate)</li>
                         <li>Threat briefings and report triage</li>
                         <li>Tools shared over MCP</li>
                     </ul>
@@ -817,7 +740,7 @@
             <details class="faq-item">
                 <summary class="faq-question">What is Shikari and what does it do?</summary>
                 <div class="faq-answer">
-                    <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Shikari turns MITRE ATT&CK threat intelligence into detection queries for Microsoft Defender XDR, Google SecOps, Splunk and Elastic. Point it at a threat group, a CVE, a report or a company and it generates coverage for every technique involved, chains the detections into correlations, and checks them before you keep them. It is open source and self-hosted, and works without AI by default.</p>
+                    <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">Shikari turns MITRE ATT&CK threat intelligence into detection queries for Defender XDR, Google SecOps, Splunk and Elastic. Point it at a threat group, a CVE, a report or a company and it generates coverage for every technique involved, chains the detections into correlations, and checks them before you keep them. It is open source and self-hosted, and works without AI by default.</p>
                 </div>
             </details>
 
@@ -1111,11 +1034,11 @@
                     <ul style="margin-left: 20px; font-size: 0.95em;">
                         <li><strong>Critical (10 pts):</strong> Credential Access, Lateral Movement, Exfiltration, Impact</li>
                         <li><strong>High (8 pts):</strong> Privilege Escalation, Persistence, Command & Control</li>
-                        <li><strong>Medium (6 pts):</strong> Defense Evasion, Collection, Initial Access</li>
+                        <li><strong>Medium (6 pts):</strong> Stealth, Defense Impairment (Defense Evasion on older detections), Collection, Initial Access</li>
                         <li><strong>Lower (3-4 pts):</strong> Execution, Discovery, Reconnaissance</li>
                     </ul>
                     <p><strong>Note:</strong> Semantic overlap (query field similarity) is calculated and displayed as <em>informational metadata</em> but does NOT affect scoring. What matters is whether the techniques form a meaningful attack chain, not whether they use similar log fields.</p>
-                    <p><strong>Minimum Threshold:</strong> Only correlations with 75% or higher relevance (score ≥ 105/140) are included by default. This threshold can be adjusted by setting <code>CORRELATION_MIN_RELEVANCE</code> in your <code>.env</code> file (range: 0.0 to 1.0).</p>
+                    <p><strong>Minimum Threshold:</strong> Only correlations with 40% or higher relevance (score ≥ 56/140) are included by default. An administrator changes it under Profile → Config → Correlation Parameters, or with <code>CORRELATION_MIN_RELEVANCE</code> in your <code>.env</code> file (range: 0.0 to 1.0).</p>
                 </div>
             </details>
 
@@ -1361,11 +1284,9 @@
                 <div class="faq-answer">
                     <p>Planned enhancements include:</p>
                     <ul>
-                        <li>VECTR integration for purple team exercises</li>
-                        <li>Atomic Red Team emulation capabilities</li>
-                        <li>Real-time threat intelligence feeds</li>
-                        <li>Custom query template support</li>
-                        <li>Cross-vendor correlation workflows</li>
+                        <li>Running Atomic Red Team tests from Shikari and recording your own lab's telemetry into Emulate</li>
+                        <li>Defender XDR query execution with hit counts, alongside the Splunk client</li>
+                        <li>Live push of detections into Defender XDR and Google SecOps (a dry run today, under Detections as code)</li>
                     </ul>
                 </div>
             </details>
@@ -1380,7 +1301,7 @@
 
             <h3 id="arch-how-it-fits-together">How it fits together</h3>
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                Shikari turns MITRE ATT&amp;CK threat intelligence into detections for Microsoft Defender XDR, Google SecOps,
+                Shikari turns MITRE ATT&amp;CK threat intelligence into detections for Defender XDR, Google SecOps,
                 Splunk and Elastic. The same pipeline runs behind every interface — the web UI, the <code>shikari</code>
                 supervisor, the console and the MCP server — and it works without AI by default. A model is optional, and off
                 unless you turn it on.
@@ -2149,14 +2070,16 @@ AI recognizes this as:
                     <tr><td><strong>Coverage sweep</strong></td><td>A group</td><td>Lists the group's undetected techniques, hunts the gaps, and reports what closed and what can't be.</td></tr>
                     <tr><td><strong>Library audit</strong></td><td>Optional focus</td><td>Reviews the saved library for duplicates and overlaps, and flags detections resting on noisy indicators. Reports only.</td></tr>
                     <tr><td><strong>Detection tuning</strong></td><td>A run</td><td>Finds detections that pass the checks but rest on noisy indicators, and tightens them to be more specific — only ever narrowing.</td></tr>
+                    <tr><td><strong>Threat briefing</strong></td><td>A group or a domain</td><td>Writes a practitioner briefing for a threat group or a profiled organisation: likely TTPs, coverage gaps and the next hunts.</td></tr>
+                    <tr><td><strong>IOC investigation</strong></td><td>An indicator</td><td>Pivots from an IP, domain, hash or CVE through recent reputable reporting and Shikari's intel to actors, techniques and recommended hunts.</td></tr>
                 </tbody>
             </table>
 
             <div class="workflow-step">
                 <h4>Console and MCP</h4>
-                <p>The same six agents are in the console (<code>agent/repair</code> … <code>agent/tune</code>) and over MCP:
-                <code>shikari mcp</code> gives any MCP client — Claude Code, Claude Desktop or your own agent — Shikari's 21
-                tools and the six agents' prompts, with the changing tools marked so the client asks first. It signs in to a
+                <p>All eight agents are in the console (<code>agent/repair</code> … <code>agent/investigate</code>) and over MCP:
+                <code>shikari mcp</code> gives any MCP client — Claude Code, Claude Desktop or your own agent — Shikari's 24
+                tools and the eight agents' prompts, with the six changing tools marked so the client asks first. It signs in to a
                 running Shikari as you, so hunts use your AI settings and your keys stay on the server.</p>
             </div>
             
@@ -2170,20 +2093,22 @@ AI recognizes this as:
             <h3 id="intp-intel">Intel</h3>
 
             <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6;">
-                The Intel menu is where threat intelligence comes into Shikari before it becomes detections — the weekly feed,
-                the companies you've profiled, and the report and actor research that seeds a hunt.
+                The Intel menu is where threat intelligence comes into Shikari before it becomes detections: the weekly feed,
+                indicators and shared intelligence, the companies and campaigns you've researched, national capability, and the
+                ATT&amp;CK procedure data behind it all. Report and actor research start from the Home page's Analyse and Research tabs.
             </p>
 
             <div class="workflow-step">
                 <h4>Threat Feed</h4>
-                <p>This week's threat research, pulled from around 26 vendor and government sources and tagged by industry,
-                nation and motive. Watchlists flag new posts about the groups, sectors or regions you care about, optionally by
-                email, and your technology-stack filter highlights what's relevant to what you run.</p>
+                <p>This week's threat research, pulled from 26 vendor and government sources and tagged by industry,
+                nation and motive. <strong>Search all research</strong> looks further back, through every post collected and
+                ATT&amp;CK's groups, software and campaigns. Watchlists flag new posts about the groups, CVEs or vendors you care
+                about, optionally by email, and your technology-stack filter leaves out posts aimed only at products you don't run.</p>
             </div>
 
             <div class="workflow-step">
                 <h4>Indicator Management</h4>
-                <p>One page for indicators, in two tabs. <strong>Search indicators</strong> looks up an IP, domain, URL, hash,
+                <p>One page for indicators, in two collapsible sections. <strong>Search indicators</strong> looks up an IP, domain, URL, hash,
                 email or CVE — and its common defanged forms — across the reputable vendor, CERT/government, news and aggregator
                 sources from the last 7 days, filterable by tier and cached for the window. No AI.</p>
                 <p><strong>Import / export</strong> takes intelligence in the other direction: STIX bundles, TAXII collections and
@@ -2196,15 +2121,24 @@ AI recognizes this as:
             </div>
 
             <div class="workflow-step">
-                <h4>Companies Catalogue</h4>
-                <p>Every organisation you've profiled, newest first — a Library for companies. Each card opens that company's
-                exposure map and Review page, so a profile doesn't have to be re-run.</p>
+                <h4>Catalogue</h4>
+                <p>Two tabs. <strong>Companies</strong> lists every organisation you've profiled, newest first — a Library for
+                companies. Each card opens that company's exposure map, so a profile doesn't have to be re-run.
+                <strong>Campaigns</strong> profiles an emerging campaign ATT&amp;CK doesn't describe yet from the reports about it:
+                the techniques they describe, the groups they name, a timeline and the indicators triaged by age.</p>
             </div>
 
             <div class="workflow-step">
-                <h4>Report and actor research</h4>
-                <p>Extract TTPs and IOCs from a report URL or file and hunt them, or find groups by keyword (country, industry)
-                and consolidate their techniques before generating coverage.</p>
+                <h4>Cyber Powers</h4>
+                <p>National cyber capability on a world map, in three views: Nations (IISS tier), Groups (how firmly ATT&amp;CK
+                attributes groups to each country) and Targets (who ATT&amp;CK's groups are described as targeting).</p>
+            </div>
+
+            <div class="workflow-step">
+                <h4>MITRESaw</h4>
+                <p>The ATT&amp;CK procedure data behind the threat briefings and detections: every group's techniques, whether each
+                reaches the group directly, through a campaign or through its software, and the indicators in the procedure text.
+                It also shows the status of the OSINT repositories and the indicator exclusions.</p>
             </div>
             
 <hr style="border: none; border-top: 2px solid #e2e8f0; margin: 2em 0;">
@@ -2219,10 +2153,11 @@ AI recognizes this as:
 
             <div class="workflow-step">
                 <h4>The Review page</h4>
-                <p>When profiling finishes it opens a Review page: the company's branding, a profile summary (industry, location,
-                hosting, source, risk score), the exposure map, and the recommended groups laid out in columns — each with a
-                <strong>likelihood</strong> of targeting this organisation (how strongly its sector and region match the group's
-                known targeting), the top three pre-ticked. Tick the groups you want and generate; each gets its own Results page.</p>
+                <p>When profiling finishes it opens a Review page: the company's branding and risk score, a profile summary
+                (industry, location and the number of recommended groups, with the products seen beneath), the exposure map, and
+                the ten recommended groups two to a row — each with a <strong>likelihood</strong> of targeting this organisation
+                and the signals behind it, and its own tick box, the top three ticked. Tick the groups you want and press
+                <strong>Generate detections</strong>; each gets its own Results page.</p>
             </div>
 
             <div class="workflow-step">
@@ -2268,19 +2203,10 @@ AI recognizes this as:
                     </a>
                 </div>
 
-
-                <!-- Spacer for balance -->
-                <div class="spacer"></div>
             </div>
 
-            <!-- Timestamp and Attribution -->
+            <a class="footer-legal" href="https://github.com/cmdaltr/shikari/blob/main/TRADEMARKS.md" target="_blank" rel="noopener noreferrer" title="Shikari™ and the bateleur logo are trademarks of cmdaltr; other names and logos are their owners'"><img src="/static/images/shikari/shikari-favicon-32.png" alt="" width="20" height="20"><span>Trademarks &amp; copyright</span></a>
             <div class="footer-gloss"><span class="fg-word">shi·ka·ri</span><span class="fg-ipa">\shi-ˈkär-ē\</span><span class="fg-def">a professional big-game hunter or guide</span></div>
-            <div class="timestamp">
-                <br>
-                <span style="font-size: 0.85em; opacity: 0.7; margin-top: 8px; display: block;">
-                    Vendor logos are stylized representations. Splunk®, Microsoft®, Google® and Elastic® are registered trademarks of their respective companies.
-                </span>
-            </div>
     </footer>
 
     <!-- Dark Mode Toggle Script -->

@@ -1,5 +1,6 @@
 {# Ordered Adversary List: the top-10 ATT&CK groups most likely to target this organisation
-   (shikari.intelligence.adversary_ranking). Context: adversaries, domain, is_home (optional). #}
+   (shikari.intelligence.adversary_ranking). Context: adversaries, domain, is_home (optional),
+   selectable (optional: a checkbox per group, for Review's Generate detections; top three ticked). #}
 {% if adversaries %}
 {% set labels = {'industry': 'Industry', 'geography': 'Geography', 'exposure': 'Exposure', 'incidents': 'Incidents'} %}
 <div class="detection-section adv-section" id="adversaries">
@@ -18,10 +19,14 @@
     industry, geography, exposed OSINT and demonstrated activity. No AI — each row shows what drove its position.</p>
   <ol class="adv-list">
   {% for a in adversaries %}
-    <li class="adv-item adv-band-{{ a.band|lower }}">
-      <span class="adv-rank">{{ a.rank }}</span>
+    <li class="adv-item adv-band-{{ a.band|lower }}{% if selectable %} adv-selectable{% endif %}">
+      {% if selectable %}<label class="adv-rank adv-pick" title="Generate detections for {{ a.name }}">
+        <input type="checkbox" class="rv-group-cb" value="{{ a.name }}"{% if loop.index0 < 3 %} checked{% endif %} aria-label="Generate detections for {{ a.name }}">
+        <span>{{ a.rank }}</span></label>
+      {% else %}<span class="adv-rank">{{ a.rank }}</span>{% endif %}
       <div class="adv-main">
         <div class="adv-head">
+          {% if a.icon %}<span class="adv-icon" title="{{ a.icon_title }}" aria-label="{{ a.icon_title }}">{{ a.icon }}</span>{% endif %}
           <a class="adv-name" href="https://attack.mitre.org/groups/{{ a.group_id }}/" target="_blank" rel="noopener">{{ a.name }}</a>
           {% if a.nexus %}<span class="adv-nexus">{{ a.nexus }}</span>{% endif %}
           <span class="adv-id">{{ a.group_id }}</span>

@@ -1,0 +1,124 @@
+    <!-- AI/LLM Availability Prompt Modal -->
+    <div id="ai-prompt-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10003; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); max-width: 550px; width: 90%; padding: 0; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; color: white;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="font-size: 2em;">🤖</div>
+                    <h2 id="ai-prompt-title" style="margin: 0; font-size: 1.5em; font-weight: 600;">Use AI for this hunt?</h2>
+                </div>
+            </div>
+            <div style="padding: 24px;">
+                <p id="ai-prompt-intro" style="margin: 0 0 16px 0; color: #666; line-height: 1.6;">Shikari can use AI to generate detections alongside the standard pipeline.</p>
+
+                <!-- Several providers in the profile: pick one (the assigned one is preselected) -->
+                <div id="ai-provider-picker" style="display: none; margin-bottom: 16px;">
+                    <label for="ai-provider-select" style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px; font-size: 0.9em; font-family: 'Inter', sans-serif; letter-spacing: 0.01em;">Which AI should generate detections?</label>
+                    <select id="ai-provider-select" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95em; font-family: 'Inter', sans-serif; color: #1f2937; background: white; cursor: pointer; outline: none;"></select>
+                </div>
+
+                <p id="ai-prompt-note" style="margin: 0 0 16px 0; color: #6b7280; font-size: 0.85em; line-height: 1.5;"></p>
+
+                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                    <button id="ai-prompt-yes-btn" style="flex: 1; background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">Yes</button>
+                    <button id="ai-prompt-no-btn" style="flex: 1; background: #6b7280; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">No</button>
+                </div>
+                <label style="display: flex; align-items: center; gap: 8px; color: #6b7280; font-size: 0.9em; cursor: pointer;">
+                    <input type="checkbox" id="ai-prompt-remember"> Remember this choice (change it under Profile → API Keys)
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // The AI prompt before a run (GitHub #10), for Hunt, Upload and Manual: offered only when the
+    // user's profile has a provider that can generate detections; the provider assigned to
+    // detection generation is preselected, and a remembered choice skips the prompt.
+    // shikariAskAi({title, purpose, run}, onChoice) calls onChoice(providerId, modelId),
+    // both empty for "no AI".
+    (function() {
+        var options = [];
+        var pending = null;
+
+        function rememberChoice(providerId, modelId) {
+            return fetch('/api/profile/ai-settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ remember: { provider: providerId || null, model: modelId || '' } })
+            }).catch(function() {});
+        }
+
+        function choose(providerId, modelId) {
+            var done = pending;
+            pending = null;
+            document.getElementById('ai-prompt-modal').style.display = 'none';
+            var remember = document.getElementById('ai-prompt-remember');
+            if (remember.checked) {
+                remember.checked = false;
+                rememberChoice(providerId, modelId).then(function() { if (done) done(providerId || '', modelId || ''); });
+            } else if (done) {
+                done(providerId || '', modelId || '');
+            }
+        }
+
+        window.shikariAskAi = function(text, onChoice) {
+            pending = onChoice;
+            var modal = document.getElementById('ai-prompt-modal');
+            var yesBtn = document.getElementById('ai-prompt-yes-btn');
+            var noBtn = document.getElementById('ai-prompt-no-btn');
+            var picker = document.getElementById('ai-provider-picker');
+            var select = document.getElementById('ai-provider-select');
+            var intro = document.getElementById('ai-prompt-intro');
+            var note = document.getElementById('ai-prompt-note');
+            document.getElementById('ai-prompt-title').textContent = text.title;
+
+            fetch('/api/ai/availability')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    options = data.providers || [];
+                    // Nothing in the profile that can generate detections: don't ask
+                    if (!data.any_available) return choose(null, null);
+                    // A remembered choice that's still configured (or "no AI")
+                    var remembered = data.remember;
+                    if (remembered && (!remembered.provider || options.some(function(o) { return o.id === remembered.provider; }))) {
+                        return choose(remembered.provider, remembered.model);
+                    }
+
+                    var assigned = data.assigned || {};
+                    select.innerHTML = '';
+                    options.forEach(function(o) {
+                        if (o.id === assigned.provider && assigned.model) o.model = assigned.model;
+                        var el = new Option(o.label + (o.model ? ' / ' + o.model : ''), o.id, false, o.id === assigned.provider);
+                        select.appendChild(el);
+                    });
+                    if (options.length === 1) {
+                        picker.style.display = 'none';
+                        intro.textContent = 'Use ' + options[0].label + (options[0].model ? ' / ' + options[0].model : '') +
+                            ' to ' + text.purpose + '?';
+                        yesBtn.textContent = 'Yes';
+                    } else {
+                        picker.style.display = 'block';
+                        intro.textContent = 'Shikari can use AI to ' + text.purpose + '.';
+                        yesBtn.textContent = 'Use this and ' + text.run;
+                    }
+                    noBtn.textContent = 'Run without AI';
+                    var notes = ['Up to ' + (data.max_calls || 25) + ' LLM calls this run (set under Profile → API Keys).'];
+                    (data.ask_only || []).forEach(function(a) { notes.push(a.label + ': ' + a.note + '.'); });
+                    note.textContent = notes.join(' ');
+                    modal.style.display = 'flex';
+                })
+                .catch(function() {
+                    // Availability check failed: don't block the run, just run without AI
+                    choose(null, null);
+                });
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var select = document.getElementById('ai-provider-select');
+            document.getElementById('ai-prompt-no-btn').addEventListener('click', function() { choose(null, null); });
+            document.getElementById('ai-prompt-yes-btn').addEventListener('click', function() {
+                var opt = options[options.length > 1 ? select.selectedIndex : 0] || {};
+                choose(opt.id, opt.model);
+            });
+        });
+    })();
+    </script>

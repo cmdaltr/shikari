@@ -282,6 +282,23 @@ def _get_llm_provider(user_id: int, db, local_llm_endpoints: Optional[List[dict]
 # Route
 # ---------------------------------------------------------------------------
 
+@router.get("/ask/status")
+async def ask_status(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """Whether Ask Shikari has a model to answer with, so the button can grey out when it hasn't:
+    nothing is sent anywhere until a model is linked and a question asked."""
+    local = getattr(request.app.state, "local_llm_endpoints", None)
+    if local is None:
+        single = getattr(request.app.state, "local_llm_detected", {})
+        local = [single] if single.get("available") else []
+    db = next(get_db())
+    try:
+        user = get_user_from_session_id(shikari_session, db) if shikari_session else None
+        candidates, _ = _provider_candidates(user.id if user else None, db, local)
+    finally:
+        db.close()
+    return {"available": bool(candidates), "provider": candidates[0][0] if candidates else None}
+
+
 @router.post("/ask", response_model=AskResponse)
 async def ask_shikari(
     payload: AskRequest,

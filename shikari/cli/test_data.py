@@ -194,7 +194,7 @@ def _sample_correlations():
                 "googlesecops": {"query": f'metadata.event_type = "PROCESS_LAUNCH" // {names[tid]}',
                                  "file": _udm_path(tid), "label": "Google SecOps"},
                 "mde": {"query": f'DeviceProcessEvents | where Timestamp > ago(1d) // {names[tid]}',
-                        "file": _kql_path(tid), "label": "Microsoft Defender XDR"},
+                        "file": _kql_path(tid), "label": "Defender XDR"},
             },
         }
 
@@ -204,7 +204,7 @@ def _sample_correlations():
         "techniques_involved": [names[t] for t in order],
         "tactics": [tactics[t] for t in order],
         "vendors": ["googlesecops", "mde"],
-        "vendor_labels": ["Google SecOps", "Microsoft Defender XDR"],
+        "vendor_labels": ["Google SecOps", "Defender XDR"],
         "attack_chain_length": len(order),
         "relevance_score": 0.9,
         "time_window": "1h",
@@ -229,6 +229,10 @@ def _sample_profile():
             "country": "United Kingdom", "mail_provider": "Microsoft 365",
             "ip_addresses": ["203.0.113.10", "203.0.113.11"],
         },
+        "threat_profile": {
+            "industry": {"sector": "Financial Services", "subsector": "Banking", "other_sectors": ["Technology"]},
+            "geography": {"country": "United Kingdom", "region": "Europe"},
+        },
         "risk_score": 62,
         "recommended_groups": ["APT29", "APT41", "FIN13"],
         "recommended_techniques": [t[0] for t in TECHNIQUES],
@@ -237,7 +241,8 @@ def _sample_profile():
                   "hosting": ["United Kingdom"]},
         "breach_surface": {"breaches": 1, "exposed_accounts": 3},
         "exposed_services": {"per_ip": [], "ports": [25, 443], "cpes": [], "vulns": [], "hostnames": []},
-        "detected_stack": {"web_server": "nginx"},
+        "detected_stack": [{"id": "m365", "label": "Microsoft 365"}, {"id": "fortinet", "label": "Fortinet"},
+                           {"id": "nginx", "label": "nginx"}],
         "sample": True,
     }
 

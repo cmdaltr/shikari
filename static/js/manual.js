@@ -17,6 +17,20 @@
   function saveEntries() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch (_) {}
   }
+  // A reference must be a web link: anything else is refused at Append (and again by the server)
+  function badReferences(lines) {
+    return lines.filter(function (line) {
+      if (/\s/.test(line)) return true;
+      try {
+        var u = new URL(line);
+        return !((u.protocol === 'http:' || u.protocol === 'https:') && u.host);
+      } catch (_) { return true; }
+    });
+  }
+  function techniquePlatforms() {
+    var el = document.getElementById('mn-technique-platforms');
+    return (el && safeParse(el.textContent)) || {};
+  }
   function clearManualStorage() {
     try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
     try { localStorage.removeItem(STORAGE_GROUP_KEY); } catch (_) {}
@@ -54,6 +68,18 @@
       });
       card.appendChild(badgeWrap);
     }
+    // Entries appended before Platforms existed have none: the server uses the technique's
+    if (entry.platforms && entry.platforms.length) {
+      var platWrap = document.createElement('div');
+      platWrap.style.margin = '0 0 .5rem 0';
+      entry.platforms.forEach(function (p) {
+        var b = document.createElement('span');
+        b.className = 'platform-badge';
+        b.textContent = p;
+        platWrap.appendChild(b);
+      });
+      card.appendChild(platWrap);
+    }
     if (entry.procedures && entry.procedures.length) {
       var ul = document.createElement('ul');
       ul.style.margin = '0';
@@ -64,6 +90,37 @@
         ul.appendChild(li);
       });
       card.appendChild(ul);
+    }
+    // Entries appended before Indicators existed have none: their queries come from AI or the LOL datasets
+    if (entry.indicators && entry.indicators.length) {
+      var indTitle = document.createElement('p');
+      indTitle.className = 'mn-indicators-title';
+      indTitle.textContent = 'Indicators';
+      card.appendChild(indTitle);
+      var inds = document.createElement('ul');
+      inds.className = 'mn-indicators';
+      entry.indicators.forEach(function (v) {
+        var li = document.createElement('li');
+        li.textContent = v;
+        inds.appendChild(li);
+      });
+      card.appendChild(inds);
+    }
+    if (entry.references && entry.references.length) {
+      var refs = document.createElement('ul');
+      refs.className = 'mn-refs';
+      entry.references.forEach(function (r) {
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        // Only links Append accepted reach here, but an older stored entry is checked again
+        if (!badReferences([r]).length) a.href = r;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = r;
+        li.appendChild(a);
+        refs.appendChild(li);
+      });
+      card.appendChild(refs);
     }
     return card;
   }
@@ -108,6 +165,19 @@
       }
     }
 
+    // Choosing a technique ticks its ATT&CK platforms; the user can change them before Append
+    var platformsOf = techniquePlatforms();
+    var techniqueSel = document.getElementById('technique');
+    if (techniqueSel) {
+      techniqueSel.addEventListener('change', function () {
+        var tid = (techniqueSel.value.split(':')[0] || '').trim().toUpperCase();
+        var own = platformsOf[tid] || [];
+        document.querySelectorAll('input[name="platforms"]').forEach(function (box) {
+          box.checked = own.indexOf(box.value) !== -1;
+        });
+      });
+    }
+
     // Append handler
     var appendBtn = document.getElementById('append-btn');
     if (appendBtn && appendBtn.dataset.bound !== '1') {
@@ -126,10 +196,32 @@
           var procedures = proceduresRaw.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
           var tactics = Array.prototype.slice.call(document.querySelectorAll('input[name="tactics"]:checked'))
             .map(function (i) { return i.value; });
+          var platforms = Array.prototype.slice.call(document.querySelectorAll('input[name="platforms"]:checked'))
+            .map(function (i) { return i.value; });
+          var indicatorsEl = document.getElementById('indicators');
+          var indicators = ((indicatorsEl && indicatorsEl.value) || '').split('\n')
+            .map(function (s) { return s.trim(); }).filter(Boolean);
+          var referencesEl = document.getElementById('references');
+          var references = ((referencesEl && referencesEl.value) || '').split('\n')
+            .map(function (s) { return s.trim(); }).filter(Boolean);
 
           if (!technique && !groupDesc && !tactics.length && !procedures.length) return;
 
-          var entry = { group_desc: groupDesc, technique: technique, tactics: tactics, procedures: procedures };
+          var bad = badReferences(references);
+          if (bad.length) {
+            var refMsg = document.getElementById('append-message');
+            if (refMsg) {
+              refMsg.textContent = 'References must be http:// or https:// URLs, one per line: ' + bad.slice(0, 3).join(', ');
+              refMsg.style.display = 'block';
+              refMsg.style.color = 'darkred';
+              refMsg.setAttribute('role', 'alert');
+              clearTimeout(window.__appendMsgTimer);
+            }
+            return;
+          }
+
+          var entry = { group_desc: groupDesc, technique: technique, tactics: tactics, platforms: platforms,
+                        procedures: procedures, indicators: indicators, references: references };
           entries.push(entry);
           saveEntries();
           list.appendChild(buildCard(entry));
@@ -160,7 +252,7 @@
       });
     }
 
-    // Submit handler -> POST to /generate with FormData, handle JSON/HTML, clear storage
+    // Submit handler -> POST to /manual_submit with FormData, handle JSON/HTML, clear storage
     var submitBtn = document.getElementById('submit-btn');
     if (submitBtn && submitBtn.dataset.bound !== '1') {
       submitBtn.dataset.bound = '1';
@@ -187,70 +279,96 @@
             groupName = currentDesc || (entries[0] && entries[0].group_desc) || '';
           }
 
-          var prevSubmitText = submitBtn.textContent;
-          submitBtn.disabled = true;
-          if (appendBtn) appendBtn.disabled = true;
-          submitBtn.textContent = 'Submitting...';
-
-          var fd = new FormData();
-          fd.append('group_name', groupName);
-          fd.append('manual', '1');
-          fd.append('manual_entries', JSON.stringify(entries));
-
-          fetch('/generate', {
-            method: 'POST',
-            body: fd,
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-          })
-          .then(function (response) {
-            var contentType = response.headers.get('content-type') || '';
-            if (contentType.includes('application/json')) {
-              return response.json().then(function (payload) { return { kind: 'json', payload: payload }; });
-            }
-            return response.text().then(function (payload) { return { kind: 'html', payload: payload }; });
-          })
-          .then(function (res) {
-            if (res.kind === 'json') {
-              var data = res.payload || {};
-              if (data.redirect_url) {
-                clearManualStorage();
-                window.location = data.redirect_url;
-                return;
-              }
-              if (msg) {
-                msg.textContent = data.message || 'Unexpected response.';
-                msg.style.display = 'block';
-                msg.style.color = 'darkred';
-                msg.setAttribute('role', 'alert');
-              }
-              return;
-            }
-            var parser = new DOMParser();
-            var doc = parser.parseFromString(res.payload, 'text/html');
-            var newContent = doc.getElementById('main-content');
-            var oldContent = document.getElementById('main-content');
-            if (newContent && oldContent) {
-              oldContent.innerHTML = newContent.innerHTML;
-              clearManualStorage();
-            }
-          })
-          .catch(function (err) {
-            if (msg) {
-              msg.textContent = 'Submit failed: ' + err.message;
-              msg.style.display = 'block';
-              msg.style.color = 'darkred';
-              msg.setAttribute('role', 'alert');
-            }
-          })
-          .finally(function () {
-            submitBtn.disabled = false;
-            if (appendBtn) appendBtn.disabled = false;
-            submitBtn.textContent = prevSubmitText || 'Submit';
-          });
+          // The Hunt tab's AI prompt (templates/partials/ai_prompt.html); without it, no AI
+          if (window.shikariAskAi) {
+            window.shikariAskAi({ title: 'Use AI for these detections?',
+                                  purpose: 'generate detections alongside the standard pipeline', run: 'submit' },
+                                function (providerId, modelId) { send(groupName, providerId, modelId); });
+          } else {
+            send(groupName, '', '');
+          }
         } catch (e) {
           if (window.console && console.error) console.error(e);
         }
       });
+    }
+
+    function send(groupName, aiProvider, aiModel) {
+      var msg = document.getElementById('append-message');
+      try {
+        var prevSubmitText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        if (appendBtn) appendBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+
+        var fd = new FormData();
+        fd.append('group_name', groupName);
+        fd.append('group_desc', (entries[0] && entries[0].group_desc) || '');
+        fd.append('technique_entries', JSON.stringify(entries));
+        fd.append('ai_provider', aiProvider || '');
+        fd.append('ai_model', aiModel || '');
+        // Every option sent as true/false: an unticked box sends nothing, and the server's
+        // defaults are the Hunt tab's (correlations, LOL and OSINT Enhancement on)
+        [['auto_validate', 'mn-auto-validate'], ['lol_datasets', 'mn-lol-datasets'],
+         ['osint_enhancement', 'mn-osint-enhancement'], ['osint_comparison', 'mn-osint-comparison'],
+         ['run_correlation', 'mn-run-correlation']].forEach(function (pair) {
+          var box = document.getElementById(pair[1]);
+          if (box) fd.append(pair[0], box.checked && !box.disabled ? 'true' : 'false');
+        });
+
+        fetch('/manual_submit', {
+          method: 'POST',
+          body: fd,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (response) {
+          var contentType = response.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            return response.json().then(function (payload) { return { kind: 'json', payload: payload }; });
+          }
+          return response.text().then(function (payload) { return { kind: 'html', payload: payload }; });
+        })
+        .then(function (res) {
+          if (res.kind === 'json') {
+            var data = res.payload || {};
+            if (data.redirect_url) {
+              clearManualStorage();
+              window.location = data.redirect_url;
+              return;
+            }
+            if (msg) {
+              msg.textContent = data.message || 'Unexpected response.';
+              msg.style.display = 'block';
+              msg.style.color = 'darkred';
+              msg.setAttribute('role', 'alert');
+            }
+            return;
+          }
+          var parser = new DOMParser();
+          var doc = parser.parseFromString(res.payload, 'text/html');
+          var newContent = doc.getElementById('main-content');
+          var oldContent = document.getElementById('main-content');
+          if (newContent && oldContent) {
+            oldContent.innerHTML = newContent.innerHTML;
+            clearManualStorage();
+          }
+        })
+        .catch(function (err) {
+          if (msg) {
+            msg.textContent = 'Submit failed: ' + err.message;
+            msg.style.display = 'block';
+            msg.style.color = 'darkred';
+            msg.setAttribute('role', 'alert');
+          }
+        })
+        .finally(function () {
+          submitBtn.disabled = false;
+          if (appendBtn) appendBtn.disabled = false;
+          submitBtn.textContent = prevSubmitText || 'Submit';
+        });
+      } catch (e) {
+        if (window.console && console.error) console.error(e);
+      }
     }
   });
 })();

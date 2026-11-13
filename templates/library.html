@@ -1397,6 +1397,11 @@ function updateActiveFilters() {
     } else {
         container.style.display = 'none';
     }
+    // The open Filters card's height was fixed when it opened: refit it so the tags aren't clipped
+    const filtersContent = document.getElementById('filters-content');
+    if (filtersContent.style.maxHeight !== '0px') {
+        filtersContent.style.maxHeight = filtersContent.scrollHeight + 'px';
+    }
 }
 
 // Remove a specific filter

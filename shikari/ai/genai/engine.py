@@ -625,6 +625,9 @@ _TACTIC_PRIORITY = {
     "command-and-control": 8,
     # Medium priority tactics
     "defense-evasion": 6,
+    # ATT&CK v18 split Defense Evasion into these two; older detections still carry it
+    "stealth": 6,
+    "defense-impairment": 6,
     "collection": 6,
     "initial-access": 6,
     # Lower priority tactics (still important but more common/noisy)

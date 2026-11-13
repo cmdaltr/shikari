@@ -1,6 +1,6 @@
 """Cross-vendor correlation playbooks (#8)."""
 
-from shikari.correlation.cross_vendor import build_cross_vendor_playbooks
+from shikari.correlation.cross_vendor import build_cross_vendor_playbooks, relabel
 
 
 def _file_info(records):
@@ -83,3 +83,11 @@ def test_non_chain_correlations_ignored():
     fi = _file_info([("a.yaml", "mde", "T1", "DeviceName x", ["X"]), ("b.yaml", "googlesecops", "T2", "principal.hostname y", ["Y"])])
     corr = {"vendor": "mde", "chain": False, "techniques_involved": ["T1", "T2"], "relevance_score": 1.0}
     assert build_cross_vendor_playbooks([corr], fi) == []
+
+
+def test_relabel_saved_playbooks_old_defender_label():
+    pb = {"vendor_labels": ["Google SecOps", "Microsoft Defender XDR"],
+          "stages": [{"vendors": {"mde": {"query": "q", "label": "Microsoft Defender XDR"}}}]}
+    out = relabel([pb])[0]
+    assert out["vendor_labels"] == ["Google SecOps", "Defender XDR"]
+    assert out["stages"][0]["vendors"]["mde"]["label"] == "Defender XDR"

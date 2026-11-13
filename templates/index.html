@@ -200,6 +200,7 @@
     <!-- Global Navigation Controls (Library|Home|Logout|Profile|Dark|Help for authenticated, Login|Home|Dark|Help for guests) -->
     {% include "partials/nav_controls.html" %}
     {% block content %}
+    {% from "partials/hunt_options.html" import additional_options %}
     <div style="flex: 1; width: 100%;">
     <div class="container" style="width: 1500px; max-width: calc(100vw - 4em); margin: 0 auto; padding: 2em; padding-top: 80px; padding-bottom: 80px; position: relative; box-sizing: border-box;">
       <!-- Page title / app name with banner -->
@@ -369,63 +370,10 @@
               </div>
 
               <div class="hp-options">
-              <!-- Additional Options -->
-              <details class="options-section" open>
-                <summary class="options-header">Additional Options</summary>
-                <div class="options-grid is-four">
-
-                    <!-- Auto-validate -->
-                    <label class="option-item auto-validate-label" id="auto-validate-label" style="align-items: flex-start;">
-                      <input type="checkbox" name="auto_validate" id="auto_validate_checkbox" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
-                      <div style="flex: 1; min-width: 0;">
-                        <span class="option-label">
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: text-bottom; flex-shrink: 0;">
-                            <path d="M9 12l2 2 4-4"/>
-                            <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"/>
-                          </svg>
-                          Auto-validate
-                          <span id="docker-status-badge" class="docker-status-badge" style="display: none; font-size: 0.6em; margin-left: 0.5em; padding: 2px 8px; border-radius: 4px; font-weight: 500;"></span>
-                        </span>
-                        <span class="option-hint" id="auto-validate-hint" style="margin-top: 0.4em; display: block;">Test generated queries against sample events in containerized SIEMs</span>
-                      </div>
-                    </label>
-
-                  <!-- LOLBAS / LOLDrivers / LOLRMM -->
-                  <label class="option-item">
-                    <input type="checkbox" name="lol_datasets" value="true" id="lol-datasets-checkbox" checked>
-                    <span class="option-label">
-                      LOL datasets
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">What LOLBAS, LOLDrivers and LOLRMM document about the binaries, drivers and RMM tools a group is seen using: their command lines, hashes and paths go into the queries, and each detection links to the entries. No AI; fetched at most daily.</span>
-                      </span>
-                    </span>
-                  </label>
-
-                  <!-- Column 1: OSINT Enhancement -->
-                  <label class="option-item">
-                    <input type="checkbox" name="osint_enhancement" value="true" id="osint-enhancement-checkbox" checked>
-                    <span class="option-label">
-                      OSINT Enhancement
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Merge indicators from public rules (Google SecOps, Sentinel, Splunk, Elastic). Adds known false positives to each detection.</span>
-                      </span>
-                    </span>
-                  </label>
-
-                  <!-- Column 2: OSINT Comparison -->
-                  <label class="option-item">
-                    <input type="checkbox" name="osint_comparison" value="true" id="osint-comparison-checkbox">
-                    <span class="option-label">
-                      OSINT Comparison
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Compare generated detections against OSINT databases (Elastic, Splunk, etc.) and add comparison metadata to YAML files showing how well they align with community detection rules.</span>
-                      </span>
-                    </span>
-                  </label>
-
-
-                </div>
-              </details>
+              {{ additional_options({"auto_validate": "auto_validate_checkbox", "auto_validate_label": "auto-validate-label",
+                                     "auto_validate_hint": "auto-validate-hint", "docker_badge": "docker-status-badge",
+                                     "lol_datasets": "lol-datasets-checkbox", "osint_enhancement": "osint-enhancement-checkbox",
+                                     "osint_comparison": "osint-comparison-checkbox"}) }}
 
 
               </div>
@@ -563,7 +511,10 @@
             .actor-ac-alias { font-size:17px;color:#9ca3af;margin-left:6px; }
             .actor-th { user-select:none; }
             .actor-th:hover { background:#e2e8f0; }
-            .actor-row-shared td:first-child { border-left:3px solid #f59e0b; padding-left:7px; }
+            /* Shared techniques in indigo, a tint across the whole row: amber was lost among the amber badges */
+            .actor-row-shared td { background:rgba(79,70,229,.07); }
+            .actor-row-shared td:first-child { border-left:5px solid #4f46e5; padding-left:5px; }
+            .actor-shared-key { display:inline-block;width:22px;height:14px;background:rgba(79,70,229,.12);border-left:5px solid #4f46e5;border-radius:2px; }
             </style>
 
             <script>
@@ -1760,8 +1711,8 @@
                   <div id="actor-not-found-bar" style="display:none;margin-bottom:10px;padding:8px 12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;font-size:18px;color:#92400e;"></div>
                   <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px;">
                     <span style="font-size:15px;color:#6b7280;display:flex;align-items:center;gap:5px;">
-                      <span style="display:inline-block;width:3px;height:14px;background:#f59e0b;border-radius:2px;"></span>
-                      = &gt;1 actor
+                      <span class="actor-shared-key"></span>
+                      used by more than one group
                     </span>
                     <div id="tactic-multiselect" style="position:relative;">
                       <button id="tactic-ms-btn" type="button"
@@ -1901,67 +1852,8 @@
               </div>
 
               <div class="hp-options">
-              <!-- Additional Options -->
-              <details class="options-section" open>
-                <summary class="options-header">Additional Options</summary>
-                <div class="options-grid is-four">
-
-                    <label class="option-item auto-validate-label" style="align-items: flex-start;">
-                      <input type="checkbox" name="auto_validate" value="true" style="margin-top: 0.2em; flex-shrink: 0;">
-                      <div style="flex: 1; min-width: 0;">
-                        <span class="option-label">
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: text-bottom; flex-shrink: 0;">
-                            <path d="M9 12l2 2 4-4"/>
-                            <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"/>
-                          </svg>
-                          Auto-validate
-                          <span class="docker-status-badge" style="display: none; font-size: 0.6em; margin-left: 0.5em; padding: 2px 8px; border-radius: 4px; font-weight: 500;"></span>
-                        </span>
-                        <span class="option-hint" style="margin-top: 0.4em; display: block;">Test generated queries against sample events in containerized SIEMs</span>
-                      </div>
-                    </label>
-
-                  <!-- LOLBAS / LOLDrivers / LOLRMM -->
-                  <label class="option-item">
-                    <input type="checkbox" name="lol_datasets" value="true" id="upload_lol_datasets" checked>
-                    <span class="option-label">
-                      LOL datasets
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">What LOLBAS, LOLDrivers and LOLRMM document about the binaries, drivers and RMM tools a group is seen using: their command lines, hashes and paths go into the queries, and each detection links to the entries. No AI; fetched at most daily.</span>
-                      </span>
-                    </span>
-                  </label>
-
-                  <!-- Row 1 Column 1: OSINT Enhancement -->
-                  <label class="option-item">
-                    <input type="checkbox" name="osint_enhancement" id="upload_osint_enhancement" value="true" checked>
-                    <span class="option-label">
-                      OSINT Enhancement
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Merge indicators from public rules (Google SecOps, Sentinel, Splunk, Elastic). Adds known false positives to each detection.</span>
-                      </span>
-                    </span>
-                  </label>
-
-
-
-
-                  <!-- Row 1 Column 2: OSINT Comparison -->
-                  <label class="option-item">
-                    <input type="checkbox" name="osint_comparison" id="upload_osint_comparison" value="true">
-                    <span class="option-label">
-                      OSINT Comparison
-                      <span class="option-info-icon">i
-                        <span class="option-info-tooltip">Compare generated detections against OSINT databases (Elastic, Splunk, etc.) and add comparison metadata to YAML files showing how well they align with community detection rules.</span>
-                      </span>
-                    </span>
-                  </label>
-
-
-
-
-                </div>
-              </details>
+              {{ additional_options({"lol_datasets": "upload_lol_datasets", "osint_enhancement": "upload_osint_enhancement",
+                                     "osint_comparison": "upload_osint_comparison"}) }}
 
 
               </div>
@@ -2092,13 +1984,8 @@
         <div class="spacer"></div>
       </div>
 
-      <!-- Timestamp and Attribution -->
+      <a class="footer-legal" href="https://github.com/cmdaltr/shikari/blob/main/TRADEMARKS.md" target="_blank" rel="noopener noreferrer" title="Shikari™ and the bateleur logo are trademarks of cmdaltr; other names and logos are their owners'"><img src="/static/images/shikari/shikari-favicon-32.png" alt="" width="20" height="20"><span>Trademarks &amp; copyright</span></a>
       <div class="footer-gloss"><span class="fg-word">shi·ka·ri</span><span class="fg-ipa">\shi-ˈkär-ē\</span><span class="fg-def">a professional big-game hunter or guide</span></div>
-      <div class="timestamp">
-        <span style="font-size: 0.85em; opacity: 0.7; display: block;">
-          Splunk®, Microsoft®, Google® and Elastic® names and logos are trademarks of their respective companies.
-        </span>
-      </div>
     </footer>
 
     <script src="{{ url_for('static', path='js/tabs.js') }}?v={{ request.app.state.asset_version }}" defer></script>
@@ -2252,182 +2139,32 @@
                 document.querySelectorAll('.home-tabs .hp-primary, .home-tabs .hp-secondary').forEach(el => watch.observe(el));
             }
         })();
-
-        // Docker status for every Auto-validate option (Hunt and Upload)
-        document.addEventListener('DOMContentLoaded', async function() {
-            const labels = Array.from(document.querySelectorAll('.auto-validate-label'));
-            if (!labels.length) return;
-            let state;
-            try {
-                const data = await (await fetch('/api/validation/docker-status')).json();
-                state = data.available
-                    ? { text: 'Docker Ready', bg: 'rgba(16, 185, 129, 0.15)', fg: '#059669', ok: true }
-                    : { text: 'Docker Required', bg: 'rgba(245, 158, 11, 0.15)', fg: '#d97706', ok: false,
-                        hint: data.message || 'Docker is required for validation' };
-            } catch (error) {
-                console.error('Failed to check Docker status:', error);
-                state = { text: 'Status Unknown', bg: 'rgba(107, 114, 128, 0.15)', fg: '#6b7280', ok: false };
-            }
-            labels.forEach(function (label) {
-                const checkbox = label.querySelector('input[type="checkbox"]');
-                const badge = label.querySelector('.docker-status-badge');
-                const hint = label.querySelector('.option-hint');
-                if (badge) {
-                    badge.textContent = state.text;
-                    badge.style.display = 'inline';
-                    badge.style.background = state.bg;
-                    badge.style.color = state.fg;
-                }
-                checkbox.disabled = !state.ok;
-                if (!state.ok) checkbox.checked = false;
-                if (state.hint && hint) hint.textContent = state.hint;
-                if (state.hint) label.style.opacity = '0.6';
-            });
-        });
     </script>
+
+    <script src="{{ url_for('static', path='js/auto_validate.js') }}?v={{ request.app.state.asset_version }}"></script>
 
     {% include "partials/ask_shikari.html" %}
 
     {% endblock %}
 
-    <!-- AI/LLM Availability Prompt Modal -->
-    <div id="ai-prompt-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10003; align-items: center; justify-content: center;">
-        <div style="background: white; border-radius: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); max-width: 550px; width: 90%; padding: 0; overflow: hidden;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; color: white;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div style="font-size: 2em;">🤖</div>
-                    <h2 id="ai-prompt-title" style="margin: 0; font-size: 1.5em; font-weight: 600;">Use AI for this hunt?</h2>
-                </div>
-            </div>
-            <div style="padding: 24px;">
-                <p id="ai-prompt-intro" style="margin: 0 0 16px 0; color: #666; line-height: 1.6;">Shikari can use AI to generate detections alongside the standard pipeline.</p>
-
-                <!-- Several providers in the profile: pick one (the assigned one is preselected) -->
-                <div id="ai-provider-picker" style="display: none; margin-bottom: 16px;">
-                    <label for="ai-provider-select" style="display: block; font-weight: 600; color: #374151; margin-bottom: 6px; font-size: 0.9em; font-family: 'Inter', sans-serif; letter-spacing: 0.01em;">Which AI should generate detections?</label>
-                    <select id="ai-provider-select" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95em; font-family: 'Inter', sans-serif; color: #1f2937; background: white; cursor: pointer; outline: none;"></select>
-                </div>
-
-                <p id="ai-prompt-note" style="margin: 0 0 16px 0; color: #6b7280; font-size: 0.85em; line-height: 1.5;"></p>
-
-                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
-                    <button id="ai-prompt-yes-btn" style="flex: 1; background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">Yes</button>
-                    <button id="ai-prompt-no-btn" style="flex: 1; background: #6b7280; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.2s;">No</button>
-                </div>
-                <label style="display: flex; align-items: center; gap: 8px; color: #6b7280; font-size: 0.9em; cursor: pointer;">
-                    <input type="checkbox" id="ai-prompt-remember"> Remember this choice (change it under Profile → API Keys)
-                </label>
-            </div>
-        </div>
-    </div>
-
+    {% include "partials/ai_prompt.html" %}
     <script>
-    // The AI prompt before a run (GitHub #10), for Hunt and Upload: offered only when the
-    // user's profile has a provider that can generate detections; the provider assigned to
-    // detection generation is preselected, and a remembered choice skips the prompt.
-    // shikariAskAi({title, purpose, run}, onChoice) calls onChoice(providerId, modelId),
-    // both empty for "no AI".
-    (function() {
-        var options = [];
-        var pending = null;
-
-        function rememberChoice(providerId, modelId) {
-            return fetch('/api/profile/ai-settings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ remember: { provider: providerId || null, model: modelId || '' } })
-            }).catch(function() {});
-        }
-
-        function choose(providerId, modelId) {
-            var done = pending;
-            pending = null;
-            document.getElementById('ai-prompt-modal').style.display = 'none';
-            var remember = document.getElementById('ai-prompt-remember');
-            if (remember.checked) {
-                remember.checked = false;
-                rememberChoice(providerId, modelId).then(function() { if (done) done(providerId || '', modelId || ''); });
-            } else if (done) {
-                done(providerId || '', modelId || '');
-            }
-        }
-
-        window.shikariAskAi = function(text, onChoice) {
-            pending = onChoice;
-            var modal = document.getElementById('ai-prompt-modal');
-            var yesBtn = document.getElementById('ai-prompt-yes-btn');
-            var noBtn = document.getElementById('ai-prompt-no-btn');
-            var picker = document.getElementById('ai-provider-picker');
-            var select = document.getElementById('ai-provider-select');
-            var intro = document.getElementById('ai-prompt-intro');
-            var note = document.getElementById('ai-prompt-note');
-            document.getElementById('ai-prompt-title').textContent = text.title;
-
-            fetch('/api/ai/availability')
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    options = data.providers || [];
-                    // Nothing in the profile that can generate detections: don't ask
-                    if (!data.any_available) return choose(null, null);
-                    // A remembered choice that's still configured (or "no AI")
-                    var remembered = data.remember;
-                    if (remembered && (!remembered.provider || options.some(function(o) { return o.id === remembered.provider; }))) {
-                        return choose(remembered.provider, remembered.model);
-                    }
-
-                    var assigned = data.assigned || {};
-                    select.innerHTML = '';
-                    options.forEach(function(o) {
-                        if (o.id === assigned.provider && assigned.model) o.model = assigned.model;
-                        var el = new Option(o.label + (o.model ? ' / ' + o.model : ''), o.id, false, o.id === assigned.provider);
-                        select.appendChild(el);
-                    });
-                    if (options.length === 1) {
-                        picker.style.display = 'none';
-                        intro.textContent = 'Use ' + options[0].label + (options[0].model ? ' / ' + options[0].model : '') +
-                            ' to ' + text.purpose + '?';
-                        yesBtn.textContent = 'Yes';
-                    } else {
-                        picker.style.display = 'block';
-                        intro.textContent = 'Shikari can use AI to ' + text.purpose + '.';
-                        yesBtn.textContent = 'Use this and ' + text.run;
-                    }
-                    noBtn.textContent = 'Run without AI';
-                    var notes = ['Up to ' + (data.max_calls || 25) + ' LLM calls this run (set under Profile → API Keys).'];
-                    (data.ask_only || []).forEach(function(a) { notes.push(a.label + ': ' + a.note + '.'); });
-                    note.textContent = notes.join(' ');
-                    modal.style.display = 'flex';
-                })
-                .catch(function() {
-                    // Availability check failed: don't block the run, just run without AI
-                    choose(null, null);
+    document.addEventListener('DOMContentLoaded', function() {
+        // Hunt: hold the hunt until the AI choice is made, then dispatch a real 'submit'
+        // so the AJAX handler in static/js/index.js runs (a native form.submit() would
+        // bypass it and POST the whole page)
+        var genBtn = document.getElementById('generate_btn');
+        if (genBtn) genBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.shikariAskAi({ title: 'Use AI for this hunt?', purpose: 'generate detections alongside the standard pipeline', run: 'run hunt' },
+                function(providerId, modelId) {
+                    document.getElementById('hidden_ai_provider').value = providerId;
+                    document.getElementById('hidden_ai_model').value = modelId;
+                    var form = document.getElementById('generate-form');
+                    if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
                 });
-        };
-
-        document.addEventListener('DOMContentLoaded', function() {
-            var select = document.getElementById('ai-provider-select');
-            document.getElementById('ai-prompt-no-btn').addEventListener('click', function() { choose(null, null); });
-            document.getElementById('ai-prompt-yes-btn').addEventListener('click', function() {
-                var opt = options[options.length > 1 ? select.selectedIndex : 0] || {};
-                choose(opt.id, opt.model);
-            });
-
-            // Hunt: hold the hunt until the AI choice is made, then dispatch a real 'submit'
-            // so the AJAX handler in static/js/index.js runs (a native form.submit() would
-            // bypass it and POST the whole page)
-            var genBtn = document.getElementById('generate_btn');
-            if (genBtn) genBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                window.shikariAskAi({ title: 'Use AI for this hunt?', purpose: 'generate detections alongside the standard pipeline', run: 'run hunt' },
-                    function(providerId, modelId) {
-                        document.getElementById('hidden_ai_provider').value = providerId;
-                        document.getElementById('hidden_ai_model').value = modelId;
-                        var form = document.getElementById('generate-form');
-                        if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-                    });
-            });
         });
-    })();
+    });
     </script>
     {% include "partials/llm_modal.html" %}
     <script src="{{ url_for('static', path='js/card_collapse.js') }}?v={{ request.app.state.asset_version }}"></script>

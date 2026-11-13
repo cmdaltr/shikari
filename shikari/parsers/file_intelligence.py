@@ -171,11 +171,17 @@ class FileIntelligenceParser:
         # Determine file type
         file_type = self._detect_file_type(file_path, file_content)
 
-        # Extract text based on file type
-        if file_content:
+        # Extract text based on file type; a PDF's pages and metadata name its publisher too
+        pages, doc_meta = [], {}
+        if file_type == 'pdf':
+            pages, doc_meta = self._read_pdf(file_content if file_content else self._file_bytes(file_path))
+            text = '\n\n'.join(pages)
+        elif file_content:
             text = self._extract_text_from_bytes(file_content, file_type)
         else:
             text = self._extract_text_from_file(file_path, file_type)
+        if file_type == 'docx':
+            doc_meta = self._docx_properties(file_content if file_content else self._file_bytes(file_path))
 
         # Extract TTPs and IOCs
         result = {
@@ -187,6 +193,11 @@ class FileIntelligenceParser:
                 "file_name": os.path.basename(file_path) if file_path else "uploaded_file"
             }
         }
+        # A report, not an indicator export: its publisher's own domains and the sites it
+        # only cites aren't indicators (blog_analyzer does the same for a URL). An IOC list
+        # (CSV, JSON, XLSX) writes its URLs plain and is left alone
+        if file_type in ('pdf', 'docx', 'text'):
+            result["publisher"] = self._drop_publisher(result["iocs"], text, doc_meta, pages, file_type)
         from shikari.build.ioc_flow import ioc_mentions
         result["ioc_mentions"] = ioc_mentions(text, result["iocs"])
 
@@ -284,16 +295,66 @@ class FileIntelligenceParser:
 
     def _extract_pdf_bytes(self, content: bytes) -> str:
         """Extract text from PDF bytes."""
+        return '\n\n'.join(self._read_pdf(content)[0])
+
+    def _read_pdf(self, content: bytes):
+        """Each page's text and the document information (/Author, /Producer ...) of a PDF."""
         try:
             # pypdf is a dependency; it's PyPDF2's successor (PyPDF2 was never installed, so a
             # PDF report quietly came back as no text at all)
             from pypdf import PdfReader
             from io import BytesIO
             reader = PdfReader(BytesIO(content))
-            return '\n\n'.join(page.extract_text() or "" for page in reader.pages)
+            pages = [page.extract_text() or "" for page in reader.pages]
         except Exception as e:
             print(f"Error extracting PDF bytes: {e}")
-            return ""
+            return [], {}
+        try:
+            meta = {str(k): str(v) for k, v in (reader.metadata or {}).items() if v}
+        except Exception:
+            meta = {}
+        return pages, meta
+
+    @staticmethod
+    def _file_bytes(file_path: str) -> bytes:
+        try:
+            with open(file_path, 'rb') as f:
+                return f.read()
+        except OSError as e:
+            print(f"Error reading file: {e}")
+            return b""
+
+    @staticmethod
+    def _docx_properties(content: bytes) -> Dict[str, str]:
+        """A DOCX's core properties that can name its publisher."""
+        try:
+            import docx
+            from io import BytesIO
+            props = docx.Document(BytesIO(content)).core_properties
+            return {k: getattr(props, k) or "" for k in ("author", "title", "subject")}
+        except Exception:
+            return {}
+
+    @staticmethod
+    def _drop_publisher(iocs: Dict[str, List[str]], text: str, metadata: Dict, pages: List[str],
+                        file_type: str) -> Optional[Dict]:
+        """
+        Drop the document's publisher's domains (blog_analyzer.document_publisher) and, for a
+        PDF or DOCX, the domains it only cites. Returns {name, domains left out} or None.
+        """
+        from shikari.parsers.blog_analyzer import _drop_citation_links, _drop_publisher_domains, document_publisher
+
+        publisher = document_publisher(text, iocs.get("domain"), metadata, pages)
+        before = list(iocs.get("domain") or [])
+        if publisher:
+            _drop_publisher_domains(iocs, "", text, publisher=publisher, keep_defanged=True)
+        dropped = [d for d in before if d not in (iocs.get("domain") or [])]
+        if file_type != 'text':
+            # A .txt is as often an indicator list as a report, and writes its URLs plain
+            _drop_citation_links(iocs, text)
+        if not publisher:
+            return None
+        return {"name": publisher["name"], "domains": sorted(publisher["domains"]), "dropped": dropped}
 
     def _extract_text_from_json(self, data: dict) -> str:
         """Extract relevant text from JSON structures (STIX, MISP, etc.)."""

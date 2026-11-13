@@ -11,12 +11,12 @@
 {% block content %}
 <div class="results-container ms-page as-page">
   <div class="page-header">
+    {% if user and user.role.value == 'admin' %}
+    <a href="/settings/report-branding" class="page-header-link">Report branding <span class="page-header-tier">Pro</span></a>
+    {% endif %}
     <h1>Assessments</h1>
     <p>Build intelligence-led test cases from the groups a profile ranks, then run them in a campaign
       and record what the attack did and what the defence saw. VECTR-style, no AI involved.</p>
-    {% if user and user.role.value == 'admin' %}
-    <p><a href="/settings/report-branding" class="btn-secondary">Report branding <span class="badge">Pro</span></a></p>
-    {% endif %}
   </div>
 
   <div class="sx-tabs" role="tablist">

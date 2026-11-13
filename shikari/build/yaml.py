@@ -733,6 +733,13 @@ def construct_yaml(
                 if source_name not in reference_sources:
                     reference_sources.append(f"Splunk: {source_name}")
 
+        for vendor_name in ("Google SecOps", "Elastic"):
+            for ref in loader.get_queries_by_technique(tid, vendor=vendor_name):
+                reference_used = True
+                source = f"{vendor_name}: {ref.get('name', vendor_name + ' Reference')}"
+                if source not in reference_sources:
+                    reference_sources.append(source)
+
         if reference_used:
             print(f" 📚 Reference queries found for {tid}: {len(reference_sources)} source(s)")
     except ImportError:

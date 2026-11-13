@@ -15,7 +15,7 @@
 
 .summary-cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 16px;
   margin-bottom: 30px;
 }
@@ -42,6 +42,16 @@
 .summary-card:nth-child(4) {
   background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
 }
+
+.summary-card:nth-child(5) {
+  background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+}
+
+.summary-card:nth-child(6) {
+  background: linear-gradient(135deg, #00796b 0%, #20c3b0 100%);
+}
+
+@media (max-width: 1100px) { .summary-cards { grid-template-columns: repeat(3, 1fr); } }
 
 .summary-card .number {
   font-size: 2.2em;
@@ -262,40 +272,6 @@
   color: var(--text-secondary);
 }
 
-.gap-section {
-  background: #fff8e6;
-  border: 1px solid #f0c040;
-  border-radius: 8px;
-  padding: 20px;
-  margin-top: 20px;
-}
-
-[data-theme="dark"] .gap-section {
-  background: #3d3520;
-  border-color: #6b5a2a;
-}
-
-.gap-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.gap-item {
-  padding: 4px 12px;
-  background: white;
-  border: 1px solid #f0c040;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  font-family: monospace;
-}
-
-[data-theme="dark"] .gap-item {
-  background: #2d2d2d;
-  border-color: #6b5a2a;
-}
-
 .back-link {
   display: inline-flex;
   align-items: center;
@@ -373,12 +349,26 @@
   font-style: italic;
 }
 .cloud-intro { color: var(--text-secondary); margin: 0 0 12px; line-height: 1.5; }
-.cloud-summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
-.cloud-summary .chip { border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 14px; }
-.cloud-summary .chip strong { display: block; font-size: 1.2em; }
+/* Cloud coverage and Coverage gaps: a coloured tile per provider or SIEM, like the summary cards */
+.cloud-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 14px; }
+.cov-tile { display: flex; align-items: center; gap: 14px; border-radius: 8px; padding: 14px 16px; color: #fff;
+  box-shadow: 0 4px 6px rgba(0,0,0,.1); background: linear-gradient(135deg, #475569 0%, #1e293b 100%); }
+.cov-tile-logo { flex: 0 0 auto; width: 48px; height: 48px; border-radius: 10px; background: #fff; display: grid; place-items: center; }
+.cov-tile-logo img { max-width: 36px; max-height: 32px; }
+.cov-tile .number { display: block; font-size: 1.7em; font-weight: 900; line-height: 1.05; }
+.cov-tile .label { display: block; font-size: .9rem; opacity: .92; margin-top: 3px; }
+.cov-tile[data-key="aws"] { background: linear-gradient(135deg, #232f3e 0%, #ff9900 140%); }
+.cov-tile[data-key="azure"] { background: linear-gradient(135deg, #0050a0 0%, #35b8f0 100%); }
+.cov-tile[data-key="gcp"] { background: linear-gradient(135deg, #1a73e8 0%, #34a853 100%); }
+.cov-tile[data-key="identity"] { background: linear-gradient(135deg, #6d28d9 0%, #a78bfa 100%); }
+.cov-tile[data-key="secops"] { background: linear-gradient(135deg, #1a73e8 0%, #4facfe 100%); }
+.cov-tile[data-key="mde"] { background: linear-gradient(135deg, #0f3f8c 0%, #2f80ed 100%); }
+.cov-tile[data-key="splunk"] { background: linear-gradient(135deg, #3b2a6b 0%, #e5007d 120%); }
+.cov-tile[data-key="elastic"] { background: linear-gradient(135deg, #00796b 0%, #20c3b0 100%); }
+@media (max-width: 900px) { .cloud-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .cloud-gaps-toggle { display: inline-flex; gap: 6px; align-items: center; margin-bottom: 10px; }
-#cloud-table td.cv-yes { color: #166534; }
-#cloud-table td.cv-gap { color: #b91c1c; font-weight: 600; }
+:is(#cloud-table, #gaps-table) td.cv-yes { color: #166534; }
+:is(#cloud-table, #gaps-table) td.cv-gap { color: #b91c1c; font-weight: 600; }
 #cloud-table td.cv-na { color: var(--text-secondary); }
 </style>
 {% endblock %}
@@ -417,12 +407,20 @@
         <div class="label">Techniques Covered</div>
       </div>
       <div class="summary-card">
-        <div class="number" id="splunk-count">-</div>
-        <div class="label">Splunk Queries</div>
+        <div class="number" id="secops-count">-</div>
+        <div class="label">Google SecOps Queries</div>
       </div>
       <div class="summary-card">
         <div class="number" id="mde-count">-</div>
         <div class="label">Defender XDR Queries</div>
+      </div>
+      <div class="summary-card">
+        <div class="number" id="splunk-count">-</div>
+        <div class="label">Splunk Queries</div>
+      </div>
+      <div class="summary-card">
+        <div class="number" id="elastic-count">-</div>
+        <div class="label">Elastic Queries</div>
       </div>
     </div>
 
@@ -568,20 +566,20 @@
       </table>
     </div>
 
-    <!-- Gaps -->
-    <div id="gaps-section" class="gap-section" style="display: none;">
-      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Coverage Gaps</h3>
-      <p>Techniques that have queries in one vendor but not the other:</p>
-
-      <div id="splunk-gaps" style="display: none;">
-        <strong>Missing Splunk coverage:</strong>
-        <div class="gap-list" id="splunk-gaps-list"></div>
-      </div>
-
-      <div id="mde-gaps" style="display: none; margin-top: 15px;">
-        <strong>Missing Defender XDR coverage:</strong>
-        <div class="gap-list" id="mde-gaps-list"></div>
-      </div>
+    <!-- Gaps between SIEMs: what your detections cover in some of your SIEMs but not others -->
+    <div class="table-section" id="gaps-section">
+      <h2 class="section-title">
+        <div class="icon">
+          <svg viewBox="0 0 24 24" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        Coverage gaps
+      </h2>
+      <p class="cloud-intro">Techniques your detections cover in some of your SIEMs but not all of them, from the SIEMs chosen in Profile (all four if none is). Each chip counts the techniques that SIEM is missing.</p>
+      <div id="gaps-summary" class="cloud-summary"></div>
+      <table class="coverage-table" id="gaps-table">
+        <thead id="gaps-thead"><tr><th>Technique</th></tr></thead>
+        <tbody id="gaps-tbody"><tr><td>Loading…</td></tr></tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -909,8 +907,10 @@ async function loadCoverage() {
     // Update summary cards
     document.getElementById('total-queries').textContent = data.summary.total_queries || 0;
     document.getElementById('techniques-covered').textContent = (data.summary.techniques_covered || []).length;
-    document.getElementById('splunk-count').textContent = data.summary.vendors?.Splunk || 0;
+    document.getElementById('secops-count').textContent = data.summary.vendors?.['Google SecOps'] || 0;
     document.getElementById('mde-count').textContent = data.summary.vendors?.MDE || 0;
+    document.getElementById('splunk-count').textContent = data.summary.vendors?.Splunk || 0;
+    document.getElementById('elastic-count').textContent = data.summary.vendors?.Elastic || 0;
 
     // Coverage per technique ID, and per technique with its sub-techniques rolled up
     const byTech = data.by_technique || {};
@@ -1042,27 +1042,6 @@ async function loadCoverage() {
 
     applyFilters();
 
-    // Show gaps if any
-    const splunkGaps = data.gaps?.techniques_without_splunk || [];
-    const mdeGaps = data.gaps?.techniques_without_mde || [];
-
-    if (splunkGaps.length > 0 || mdeGaps.length > 0) {
-      document.getElementById('gaps-section').style.display = 'block';
-
-      if (splunkGaps.length > 0) {
-        document.getElementById('splunk-gaps').style.display = 'block';
-        document.getElementById('splunk-gaps-list').innerHTML = splunkGaps.map(t =>
-          `<span class="gap-item">${t}</span>`
-        ).join('');
-      }
-
-      if (mdeGaps.length > 0) {
-        document.getElementById('mde-gaps').style.display = 'block';
-        document.getElementById('mde-gaps-list').innerHTML = mdeGaps.map(t =>
-          `<span class="gap-item">${t}</span>`
-        ).join('');
-      }
-    }
 
   } catch (error) {
     document.getElementById('loading').innerHTML = `<div class="no-data">Failed to load coverage data: ${error.message}</div>`;
@@ -1082,9 +1061,11 @@ document.addEventListener('DOMContentLoaded', () => { wireFilters(); loadCoverag
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     data = await r.json();
   } catch (e) { tbody.innerHTML = `<tr><td colspan="5">Couldn't load cloud coverage: ${esc(e.message)}</td></tr>`; return; }
+  const CLOUD_LOGOS = {aws: 'aws.webp', azure: 'azure.webp', gcp: 'gcp.webp', identity: 'identity.svg'};
   document.getElementById('cloud-summary').innerHTML = data.providers.map(p => {
     const s = data.summary[p];
-    return `<div class="chip"><strong>${s.covered} / ${s.applicable}</strong>${esc(data.labels[p])}</div>`;
+    return `<div class="cov-tile" data-key="${esc(p)}"><span class="cov-tile-logo"><img src="/static/images/cloud/${CLOUD_LOGOS[p]}" alt=""></span>`
+      + `<span><span class="number">${s.covered} / ${s.applicable}</span><span class="label">${esc(data.labels[p])}</span></span></div>`;
   }).join('');
   const cell = v => v === null ? '<td class="cv-na">n/a</td>'
     : v.length ? `<td class="cv-yes">✓ ${esc(v.join(', '))}</td>` : '<td class="cv-gap">gap</td>';
@@ -1096,6 +1077,29 @@ document.addEventListener('DOMContentLoaded', () => { wireFilters(); loadCoverag
   };
   document.getElementById('cloud-gaps-only').addEventListener('change', render);
   render();
+})();
+// Coverage gaps between the user's SIEMs
+(async function () {
+  const tbody = document.getElementById('gaps-tbody');
+  if (!tbody) return;
+  const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let data;
+  try {
+    const r = await fetch('/api/coverage/siem-gaps');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    data = await r.json();
+  } catch (e) { tbody.innerHTML = `<tr><td>Couldn't load coverage gaps: ${esc(e.message)}</td></tr>`; return; }
+  const cols = data.siems.length + 1;
+  document.getElementById('gaps-thead').innerHTML = `<tr><th>Technique</th>${data.siems.map(s => `<th>${esc(s.label)}</th>`).join('')}</tr>`;
+  document.getElementById('gaps-summary').innerHTML = data.siems.map(s =>
+    `<div class="cov-tile" data-key="${esc(s.id)}"><span class="cov-tile-logo"><img src="/static/images/siem/${esc(s.id)}.png" alt=""></span>`
+    + `<span><span class="number">${data.summary[s.id]}</span><span class="label">missing in ${esc(s.label)}</span></span></div>`).join('');
+  if (data.siems.length < 2) {
+    tbody.innerHTML = `<tr><td colspan="${cols}">Only one SIEM is chosen in Profile, so there's nothing to compare it with.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = data.techniques.map(t => `<tr><td><a href="https://attack.mitre.org/techniques/${esc(t.technique_id.replace('.', '/'))}/" target="_blank" rel="noopener">${esc(t.technique_id)}</a> ${esc(t.name)}</td>${data.siems.map(s => t.coverage[s.id] ? '<td class="cv-yes">✓</td>' : '<td class="cv-gap">gap</td>').join('')}</tr>`).join('')
+    || `<tr><td colspan="${cols}">No gaps: every technique you detect is covered in each of your SIEMs.</td></tr>`;
 })();
 </script>
 {{ am.dialog() }}

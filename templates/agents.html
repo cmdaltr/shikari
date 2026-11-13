@@ -58,10 +58,10 @@
         {% endif %}
       </label>
       {% endfor %}
-      <label class="ag-approve"><input type="checkbox" name="approve" checked> Ask before actions that change something</label>
-    </div>
-    <div class="ag-actions">
-      <button type="submit" class="ag-start" {% if not providers and not model %}disabled{% endif %}>Start</button>
+      <div class="ag-submit">
+        <label class="ag-approve"><input type="checkbox" name="approve" checked> Ask before actions that change something</label>
+        <button type="submit" class="ag-start" {% if not providers and not model %}disabled{% endif %}>Start</button>
+      </div>
     </div>
     <details class="ag-built">
       <summary>How this agent is built</summary>

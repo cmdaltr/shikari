@@ -709,10 +709,13 @@ def refresh(bundle, group_meta: Dict, days: int = FEED_DAYS, workers: int = 10) 
         _refreshing = False
 
 
-def refresh_in_background(bundle, group_meta: Dict, force: bool = False) -> bool:
-    """Start a refresh unless one is running or the cache is fresh. True when one was started."""
+def refresh_in_background(bundle, group_meta: Dict, force: bool = False, every: int = REFRESH_EVERY) -> bool:
+    """
+    Start a refresh unless one is running or the cache is younger than every seconds (the
+    watchlist collector passes the shortest interval any user chose). True when one was started.
+    """
     last = _load().get("last_refresh") or 0
-    if _refreshing or (not force and time.time() - last < REFRESH_EVERY):
+    if _refreshing or (not force and time.time() - last < every):
         return False
 
     def run():

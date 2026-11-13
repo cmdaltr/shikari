@@ -32,10 +32,11 @@
     </div>
   </header>
 
-  <!-- Profile summary -->
-  <section class="detection-section rv-summary">
-    <h2>Profile summary</h2>
-    <dl class="rv-sum-grid">
+  <!-- Profile summary: leads the exposure card, so who the company is and what it exposes read as one -->
+  {% set exposure_lead %}
+    {# The short facts share one row, however many there are; products and source run full width beneath #}
+    {% set sum_cols = 1 + (1 if summary.industry else 0) + (1 if summary.location else 0) + (1 if summary.hosting else 0) %}
+    <dl class="rv-sum-grid" style="--rv-sum-cols: {{ sum_cols }}">
       {% if summary.industry %}<div><dt>Industry</dt><dd>{{ summary.industry }}{% if summary.subsector %} <span class="rv-muted">({{ summary.subsector }})</span>{% endif %}</dd></div>{% endif %}
       {% if summary.location %}<div><dt>Location</dt><dd>{{ summary.location }}</dd></div>{% endif %}
       {% if summary.hosting %}<div><dt>Hosted from</dt><dd>{{ summary.hosting }}</dd></div>{% endif %}
@@ -45,29 +46,38 @@
         <span id="rv-add-stack-status" role="status" class="rv-muted"></span></dd></div>{% endif %}
       {% if summary.source %}<div class="rv-sum-wide"><dt>Source</dt><dd class="rv-muted">{{ summary.source }}</dd></div>{% endif %}
     </dl>
-  </section>
-
+  {% endset %}
   <!-- Exposure map -->
   {% if exposure %}
+    {% set exposure_title = "Profile and exposure" %}
     {% include "partials/exposure.html" %}
+  {% else %}
+  <section class="detection-section rv-summary"><h2>Profile summary</h2>{{ exposure_lead }}</section>
   {% endif %}
 
   <!-- Ordered Adversary List: top-10 most likely to target this org -->
+  {% set selectable = adversaries|length > 0 %}
   {% include "partials/adversary_list.html" %}
 
   <!-- Detection generation -->
   <section class="detection-section rv-groups">
     <div class="rv-groups-head">
       <h2>Generate detections</h2>
-      <p class="rv-muted">Each group is a full generation run. The likelihood is how strongly this organisation's sector and region match the group's known targeting. The top three are pre-selected.</p>
+      {% if adversaries %}
+      <p class="rv-muted">Tick the groups to generate for in the list above: each is a full generation run. The top three are pre-selected.</p>
       <label class="rv-selectall"><input type="checkbox" id="rv-select-all"> Select all</label>
+      {% else %}
+      <p class="rv-muted">Each group is a full generation run. The top three are pre-selected.</p>
+      <label class="rv-selectall"><input type="checkbox" id="rv-select-all"> Select all</label>
+      {% endif %}
     </div>
 
+    {% if not adversaries %}
     <div class="rv-grid" role="group" aria-label="Recommended threat groups">
       {% for g in groups %}
       <label class="rv-group{% if g.band %} rv-band-{{ g.band|lower }}{% endif %}">
         <input type="checkbox" class="rv-group-cb" value="{{ g.name }}"{% if loop.index0 < 3 %} checked{% endif %}>
-        <span class="rv-group-name">{{ g.name }}</span>
+        <span class="rv-group-name">{% if g.icon %}<span class="rv-group-icon" title="{{ g.icon_title }}" aria-label="{{ g.icon_title }}">{{ g.icon }}</span>{% endif %}{{ g.name }}</span>
         {% if g.likelihood is not none %}
         <span class="rv-like" title="{{ g.band }} likelihood{% if g.sources %} — matched on {{ g.sources|join(' and ') }}{% endif %}">
           <span class="rv-like-bar"><span class="rv-like-fill" style="width: {{ g.likelihood }}%"></span></span>
@@ -77,6 +87,7 @@
       </label>
       {% endfor %}
     </div>
+    {% endif %}
 
     <div class="rv-actions">
       <label class="rv-corr"><input type="checkbox" id="rv-correlation" checked> Generate correlations <span class="rv-muted">(recommended)</span></label>

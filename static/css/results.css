@@ -1164,9 +1164,20 @@
 .corr-inherited-tid { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .85em; padding: 0 5px; border-radius: 4px; background: rgba(100, 116, 139, .14); }
 
 /* Footer order (swap @cmdaltr and the gloss): gloss left, @cmdaltr centre, trademark right */
-.page-footer .footer-gloss { order: 1; flex: 1 1 0; text-align: left; }
-.page-footer .footer-content { order: 2; flex: 0 0 auto; }
-.page-footer .timestamp { order: 3; }
+/* Same as common.css (this file loads after it): @cmdaltr left, the gloss centred, the
+   trademarks and copyright link right */
+.page-footer { flex-direction: row; flex-wrap: nowrap; justify-content: space-between; align-items: center; gap: 24px; }
+/* Equal outer columns keep the gloss dead centre whatever the two links' widths */
+.page-footer .footer-content { order: 1; flex: 1 1 0; min-width: 0; justify-content: flex-start; }
+.page-footer .footer-gloss { order: 2; flex: 0 1 auto; text-align: center; white-space: nowrap; }
+.page-footer .footer-legal { order: 3; flex: 1 1 0; min-width: 0; display: flex; justify-content: flex-end; align-items: center; gap: 8px; color: #8B9AA3; text-decoration: none; font-size: 0.9em; transition: color 0.2s; }
+.page-footer .footer-legal:hover { color: var(--accent); }
+.page-footer .footer-legal img { border-radius: 4px; }
+@media (max-width: 760px) {
+  .page-footer { flex-direction: column; gap: 6px; }
+  .page-footer .footer-content, .page-footer .footer-legal { flex: 0 0 auto; justify-content: center; }
+  .page-footer .footer-gloss { white-space: normal; }
+}
 
 /* Validation in the K's red: the checklist and the note on what it unlocks */
 #validation-checklist { --accent: var(--k-red); --accent-hover: var(--k-red-hover); }

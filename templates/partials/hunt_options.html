@@ -1,0 +1,63 @@
+{#
+  The Hunt tab's Additional Options, shared by Hunt, Analyse (templates/index.html) and Manual.
+  ids: the element ids each page's scripts read (static/js/index.js, manual.js); a key left out
+  gives that element none. The Docker badge is filled by static/js/auto_validate.js.
+#}
+{% macro additional_options(ids={}) %}
+<details class="options-section" open>
+  <summary class="options-header">Additional Options</summary>
+  <div class="options-grid is-four">
+
+    <!-- Auto-validate -->
+    <label class="option-item auto-validate-label"{% if ids.auto_validate_label %} id="{{ ids.auto_validate_label }}"{% endif %} style="align-items: flex-start;">
+      <input type="checkbox" name="auto_validate"{% if ids.auto_validate %} id="{{ ids.auto_validate }}"{% endif %} value="true" style="margin-top: 0.2em; flex-shrink: 0;">
+      <div style="flex: 1; min-width: 0;">
+        <span class="option-label">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: text-bottom; flex-shrink: 0;">
+            <path d="M9 12l2 2 4-4"/>
+            <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"/>
+          </svg>
+          Auto-validate
+          <span{% if ids.docker_badge %} id="{{ ids.docker_badge }}"{% endif %} class="docker-status-badge" style="display: none; font-size: 0.6em; margin-left: 0.5em; padding: 2px 8px; border-radius: 4px; font-weight: 500;"></span>
+        </span>
+        <span class="option-hint"{% if ids.auto_validate_hint %} id="{{ ids.auto_validate_hint }}"{% endif %} style="margin-top: 0.4em; display: block;">Test generated queries against sample events in containerised SIEMs</span>
+      </div>
+    </label>
+
+    <!-- LOLBAS / LOLDrivers / LOLRMM -->
+    <label class="option-item">
+      <input type="checkbox" name="lol_datasets" value="true"{% if ids.lol_datasets %} id="{{ ids.lol_datasets }}"{% endif %} checked>
+      <span class="option-label">
+        LOL datasets
+        <span class="option-info-icon">i
+          <span class="option-info-tooltip">What LOLBAS, LOLDrivers and LOLRMM document about the binaries, drivers and RMM tools a group is seen using: their command lines, hashes and paths go into the queries, and each detection links to the entries. No AI; fetched at most daily.</span>
+        </span>
+      </span>
+    </label>
+
+    <!-- OSINT Enhancement -->
+    <label class="option-item">
+      <input type="checkbox" name="osint_enhancement" value="true"{% if ids.osint_enhancement %} id="{{ ids.osint_enhancement }}"{% endif %} checked>
+      <span class="option-label">
+        OSINT Enhancement
+        <span class="option-info-icon">i
+          <span class="option-info-tooltip">Merge indicators from public rules (Google SecOps, Sentinel, Splunk, Elastic). Adds known false positives to each detection.</span>
+        </span>
+      </span>
+    </label>
+
+    <!-- OSINT Comparison -->
+    <label class="option-item">
+      <input type="checkbox" name="osint_comparison" value="true"{% if ids.osint_comparison %} id="{{ ids.osint_comparison }}"{% endif %}>
+      <span class="option-label">
+        OSINT Comparison
+        <span class="option-info-icon">i
+          <span class="option-info-tooltip">Compare generated detections against OSINT databases (Elastic, Splunk, etc.) and add comparison metadata to YAML files showing how well they align with community detection rules.</span>
+        </span>
+      </span>
+    </label>
+
+
+  </div>
+</details>
+{% endmacro %}

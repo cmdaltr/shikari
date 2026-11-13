@@ -207,7 +207,11 @@ a.nav-menu-item:hover, a.nav-menu-item:focus-visible { background: rgba(197, 48,
 
 /* ========== Page Title ========== */
 /* Every page's title and its one-line description (Coverage's style) */
-.page-header { margin: 0 0 30px; padding-top: 16px; text-align: left; }  /* as much space above the title as below the description */
+.page-header { margin: 0 0 30px; padding-top: 16px; text-align: left; position: relative; }  /* as much space above the title as below the description */
+/* A quiet link level with the title, top right (e.g. a Pro setting), so it doesn't push the page down */
+.page-header-link { position: absolute; top: 22px; right: 0; font-size: 13px; font-weight: 600; color: var(--accent, #C53030); text-decoration: none; white-space: nowrap; }
+.page-header-link:hover { text-decoration: underline; }
+.page-header-tier { margin-left: 6px; padding: 1px 6px; border: 1px solid currentColor; border-radius: 4px; font-size: 11px; letter-spacing: 0.03em; }
 .page-header h1 { margin: 0 0 8px; font-size: 28px; font-weight: 400; line-height: 1.2; color: #666666; letter-spacing: normal; text-transform: none; }
 .page-header p { margin: 0; color: var(--text-secondary); font-size: 0.95rem; }
 [data-theme="dark"] .page-header h1 { color: var(--text-secondary); }
@@ -490,7 +494,16 @@ img.siem-logo, img.af-logo, img.vendor-icon, img.table-vendor-icon { object-fit:
 /* Black logos (GitHub, OpenAI) turn white on the dark theme */
 [data-theme="dark"] img.logo-mono { filter: invert(1); }
 
-/* Footer order (swap @cmdaltr and the gloss): gloss left, @cmdaltr centre, trademark right */
-.page-footer .footer-gloss { order: 1; flex: 1 1 0; text-align: left; }
-.page-footer .footer-content { order: 2; flex: 0 0 auto; }
-.page-footer .timestamp { order: 3; }
+/* Footer: @cmdaltr left, the gloss centred, the trademarks and copyright link right */
+.page-footer { flex-direction: row; flex-wrap: nowrap; justify-content: space-between; align-items: center; gap: 24px; }
+/* Equal outer columns keep the gloss dead centre whatever the two links' widths */
+.page-footer .footer-content { order: 1; flex: 1 1 0; min-width: 0; justify-content: flex-start; }
+.page-footer .footer-gloss { order: 2; flex: 0 1 auto; text-align: center; white-space: nowrap; }
+.page-footer .footer-legal { order: 3; flex: 1 1 0; min-width: 0; display: flex; justify-content: flex-end; align-items: center; gap: 8px; color: #8B9AA3; text-decoration: none; font-size: 0.9em; transition: color 0.2s; }
+.page-footer .footer-legal:hover { color: var(--accent); }
+.page-footer .footer-legal img { border-radius: 4px; }
+@media (max-width: 760px) {
+  .page-footer { flex-direction: column; gap: 6px; }
+  .page-footer .footer-content, .page-footer .footer-legal { flex: 0 0 auto; justify-content: center; }
+  .page-footer .footer-gloss { white-space: normal; }
+}

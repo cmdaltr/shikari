@@ -6,7 +6,7 @@ Pushing is outward-facing and can't be exercised without live tenant credentials
 returns them for review, writing nothing. An actual push happens only when ``execute=True`` and the
 caller supplies credentials — kept off in the UI until a tenant is wired up. No AI.
 
-Supported today: Microsoft Defender XDR (custom detection rules, Graph security API) and
+Supported today: Defender XDR (custom detection rules, Graph security API) and
 Google SecOps (rules, Chronicle Detection Engine). Each detection becomes one rule in that SIEM's
 native language (KQL / YARA-L), which is already what Shikari generated.
 """
@@ -16,7 +16,7 @@ from typing import Dict, List, Optional
 # SIEM key -> (label, the rule endpoint a real push would POST to, created disabled)
 TARGETS = {
     "mde": {
-        "label": "Microsoft Defender XDR",
+        "label": "Defender XDR",
         "endpoint": "https://graph.microsoft.com/beta/security/rules/detectionRules",
         "language": "KQL",
     },
