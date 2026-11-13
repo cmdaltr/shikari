@@ -12,12 +12,17 @@ Three backends: kokoro (default, local, free, more natural than piper), piper (l
 (Google Cloud Chirp 3: HD — higher quality but a cloud call needing GOOGLE_TTS_API_KEY; ~7k characters a
 render sits well inside the free monthly tier). Needs ffmpeg and Playwright's Chromium. Writes
 shikari-walkthrough.mp4, its .srt and youtube.txt (a description with chapters).
+
+The work folder (shikari-video-* in the system temp folder) holds the lossless frames, ~18 GB for a
+full-length run. It's removed when the run ends, however it ends; --keep-work keeps it for debugging.
 """
 import argparse
 import base64
 import json
 import os
 import re
+import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -33,6 +38,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = Path(__file__).with_name("script.yaml")
+WORK_PREFIX = "shikari-video-"
 W, H = 1920, 1080
 # The browser window: a full 1920x1080 CSS viewport so each page sits in frame at desktop width without
 # feeling cramped or zoomed in. Captured 1:1 as lossless PNG (see Recorder) — JPEG frames put visible
@@ -361,6 +367,10 @@ def main():
                         help="Google Cloud API key (defaults to the GOOGLE_TTS_API_KEY env var)")
     parser.add_argument("--google-key-file", default=os.environ.get("GOOGLE_TTS_KEY_FILE", ""),
                         help="read the Google API key from this file instead (defaults to the GOOGLE_TTS_KEY_FILE env var)")
+    parser.add_argument("--keep-work", action="store_true",
+                        help="keep the work folder (frames, WAVs, intermediate MP4s) and print its path")
+    parser.add_argument("--min-free-gb", type=float, default=30,
+                        help="refuse to start with less free space than this where the work folder goes (default 30)")
     args = parser.parse_args()
     if args.tts == "google" and not args.google_key and args.google_key_file:
         args.google_key = Path(args.google_key_file).expanduser().read_text().strip()
@@ -373,7 +383,37 @@ def main():
     scenes = [s for s in spec["scenes"] if not args.only or s["id"] in args.only]
     out = args.out.expanduser()
     out.mkdir(parents=True, exist_ok=True)
-    work = Path(tempfile.mkdtemp(prefix="shikari-video-"))
+    sweep_stale_work()
+    free_gb = shutil.disk_usage(tempfile.gettempdir()).free / 1e9
+    if free_gb < args.min_free_gb:
+        sys.exit(f"Only {free_gb:.0f} GB free in {tempfile.gettempdir()}: a full-length run needs ~20 GB "
+                 f"for its frames. Free some space, or lower --min-free-gb for a short --only run.")
+    work = Path(tempfile.mkdtemp(prefix=WORK_PREFIX))
+    if args.keep_work:
+        print(f"Work folder (kept): {work}")
+    # SIGTERM (a killed background run) otherwise skips the finally and leaves the frames behind
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
+    try:
+        return render(args, spec, scenes, out, work, email, password)
+    finally:
+        if args.keep_work:
+            print(f"Work folder kept: {work}")
+        else:
+            shutil.rmtree(work, ignore_errors=True)
+
+
+def sweep_stale_work(max_age=86400):
+    """Remove work folders a run left behind (one killed outright) more than max_age seconds ago."""
+    for d in Path(tempfile.gettempdir()).glob(f"{WORK_PREFIX}*"):
+        try:
+            if d.is_dir() and time.time() - d.stat().st_mtime > max_age:
+                shutil.rmtree(d, ignore_errors=True)
+                print(f"Removed a stale work folder: {d}")
+        except OSError:
+            pass
+
+
+def render(args, spec, scenes, out, work, email, password):
     (work / "frames").mkdir()
 
     kokoro_helper = Path(__file__).with_name("kokoro_tts.py")
@@ -542,6 +582,10 @@ def main():
                         "-start_number", str(first), "-i", str(seq / "%06d.png"), "-frames:v", str(count),
                         "-vf", vf, "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p",
                         str(clip)], check=True)
+    # The clips are the last readers of the frames: drop them now rather than carry ~18 GB to the end
+    if not args.keep_work:
+        shutil.rmtree(seq, ignore_errors=True)
+        shutil.rmtree(work / "frames", ignore_errors=True)
     concat_list.write_text("".join(f"file '{c}'\n" for c in clips))
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(concat_list),
                     "-c", "copy", str(main_mp4)], check=True)
