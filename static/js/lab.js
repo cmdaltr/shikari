@@ -42,7 +42,9 @@
       </details>`;
   }
 
-  const ENGINE_NAME = { docker: 'Docker', tart: 'Tart', vmware: 'VMware', parallels: 'Parallels' };
+  const ENGINE_NAME = { docker: 'Docker', tart: 'Tart', hyperv: 'Hyper-V', libvirt: 'KVM', vmware: 'VMware', parallels: 'Parallels' };
+  // Engines that drive VMs they didn't make: an unadopted one needs its OS set (machines.HAND_BUILT)
+  const HAND_BUILT = ['utm', 'hyperv', 'libvirt'];
   // Shared engine descriptions, used by the Create buttons and the Info modal so they can't drift.
   const engineKind = t => (t.kind === 'container' ? 'container' : 'VM');
   const engineWhy = t => (t.kind === 'container'
@@ -90,6 +92,32 @@
       engines: [{ label: 'UTM (QEMU)', why: 'Windows 11 on ARM, built once in the UTM app, then managed here — the only engine that runs Windows.' }] };
     return `<div class="lab-template lab-template-utm"><div class="lab-template-top"><span class="lab-template-name">${engineIcon('utm')}<strong>Windows &amp; others, via UTM</strong></span>
       <button type="button" class="ui-pill lab-template-info" data-name="Windows 11">${actIcon('info')}Info</button></div>${body}</div>`;
+  }
+
+  // Hyper-V (Windows host) and KVM (Linux host) build a VM from your own disk image or ISO — the
+  // way to a Windows machine there, since Microsoft publish no image a template could pull.
+  function vmHostCards(hostData) {
+    return (hostData.engines || []).filter(e => (e.key === 'hyperv' || e.key === 'libvirt') && e.supported).map(e => {
+      const label = e.key === 'hyperv' ? 'Hyper-V' : 'KVM';
+      let body;
+      if (e.running) {
+        const buttons = canLab ? `<div class="lab-create-row">
+            <button type="button" class="ui-pill lab-win" data-win="image" data-engine="${esc(e.key)}">${osIcon('windows')}<span>From disk or ISO</span></button>
+          </div>` : '';
+        body = `<p class="lab-template-about">Build a VM from a ${e.key === 'hyperv' ? 'VHDX, VHD' : 'qcow2'} or ISO on this host, or adopt one you built in ${e.key === 'hyperv' ? 'Hyper-V Manager' : 'virt-manager'} (an admin sees it under Your machines; Set OS claims it).</p>${buttons}`;
+      } else {
+        const note = e.installed ? (e.note || `${label} is installed but isn't answering.`) : `Install ${label} to run Windows and Linux VMs here.`;
+        const install = !e.installed && e.install ? `<p class="lab-template-records"><code class="lab-install">${esc(e.install)}</code></p>` : '';
+        body = `<p class="lab-template-about">${esc(note)}</p>${install}`;
+      }
+      templateInfo[`Windows (${label})`] = {
+        records: 'Security event log (process creation incl. command line), PowerShell Script Block Logging, Windows audit policy',
+        engines: [{ label: `${label} VM`, why: e.key === 'hyperv'
+          ? 'Commands run in a Windows guest through PowerShell Direct (no network needed), as the login you give with Set OS; a Linux guest over SSH on the Default Switch.'
+          : 'Commands run through the QEMU guest agent (qemu-guest-agent; virtio-win guest tools on Windows), so the guest needs no network or SSH.' }] };
+      return `<div class="lab-template"><div class="lab-template-top"><span class="lab-template-name">${osIcon('windows')}<strong>Windows &amp; others, via ${esc(label)}</strong></span>
+        <button type="button" class="ui-pill lab-template-info" data-name="${esc(`Windows (${label})`)}">${actIcon('info')}Info</button></div>${body}</div>`;
+    }).join('');
   }
 
   function createButton(t) {
@@ -148,13 +176,14 @@
     let actions = '';
     if (m.manageable) {
       // A UTM VM Shikari didn't create needs its OS set before it can be set up or recorded on
-      const needsOs = m.engine === 'utm' && !m.os;
+      const needsOs = HAND_BUILT.includes(m.engine) && !m.os;
       const act = (a, label, cls = 'lab-act') => `<button type="button" class="ui-pill ${cls}" data-a="${a}">${actIcon(a)}${label}</button>`;
       actions = `<div class="lab-actions">
         ${act('snapshot', 'Snapshot')}
         ${act('revert', 'Revert')}
         ${m.engine === 'utm' ? act('clone', 'Clone') : ''}
         ${needsOs ? act('adopt', 'Set OS') : ''}
+        ${m.engine === 'hyperv' && m.os ? act('adopt', 'Guest login') : ''}
         ${m.os ? act('provision', 'Install tooling') : ''}
         ${m.os ? act('record', 'Record') : ''}
         ${m.os && on && !m.enrolled ? act('enrol', 'Enrol in CALDERA') : ''}
@@ -200,7 +229,7 @@
       // Windows (the UTM card) leads, then macOS, then Linux/Ubuntu last
       const tpls = (data.templates || []).slice().sort((a, b) => (a.os === 'macos' ? 0 : 1) - (b.os === 'macos' ? 0 : 1));
       templateInfo = {};  // rebuilt by utmCard + templateCards below (keeps the Info modal in sync)
-      el('lab-templates').innerHTML = utmCard(data.host) + templateCards(tpls);
+      el('lab-templates').innerHTML = utmCard(data.host) + vmHostCards(data.host) + templateCards(tpls);
       el('lab-templates-empty').hidden = tpls.length > 0;
       // Exclude Rivendell's own VMs, and order by OS: Windows, then macOS, then Linux.
       const osRank = { windows: 0, macos: 1, linux: 2 };
@@ -277,7 +306,9 @@
   root.addEventListener('click', e => {
     const b = e.target.closest('.lab-win');
     if (!b) return;
-    if (b.dataset.win === 'clone') cloneFromCreate(); else isoDialog();
+    if (b.dataset.win === 'clone') cloneFromCreate();
+    else if (b.dataset.win === 'image') imageDialog(b.dataset.engine);
+    else isoDialog();
   });
 
   // Machine actions
@@ -306,7 +337,7 @@
     } else if (act === 'clone') {
       cloneDialog(engine, name);
     } else if (act === 'adopt') {
-      adoptDialog(engine, name);
+      adoptDialog(engine, name, os);
     } else if (act === 'logs') {
       api(`/api/lab/logs?engine=${encodeURIComponent(engine)}&name=${encodeURIComponent(name)}`)
         .then(r => openModal(`Logs — ${name}`, `<pre class="lab-logs">${esc(r.logs || r.error || 'No output')}</pre>`));
@@ -401,21 +432,73 @@
     });
   }
 
-  function adoptDialog(engine, name) {
+  // Hyper-V has no guest agent, so Set OS also takes the way in: the guest's own account for
+  // PowerShell Direct (Windows), or the SSH user, key and address (Linux). Blank keeps what's stored.
+  function accessFields(engine) {
+    if (engine !== 'hyperv') return '';
+    return `<div id="lab-access">
+      <label class="lab-field">Guest user <input type="text" id="lab-acc-user" autocomplete="off" placeholder="Administrator / shikari"></label>
+      <label class="lab-field lab-acc-win">Password <input type="password" id="lab-acc-pw" autocomplete="new-password"></label>
+      <label class="lab-field lab-acc-lin">SSH key on this host <input type="text" id="lab-acc-key" autocomplete="off" placeholder="blank: Shikari's own key"></label>
+      <label class="lab-field lab-acc-lin">Address <input type="text" id="lab-acc-host" autocomplete="off" placeholder="blank: ask Hyper-V"></label>
+      <p class="lab-hint">PowerShell Direct runs commands in a Windows guest as this account (a local administrator); the password is kept encrypted. A Linux guest is reached over SSH.</p></div>`;
+  }
+  function accessValues() {
+    const v = id => (el(id) ? el(id).value.trim() : '');
+    return { user: v('lab-acc-user'), password: el('lab-acc-pw') ? el('lab-acc-pw').value : '', key: v('lab-acc-key'), host: v('lab-acc-host') };
+  }
+  function syncAccess(os) {
+    document.querySelectorAll('.lab-acc-win').forEach(n => { n.hidden = os !== 'windows'; });
+    document.querySelectorAll('.lab-acc-lin').forEach(n => { n.hidden = os !== 'linux'; });
+  }
+
+  function adoptDialog(engine, name, current) {
     openModal(`Set the OS for ${name}`, `<label class="lab-field">Operating system
       <select id="lab-os" class="dropdown-styled">
         <option value="windows">Windows</option>
         <option value="linux">Linux</option>
-        <option value="macos">macOS</option>
-      </select></label>
+        ${engine === 'hyperv' || engine === 'libvirt' ? '' : '<option value="macos">macOS</option>'}
+      </select></label>${accessFields(engine)}
       <p class="lab-hint">So Shikari knows how to turn on logging, install Atomic Red Team and record on it.</p>
       <div class="lab-modal-actions"><button type="button" class="ui-pill" id="lab-os-cancel">Cancel</button>
       <button type="button" class="btn-primary" id="lab-os-go">Save</button></div>`);
+    if (current) el('lab-os').value = current;
+    syncAccess(el('lab-os').value);
+    el('lab-os').addEventListener('change', () => syncAccess(el('lab-os').value));
     el('lab-os-go').addEventListener('click', () => {
+      const body = { engine, name, os: el('lab-os').value, ...accessValues() };
       closeModal();
-      post('/api/lab/adopt', { engine, name, os: el('lab-os').value }).then(refresh);
+      post('/api/lab/adopt', body).then(refresh);
     });
     el('lab-os-cancel').addEventListener('click', closeModal);
+  }
+
+  // A VM from your own disk or ISO (Hyper-V or KVM). From an ISO you install the OS yourself.
+  function imageDialog(engine) {
+    const hv = engine === 'hyperv';
+    openModal(`New ${hv ? 'Hyper-V' : 'KVM'} VM from a disk or ISO`, `<label class="lab-field">Name
+        <input type="text" id="lab-img-name" value="${esc(suggestName('windows-vm'))}" autocomplete="off"></label>
+      <label class="lab-field">Disk image or ISO on this host
+        <input type="text" id="lab-img-path" autocomplete="off" placeholder="${hv ? 'C:\\VMs\\win2022.vhdx or C:\\ISO\\Win11_x64.iso' : '/var/lib/libvirt/images/Win11_x64.iso or a .qcow2'}"></label>
+      <label class="lab-field">Operating system
+        <select id="lab-os" class="dropdown-styled"><option value="windows">Windows</option><option value="linux">Linux</option></select></label>
+      ${hv ? accessFields('hyperv') : ''}
+      <p class="lab-hint">${hv
+        ? 'A VHDX or VHD becomes the read-only parent of a differencing disk, so one prepared image serves many machines. From an ISO, install over Hyper-V Manager\'s Connect.'
+        : 'A qcow2 becomes the backing file of an overlay. From an ISO, install over Desktop, and add the virtio-win guest tools (Windows) or qemu-guest-agent (Linux) so Shikari can run commands.'}</p>
+      <div class="lab-modal-actions"><button type="button" class="ui-pill" id="lab-img-cancel">Cancel</button>
+      <button type="button" class="btn-primary" id="lab-img-go">Create</button></div>`);
+    syncAccess(el('lab-os').value);
+    el('lab-os').addEventListener('change', () => syncAccess(el('lab-os').value));
+    el('lab-img-go').addEventListener('click', () => {
+      const name = el('lab-img-name').value.trim(), image = el('lab-img-path').value.trim();
+      if (!name || !image) return;
+      const acc = accessValues();
+      const body = { engine, name, image, os: el('lab-os').value, user: acc.user, password: acc.password };
+      closeModal();
+      post('/api/lab/create-from-image', body).then(r => { if (r.started) pollJob(); });
+    });
+    el('lab-img-cancel').addEventListener('click', closeModal);
   }
 
   function snapshotDialog(engine, name) {

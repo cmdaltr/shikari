@@ -165,7 +165,7 @@
   <section class="ui-card ms-card em-lab-block" id="lab">
       <h2>Your lab</h2>
       <p class="ms-note">Install, create and manage the containers and VMs an emulation records on, without leaving Shikari.
-        Shikari drives Docker and Tart to create Linux and macOS machines, and UTM for Windows (and other OSes QEMU runs) — you build the UTM VM once, then Shikari manages it.
+        Shikari drives Docker and Tart to create Linux and macOS machines, and UTM for Windows (and other OSes QEMU runs) — you build the UTM VM once, then Shikari manages it. On a Windows host it drives Hyper-V, and on a Linux host KVM through libvirt: both create a Linux VM from Ubuntu's cloud image, or a Windows VM from your own disk image or ISO.
         The machines are disposable — snapshot one before you turn logging on or run atomics, and revert when you're done.
         A running machine has <strong>Console</strong> (an interactive shell in the browser) and <strong>Desktop</strong> (a graphical console — VNC or SPICE) — the Desktop panel asks for the machine's endpoint and protocol the first time, since UTM's display can't be auto-discovered.</p>
 

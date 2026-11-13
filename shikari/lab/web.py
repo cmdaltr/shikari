@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 from shikari.auth import get_user_from_session_id
 from shikari.database.db import get_db
 from shikari.lab import hosts, iso, machines, provision
+from shikari.lab.engines import ENGINES
 from shikari.lab.runner import LabError
 from shikari.lab.templates import offered
 
@@ -162,8 +163,9 @@ def _caldera_naming() -> dict:
 
     # The Linux machines the "Add agent" modal offers, each with its template, engine, label and
     # name tag — Ubuntu (VM or container) and Rocky (container only). macOS/Windows resolve by OS.
+    # Only engines this host's OS and CPU can run: a Mac isn't offered Hyper-V, nor a Linux host Tart.
     flavours = [{"template": t["id"], "engine": t["engine"], "label": t["name"], "tag": t["tag"]}
-                for t in templates.TEMPLATES if t.get("os") == "linux"]
+                for t in templates.TEMPLATES if t.get("os") == "linux" and hosts.engine_supported(t["engine"])]
     return {"os_tag": caldera.OS_TAG, "group_for": caldera.GROUP_FOR,
             "template_tag": templates.TEMPLATE_TAG, "linux_flavours": flavours}
 
@@ -210,6 +212,39 @@ async def create(request: Request, shikari_session: Optional[str] = Cookie(None)
     return _background(f"Create {name}", work)
 
 
+@router.post("/create-from-image")
+async def create_from_image(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """A VM from your own disk image or ISO, on Hyper-V or libvirt — the way to a Windows machine
+    there. `image` is a path on the Shikari host (or a URL); the guest login is optional here and
+    can be set later with Set OS."""
+    user, denied = _lab(shikari_session)
+    if denied:
+        return denied
+    data = await request.json()
+    engine, name = str(data.get("engine", "")), str(data.get("name", ""))
+    image, os_name = str(data.get("image", "")).strip(), str(data.get("os", ""))
+    access = {k: data.get(k) for k in ("user", "password") if data.get(k)}
+    try:
+        from shikari.lab.runner import safe_name
+
+        safe_name(name)
+        if not getattr(ENGINES.get(engine), "from_image", False):
+            raise LabError("This engine creates only from templates", engine)
+        if not image:
+            raise LabError("Give the path to the disk image or ISO")
+    except LabError as e:
+        return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
+
+    def work(say):
+        say(f"Creating {name} on {engine} from {image}…")
+        machines.create_from_image(engine, name, image, os_name, owner=user.id, access=access)
+        if image.lower().endswith(".iso"):
+            say("Start it and install the OS over its console (Desktop on KVM; Hyper-V Manager's "
+                "Connect on Hyper-V), then Set OS with the account you made.")
+
+    return _background(f"Create {name}", work)
+
+
 @router.post("/action")
 async def action(request: Request, shikari_session: Optional[str] = Cookie(None)):
     """start, stop, delete, snapshot, revert. The quick ones answer now; revert runs as a job."""
@@ -242,8 +277,8 @@ async def action(request: Request, shikari_session: Optional[str] = Cookie(None)
 
 @router.post("/adopt")
 async def adopt(request: Request, shikari_session: Optional[str] = Cookie(None)):
-    """Set the OS of a VM Shikari manages but didn't create (a UTM VM), so it can be provisioned
-    and recorded."""
+    """Set the OS of a VM Shikari manages but didn't create (a UTM, Hyper-V or libvirt VM), so it
+    can be provisioned and recorded, and for Hyper-V how to get into it."""
     user, denied = _lab(shikari_session)
     if denied:
         return denied
@@ -251,8 +286,10 @@ async def adopt(request: Request, shikari_session: Optional[str] = Cookie(None))
     engine, name, os_name = data.get("engine", ""), data.get("name", ""), data.get("os", "")
     if not _owns(user, engine, name):
         return _not_yours()
+    # Hyper-V's way in: the guest's account for PowerShell Direct, or SSH user, key and address
+    access = {k: data.get(k) for k in ("user", "password", "key", "host") if data.get(k)}
     try:
-        return {"ok": True, **machines.adopt(engine, name, os_name, owner=user.id)}
+        return {"ok": True, **machines.adopt(engine, name, os_name, owner=user.id, access=access)}
     except LabError as e:
         return JSONResponse({"error": e.message, "detail": e.detail}, status_code=400)
 
@@ -765,7 +802,7 @@ async def console_ws(websocket: WebSocket):
     if not user or not _can_lab(user):
         await websocket.close(code=4401)
         return
-    if engine not in ("docker", "tart", "utm") or not valid_name(name) or not _owns(user, engine, name):
+    if engine not in ENGINES or not valid_name(name) or not _owns(user, engine, name):
         await websocket.close(code=4403)
         return
 
@@ -860,18 +897,33 @@ async def console_ws(websocket: WebSocket):
             managed.detach()  # keep the shell for a reconnect; the reaper handles the grace window
 
 
+def _desktop_for(engine: str, name: str):
+    """The machine's desktop endpoint: what its owner configured, else what the engine reports
+    live (libvirt allocates a VNC port at each start, so it's asked, not stored). Either way it's
+    trusted config or the hypervisor's own answer, never the request's."""
+    from shikari.lab import desktop, registry
+
+    ep = registry.get_desktop(engine, name)
+    if ep or not hasattr(ENGINES.get(engine), "desktop"):
+        return ep
+    try:
+        live = ENGINES[engine].desktop(name)
+    except LabError:
+        return None
+    return live if live and desktop.valid_endpoint(live[0], live[1]) else None
+
+
 @router.get("/desktop-endpoint")
 def desktop_endpoint_get(engine: str, name: str, shikari_session: Optional[str] = Cookie(None)):
     """Report a machine's graphical-console endpoint (VNC or SPICE) for the UI (#28)."""
-    from shikari.lab import registry
     from shikari.lab.console import valid_name
 
     user = _user(shikari_session)
     if not user or not _can_lab(user):
         return JSONResponse({"error": "Please log in"}, status_code=401)
-    if engine not in ("docker", "tart", "utm") or not valid_name(name) or not _owns(user, engine, name):
+    if engine not in ENGINES or not valid_name(name) or not _owns(user, engine, name):
         return _not_yours()
-    ep = registry.get_desktop(engine, name)
+    ep = _desktop_for(engine, name)
     return {"configured": bool(ep), "host": ep[0] if ep else "", "port": ep[1] if ep else None,
             "kind": ep[2] if ep else "vnc"}
 
@@ -889,7 +941,7 @@ async def desktop_endpoint_set(request: Request, shikari_session: Optional[str] 
     body = await request.json()
     engine = body.get("engine", "")
     name = body.get("name", "")
-    if engine not in ("docker", "tart", "utm") or not valid_name(name) or not _owns(user, engine, name):
+    if engine not in ENGINES or not valid_name(name) or not _owns(user, engine, name):
         return _not_yours()
     if body.get("clear"):
         registry.clear_desktop(engine, name)
@@ -915,7 +967,7 @@ async def desktop_ws(websocket: WebSocket):
     from the request — so a caller can't aim the bridge anywhere (SSRF). The byte pump is protocol-
     agnostic; noVNC asks for the 'binary' subprotocol, so we echo any requested subprotocol back.
     """
-    from shikari.lab import desktop, registry
+    from shikari.lab import desktop
     from shikari.lab.console import valid_name
 
     engine = websocket.query_params.get("engine", "")
@@ -924,10 +976,10 @@ async def desktop_ws(websocket: WebSocket):
     if not user or not _can_lab(user):
         await websocket.close(code=4401)
         return
-    if engine not in ("docker", "tart", "utm") or not valid_name(name) or not _owns(user, engine, name):
+    if engine not in ENGINES or not valid_name(name) or not _owns(user, engine, name):
         await websocket.close(code=4403)
         return
-    ep = registry.get_desktop(engine, name)
+    ep = _desktop_for(engine, name)
     if not ep:
         await websocket.close(code=4404)  # no graphical endpoint configured for this machine
         return

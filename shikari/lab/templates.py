@@ -29,6 +29,29 @@ TEMPLATES = [
                  "exactly as on a real host. Heavier than the container.",
     },
     {
+        # amd64 only: an arm64 KVM guest needs UEFI firmware, and Shikari's libvirt VMs are BIOS so
+        # their internal snapshots work on any libvirt (shikari.lab.engines.virt_install_argv)
+        "id": "ubuntu-kvm", "engine": "libvirt", "kind": "vm", "os": "linux",
+        "distro": "ubuntu", "tag": "ubu24",
+        "name": "Ubuntu 24.04 KVM VM",
+        "image": {"amd64": "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"},
+        "create": {"os_name": "linux", "osinfo": "ubuntu24.04"},
+        "records": "auditd, syslog, journald, Sysmon for Linux",
+        "about": "A full Linux VM under KVM on a Linux host, from Ubuntu's cloud image. cloud-init "
+                 "puts in the QEMU guest agent Shikari runs commands through, on first boot.",
+    },
+    {
+        "id": "ubuntu-hyperv", "engine": "hyperv", "kind": "vm", "os": "linux",
+        "distro": "ubuntu", "tag": "ubu24",
+        "name": "Ubuntu 24.04 Hyper-V VM",
+        # Ubuntu publishes no VHDX; the qcow2 cloud image is converted once with qemu-img
+        "image": {"amd64": "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"},
+        "create": {"os_name": "linux"},
+        "records": "auditd, syslog, journald, Sysmon for Linux",
+        "about": "A full Linux VM under Hyper-V on a Windows host, from Ubuntu's cloud image. Shikari "
+                 "reaches it over SSH on the Default Switch with its own key, put in by cloud-init.",
+    },
+    {
         "id": "ubuntu-container", "engine": "docker", "kind": "container", "os": "linux",
         "distro": "ubuntu", "tag": "ubu24",
         "name": "Ubuntu 24.04 container", "image": {"arm64": "ubuntu:24.04", "amd64": "ubuntu:24.04"},
@@ -54,7 +77,10 @@ TEMPLATES = [
         "about": "A macOS VM on Apple Silicon. Records the unified log and Endpoint Security, "
                  "which no public dataset has — the main reason to record your own.",
     },
-    # No Windows template: Tart can't run Windows (Apple's Virtualization.framework takes only
+    # No Windows template: Microsoft publish no Windows image that boots unattended. On Hyper-V
+    # and KVM, Shikari builds one from your ISO or VHDX (machines.create_from_image) or drives one
+    # you built; on a Mac, UTM. The rest of this note is about the Mac.
+    # Tart can't run Windows (Apple's Virtualization.framework takes only
     # Linux and macOS guests), and UTM — which runs Windows 11 on ARM via QEMU — has no
     # create-from-image. Build the Windows VM in the UTM app once; Shikari then manages and records
     # it from Your machines (shikari.lab.engines.UTM). record-atomics.ps1 still works by hand too.

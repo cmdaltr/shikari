@@ -3,9 +3,9 @@ The optional components Shikari can use, and whether each is present on this hos
 
 Drives the dependency table on the Help page: a green tick when the component is installed,
 a red cross when it isn't, and N/A when the host OS or CPU can't run it at all (Tart needs
-Apple Silicon; UTM needs macOS). Detection is host-level and deliberately cheap — the lab
-engine probes are already called on each Lab page load (shikari.lab.hosts) — so this is safe
-to compute on every request without caching.
+Apple Silicon; UTM needs macOS; Hyper-V needs Windows; libvirt needs Linux). Detection is
+host-level and deliberately cheap — the lab engine probes are already called on each Lab page
+load (shikari.lab.hosts) — so this is safe to compute on every request without caching.
 
 Status is one of: "installed", "missing", "na".
 """
@@ -44,6 +44,9 @@ def dependency_matrix() -> dict:
     host = hosts.capabilities()
     engines = {e["key"]: e for e in host["engines"]}
     docker, tart, utm = engines["docker"], engines["tart"], engines["utm"]
+    # Read N/A when a host report predates an engine (or leaves it out)
+    absent = {"supported": False, "installed": False, "running": False, "name": "", "version": ""}
+    hyperv, libvirt = engines.get("hyperv", absent), engines.get("libvirt", absent)
 
     # AI is available out of the box when a local runtime is installed or a server key is set.
     # A user can also add their own key under Profile → API Keys, which this host-level check
@@ -68,6 +71,10 @@ def dependency_matrix() -> dict:
          "status": _engine_status(tart), "detail": _engine_detail(tart)},
         {"name": "UTM", "enables": "Emulate lab Windows and Linux VMs (macOS)",
          "status": _engine_status(utm), "detail": _engine_detail(utm)},
+        {"name": "Hyper-V", "enables": "Emulate lab Windows and Linux VMs (Windows Pro/Enterprise)",
+         "status": _engine_status(hyperv), "detail": _engine_detail(hyperv)},
+        {"name": "KVM (libvirt)", "enables": "Emulate lab Linux and Windows VMs (Linux)",
+         "status": _engine_status(libvirt), "detail": _engine_detail(libvirt)},
         {"name": "AI provider", "enables": "Ask Shikari, Agents, AI-written queries, threat briefings",
          "status": ai_status, "detail": ai_detail.strip(" ·")},
         {"name": "Desktop app window", "enables": "The shikari app window (otherwise use a browser)",

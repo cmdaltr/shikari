@@ -9,22 +9,27 @@ Two pure, testable pieces and one runtime piece:
   - ConsoleSession: forks the PTY, execs that argv, and exposes read/write/resize/close.
 
 Engine coverage: Docker is fully interactive (`docker exec -it`). Tart and UTM run their exec under the
-forked PTY — interactive where the tool forwards the tty; a graphical Windows console (noVNC) is a later
+forked PTY — interactive where the tool forwards the tty; libvirt attaches to the VM's serial console
+(`virsh console`); Hyper-V has none (Shikari runs on Windows there, which has no PTY to fork); a graphical Windows console (noVNC) is a later
 increment (see docs/implementation-plans/28-vm-consoles.md). Auth and name validation are the caller's
 job (shikari.lab.web gates on _owns/_can_lab, the same as every other lab action).
 """
 from __future__ import annotations
 
-import fcntl
 import os
 import re
 import secrets
 import signal
 import struct
-import termios
 import threading
 import time
 from typing import List, Optional
+
+try:
+    import fcntl
+    import termios
+except ImportError:  # Windows (a Hyper-V host): no PTYs, so no console sessions, but valid_name still works
+    fcntl = termios = None
 
 # Machine names follow the lab's own convention (shi-…, no spaces); be strict here too, since the name
 # becomes an argv element — a belt-and-braces guard on top of the ownership check.
@@ -51,6 +56,18 @@ def console_argv(engine: str, name: str, windows: bool = False) -> List[str]:
     if engine == "utm":
         # utmctl --cmd is variadic and must come last.
         return ["utmctl", "exec", "--hide", name, "--cmd", *(win_shell if windows else _POSIX_SHELL)]
+    if engine == "libvirt":
+        # The guest agent can't carry a tty, so this is the VM's serial console: a real terminal,
+        # which a Shikari-made VM logs straight into (shikari.lab.seed). Windows has no serial shell.
+        if windows:
+            raise ValueError("a Windows VM on KVM has no text console — use Desktop")
+        from shikari.lab.engines import virsh_argv
+
+        return virsh_argv("console", name, "--force")
+    if engine == "hyperv":
+        # Shikari on Windows has no PTY to fork, and Hyper-V's console is graphical (vmconnect)
+        raise ValueError("the browser console isn't available for Hyper-V — use Hyper-V Manager's "
+                         "Connect, or Enter-PSSession -VMName on the host")
     raise ValueError(f"unknown engine: {engine!r}")
 
 

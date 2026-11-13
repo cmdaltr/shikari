@@ -260,7 +260,7 @@ def plan(abilities: List[Dict], agents: List[Dict], techniques: List[str], group
 # Shikari's own machine engines, and the environments the lab script (scripts/telemetry/caldera-lab.sh)
 # builds each CALDERA group in — so an agent the machine registry doesn't know (a lab-script VM, say)
 # is still placed by the group it enrolled under.
-_ENGINE_LABEL = {"docker": "Docker", "tart": "Tart", "utm": "UTM"}
+_ENGINE_LABEL = {"docker": "Docker", "tart": "Tart", "utm": "UTM", "hyperv": "Hyper-V", "libvirt": "KVM"}
 _GROUP_ENV = {"disposable": "OrbStack", "winlab": "UTM", "maclab": "Tart"}
 
 
@@ -407,10 +407,13 @@ def enrol_agent(engine_key: str, name: str, os_name: str, group: str, server_url
     Enrol an Shikari-managed, running machine as a CALDERA agent in `group`, with the machine name as
     its paw. The machine fetches the architecture-correct sandcat itself and runs it detached, so
     nothing large streams over the guest agent (which chokes on it):
-      - Tart Linux : curl in the VM, hostname set to `name`, run under systemd (systemd-run)
+      - Tart Linux : curl in the VM, hostname set to `name`, run under systemd (systemd-run);
+                     Hyper-V and libvirt Linux VMs the same way
       - Docker     : push the binary with `docker cp`, run with `docker exec -d`
       - Tart macOS : curl in the VM, run under launchd — needs the Tart guest agent (a cirruslabs base)
-      - UTM Windows: download in the VM with PowerShell, run hidden with Start-Process
+      - UTM Windows: download in the VM with PowerShell, run hidden with Start-Process (libvirt too);
+                     Hyper-V as a SYSTEM scheduled task, since PowerShell Direct ends the processes
+                     its session started when the session closes
     The arch header matters: the amd64 default fails on an arm64 Tart VM (Exec format error).
     """
     from shikari.lab.engines import engine_for
@@ -420,7 +423,8 @@ def enrol_agent(engine_key: str, name: str, os_name: str, group: str, server_url
     if not platform:
         raise LabError("Unknown OS", os_name)
     # Which OS each engine can carry: a container is Linux, Tart does Linux/macOS, UTM does Windows.
-    valid = {"docker": {"linux"}, "tart": {"linux", "macos"}, "utm": {"windows"}}
+    valid = {"docker": {"linux"}, "tart": {"linux", "macos"}, "utm": {"windows"},
+             "hyperv": {"linux", "windows"}, "libvirt": {"linux", "windows"}}
     if os_name not in valid.get(engine_key, set()):
         raise LabError("Can't enrol this machine", f"no enrol path for {os_name} on {engine_key}")
     url = server_url.rstrip("/")
@@ -455,7 +459,7 @@ def enrol_agent(engine_key: str, name: str, os_name: str, group: str, server_url
         finally:
             _os.unlink(tmp.name)
 
-    elif engine_key == "tart" and os_name == "linux":
+    elif engine_key in ("tart", "hyperv", "libvirt") and os_name == "linux":
         # systemd-run returns at once and hands the agent to systemd, so it survives the exec session;
         # the cirruslabs base's hostname is "ubuntu", so set it to `name` or the diagram collapses nodes.
         script = (f"curl -s {dl} -o /tmp/sc && chmod +x /tmp/sc && "
@@ -482,12 +486,17 @@ def enrol_agent(engine_key: str, name: str, os_name: str, group: str, server_url
                   f"sudo launchctl bootstrap system /Library/LaunchDaemons/{label}.plist")
         eng.exec(name, ["bash", "-lc", script], timeout=180)
 
-    elif engine_key == "utm" and os_name == "windows":
+    elif engine_key in ("utm", "hyperv", "libvirt") and os_name == "windows":
         ps = (f"$ErrorActionPreference='Stop'; "
               f"$h=@{{'file'='sandcat.go';'platform'='windows';'architecture'='{arch}'}}; "
               f"Invoke-WebRequest -Uri '{url}/file/download' -Method Post -Headers $h -OutFile 'C:\\Windows\\Temp\\sc.exe'; "
-              f"Start-Process -WindowStyle Hidden 'C:\\Windows\\Temp\\sc.exe' "
-              f"-ArgumentList '-server','{url}','-group','{group}','-paw','{name}','-v'")
+              + (f"$a=New-ScheduledTaskAction -Execute 'C:\\Windows\\Temp\\sc.exe' "
+                 f"-Argument '-server {url} -group {group} -paw {name} -v'; "
+                 "Register-ScheduledTask -TaskName 'shikari-caldera-sc' -Action $a -User 'SYSTEM' "
+                 "-RunLevel Highest -Force | Out-Null; Start-ScheduledTask -TaskName 'shikari-caldera-sc'"
+                 if engine_key == "hyperv" else
+                 f"Start-Process -WindowStyle Hidden 'C:\\Windows\\Temp\\sc.exe' "
+                 f"-ArgumentList '-server','{url}','-group','{group}','-paw','{name}','-v'"))
         eng.exec(name, ["powershell", "-NoProfile", "-Command", ps], timeout=180)
 
     else:
@@ -520,10 +529,13 @@ def _wait_ready(engine_key: str, name: str, say: Callable[[str], None] = print,
 
     if engine_key == "docker":
         return  # a container is ready the moment it is running
+    from shikari.lab.registry import get as registry_get
+
     eng = engine_for(engine_key)
+    windows = engine_key == "utm" or (registry_get(engine_key, name) or {}).get("os") == "windows"
     for _ in range(tries):
         try:
-            eng.exec(name, ["true"] if engine_key == "tart" else ["cmd", "/c", "echo", "ok"], timeout=15)
+            eng.exec(name, ["cmd", "/c", "echo", "ok"] if windows else ["true"], timeout=15)
             return
         except LabError:
             time.sleep(interval)

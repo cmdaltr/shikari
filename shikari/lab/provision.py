@@ -1,6 +1,7 @@
 """
 Turn a fresh machine into one an Emulate run can record on, in one click per step, run inside
-the machine itself (docker exec / tart exec). The steps follow Recording a lab (docs 20):
+the machine itself (docker exec, tart exec, utmctl exec, PowerShell Direct or SSH on
+Hyper-V, the QEMU guest agent on libvirt). The steps follow Recording a lab (docs 20):
 
   logging   the OS's native audit logging the detections rely on (auditd rules on Linux;
             Endpoint Security / unified log on macOS; Security, PowerShell and audit on Windows)
@@ -104,11 +105,16 @@ def run_step(engine_key: str, name: str, os_name: str, step: str, timeout: int =
     try:
         out = engine.exec(name, [*spec["interp"], script], timeout=timeout)
     except LabError as e:
-        # tart exec needs the guest agent; say so rather than a bare failure
+        # Each VM engine reaches the guest its own way; say which, rather than a bare failure
         if engine_key == "tart":
             raise LabError("Couldn't run it in the VM",
                            "Tart runs commands through its guest agent. The Cirrus Labs base "
                            "images include it; a custom image may not. " + (e.detail or ""))
+        if engine_key == "hyperv" and e.message != "Set the guest login first":
+            raise LabError("Couldn't run it in the VM",
+                           ("Hyper-V runs commands in a Windows guest through PowerShell Direct, as the "
+                            "login set with Set OS. " if os_name == "windows" else
+                            "Hyper-V reaches a Linux guest over SSH on the Default Switch. ") + (e.detail or ""))
         raise
     registry.mark_provisioned(engine_key, name, step)
     return out

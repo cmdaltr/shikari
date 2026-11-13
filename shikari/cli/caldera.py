@@ -2,10 +2,10 @@
 shikari caldera — provision and enrol CALDERA agents from the command line (the CLI half of the
 #30 provisioning the web 'Add CALDERA agent' flow also exposes).
 
-  shikari caldera provision linux [name] [--engine tart|docker] [--distro ubuntu|rocky] [--group G]
+  shikari caldera provision linux [name] [--engine tart|docker|libvirt|hyperv] [--distro ubuntu|rocky] [--group G]
   shikari caldera provision macos [name]            # needs a cirruslabs base (Tart guest agent)
                                                        # --distro rocky is Docker-only (Rocky 10)
-  shikari caldera enrol <tart|docker|utm> <name>    # enrol a machine Shikari already manages
+  shikari caldera enrol <engine> <name>             # enrol a machine Shikari already manages
   shikari caldera list                              # managed machines, and which are agents
 
 The disposable-lab bring-up (the server plus a couple of Linux agents) still lives in
@@ -52,7 +52,8 @@ def _provision(args) -> int:
         if args.distro == "rocky":
             template = "rocky-container"  # Rocky is Docker-only (no cirruslabs Rocky Tart base)
         else:
-            template = "ubuntu-container" if args.engine == "docker" else "ubuntu-vm"
+            template = {"docker": "ubuntu-container", "libvirt": "ubuntu-kvm",
+                        "hyperv": "ubuntu-hyperv"}.get(args.engine, "ubuntu-vm")
     else:
         template = "macos-vm"
     name = args.name or _autoname(args.os, template)
@@ -98,15 +99,16 @@ def main():
     pr.add_argument("os", choices=["linux", "macos"],
                     help="linux or macos (Windows: build the UTM VM, then `caldera enrol utm <name>`)")
     pr.add_argument("name", nargs="?", help="machine name (default: shi-cal-ubu24, shi-cal-mac15, …)")
-    pr.add_argument("--engine", choices=["tart", "docker"], default="tart",
-                    help="linux only: tart VM (full kernel, default) or docker container (light)")
+    pr.add_argument("--engine", choices=["tart", "docker", "libvirt", "hyperv"], default="tart",
+                    help="linux only: tart VM (full kernel, default), docker container (light), "
+                         "or a KVM (Linux host) or Hyper-V (Windows host) VM")
     pr.add_argument("--distro", choices=["ubuntu", "rocky"], default="ubuntu",
                     help="linux only: ubuntu 24.04 (default), or rocky 10 (Docker-only)")
     pr.add_argument("--group", help="CALDERA group (default: per OS)")
     pr.add_argument("--server", help="CALDERA server URL (default: configured, else the host LAN IP)")
 
     en = sub.add_parser("enrol", help="enrol a machine Shikari already manages")
-    en.add_argument("engine", choices=["tart", "docker", "utm"])
+    en.add_argument("engine", choices=["tart", "docker", "utm", "hyperv", "libvirt"])
     en.add_argument("name")
     en.add_argument("--os", choices=["linux", "macos", "windows"], help="override the machine's recorded OS")
     en.add_argument("--group", help="CALDERA group (default: per OS)")

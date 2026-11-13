@@ -60,6 +60,32 @@ ENGINES = {
                 "to UTM — grant it (System Settings → Privacy & Security → Automation), and open "
                 "the UTM app once.",
     },
+    "hyperv": {
+        "name": "Hyper-V",
+        "runs": "Windows and Linux VMs on Windows",
+        "blurb": "Hyper-V VMs on a Windows host. Shikari creates a Linux VM from a cloud image, or a "
+                 "VM from your VHDX or ISO, and starts, checkpoints, provisions and records it.",
+        "probe": ["powershell", "-NoProfile", "-Command", "Get-VMHost"],
+        "install": {"windows": "Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All   "
+                               "# elevated PowerShell, then reboot (Windows Pro, Enterprise or Education)"},
+        "requires": {"os": "windows"},
+        "note": "Shikari needs to run elevated, or as a member of the Hyper-V Administrators group "
+                "(sign out and in after adding it). A Linux cloud image also needs qemu-img "
+                "(winget install SoftwareFreedomConservancy.QEMU).",
+    },
+    "libvirt": {
+        "name": "KVM (libvirt)",
+        "runs": "Linux and Windows VMs on Linux",
+        "blurb": "KVM/QEMU VMs through libvirt. Shikari creates a Linux VM from a cloud image, or one "
+                 "from your ISO, and starts, snapshots, provisions and records it.",
+        "probe": ["virsh", "--version"],
+        "install": {"linux": "sudo apt install -y qemu-system-x86 libvirt-daemon-system virtinst qemu-utils "
+                             "&& sudo usermod -aG libvirt,kvm $USER   # then sign out and in"},
+        "requires": {"os": "linux"},
+        "note": "virsh answers only for a member of the libvirt group (qemu:///system), and VMs need "
+                "/dev/kvm: on a VM host, nested virtualisation must be on. Creating a VM also needs "
+                "virt-install (the virtinst package).",
+    },
 }
 
 
@@ -96,13 +122,57 @@ def _utm_ready() -> bool:
     return ok
 
 
+_HYPERV = {"t": 0.0, "probe": None}
+
+# One PowerShell launch answers all three questions (a launch costs about a second)
+HYPERV_PROBE = ("$m = [bool](Get-Command Get-VM -ErrorAction SilentlyContinue); $h = $false; $v = ''; "
+                "if ($m) { try { Get-VMHost -ErrorAction Stop | Out-Null; $h = $true } catch {} }; "
+                "try { $v = (Get-Item \"$env:windir\\System32\\vmms.exe\" -ErrorAction Stop).VersionInfo.ProductVersion } catch {}; "
+                "ConvertTo-Json -InputObject @{ module = $m; host = $h; version = $v } -Compress")
+
+
+def parse_hyperv_probe(out: str) -> Dict:
+    """HYPERV_PROBE's answer: installed (the Hyper-V module is there), running (Get-VMHost works for
+    this account, which needs elevation or Hyper-V Administrators) and the VMMS version."""
+    import json
+
+    try:
+        row = json.loads((out or "").strip() or "{}")
+    except ValueError:
+        row = {}
+    row = row if isinstance(row, dict) else {}
+    return {"installed": bool(row.get("module")), "running": bool(row.get("host")),
+            "version": str(row.get("version") or "")}
+
+
+def _hyperv_probe() -> Dict:
+    """Cached briefly: the Lab page asks on every load, and PowerShell is slow to start."""
+    import time
+
+    now = time.time()
+    if _HYPERV["probe"] is not None and now - _HYPERV["t"] < 20:
+        return _HYPERV["probe"]
+    from shikari.lab.engines import ps_argv
+
+    try:
+        probe = parse_hyperv_probe(run(ps_argv(HYPERV_PROBE), timeout=20, check=False))
+    except LabError:
+        probe = {"installed": False, "running": False, "version": ""}
+    _HYPERV.update(t=now, probe=probe)
+    return probe
+
+
 def _engine_status(key: str, spec: Dict) -> Dict:
     host_os, host_arch = os_name(), arch()
     requires = spec.get("requires") or {}
     supported = (requires.get("os", host_os) == host_os and requires.get("arch", host_arch) == host_arch)
     present = which(spec["probe"][0]) is not None
     version = ""
-    if present:
+    # hyperv: powershell is on every Windows, so "installed" is the Hyper-V module, not the command
+    hv = _hyperv_probe() if key == "hyperv" and present and supported else None
+    if hv is not None:
+        present, version = hv["installed"], hv["version"]
+    elif present:
         if key == "utm":
             version = _utm_version()
         else:
@@ -116,6 +186,13 @@ def _engine_status(key: str, spec: Dict) -> Dict:
         running = present and run_ok(["docker", "info", "--format", "{{.ServerVersion}}"])
     elif key == "utm":
         running = present and _utm_ready()
+    elif key == "hyperv":
+        running = bool(hv and hv["running"])
+    elif key == "libvirt":
+        # virsh itself always runs; the daemon answering this account is what matters
+        from shikari.lab.engines import virsh_argv
+
+        running = supported and present and run_ok(virsh_argv("list", "--all", "--name"))
     else:
         running = present and run_ok(spec["probe"])
     return {
@@ -135,6 +212,15 @@ def capabilities() -> Dict:
         "engines": engines,
         "ready": [e["key"] for e in engines if e["running"]],
     }
+
+
+def engine_supported(key: str) -> bool:
+    """Whether this host's OS and CPU can run the engine at all — no probe, so it's free to ask."""
+    spec = ENGINES.get(key)
+    if not spec:
+        return False
+    requires = spec.get("requires") or {}
+    return requires.get("os", os_name()) == os_name() and requires.get("arch", arch()) == arch()
 
 
 def engine_ready(key: str) -> bool:
