@@ -18,8 +18,8 @@ reference_queries/
 │   ├── RemoteDesktopProtocol_MDE_DeviceRegistryEvents.yaml
 │   ├── SSH_DeviceFileEvents.yaml
 │   └── SSH_DeviceProcessEvents.yaml
-├── GoogleSecOps/                # Future: Google SecOps queries
-└── Elastic/                     # Future: Elastic Security queries
+├── GoogleSecOps/                # Google SecOps (YARA-L rules or UDM searches)
+└── Elastic/                     # Elastic Security (ES|QL, EQL or KQL)
 ```
 
 ## Adding New Reference Queries
@@ -126,6 +126,21 @@ indicators:
   reg:
     - [registry indicators]
   # Add other indicator types as needed
+```
+
+### Google SecOps and Elastic Queries
+
+Create a YAML file in `GoogleSecOps/` or `Elastic/`: one query per file, or a list of them in one file. Only `technique_id`, `name` and `query` are needed; `platform` (or `log_source`) groups it on the Coverage page, and falls back to the SIEM's name.
+
+```yaml
+name: LSASS memory read by a non-system process
+technique_id: T1003.001
+platform: Windows
+log_source: WINEVTLOG            # SecOps log type, or the Elastic index pattern (logs-endpoint.events.*)
+description: |
+  Credential dumping from LSASS memory.
+query: |
+  [Your YARA-L rule or UDM search, or your ES|QL / EQL / KQL query]
 ```
 
 ### File Naming Conventions

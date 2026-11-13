@@ -2,13 +2,13 @@
 
 An agent is a model in a loop with tools. You give it a task; it picks a tool, reads what comes back, and picks again until it can answer. That's the whole idea. The rest is about which tools it gets, what its instructions say, and what it's allowed to do without asking.
 
-Shikari has six agents, an MCP server that gives the same tools to any MCP client, and a one-file example you can read in five minutes.
+Shikari has eight agents, an MCP server that gives the same tools to any MCP client, and a one-file example you can read in five minutes.
 
 | Where | What |
 |---|---|
 | Web | **Agents** page (robot icon in the top bar) |
 | Console | `shikari console` → `use agent/repair`, `agent/ask`, `agent/triage`, `agent/sweep`, `agent/audit`, `agent/tune` |
-| MCP | `shikari mcp`: Shikari's tools and the six agents' prompts in Claude Code, Claude Desktop or your own agent |
+| MCP | `shikari mcp`: Shikari's tools and the eight agents' prompts in Claude Code, Claude Desktop or your own agent |
 | Example | [`examples/agents/minimal_agent.py`](../../examples/agents/minimal_agent.py): about 100 lines, no Shikari dependency |
 
 Agents run on any provider in your profile that can call tools (Profile → API Keys): Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok, or a local endpoint (Ollama, LM Studio, llama.cpp). Pick one on the Agents page or with `set PROVIDER` in the console. Without a choice, Claude is used if you have an Anthropic key (it's the most reliable at multi-step tool use), otherwise your Ask Shikari provider.
@@ -39,9 +39,9 @@ python examples/agents/minimal_agent.py data/groups "Do we have a detection for 
 
 It searched for `comsvcs`, `MiniDump` and `T1003.001`, read the two LSASS Memory files, and pointed out that the SecOps regex expects the literal text `PID`, so it can never match a real command line. A grep would have found the files; the agent also judged them.
 
-## Shikari's six agents
+## Shikari's eight agents
 
-All six are the same runtime ([`shikari/agents/runtime.py`](../../shikari/agents/runtime.py)) with different instructions and tool sets ([`definitions.py`](../../shikari/agents/definitions.py)). Each shows a different pattern.
+All eight are the same runtime ([`shikari/agents/runtime.py`](../../shikari/agents/runtime.py)) with different instructions and tool sets ([`definitions.py`](../../shikari/agents/definitions.py)). Each shows a different pattern.
 
 ### Detection repair: check, fix, check again
 
@@ -98,6 +98,18 @@ This is repair's evaluator-optimiser pattern again, with a different evaluator. 
 
 For each detection it reads the indicators, runs `noisy_indicators` on them with the technique, and tightens only the ones resting on noisy indicators: it requires a specific indicator alongside the noisy one, binds the parent process, or adds a distinctive command-line fragment, then checks the result with `check_query` and saves it with a reason. It only ever makes a query more specific. The guard rails matter here: recorded telemetry is four labs' background, not the user's estate, so a noisy indicator is a reason to look, not a verdict. When a detection has nothing specific to anchor on, the agent leaves it and says so rather than weaken a real detection, and `save_query_fix` keeps the previous query in `repair_history` either way. Changing a query waits for your approval, as every changing tool does.
 
+### Threat briefing: read-only, from the tools
+
+The tools are `rank_adversaries`, `group_coverage`, `actor_techniques`, `find_actors`, `technique_info`, `technique_coverage` and `ioc_search`.
+
+Given a group, it briefs on that group; given a profiled organisation's domain, it ranks the actors most likely to target it and briefs on the top two or three. For each it pulls the group's techniques and which have no detection yet, then writes a summary, the techniques to prioritise, the coverage gaps and at most five recommended hunts. It changes nothing: it recommends hunts rather than starting them, and an unprofiled domain ends the briefing with a suggestion to profile it rather than an invented profile.
+
+### IOC investigation: decide each pivot from the last
+
+The tools are `ioc_search`, `analyse_report`, `find_actors`, `group_coverage`, `actor_techniques`, `technique_info`, `technique_coverage`, `rank_adversaries`, `profile_company` and `run_status`.
+
+It starts from an IP, domain, URL, hash, email, CVE or organisation domain, searches recent reputable reporting for it, and lets each result choose the next step: a named group leads to its techniques and Shikari's coverage of them, a substantial report to `analyse_report`, an organisation's domain to `rank_adversaries`. Unlike the fixed sequence of a briefing, the route depends on what turns up. Its only permitted change is profiling an organisation's domain under investigation, which waits for your approval; it recommends hunts rather than starting them, and says so plainly when reporting is thin.
+
 ## Two APIs, one loop
 
 [`llm.py`](../../shikari/agents/llm.py) adapts the loop to Anthropic's Messages API and to the OpenAI-compatible Chat Completions API that every other provider speaks. The differences are only in shape: where the system prompt goes, how a tool request is marked up (a `tool_use` content block, or `tool_calls` with the arguments as a JSON string), and how results go back (one user message of `tool_result` blocks, or one `tool` message per result). The loop, the tools and the approvals don't change.
@@ -134,7 +146,7 @@ claude mcp add shikari --env SHIKARI_TOKEN=shik_... -- /path/to/shikari/.venv/bi
 
 Create the token in Profile → Security → API Tokens. It's shown once, works with MFA, and revoking it signs out whatever uses it; `SHIKARI_EMAIL` and `SHIKARI_PASSWORD` still work for accounts without MFA.
 
-`shikari mcp` exposes the same 21 tools the agents use, with the 5 changing tools marked as not read-only so the client asks first, plus the six agents' instructions as prompts (`repair`, `ask`, `triage`, `sweep`, `audit`, `tune`). It signs in to a running Shikari as you, so hunts use your AI settings and your keys stay on the server.
+`shikari mcp` exposes the same 24 tools the agents use, with the 6 changing tools marked as not read-only so the client asks first, plus the eight agents' instructions as prompts (`repair`, `ask`, `triage`, `sweep`, `audit`, `tune`, `brief`, `investigate`). It signs in to a running Shikari as you, so hunts use your AI settings and your keys stay on the server.
 
 ## Building your own
 

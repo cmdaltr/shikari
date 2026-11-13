@@ -19,6 +19,24 @@ If the report is about a threat group, the run is linked to it under its ATT&CK 
 
 Commands come from the report's code blocks and its text. A sentence that starts with a program's name ("the flaws remain unpatched", "net group occurring near…") isn't taken as a command. Where a report shows commands but no technique IDs, Shikari maps each command to the technique ATT&CK's procedures cite it under most (`whoami /priv` to **T1033**, `nltest /domain_trusts` to **T1482**), without AI.
 
+### The publisher's own domains
+
+A report mentions its own site and contact addresses, and links the sources it cites; none of those are indicators, so the review window leaves them out and says whose they were ("Publisher: Trellix (its domains left out: trellix[.]com)").
+
+For a URL the publisher is the site that served the page: its address, `og:url` and canonical link give its domains, and `og:site_name` and the page's schema.org publisher give its names, so a Mandiant post on `cloud.google.com` still recognises `@mandiant.com` contacts. A domain that appears only as the host of a plain link is a citation and goes too.
+
+An uploaded PDF, DOCX, TXT or MD file has no address, so Shikari works the publisher out from the document. Each domain scores from the signals pointing at it, and needs 2 to count as the publisher's:
+
+| Signal | Score |
+|---|---|
+| The metadata Author, Creator or Company, or a copyright line (`© 2025 Trellix`), names it: by the domain's first label (Trellix for `trellix.com`) or the Threat Feed's sources (Unit 42 for `paloaltonetworks.com`) | 2 |
+| It's in a page header or footer on most pages (three pages or more) | 2 |
+| Only the metadata Title, Subject or Producer names it (Producer is usually the PDF software; a title often names someone else's product) | 1 |
+| A role address on it written plain: `press@`, `intel@`, `info@`, `contact@` | 1 |
+| It's the host of plain links on most pages | 1 |
+
+A domain the document writes defanged (`trellix[.]com`, `hxxps://trellix.com`) is kept even if it's the publisher's: that's how a report marks an indicator. A defanged contact address (`contact[at]cisa[.]dhs[.]gov`) still goes. Domains a PDF or DOCX only links plainly go as citations, as for a URL; a TXT or MD file is as often an indicator list as a report, so its links stay. CSV, JSON, XLSX and YARA files are taken as indicator lists and nothing is left out beyond the fixed list of common vendors (`microsoft.com`, `crowdstrike.com` and so on), which applies to every file. When no publisher is found, the indicators are as extracted.
+
 ### What the IOC sweep leaves out or narrows
 
 | Indicator | In the sweep |
@@ -43,4 +61,4 @@ The options are the same as on the Hunt tab: Merge by Parent Technique, Auto-val
 
 - A report that names behaviour but no technique IDs or commands gives fewer TTPs without AI. A command maps to a technique only when ATT&CK's procedures cite it at least three times, mostly under one technique.
 - Some sites block automated fetches or load their text with JavaScript. If a URL gives nothing, save the page as PDF or text and upload it.
-- IOCs are taken as written. Check the review list for benign infrastructure the report mentions (vendor domains, sinkholes, public DNS resolvers).
+- IOCs are taken as written. Check the review list for benign infrastructure the report mentions (other vendors' domains, sinkholes, public DNS resolvers), and for an uploaded file check the publisher line: a report with no metadata, copyright line or contact address may give no publisher.

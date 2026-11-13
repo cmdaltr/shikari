@@ -11,13 +11,13 @@
 
 | Section | What it shows |
 |---|---|
-| Totals | Total queries, techniques covered, and queries per SIEM |
+| Totals | Total queries, techniques covered, and the reference query count for each SIEM: Google SecOps, Defender XDR, Splunk and Elastic. Reference queries live in `bespoke/llm_references/`, one folder per SIEM |
 | Filters | Number of queries, vendor, tactic, platform, and a search box. A collapsed Filters card shows "N active" when filters still apply |
 | Coverage by Tactic | One card per tactic; open one to see its covered techniques, coloured by how many queries each has |
 | ATT&CK Matrix | Every Enterprise technique under each tactic. A technique counts its sub-techniques' queries too. **Expand all sub-techniques** and **Covered only** change the view |
 | Coverage by Technique / Platform | Compact cards: by technique (ID, name, SIEMs, platforms) or by platform (SIEMs, technique and query counts, the techniques). **Export** downloads the cards as CSV, with any filters applied |
-| Coverage Gaps | Techniques with queries for one SIEM but not another |
-| Cloud coverage | ATT&CK's cloud techniques by provider: AWS, Azure, GCP, and Identity & SaaS. Each cell lists the SIEMs with a saved detection over that provider's logs, **gap** where there's none, or n/a where the technique doesn't apply. **Gaps only** keeps the rows with a gap |
+| Cloud coverage | ATT&CK's cloud techniques by provider: AWS, Azure, GCP, and Identity & SaaS, each with a coloured card and its logo above the table. Each cell lists the SIEMs with a saved detection over that provider's logs, **gap** where there's none, or n/a where the technique doesn't apply. **Gaps only** keeps the rows with a gap |
+| Coverage gaps | Techniques your saved detections cover in some of your SIEMs (those chosen in Profile, or all four) but not all of them: a column per SIEM, **gap** where it has none, and a chip counting each SIEM's gaps |
 
 ## Cloud coverage
 

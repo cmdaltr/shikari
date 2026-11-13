@@ -91,11 +91,13 @@ def main():
             page.evaluate(TIDY)
             # The window grows to the page's height so nothing reflows between measuring and the picture,
             # and content that only draws once scrolled into view is drawn
-            height = min(MAX_HEIGHT, page.evaluate(PAGE_HEIGHT))
+            # A long page can raise the cap (max_height in pages.yaml) to reach a card near its foot
+            cap = p.get("max_height", MAX_HEIGHT)
+            height = min(cap, page.evaluate(PAGE_HEIGHT))
             page.set_viewport_size({"width": WIDTH, "height": height})
             page.wait_for_timeout(1500)
             page.evaluate(TIDY)
-            height = min(MAX_HEIGHT, page.evaluate(PAGE_HEIGHT))
+            height = min(cap, page.evaluate(PAGE_HEIGHT))
             page.set_viewport_size({"width": WIDTH, "height": height})
             page.wait_for_timeout(500)
 

@@ -22,7 +22,7 @@
 | Reference queries | Your own production-tested queries in `bespoke/llm_references/`, used as templates and examples |
 | Bespoke | Your organisation's own prompts, templates, mappings and reference queries, kept out of git |
 | MITRESaw | The tool that walks ATT&CK into a table of procedures and indicators |
-| KQL | Kusto Query Language: Microsoft Defender XDR advanced hunting |
+| KQL | Kusto Query Language: Defender XDR advanced hunting |
 | YARA-L | Google SecOps's rule language |
 | SPL | Splunk's Search Processing Language |
 | EQL, ES\|QL | Elastic's event and piped query languages |

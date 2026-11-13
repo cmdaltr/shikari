@@ -197,7 +197,7 @@ flowchart TD
 
 ## 1. System Overview — What Is Shikari?
 
-Shikari takes a **threat actor name** (or CVE, report, ATT&CK techniques or company) and automatically produces **detection queries** for your SIEMs (Google SecOps, Microsoft Defender XDR, Splunk and Elastic). It does this by looking up what that threat actor actually does (via MITRE ATT&CK), then building tailored searches for each technique.
+Shikari takes a **threat actor name** (or CVE, report, ATT&CK techniques or company) and automatically produces **detection queries** for your SIEMs (Google SecOps, Defender XDR, Splunk and Elastic). It does this by looking up what that threat actor actually does (via MITRE ATT&CK), then building tailored searches for each technique.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
@@ -304,7 +304,7 @@ flowchart TD
 
     subgraph "Query Builders"
         SPL["Splunk<br/><i>SPL query</i>"]
-        KQL["Microsoft Defender<br/><i>KQL query</i>"]
+        KQL["Defender XDR<br/><i>KQL query</i>"]
         YARAL["Google SecOps<br/><i>YARAL rule</i>"]
         EQL["Elastic<br/><i>EQL query</i>"]
     end
@@ -1010,4 +1010,4 @@ graph LR
 
 ## Quick Reference — Explaining Shikari in One Paragraph
 
-> **Shikari** is a tool that turns threat intelligence into working detection queries. You give it the name of a threat actor (like "Scattered Spider"), and it looks up every attack technique that actor is known to use — drawing from the industry-standard MITRE ATT&CK database. For each technique, it extracts the specific indicators (commands, files, network addresses) and builds tailored search queries for your SIEMs (Google SecOps and Microsoft Defender XDR). It then links related detections into attack chains so you can spot multi-step intrusions, not just individual events. Optionally, it can test those detections in a sandboxed environment and cross-reference them against public detection rules. Emulate shows which logs record each technique, from attacks recorded in labs, and whether your detections' indicators appear in them. Everything exports to a spreadsheet, and attack flows to STIX. AI is opt-in throughout.
+> **Shikari** is a tool that turns threat intelligence into working detection queries. You give it the name of a threat actor (like "Scattered Spider"), and it looks up every attack technique that actor is known to use — drawing from the industry-standard MITRE ATT&CK database. For each technique, it extracts the specific indicators (commands, files, network addresses) and builds tailored search queries for your SIEMs (Google SecOps and Defender XDR). It then links related detections into attack chains so you can spot multi-step intrusions, not just individual events. Optionally, it can test those detections in a sandboxed environment and cross-reference them against public detection rules. Emulate shows which logs record each technique, from attacks recorded in labs, and whether your detections' indicators appear in them. Everything exports to a spreadsheet, and attack flows to STIX. AI is opt-in throughout.

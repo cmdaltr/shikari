@@ -32,7 +32,7 @@ shikari (hunt/group) > run
 | `research/actors` | Find groups by keyword and consolidate their techniques |
 | `results` | Show a run's detections, correlations and IOC flow; save them as a zip |
 | `ai/ask`, `ai/briefing`, `ai/settings` | Ask Shikari, a threat briefing, and the AI assignment |
-| `agent/repair`, `agent/ask`, `agent/triage`, `agent/sweep`, `agent/audit`, `agent/tune`, `agent/history` | The [agents](15-agents-and-ask-shikari.md) |
+| `agent/repair`, `agent/ask`, `agent/triage`, `agent/sweep`, `agent/audit`, `agent/tune`, `agent/brief`, `agent/investigate`, `agent/history` | The [agents](15-agents-and-ask-shikari.md) |
 | `generate`, `correlate`, `hunt` | Run the pipeline locally, without the server |
 | `lab/caldera` | Plan, run, collect and check CALDERA operations ([Emulate → Lab](25-caldera.md)); talks to your CALDERA server directly |
 | `emulate` | Adversary emulation — the Atomic Red Team recorder (coming soon) |
@@ -63,7 +63,7 @@ Every page works through the HTTP API. The full, live reference is at `http://lo
 
 ## MCP server (`shikari mcp`)
 
-Gives any MCP client (Claude Code, Claude Desktop, your own agent) Shikari's tools and the six agents' instructions as prompts. Tools that change something are marked so the client asks first. Your AI keys stay on the Shikari server.
+Gives any MCP client (Claude Code, Claude Desktop, your own agent) Shikari's 24 tools and the eight agents' instructions as prompts. Tools that change something are marked so the client asks first. Your AI keys stay on the Shikari server.
 
 A running Shikari server answers MCP itself at `/mcp`, so a client needs no Shikari install: send an API token (Profile → Security → API tokens) and every call runs as that token's owner. Without a valid token the endpoint answers 401.
 

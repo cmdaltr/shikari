@@ -9,7 +9,7 @@
    "href": null,
    "image": "/static/guide/img/home-hunt.jpg",
    "width": 1440,
-   "height": 1495,
+   "height": 1492,
    "sections": [
     {
      "title": "Four ways to start",
@@ -25,7 +25,7 @@
     },
     {
      "title": "Threat group",
-     "what": "Type a group's ATT&CK name or any alias (APT29, Cozy Bear, Midnight Blizzard). Shikari collects every technique the group uses, directly, through its campaigns and through its software, and builds a detection for each.",
+     "what": "Type a group's ATT&CK name or any alias (APT29, Cozy Bear, Midnight Blizzard). Shikari collects every technique the group uses, directly, through its campaigns and through its software, and builds a detection for each. Merge by Parent Technique folds sub-techniques into their parent before correlating.",
      "who": "Detection engineers and threat hunters.",
      "when": "A group is named in a briefing, an incident or a sector advisory and you need coverage for its whole playbook, not one indicator.",
      "box": [
@@ -49,7 +49,7 @@
     },
     {
      "title": "Options",
-     "what": "Merge sub-techniques into their parent, test queries against containerised SIEMs (Auto-validate), add LOLBAS, LOLDrivers and LOLRMM indicators, merge public detection rules (OSINT Enhancement), and score against them (OSINT Comparison).",
+     "what": "Test queries against sample events in containerised SIEMs (Auto-validate), add LOLBAS, LOLDrivers and LOLRMM indicators (LOL datasets), merge indicators from public detection rules (OSINT Enhancement), and score against them (OSINT Comparison).",
      "who": "Detection engineers.",
      "when": "The defaults suit most hunts. Turn on OSINT Comparison when a group's techniques have few indicators in ATT&CK.",
      "box": [
@@ -82,13 +82,13 @@
    "href": null,
    "image": "/static/guide/img/home-analyse.jpg",
    "width": 1440,
-   "height": 1401,
+   "height": 1397,
    "sections": [
     {
      "title": "A report's URL",
      "what": "Paste a blog post or advisory. Shikari extracts the ATT&CK techniques, the commands, and the indicators of compromise, defanged ones included, then shows them for review.",
      "who": "Threat intelligence analysts and detection engineers.",
-     "when": "A vendor publishes an intrusion write-up relevant to you. Feed cards open here with the URL filled in.",
+     "when": "A vendor publishes an intrusion write-up relevant to you. Threat Feed cards open here with the URL filled in.",
      "box": [
       119,
       603,
@@ -131,7 +131,7 @@
    "href": null,
    "image": "/static/guide/img/home-profile.jpg",
    "width": 1440,
-   "height": 1401,
+   "height": 1397,
    "sections": [
     {
      "title": "The company's domain",
@@ -168,7 +168,7 @@
    "href": null,
    "image": "/static/guide/img/home-research.jpg",
    "width": 1440,
-   "height": 1401,
+   "height": 1397,
    "sections": [
     {
      "title": "Keywords",
@@ -212,12 +212,12 @@
    "id": "results",
    "menu": "Home",
    "title": "Results",
-   "summary": "Where every hunt, report and profile ends. Its detections, correlations, attack flow, the anatomy of the attack and a threat briefing, all built without AI.",
+   "summary": "Where every hunt, report and profile ends. Its detections, correlations, X-SIEM pivots, attack flow, the anatomy of the attack and a threat briefing, all built without AI.",
    "path": "/results",
    "href": "/library",
    "image": "/static/guide/img/results.jpg",
    "width": 1440,
-   "height": 2317,
+   "height": 2055,
    "sections": [
     {
      "title": "Threat briefing",
@@ -238,9 +238,9 @@
      "when": "Reviewing what to deploy. Copy a query straight into your SIEM to test it.",
      "box": [
       86,
-      579,
+      563,
       1252,
-      438
+      472
      ]
     },
     {
@@ -250,21 +250,21 @@
      "when": "Single-technique alerts are too noisy. A correlation fires far less often and means more when it does.",
      "box": [
       86,
-      1028,
+      1046,
       1252,
       102
      ]
     },
     {
-     "title": "Cross-vendor playbooks",
-     "what": "Chains that span two or more of your SIEMs, laid out stage by stage with each SIEM's query and the fields to join them on.",
+     "title": "X-SIEM pivots",
+     "what": "Chains that span two or more of your SIEMs, laid out stage by stage with each SIEM's query and the fields to join them on. Run each stage where its telemetry lives and join the results inside the window.",
      "who": "SOC analysts and SOAR engineers.",
      "when": "Your endpoint and network telemetry live in different SIEMs.",
      "box": [
       86,
-      1141,
+      1159,
       1252,
-      253
+      96
      ]
     },
     {
@@ -274,7 +274,7 @@
      "when": "Briefing a team on how an attack unfolds and where you're blind.",
      "box": [
       86,
-      1405,
+      1265,
       1252,
       106
      ]
@@ -286,9 +286,9 @@
      "when": "Every time. Generated queries are a starting point, not production rules.",
      "box": [
       86,
-      1538,
+      1382,
       1252,
-      101
+      102
      ]
     }
    ]
@@ -302,7 +302,7 @@
    "href": null,
    "image": "/static/guide/img/library.jpg",
    "width": 1440,
-   "height": 2305,
+   "height": 2214,
    "sections": [
     {
      "title": "Metrics",
@@ -330,7 +330,7 @@
     },
     {
      "title": "Detections and bulk actions",
-     "what": "The saved cards. Tick several to tag, export (JSON, CSV, XML, Word, PDF) or delete them together.",
+     "what": "The saved cards, with Correlations in their own section beneath. Tick several and use the Filters card's Manage Tags, Export (JSON, CSV, XML, Word, PDF) or Delete on them together.",
      "who": "Detection engineers.",
      "when": "Handing a set of detections to another team, or tidying after a review.",
      "box": [
@@ -341,8 +341,8 @@
      ]
     },
     {
-     "title": "ATT&CK flows and anatomy",
-     "what": "Links to the attack flow and anatomy of each saved group, report or CVE.",
+     "title": "ATT&CK Flow",
+     "what": "Each saved group, report or CVE with its technique, detected and link counts, opening its attack flow on Flows. Anatomy, beneath, does the same for the anatomy.",
      "who": "Threat hunters.",
      "when": "Going back to a group you covered weeks ago.",
      "box": [
@@ -358,12 +358,12 @@
    "id": "detections-code",
    "menu": "Detections",
    "title": "Detections as code",
-   "summary": "Commit a run's detections to git, diff two runs, and plan a push into a SIEM's own rule store.",
+   "summary": "Commit a run's detections to git, diff two runs, export a pack for your own SIEM, build one Defender XDR hunt across a run, and plan a push into a SIEM's own rule store.",
    "path": "/detections/code",
    "href": null,
    "image": "/static/guide/img/detections-code.jpg",
    "width": 1440,
-   "height": 1062,
+   "height": 1775,
    "sections": [
     {
      "title": "Export a run to git",
@@ -372,7 +372,7 @@
      "when": "You review and deploy rules through pull requests.",
      "box": [
       86,
-      243,
+      260,
       1252,
       203
      ]
@@ -384,19 +384,43 @@
      "when": "After a Regenerate on a new ATT&CK release, to see exactly which queries moved.",
      "box": [
       86,
-      454,
+      471,
       1252,
-      113
+      181
+     ]
+    },
+    {
+     "title": "Export to a SIEM",
+     "what": "A zip for Elastic, Splunk or Wazuh, the detections in that SIEM's own format, created disabled, with a README of the import steps. Add a lab run and its events come too, shaped so the detections can fire on them.",
+     "who": "Detection engineers.",
+     "when": "Loading a run into a lab or test SIEM by hand.",
+     "box": [
+      86,
+      659,
+      1252,
+      290
+     ]
+    },
+    {
+     "title": "Master hunt query",
+     "what": "A run's Defender XDR detections as one advanced hunting query over 24 hours, 7 or 30 days, ranking devices by how many of the run's techniques they show. Optionally scoped to a list of techniques, with a TLP marking.",
+     "who": "Threat hunters.",
+     "when": "Hunting a whole campaign across the estate rather than one technique at a time.",
+     "box": [
+      86,
+      956,
+      1252,
+      256
      ]
     },
     {
      "title": "Push to a SIEM",
-     "what": "Builds the Defender XDR or Google SecOps rule payloads a push would send, as a dry run.",
+     "what": "Builds the Defender XDR or Google SecOps rule payloads and API calls a push would make, as a dry run. Nothing is sent.",
      "who": "Detection engineers.",
      "when": "Checking what a deployment would create before wiring it up.",
      "box": [
       86,
-      574,
+      1220,
       1252,
       203
      ]
@@ -407,7 +431,7 @@
    "id": "coverage",
    "menu": "Detections",
    "title": "Coverage",
-   "summary": "Which ATT&CK techniques you have queries for, by tactic, technique and platform, and where one SIEM covers what another doesn't.",
+   "summary": "Which ATT&CK techniques you have queries for, by tactic, technique, platform and cloud provider, and where one SIEM covers what another doesn't.",
    "path": "/coverage",
    "href": null,
    "image": "/static/guide/img/coverage.jpg",
@@ -416,62 +440,74 @@
    "sections": [
     {
      "title": "Totals",
-     "what": "Queries, techniques covered, and queries per SIEM.",
+     "what": "Total queries, techniques covered, and the reference query count for each SIEM (Google SecOps, Defender XDR, Splunk and Elastic).",
      "who": "Security managers.",
      "when": "A one-line answer to \"how much of ATT&CK do we cover?\".",
      "box": [
       86,
-      189,
+      0,
       1252,
       97
      ]
     },
     {
      "title": "Filters",
-     "what": "Narrow by number of queries, SIEM, tactic, platform or a search.",
+     "what": "Narrow by number of queries, vendor, tactic, platform or a search. Export downloads the filtered cards as CSV.",
      "who": "Detection engineers.",
      "when": "Looking at one platform (macOS, cloud) or one SIEM's coverage.",
      "box": [
       86,
-      303,
+      0,
       1252,
       85
      ]
     },
     {
      "title": "Coverage by tactic and the matrix",
-     "what": "One card per tactic, and the full ATT&CK matrix coloured by how many queries each technique has. The layers switch between your reference queries and the detections you've saved.",
+     "what": "One card per tactic, and the full ATT&CK matrix coloured by how many queries each technique has. Reference queries and My detections switch the layer; Expand all sub-techniques and Covered only change the view.",
      "who": "Detection engineers and purple teams.",
      "when": "Planning the next quarter's detection work, or showing coverage on a familiar picture.",
      "box": [
       86,
-      395,
+      0,
       1252,
       76
      ]
     },
     {
+     "title": "Coverage by technique or platform",
+     "what": "Compact cards per technique (its SIEMs and platforms) or per platform (its SIEMs and techniques).",
+     "who": "Detection engineers.",
+     "when": "Answering \"what do we have for T1059.001?\" or \"what covers our Linux estate?\".",
+     "box": [
+      86,
+      0,
+      1252,
+      97
+     ]
+    },
+    {
      "title": "Cloud coverage",
-     "what": "ATT&CK's cloud techniques by provider (AWS, Azure, GCP, identity and SaaS) and which SIEMs have a detection over that provider's logs. Gaps only lists what's missing.",
+     "what": "A coloured card per provider (AWS, Azure, GCP, Identity & SaaS), then ATT&CK's cloud techniques and which SIEMs have a detection over each provider's logs. Gaps only lists what's missing.",
      "who": "Cloud security and detection engineers.",
      "when": "Moving workloads into a cloud, or checking control-plane logging is earning its keep.",
      "box": [
       86,
-      693,
+      0,
       1252,
-      1907
+      2600
      ]
     },
     {
-     "title": "By technique, platform and gaps",
-     "what": "Compact cards per technique or platform, exportable as CSV, and Coverage Gaps, techniques covered in one SIEM but not another.",
+     "title": "Coverage gaps",
+     "what": "Techniques your saved detections cover in some of your SIEMs (those chosen in Profile, or all four) but not all, a column per SIEM, with a chip per SIEM counting its gaps.",
      "who": "Detection engineers.",
      "when": "Mid-migration between SIEMs, or when two teams run different ones.",
      "box": [
       86,
-      580,
+      712,
       1252,
-      97
+      1888
      ]
     }
    ]
@@ -485,7 +521,7 @@
    "href": null,
    "image": "/static/guide/img/flows.jpg",
    "width": 1440,
-   "height": 1695,
+   "height": 1691,
    "sections": [
     {
      "title": "Choose a flow",
@@ -534,7 +570,7 @@
    "href": null,
    "image": "/static/guide/img/anatomy.jpg",
    "width": 1440,
-   "height": 1222,
+   "height": 1219,
    "sections": [
     {
      "title": "Choose a group or CVE",
@@ -571,23 +607,23 @@
    "href": null,
    "image": "/static/guide/img/feed.jpg",
    "width": 1440,
-   "height": 2540,
+   "height": 2432,
    "sections": [
     {
-     "title": "Filters",
-     "what": "Your industries, your technology stack, opportunistic or financial activity, both, or everything. Posts naming only products you don't run are left out by default.",
-     "who": "Threat intelligence analysts and SOC leads.",
-     "when": "The Monday-morning read of what's new and relevant.",
+     "title": "Search all research",
+     "what": "Any time, not just this week. Searches every post Shikari has collected, ATT&CK's groups, software and campaigns, and the web's security news unless you untick Include web news.",
+     "who": "Threat intelligence analysts.",
+     "when": "A campaign, tool or actor name turns up and you want everything on it, not only this week's posts.",
      "box": [
       86,
-      189,
+      390,
       1252,
-      194
+      66
      ]
     },
     {
      "title": "Watchlists",
-     "what": "Saved searches (a group, a CVE, a vendor). Shikari collects every six hours and flags new matches on the Intel menu, and can email them.",
+     "what": "Saved searches (a group, a CVE, a vendor). Each collection, every six hours by default (Profile → Environment sets the interval), flags new matches on the Intel menu, and Email me sends them on.",
      "who": "Threat intelligence analysts.",
      "when": "Tracking a campaign or actor over weeks without checking by hand.",
      "box": [
@@ -595,6 +631,18 @@
       463,
       1252,
       215
+     ]
+    },
+    {
+     "title": "Filters",
+     "what": "Your industries, your stack, opportunistic or financial activity, Both (the default) or All, and a search of titles and descriptions. Posts naming only products you don't run are left out of Both.",
+     "who": "Threat intelligence analysts and SOC leads.",
+     "when": "The Monday-morning read of what's new and relevant.",
+     "box": [
+      86,
+      686,
+      1252,
+      56
      ]
     },
     {
@@ -606,7 +654,129 @@
       86,
       745,
       1252,
-      1290
+      1195
+     ]
+    },
+    {
+     "title": "Sources",
+     "what": "Each source and its last collection. Administrators can add RSS or Atom feeds.",
+     "who": "Administrators.",
+     "when": "A source you rely on isn't there, or one has stopped.",
+     "box": [
+      106,
+      2028,
+      1212,
+      202
+     ]
+    }
+   ]
+  },
+  {
+   "id": "stix",
+   "menu": "Intel",
+   "title": "Indicator Management",
+   "summary": "Search reputable reporting for an indicator, take STIX bundles, TAXII collections and MISP events as a hunt input, and export a finished run as STIX or a MISP event. No AI.",
+   "path": "/ioc",
+   "href": null,
+   "image": "/static/guide/img/stix.jpg",
+   "width": 1440,
+   "height": 1404,
+   "sections": [
+    {
+     "title": "Search indicators",
+     "what": "An IP, domain, URL, hash, email or CVE, defanged or not, looked up in the last seven days of vendor, CERT and government, news and aggregator sources. The tier chips narrow the sources.",
+     "who": "SOC analysts, incident responders and threat intelligence analysts.",
+     "when": "An alert or a ticket hands you an indicator and you need to know who has reported it.",
+     "box": [
+      86,
+      189,
+      1252,
+      191
+     ]
+    },
+    {
+     "title": "Import intelligence",
+     "what": "Upload or paste a STIX 2.1 bundle or MISP event, poll a TAXII collection, or query a MISP instance. Credentials are used for that request only. Review what was extracted, then Generate detections.",
+     "who": "Threat intelligence analysts.",
+     "when": "Intelligence arrives from an ISAC, a sharing community or a TIP rather than a blog post.",
+     "box": [
+      104,
+      436,
+      1216,
+      413
+     ]
+    },
+    {
+     "title": "Export a run",
+     "what": "A STIX 2.1 bundle with techniques, indicators and the detections themselves, or a MISP event with galaxies and attributes.",
+     "who": "Threat intelligence analysts.",
+     "when": "Sharing what you built back to your community or into a TIP.",
+     "box": [
+      104,
+      856,
+      1216,
+      198
+     ]
+    }
+   ]
+  },
+  {
+   "id": "catalogue",
+   "menu": "Intel",
+   "title": "Catalogue and company review",
+   "summary": "The Catalogue's Companies tab lists every company profiled so far, each card opening its exposure map and ranked groups, and its Campaigns tab the emerging campaigns you've researched. A profile finishes on this review, the profile, its exposure map and the groups recommended for it.",
+   "path": "/review",
+   "href": "/catalogue",
+   "image": "/static/guide/img/catalogue.jpg",
+   "width": 1440,
+   "height": 2526,
+   "sections": [
+    {
+     "title": "Profile summary",
+     "what": "Industry, location and the number of recommended groups, with the products seen beneath and a risk score, from public sources. Add to my technology stack copies the products into Profile when the company is your own.",
+     "who": "Threat intelligence analysts.",
+     "when": "Checking the profile is right before generating. A CDN or parent company can mislead it.",
+     "box": [
+      103,
+      244,
+      1220,
+      99
+     ]
+    },
+    {
+     "title": "Exposure map",
+     "what": "What an attacker can see before they act, IPs, networks, mail and its spoofability, subdomains, exposed services, known CVEs and breach metadata, linked back to the domain.",
+     "who": "Security managers, attack-surface and red teams.",
+     "when": "Attack-surface reviews, and before a penetration test.",
+     "box": [
+      86,
+      176,
+      1252,
+      685
+     ]
+    },
+    {
+     "title": "Recommended groups",
+     "what": "The ten groups most likely to target this organisation, two to a row, each with its likelihood and the signals behind it. Each has its own tick box; the top three are ticked.",
+     "who": "Threat intelligence analysts and detection engineers.",
+     "when": "Deciding which threats to cover first for this company.",
+     "box": [
+      86,
+      872,
+      1252,
+      1022
+     ]
+    },
+    {
+     "title": "Generate detections",
+     "what": "Select all, Generate correlations, and Generate detections, which runs a hunt for each ticked group. Each gets its own Results page.",
+     "who": "Detection engineers.",
+     "when": "Turning a profile into coverage for the threats that matter to that company.",
+     "box": [
+      86,
+      1905,
+      1252,
+      192
      ]
     }
    ]
@@ -620,7 +790,7 @@
    "href": null,
    "image": "/static/guide/img/cyber-powers.jpg",
    "width": 1440,
-   "height": 1556,
+   "height": 1552,
    "sections": [
     {
      "title": "The map",
@@ -649,92 +819,6 @@
    ]
   },
   {
-   "id": "stix",
-   "menu": "Intel",
-   "title": "STIX/TAXII & MISP",
-   "summary": "Take STIX bundles, TAXII collections and MISP events as a hunt input, and export a finished run as STIX or a MISP event.",
-   "path": "/intel/stix",
-   "href": null,
-   "image": "/static/guide/img/stix.jpg",
-   "width": 1440,
-   "height": 1407,
-   "sections": [
-    {
-     "title": "Import intelligence",
-     "what": "Upload or paste a STIX 2.1 bundle or MISP event, poll a TAXII collection, or query a MISP instance. Credentials are used for that request only.",
-     "who": "Threat intelligence analysts.",
-     "when": "Intelligence arrives from an ISAC, a sharing community or a TIP rather than a blog post.",
-     "box": [
-      104,
-      436,
-      1216,
-      413
-     ]
-    },
-    {
-     "title": "Export a run",
-     "what": "A STIX 2.1 bundle with techniques, indicators and the detections themselves, or a MISP event with galaxies and attributes.",
-     "who": "Threat intelligence analysts.",
-     "when": "Sharing what you built back to your community or into a TIP.",
-     "box": [
-      104,
-      856,
-      1216,
-      198
-     ]
-    }
-   ]
-  },
-  {
-   "id": "catalogue",
-   "menu": "Intel",
-   "title": "Catalogue and company review",
-   "summary": "Every company profiled so far, and each one's review, the profile, its exposure map and the groups recommended for it.",
-   "path": "/review",
-   "href": "/catalogue",
-   "image": "/static/guide/img/catalogue.jpg",
-   "width": 1440,
-   "height": 2600,
-   "sections": [
-    {
-     "title": "Profile summary",
-     "what": "Company, industry, location, hosting and a risk score, from public sources.",
-     "who": "Threat intelligence analysts.",
-     "when": "Checking the profile is right before generating. A CDN or parent company can mislead it.",
-     "box": [
-      216,
-      176,
-      993,
-      177
-     ]
-    },
-    {
-     "title": "Exposure map",
-     "what": "What an attacker can see before they act, IPs, networks, mail and its spoofability, subdomains, exposed services, known CVEs and breach metadata, linked back to the domain.",
-     "who": "Security managers, attack-surface and red teams.",
-     "when": "Attack-surface reviews, and before a penetration test.",
-     "box": [
-      216,
-      364,
-      993,
-      487
-     ]
-    },
-    {
-     "title": "Generate detections",
-     "what": "The recommended groups in columns, each with its likelihood of targeting this organisation. Tick the ones to hunt.",
-     "who": "Detection engineers.",
-     "when": "Turning a profile into coverage for the threats that matter to that company.",
-     "box": [
-      216,
-      2529,
-      993,
-      71
-     ]
-    }
-   ]
-  },
-  {
    "id": "mitresaw",
    "menu": "Intel",
    "title": "MITRESaw",
@@ -743,7 +827,7 @@
    "href": null,
    "image": "/static/guide/img/mitresaw.jpg",
    "width": 1440,
-   "height": 2600,
+   "height": 4400,
    "sections": [
     {
      "title": "The procedures",
@@ -778,7 +862,19 @@
       86,
       813,
       1252,
-      1787
+      2935
+     ]
+    },
+    {
+     "title": "Indicator exclusions",
+     "what": "Values MITRESaw leaves out of the indicators it extracts, each with a reason. They apply to groups collected from then on; a Full rebuild applies them to every group.",
+     "who": "Administrators and detection engineers.",
+     "when": "A word keeps turning up in procedure text as an indicator and means nothing.",
+     "box": [
+      86,
+      3755,
+      1252,
+      209
      ]
     }
    ]
@@ -808,7 +904,7 @@
     },
     {
      "title": "Recordings and the indicator check",
-     "what": "How many recordings are available and whether detections can be checked against them.",
+     "what": "How many recordings and techniques are available, and whether detections can be checked against them.",
      "who": "Detection engineers.",
      "when": "Checking the telemetry data is ready on this machine.",
      "box": [
@@ -820,14 +916,14 @@
     },
     {
      "title": "Your lab",
-     "what": "Create and manage Docker, Tart and UTM machines from inside Shikari, start, stop, snapshot, revert and set them up.",
+     "what": "Create and manage machines from inside Shikari, Docker and Tart for Linux and macOS, UTM for Windows, Hyper-V or KVM on Windows and Linux hosts, with snapshot, revert, a console and a desktop. CALDERA operations run chained emulations on agents and check your detections and correlations against what ran.",
      "who": "Purple teams and administrators.",
      "when": "Recording your own telemetry rather than relying on public labs.",
      "box": [
       86,
       1301,
       1252,
-      1135
+      1209
      ]
     },
     {
@@ -837,9 +933,9 @@
      "when": "Deciding which log source a detection should be built on.",
      "box": [
       86,
-      2443,
+      2516,
       1252,
-      157
+      84
      ]
     }
    ]
@@ -848,7 +944,7 @@
    "id": "assessments",
    "menu": "Build",
    "title": "Assessments",
-   "summary": "Test cases built from the groups that matter to you, and campaigns that record what each test did and what the defence saw, VECTR-style.",
+   "summary": "Test cases built from the groups that matter to you (the Threat library tab), and campaigns that record what each test did and what the defence saw (the Campaigns tab), VECTR-style.",
    "path": "/assessments",
    "href": null,
    "image": "/static/guide/img/assessments.jpg",
@@ -882,6 +978,43 @@
    ]
   },
   {
+   "id": "agents",
+   "menu": "Build",
+   "title": "Agents",
+   "summary": "A model working in a loop with Shikari's tools, repairing queries, triaging reports, sweeping coverage gaps, auditing and tuning the Library, briefing and investigating indicators. Every step is shown and kept.",
+   "path": "/agents",
+   "href": null,
+   "image": "/static/guide/img/agents.jpg",
+   "width": 1440,
+   "height": 1192,
+   "sections": [
+    {
+     "title": "The agents",
+     "what": "Detection repair, Ask Shikari (agent), Intel triage, Coverage sweep, Library audit, Detection tuning, Threat briefing and IOC investigation. Each says what it needs and what it does, and How this agent is built shows its instructions and tools.",
+     "who": "Detection engineers.",
+     "when": "Repetitive review work that follows clear rules.",
+     "box": [
+      86,
+      189,
+      1252,
+      173
+     ]
+    },
+    {
+     "title": "Run one",
+     "what": "Choose the agent, its input and the model. Actions that change something wait for your approval unless you untick Ask before actions that change something.",
+     "who": "Detection engineers.",
+     "when": "After a big run, let the repair agent fix only what the checks flag.",
+     "box": [
+      86,
+      692,
+      1252,
+      224
+     ]
+    }
+   ]
+  },
+  {
    "id": "manual",
    "menu": "Build",
    "title": "Manual",
@@ -890,7 +1023,7 @@
    "href": null,
    "image": "/static/guide/img/manual.jpg",
    "width": 1440,
-   "height": 1264,
+   "height": 1959,
    "sections": [
     {
      "title": "Group description",
@@ -906,14 +1039,26 @@
     },
     {
      "title": "Technique entries",
-     "what": "Choose a technique and its tactics, and list what was observed, one procedure per line. Commands, paths, registry keys and tool names become indicators. Append each, then Submit.",
+     "what": "Choose a technique, its tactics and the platforms it ran on (ticked from ATT&CK, editable), then describe the behaviour seen in Procedures. Indicators, one per line and defanged or not, are what the queries match. Commands, file names, paths and tool names become command-line conditions, registry keys registry conditions, domains and IPs network conditions, and hashes, domains and IPs an IOC sweep. Add http(s) references, one per line, to save them with the detections as their sources. Append each, then Submit.",
      "who": "Incident responders and detection engineers.",
      "when": "A group ATT&CK doesn't know, or your own intelligence from an incident.",
      "box": [
       86,
       189,
       1252,
-      789
+      1419
+     ]
+    },
+    {
+     "title": "Options",
+     "what": "The Hunt tab's Additional Options, with its defaults, for the whole submission. Auto-validate (needs Docker), LOL datasets, OSINT Enhancement and OSINT Comparison. Generate correlations sits beneath, beside Append. Submit asks whether to use AI, as a Hunt does, when your profile has a provider for it.",
+     "who": "Detection engineers.",
+     "when": "The defaults suit most submissions. Turn correlations off for a single technique.",
+     "box": [
+      108,
+      1332,
+      1209,
+      198
      ]
     }
    ]
@@ -927,7 +1072,7 @@
    "href": null,
    "image": "/static/guide/img/regex.jpg",
    "width": 1440,
-   "height": 1938,
+   "height": 1935,
    "sections": [
     {
      "title": "Expression and flavour",
@@ -954,18 +1099,6 @@
      ]
     },
     {
-     "title": "Checks",
-     "what": "Errors and warnings for the chosen flavour, single backslashes in Windows paths, unescaped dots, empty matches, catastrophic backtracking.",
-     "who": "Detection engineers.",
-     "when": "Before the SIEM finds the problem for you.",
-     "box": [
-      757,
-      391,
-      582,
-      98
-     ]
-    },
-    {
      "title": "Use it in a query",
      "what": "The pattern written into a query for each SIEM, escaped for its strings.",
      "who": "Detection engineers.",
@@ -976,42 +1109,17 @@
       667,
       619
      ]
-    }
-   ]
-  },
-  {
-   "id": "agents",
-   "menu": "Build",
-   "title": "Agents",
-   "summary": "A model working in a loop with Shikari's tools, repairing queries, triaging reports, sweeping coverage gaps, auditing and tuning the Library. Every step is shown and kept.",
-   "path": "/agents",
-   "href": null,
-   "image": "/static/guide/img/agents.jpg",
-   "width": 1440,
-   "height": 1253,
-   "sections": [
-    {
-     "title": "The agents",
-     "what": "Detection repair, Ask Shikari with tools, Intel triage, Coverage sweep, Library audit and Detection tuning. Each says what it needs and what it does.",
-     "who": "Detection engineers.",
-     "when": "Repetitive review work that follows clear rules.",
-     "box": [
-      86,
-      189,
-      1252,
-      173
-     ]
     },
     {
-     "title": "Run one",
-     "what": "Choose the agent, its input and the model. Actions that change something wait for your approval unless you untick it.",
+     "title": "Checks",
+     "what": "Errors and warnings for the chosen flavour, single backslashes in Windows paths, unescaped dots, empty matches, catastrophic backtracking.",
      "who": "Detection engineers.",
-     "when": "After a big run, let the repair agent fix only what the checks flag.",
+     "when": "Before the SIEM finds the problem for you.",
      "box": [
-      86,
-      692,
-      1252,
-      275
+      757,
+      391,
+      582,
+      98
      ]
     }
    ]
@@ -1025,18 +1133,18 @@
    "href": null,
    "image": "/static/guide/img/profile-environment.jpg",
    "width": 1440,
-   "height": 1889,
+   "height": 2062,
    "sections": [
     {
      "title": "SIEMs, industries and technology stack",
-     "what": "The SIEMs to generate for, the industries the Feed keeps, and the products in your estate. Hunts leave out what can't happen there.",
+     "what": "The SIEMs to generate for, the industries the Threat Feed keeps, how often watchlists are checked, and the products in your estate. Hunts leave out what can't happen there.",
      "who": "Administrators and detection leads.",
      "when": "First thing after installing. Every hunt is quicker and closer to your estate afterwards.",
      "box": [
       119,
       287,
       1189,
-      1261
+      1419
      ]
     }
    ]
@@ -1044,13 +1152,13 @@
   {
    "id": "profile-apikeys",
    "menu": "Profile and Help",
-   "title": "API keys",
+   "title": "API Keys",
    "summary": "AI providers, OSINT sources and SIEM credentials, stored encrypted. All optional.",
    "path": "/profile",
    "href": null,
    "image": "/static/guide/img/profile-apikeys.jpg",
    "width": 1440,
-   "height": 1284,
+   "height": 1281,
    "sections": [
     {
      "title": "Keys and assignments",
@@ -1107,7 +1215,7 @@
    "id": "help",
    "menu": "Profile and Help",
    "title": "Help",
-   "summary": "What Shikari does with each kind of input, what it's for, and the frequently asked questions. The guide and these tips are in the Help menu too.",
+   "summary": "What Shikari does with each kind of input, what it's for, and the frequently asked questions. The Guide and Tips and tricks are in the Help menu too.",
    "path": "/how-it-works",
    "href": null,
    "image": "/static/guide/img/help.jpg",

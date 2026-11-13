@@ -1,6 +1,6 @@
 # Threat Feed
 
-**Intel → Feed** is a wall of the last seven days of technical threat research from vendor and government sources, one card per post, each tagged with the industries targeted, the attacker's nation and whether the activity is opportunistic or financially motivated. No AI is involved.
+**Intel → Threat Feed** is a wall of the last seven days of technical threat research from vendor and government sources, one card per post, each tagged with the industries targeted, the attacker's nation and whether the activity is opportunistic or financially motivated. No AI is involved.
 
 ## Using the wall
 
@@ -50,11 +50,11 @@ Every word of the search must appear, as a whole word or the start of one. Resul
 
 The **Watchlists** card saves a search, for example `Scattered Spider`, `RedSun`, a CVE or a vendor. Each collection then flags posts that match it. The search is the same as Search all research's: Shikari's sources, plus web news if you tick **Include web news**, which sends the keyword to Google and Bing at every collection. No AI is involved.
 
-When you save a watchlist, everything it matches already counts as seen, so only posts that arrive afterwards are new. The number of new matches shows on the card, and on **Intel** and **Feed** in the menu bar. **Mark seen** clears a watchlist's new matches. A **Watch** button under each Search all research result saves that search.
+When you save a watchlist, everything it matches already counts as seen, so only posts that arrive afterwards are new. The number of new matches shows on the card, and on **Intel** and **Threat Feed** in the menu bar. **Mark seen** clears a watchlist's new matches. A **Watch** button under each Search all research result saves that search.
 
-While any watchlist exists, Shikari collects every six hours by itself, so new matches don't wait for someone to open the Feed. **Email me** sends one email per collection listing the new matches. It needs email configured (`EMAIL_ENABLED=true` and the `SMTP_*` settings in `.env`); without that, the box is greyed out.
+While any watchlist exists, Shikari collects by itself, so new matches don't wait for someone to open the Threat Feed. Each user sets how often under **Profile → Environment → Watchlist checks**: every 1, 4, 6, 12 or 24 hours, six by default. One collection serves everyone, so Shikari collects at the shortest interval chosen by anyone with a watchlist; hourly is there for a major incident. **Email me** sends one email per collection listing the new matches. It needs email configured (`EMAIL_ENABLED=true` and the `SMTP_*` settings in `.env`); without that, the box is greyed out.
 
-Watchlists are per user, in `data/feed/watchlists/` (not in git).
+Watchlists, and each user's check interval, are per user, in `data/feed/watchlists/` (not in git).
 
 ## Sources
 
@@ -66,6 +66,6 @@ An administrator can add any RSS or Atom feed (name and URL) and remove ones the
 
 ## Limits
 
-- Collection happens on start-up, on **Refresh now**, and when the page is opened six hours or more after the last collection. While any watchlist exists, Shikari also collects every six hours by itself.
+- Collection happens on start-up, on **Refresh now**, and when the page is opened six hours or more after the last collection. While any watchlist exists, Shikari also collects by itself, at the shortest interval any watchlist owner has chosen (six hours by default).
 - Tags are pattern matches, not reading comprehension. A post that discusses a group without naming it, or attributes in unusual wording, can go untagged.
 - The research archive only holds what the feeds carried. Some feeds carry ten posts, some hundreds, so older coverage varies by source.

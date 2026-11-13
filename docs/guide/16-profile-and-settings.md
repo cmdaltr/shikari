@@ -54,6 +54,7 @@ What your organisation runs, applied to every hunt and the Threat Feed.
 |---|---|
 | SIEM platforms | Hunts, uploads and reports generate detections only for the ticked SIEMs, which saves time. None ticked means all of them |
 | Threat Feed industries | The industries the [Threat Feed](10-threat-feed.md)'s "Your industries" filter keeps |
+| Watchlist checks | How often your [watchlists](10-threat-feed.md#watchlists) are checked: every 1, 4, 6 (the default), 12 or 24 hours. The feed is shared, so it's collected at the shortest interval anyone with a watchlist has chosen |
 | Technology stack | The products your organisation runs (below). None ticked means everything applies |
 
 ### Technology stack

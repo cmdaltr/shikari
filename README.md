@@ -6,7 +6,7 @@
 
 <br>
 
-Shikari™ automates threat hunting and detection engineering from MITRE ATT&CK. Give it a threat group, CVE or threat report and it generates, validates and correlates detections for Google SecOps (YARA-L), Microsoft Defender (KQL) and Elastic (ES\|QL), with coverage mapping, attack flows and MITRESaw procedure intel. AI is optional.
+Shikari™ automates threat hunting and detection engineering from MITRE ATT&CK. Give it a threat group, CVE or threat report and it generates, validates and correlates detections for Google SecOps (YARA-L), Defender XDR (KQL), Splunk (SPL) and Elastic (ES\|QL), with coverage mapping, attack flows and MITRESaw procedure intel. AI is optional.
 
 **🧭 How Shikari compares to other detection tooling: [COMPARISON.md](COMPARISON.md)**
 
@@ -65,12 +65,12 @@ The app launches this checkout's `.venv`, so it updates with `git pull`; it isn'
 - 🌍 **Cyber Powers** - IISS cyber power tiers, ATT&CK attribution confidence and targeting on an Equal Earth world map ([guide](docs/guide/11-cyber-powers.md))
 - 🧪 **Regex tester** - Test a pattern on your own text and check it for Defender XDR and SecOps (RE2), Splunk (PCRE) or Elastic (Lucene), with per-SIEM escaping ([guide](docs/guide/14-regex.md))
 - 🧬 **Emulate** - Which logs record each technique, from 1,694 attacks recorded in public labs (Windows, Linux, macOS, ESXi and cloud): native OS logs first, with Sysmon and EDR optional; your detections' indicators checked against the recordings; and Defender XDR's own alerting per technique from Microsoft's GUIDE dataset. Recording your own lab is coming soon ([guide](docs/guide/19-emulate.md))
-- 🧱 **Technology stack** - Group hunts leave out techniques and procedures for platforms and products you don't run (Profile → Technology stack)
+- 🧱 **Technology stack** - Group hunts leave out techniques and procedures for platforms and products you don't run (Profile → Environment → Technology stack)
 - 🪚 **MITRESaw** - Every group's ATT&CK procedures and the indicators in them, rebuilt as ATT&CK changes ([guide](docs/guide/12-mitresaw.md))
-- 🗺️ **Attack Flows** - Every flow saved to your library on one page: pick a group, report or CVE to open its ATT&CK flow
-- 🔍 **Multi-Platform Support** - Google SecOps (YARA-L), Microsoft Defender (KQL), Splunk (SPL) and Elastic (ES\|QL) ([onboarding](docs/SIEM_ONBOARDING.md))
+- 🗺️ **Attack Flows and Anatomy** - Every flow saved to your library on one page: pick a group, report or CVE to open its ATT&CK flow (Detections → Flows), or its plain-words anatomy workflow (Detections → Anatomy) ([guide](docs/guide/09-flows.md))
+- 🔍 **Multi-Platform Support** - Google SecOps (YARA-L), Defender XDR (KQL), Splunk (SPL) and Elastic (ES\|QL) ([onboarding](docs/SIEM_ONBOARDING.md))
 - 🔗 **Indicator Management** - Search reputable reporting from the last 7 days for an IOC (IP, domain, URL, hash, email or CVE, defanged forms matched); and import a STIX 2.1 bundle, a TAXII collection or a MISP event as a hunt input, exporting a run back out as STIX or MISP ([guide](docs/guide/21-indicator-management.md))
-- 🧾 **Detections as code** - Commit a run's detections to a git repo and diff two commits to see what a Regenerate changed; dry-run push to Defender XDR / SecOps ([guide](docs/guide/22-detections-as-code.md))
+- 🧾 **Detections as code** - Commit a run's detections to a git repo and diff two commits to see what a Regenerate changed; export a pack for Elastic, Splunk or Wazuh; one Defender XDR master hunt query per run; dry-run push to Defender XDR / SecOps ([guide](docs/guide/22-detections-as-code.md))
 - 🎛️ **Threat library & assessments** - Intelligence-led test cases from a profile's ranked groups, run in assessments that record red and blue outcomes, with CSV and ATT&CK Navigator export ([guide](docs/guide/23-threat-library-assessments.md))
 - 🧠 **Heuristic and AI-Powered Correlations** - Semantic analysis and query correlation with per-technique chained queries; each correlation carries its detections' OSINT enrichment and says when a part's query has changed since
 - 🛡️ **Threat Briefing** - ATT&CK prioritisation grounded in real MITRE data and your detection coverage gaps
@@ -79,8 +79,8 @@ The app launches this checkout's `.venv`, so it updates with `git pull`; it isn'
 - 💬 **Ask Shikari** - Conversational Q&A panel for ATT&CK questions and SIEM query generation
 - 🌐 **Web UI & CLI** - VirusTotal-inspired tabbed interface plus command-line tools
 - 🖥️ **Interactive Console (`shikari console`)** - Metasploit-style interactive shell with module selection, options, tab-completion
-- 🤖 **Agents** - Detection repair, Ask Shikari with tools, and intel triage: a model in a loop with Shikari's tools, with approval for anything that changes something ([docs](docs/agents/README.md))
-- 🔌 **MCP Server (`shikari mcp`)** - Shikari's tools and agent prompts for Claude Code, Claude Desktop or any MCP client
+- 🤖 **Agents** - Detection repair, Ask Shikari with tools, intel triage, coverage sweep, library audit, detection tuning, threat briefing and IOC investigation: a model in a loop with Shikari's tools, with approval for anything that changes something (Build → Agents, [guide](docs/guide/15-agents-and-ask-shikari.md), [docs](docs/agents/README.md))
+- 🔌 **MCP Server (`shikari mcp`)** - Shikari's 24 tools and the eight agents' prompts for Claude Code, Claude Desktop or any MCP client
 - 🎯 **RAG Fidelity Enhancement** - Improve query quality using 3,400+ community detection examples ([docs](docs/rag/README.md))
 - 🏢 **Organization-Specific Customization** - Bespoke sample searches and global exclusions for your environment
 
@@ -99,9 +99,10 @@ Shikari closes the loop between red and blue: it runs a real adversary and then 
 
 - **Detection Validation** - Every detection carries an AI-free quality grade (A–F), false-positive risk and run cost; optionally test queries against containerised SIEMs with sample events, timed. A CI gate (`python -m shikari.validation.ci`) fails a build on detections below your thresholds ([docs](docs/features/RUNTIME_VALIDATION.md))
 - **Cloud coverage** - ATT&CK's cloud techniques by provider (AWS, Azure, GCP, Identity and SaaS) against your saved detections, with a gaps-only view (Detections → Coverage, `GET /api/coverage/cloud`) ([guide](docs/guide/08-coverage.md#cloud-coverage))
+- **Coverage gaps between SIEMs** - Techniques your saved detections cover in some of your SIEMs but not all, a column and a gap count per SIEM (Detections → Coverage) ([guide](docs/guide/08-coverage.md))
 - **API and automation** - Batch hunts, streamed run progress (SSE) and signed webhooks on run and watchlist events ([guide](docs/features/API_INTEGRATION_GUIDE.md#workflow-11-webhooks)). Batch hunts, the SSE stream and the API are free; webhooks fire on the **Pro** and **Services** editions. A Free install can still register, edit and list webhooks — they just don't send until a licence is installed, and the admin page says so.
 - **Detection Library** - Save, search, tag, share, and export your generated detections
-- **Company Profiling** - Industry-aware threat landscape analysis for targeted detection
+- **Company Profiling** - Industry-aware threat landscape analysis for targeted detection; every profile is kept in Intel → Catalogue, beside the emerging campaigns you research there ([guide](docs/guide/26-campaigns.md))
 - **Ordered Adversary List** - The top-10 ATT&CK groups most likely to target an organisation, ranked (no AI) from industry, geography, exposed OSINT and public incidents — VCDB, CISA KEV and ransomware.live merged with your own curated set. Shown on the exposure map; set your own domain in Profile → Organisation to auto-profile and star it ([guide](docs/guide/04-company-profile.md#ordered-adversary-list))
 - **CVE Hunting** - Generate detections from CVE IDs with NVD enrichment
 - **Query Execution** - Splunk API client, validated against a live Splunk ([Query Execution](docs/features/QUERY_EXECUTION.md)); Defender XDR planned with hit counts (#16)
@@ -123,9 +124,9 @@ Shikari closes the loop between red and blue: it runs a real adversary and then 
 
 ### Threat Feed
 
-The Threat Feed (Intel → Feed, or `intel/feed` in the console) is a wall of the last seven days of research, one card per post: title, a two-to-three sentence description, and tags. The search box matches titles and descriptions; the filters show posts relevant to you (your industries, plus anything opportunistic or financially motivated), your industries only, opportunistic or financial only, or everything. Set your industries in Profile → Threat Feed industries. **Analyse in Shikari** opens a post on the Home page's Analyse tab.
+The Threat Feed (Intel → Threat Feed, or `intel/feed` in the console) is a wall of the last seven days of research, one card per post: title, a two-to-three sentence description, and tags. The search box matches titles and descriptions; the filters show your industries, your stack, opportunistic or financial activity, Both (any of those, and not aimed only at products you don't run; the default), or All. Set your industries and technology stack in Profile → Environment. **Analyse in Shikari** opens a post on the Home page's Analyse tab.
 
-The feed is collected in the background every time Shikari starts, whenever you press **Refresh now**, and when the Feed is opened six hours after the last collection; while any watchlist exists, every six hours. **Watch** saves a search as a watchlist: posts that match it later are flagged on the Feed and counted on the menu, and can be emailed. Only posts it hasn't seen are fetched and analysed, so a refresh with nothing new takes about ten seconds. No AI is involved: tags come from regular expressions over the text and ATT&CK's own group data.
+The feed is collected in the background every time Shikari starts, whenever you press **Refresh now**, and when the Threat Feed is opened six hours after the last collection; while any watchlist exists, at the shortest interval its owners have chosen under Profile → Environment (six hours by default). **Watch** saves a search as a watchlist: posts that match it later are flagged on the Threat Feed and counted on the menu, and can be emailed. Only posts it hasn't seen are fetched and analysed, so a refresh with nothing new takes about ten seconds. No AI is involved: tags come from regular expressions over the text and ATT&CK's own group data.
 
 Sources (RSS/Atom): Microsoft Threat Intelligence, Google Threat Intelligence (Mandiant), Unit 42, Cisco Talos, CrowdStrike, SentinelLABS, Kaspersky Securelist, ESET WeLiveSecurity, Proofpoint, The DFIR Report, Red Canary, Huntress, Elastic Security Labs, CISA, NCSC (UK), Recorded Future, Trend Micro Research, Rapid7, FortiGuard Labs, Symantec Threat Hunter, Volexity, Zscaler ThreatLabz, Sekoia, Group-IB, Bitdefender Labs and JPCERT/CC. Admins can add their own.
 
@@ -220,6 +221,11 @@ Local modules run in the console's own process. Server modules drive a running S
 | `agent/repair` | server | Agent: fix a run's queries that won't parse or can't match, re-checking each fix |
 | `agent/ask` | server | Agent: Ask Shikari with tools (library, coverage, ATT&CK, hunts) |
 | `agent/triage` | server | Agent: triage a threat report into coverage gaps, hunts and a briefing |
+| `agent/sweep` | server | Agent: hunt a group's undetected techniques and report what closed |
+| `agent/audit` | server | Agent: review the saved library for duplicates, overlaps and noisy indicators (reports only) |
+| `agent/tune` | server | Agent: tighten detections that rest on noisy indicators, only ever narrowing |
+| `agent/brief` | server | Agent: brief on a threat group or a profiled organisation: likely TTPs, coverage gaps, next hunts |
+| `agent/investigate` | server | Agent: pivot from an indicator through recent reporting to actors, techniques and hunts |
 | `agent/history` | server | Recent agent runs (kept across restarts); replay one, or `CONTINUE true` to carry on an interrupted or stopped one (**only on the provider it started on**) |
 
 Server modules sign in with `SHIKARI_TOKEN`, an API token from Profile → Security → API Tokens (works with MFA), or with `SHIKARI_EMAIL` and `SHIKARI_PASSWORD` (the console prompts for anything unset), against `SHIKARI_URL` (default `http://127.0.0.1:32453`). Agents take `PROVIDER` and `MODEL` too. `PROVIDER assigned` uses the hunt choice you remembered in the web app, otherwise your detection assignment; `PROVIDER none` runs without AI.

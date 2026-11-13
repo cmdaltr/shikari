@@ -12,7 +12,7 @@ Nothing in the engine yet — this is net-new, and deliberately so: it's outward
 
 Per SIEM you want hit counts for, a **read-only** API identity and endpoint. Read-only is the whole point — Shikari must never write a rule or change state here.
 
-- **Microsoft Defender XDR (KQL)**
+- **Defender XDR (KQL)**
   - An Entra ID app registration (client-credentials flow): tenant ID, client ID, client secret.
   - Application permission `ThreatHunting.Read.All` (Microsoft Graph `POST /security/runHuntingQuery`, or the Defender Advanced Hunting API), with admin consent granted.
   - Note the per-tenant Advanced Hunting rate limits (requests/min and /hour) — hit counts must stay well under them.

@@ -355,7 +355,7 @@ class User(Base):
 ## API Key Encryption
 
 ### Overview
-User API keys for external services (Splunk, Microsoft Defender, OpenAI, etc.) are encrypted at rest.
+User API keys for external services (Splunk, Defender XDR, OpenAI, etc.) are encrypted at rest.
 
 ### Encryption Method
 - **Algorithm**: Fernet (symmetric encryption)
@@ -364,7 +364,7 @@ User API keys for external services (Splunk, Microsoft Defender, OpenAI, etc.) a
 
 ### Supported Platforms
 - Splunk
-- Microsoft Defender (MDE)
+- Defender XDR
 - Elastic
 - OpenAI
 - Anthropic Claude

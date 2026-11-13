@@ -552,7 +552,7 @@ Custom Python Flask application simulating Google SecOps:
 
 ### MDE Simulator
 
-Custom Python Flask application simulating Microsoft Defender:
+Custom Python Flask application simulating Defender XDR:
 
 **Features:**
 - Device event JSON ingestion

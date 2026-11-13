@@ -8,7 +8,7 @@ The **Campaigns** tab of **Intel → Catalogue** (`/catalogue?tab=campaigns`) pr
 |---|---|
 | Campaign name | What the campaign is called. Its detections are saved in the library as `Campaign_<name>` |
 | Report URLs | One per line. Up to 10 sources are read |
-| Also search | Adds the reports Shikari's source archive and the news searches find for the name (the same search as the Feed) |
+| Also search | Adds the reports Shikari's source archive and the news searches find for the name (the same search as the Threat Feed) |
 | AI analyst profile | Optional, off by default. A model from your profile reads the sources and writes a profile |
 
 Each source goes through the same analyser as **Analyse → URL**: ATT&CK technique IDs and the commands that imply them, the indicators, the ATT&CK groups it names, and its publication date from the page's metadata. The sources are then merged:

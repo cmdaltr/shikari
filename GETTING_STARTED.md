@@ -81,7 +81,7 @@ python scripts/admin/reset_password.py                     # a forgotten passwor
 
 ### SIEMs
 
-Shikari generates for **Google SecOps** (YARA-L 2.0), **Microsoft Defender XDR** (KQL), **Splunk** (SPL) and **Elastic** (ES|QL). Choose yours under **Profile → SIEM platforms**; Shikari generates only for those.
+Shikari generates for **Google SecOps** (YARA-L 2.0), **Defender XDR** (KQL), **Splunk** (SPL) and **Elastic** (ES|QL). Choose yours under **Profile → SIEM platforms**; Shikari generates only for those.
 
 ### Mapping files
 

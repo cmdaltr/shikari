@@ -12,7 +12,7 @@ The Shikari API provides programmatic access to automated threat detection gener
 
 ### What You Can Build
 
-- **SIEM Integrations**: Auto-generate detections for Splunk, Microsoft Defender, Elastic
+- **SIEM Integrations**: Auto-generate detections for Splunk, Defender XDR, Elastic
 - **Threat Intelligence Pipelines**: Process CVEs and threat reports into detections
 - **Purple Team Automation**: Automated detection coverage for threat actor TTPs
 - **Security Orchestration**: Custom workflows for detection management
@@ -1315,7 +1315,7 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
 
 **A**: Specify the platform when saving detections:
 - `splunk` - Splunk SPL queries
-- `mde` - Microsoft Defender KQL queries
+- `mde` - Defender XDR KQL queries
 - `elastic` - Elastic EQL queries
 
 ### Q: Can I use Shikari API without authentication?

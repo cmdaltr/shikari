@@ -16,6 +16,14 @@ The repository is a plain git repo. An admin sets where it lives, and optionally
 
 Every export is a commit. Pick two and compare: added, removed and changed detections, by path. Rename detection is off, so a renamed detection reads as the old path removed and the new one added rather than a silent move. This is the run-to-run diff — what a new ATT&CK version, a new attribution or an edited query actually changed in your detections.
 
+## Export to a SIEM
+
+A zip to import into your own Elastic, Splunk or Wazuh by hand: all detections or one run's, in that SIEM's own format, created disabled, with a README of the import steps. Choose a lab run as well and its recorded events come too, shaped so the detections can fire on them; **Shift the events to end now** moves their timestamps up to the present. Nothing is sent anywhere.
+
+## Master hunt query
+
+A run's Defender XDR detections (or all of them) as one advanced hunting query. Each detection runs over the window you choose (the last 24 hours, 7 or 30 days), and the result ranks devices by how many of the run's techniques they show: the campaign signal no single detection gives. It takes one detection per technique unless you ask for up to three or all, and a list of techniques scopes it to a campaign. The TLP marking goes into the query's header. **Download .kql** saves it.
+
 ## Push to a SIEM
 
 Pushing detections into a SIEM's own rule store — Defender XDR custom detection rules via the Graph security API, or Google SecOps rules via the Detection Engine — is a **dry run**. Shikari builds the rule payloads and the API calls a push would make and shows the count, but sends nothing: rules would be created disabled, and live push stays off until a tenant and credentials are wired up. It exists so you can see the shape of what would be pushed, not to push from a single-machine install.

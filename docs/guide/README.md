@@ -22,23 +22,23 @@ Help → **Guide** shows a picture of every page with each part highlighted in t
 | Research | Home → Research | Find groups by keyword and compare their techniques | [Research](05-research.md) |
 | Results | Interim results open after a run; Results from the Library, Flows, Anatomy or Campaigns | A run's output to review and save (interim), or everything a group has: briefing, detections, correlations, X-SIEM pivots, attack flow | [Results](06-results.md) |
 | Library | Detections → Library | Everything you've saved, with filters, tags and exports | [Library](07-library.md) |
-| Detections as code | Detections → Detections as code | Commit a run's detections to git and diff two commits | [Detections as code](22-detections-as-code.md) |
+| Detections as code | Detections → Detections as code | Commit a run's detections to git and diff two commits; export packs for your own SIEM; a Defender XDR master hunt query; a dry-run push | [Detections as code](22-detections-as-code.md) |
 | Coverage | Detections → Coverage | Which techniques the reference queries and your detections cover | [Coverage](08-coverage.md) |
 | Flows | Detections → Flows | Every saved attack flow: what you can and can't detect | [Flows](09-flows.md) |
 | Anatomy | Detections → Anatomy | Every saved threat group's and CVE's anatomy workflow | [Flows](09-flows.md#anatomy) |
+| Threat Feed | Intel → Threat Feed | This week's threat research, tagged; search all research | [Threat Feed](10-threat-feed.md) |
+| Indicator Management | Intel → Indicator Management | Search reputable reporting for an IOC; import STIX, TAXII or MISP intel (incl. a MISP instance) as a hunt input; export a run as a STIX bundle or MISP event | [Indicator Management](21-indicator-management.md) |
 | Catalogue | Intel → Catalogue, Companies tab | Every organisation profiled so far; opens each one's exposure map | [Company profile](04-company-profile.md#companies-catalogue) |
 | Campaigns | Intel → Catalogue, Campaigns tab | Profile an emerging campaign from its reports: techniques, triaged indicators, a TLP report | [Campaigns](26-campaigns.md) |
-| Feed | Intel → Feed | This week's threat research, tagged; search all research | [Threat Feed](10-threat-feed.md) |
 | Cyber Powers | Intel → Cyber Powers | National cyber capability, attribution and targeting on a map | [Cyber Powers](11-cyber-powers.md) |
-| Indicator Management | Intel → Indicator Management | Search reputable reporting for an IOC; import STIX, TAXII or MISP intel (incl. a MISP instance) as a hunt input; export a run as a STIX bundle or MISP event | [Indicator Management](21-indicator-management.md) |
 | MITRESaw | Intel → MITRESaw | ATT&CK procedures and their indicators; OSINT repository status | [MITRESaw](12-mitresaw.md) |
-| Manual | Build → Manual | Write detections from your own TTPs, one technique at a time | [Manual](13-manual.md) |
 | Emulate | Build → Emulate | Which logs record each technique (native OS logs first); your detections' indicators against recorded attacks; Defender XDR's own alerting | [Emulate](19-emulate.md) |
-| Assessments | Build → Assessments | A threat library of test cases, run in campaigns that record red and blue outcomes | [Threat library and assessments](23-threat-library-assessments.md) |
 | Recording a lab | Your own test VMs | **Coming soon**: Atomic Red Team runs, with Defender for Endpoint's rows, into Emulate | [Recording a lab](20-recording-a-lab.md) |
 | CALDERA operations | Build → Emulate → Lab | Chained operations on CALDERA agents (fact chaining, implant behaviour), optionally capturing each step's endpoint logs over the agent's own C2, with detections and correlations checked against what ran | [CALDERA operations](25-caldera.md) |
+| Assessments | Build → Assessments | A threat library of test cases, run in campaigns that record red and blue outcomes | [Threat library and assessments](23-threat-library-assessments.md) |
+| Agents and Ask Shikari | Build → Agents; the chat button | AI that repairs and tunes queries, answers questions, triages reports, sweeps a group's gaps, audits the Library, writes briefings and investigates indicators | [Agents and Ask Shikari](15-agents-and-ask-shikari.md) |
+| Manual | Build → Manual | Write detections from your own TTPs, one technique at a time | [Manual](13-manual.md) |
 | Regex | Build → Regex | Test a regex and check it for the SIEM it will run in | [Regex](14-regex.md) |
-| Agents and Ask Shikari | Build → Agents; the chat button | AI that repairs queries, answers questions, triages reports | [Agents and Ask Shikari](15-agents-and-ask-shikari.md) |
 | Profile (settings) | Profile | Your account, SIEMs, industries, country, API keys, MFA, users | [Profile and settings](16-profile-and-settings.md) |
 | SIEM data sources | Profile → Config | Which tables / UDM event types the estate ingests; flags and excludes detections that can't fire | [SIEM data sources](24-siem-data-sources.md) |
 | Console, API and MCP | Terminal | Everything above without the browser | [Console, API and MCP](17-console-api-mcp.md) |
@@ -50,7 +50,7 @@ Help → **Guide** shows a picture of every page with each part highlighted in t
 | SIEM | Query language | Status |
 |---|---|---|
 | Google SecOps | YARA-L 2.0 | Generated |
-| Microsoft Defender XDR | KQL (advanced hunting) | Generated |
+| Defender XDR | KQL (advanced hunting) | Generated |
 | Splunk | SPL | Generated (CEF-aligned indexes by default; your own in `bespoke/mappings`) |
 | Elastic | ES\|QL | Generated (ECS fields; `shikari.build.elastic`) |
 
