@@ -257,3 +257,13 @@ def test_options_are_passed_to_the_run(submit, monkeypatch):
     assert chosen == [("anthropic", "claude-x")] and kw["genai_mode"] == "ai_generators"
     assert kw["use_llm"] == "llm" and kw["llm_config"] == {"provider": "anthropic"}
     assert kw["auto_validated"] == "Kettle Spider"
+
+
+@pytest.mark.parametrize("release", [None, SimpleNamespace(platforms={})])
+def test_platform_choices_without_a_cached_bundle(monkeypatch, release):
+    """No ATT&CK bundle cached (or one without Enterprise platforms): samarkand's list, the endpoint
+    systems first and PRE left out. This is the path the Manual page takes on a fresh install."""
+    from shikari.mitre import procedures
+    monkeypatch.setattr(procedures, "bundle_release", lambda: release)
+    choices = web.manual_platform_choices()
+    assert choices[:3] == ["Windows", "Linux", "macOS"] and "PRE" not in choices and len(choices) > 5

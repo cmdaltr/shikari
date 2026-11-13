@@ -3947,11 +3947,11 @@ def manual_platform_choices() -> list:
     systems first: most entries are on one of them. PRE is left out: it maps to no log source, so
     an entry on PRE alone could never become a detection (Reconnaissance covers that tradecraft)."""
     from samarkand import navigator
-    from shikari.assessments.export import FALLBACK_PLATFORMS
     from shikari.mitre.procedures import bundle_release
 
     release = bundle_release()
-    names = (release.platforms.get(navigator.ENTERPRISE) if release else None) or list(FALLBACK_PLATFORMS)
+    names = list((release.platforms.get(navigator.ENTERPRISE) if release else None)
+                 or navigator.PLATFORMS[navigator.ENTERPRISE])
     names = [p for p in names if p != "PRE"]
     first = [p for p in ("Windows", "Linux", "macOS") if p in names]
     return first + [p for p in names if p not in first]
