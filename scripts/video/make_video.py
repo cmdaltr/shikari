@@ -6,7 +6,7 @@ Each scene's narration is spoken by a text-to-speech backend (--tts), the browse
 actions across that time, and ffmpeg joins it all up. Run it against a throwaway instance with sample
 data, never a real one:
 
-    python scripts/video/make_video.py --base http://127.0.0.1:8010 --out ~/Movies/Shikari
+    python scripts/video/make_video.py --base http://127.0.0.1:8010 --out ~/Desktop/Staging/shikari/video
 
 Three backends: kokoro (default, local, free, more natural than piper), piper (local), and google
 (Google Cloud Chirp 3: HD — higher quality but a cloud call needing GOOGLE_TTS_API_KEY; ~7k characters a
@@ -41,11 +41,15 @@ VIEW, SCALE = {"width": 1920, "height": 1080}, 1.0
 # A scene fades in from black and out to black unless it's marked `continues` in script.yaml, in which
 # case it joins the one before it with no black between — a pause and a scroll down the same page. GAP is
 # the quiet tail after a scene's narration (the pause, held on the page or on black); FADE is each dip.
-TITLE_SECONDS, END_SECONDS, GAP, FADE, FPS = 4.0, 5.0, 1.2, 0.5, 30
+TITLE_SECONDS, END_SECONDS, GAP, FADE, FPS = 4.0, 5.0, 1.6, 0.5, 30
+# SEGMENT_PAUSE: the silence between a scene's segments (a blank line in its narration). LEAD: actions
+# fire this far ahead of the words they're pinned to, so a scroll has settled by the time it's said.
+SEGMENT_PAUSE, LEAD = 0.7, 0.25
 
 # A pulsing outline that follows an element as the page scrolls, over a dimmed page
 HIGHLIGHT = r"""
 (el) => {
+  const SUBTITLE_BAND = 0.22;  // share of the frame the two subtitle lines take up
   if (!document.getElementById('vhl-style')) {
     const st = document.createElement('style'); st.id = 'vhl-style';
     st.textContent = `#vhl { position: fixed; box-sizing: border-box; z-index: 2147483000; pointer-events: none;
@@ -65,13 +69,34 @@ HIGHLIGHT = r"""
   // Clear of the fixed nav bar
   const nav = document.querySelector('.global-nav-controls');
   const pinned = nav && ['fixed', 'sticky'].includes(getComputedStyle(nav).position);
-  const top = pinned ? nav.getBoundingClientRect().bottom + 6 : 6;
+  // ...unless the target is in the nav itself (a menu item drops down over the bar's edge)
+  const top = pinned && !nav.contains(el) ? nav.getBoundingClientRect().bottom + 6 : 6;
+  // The subtitles cover the bottom of the frame: keep what's being discussed above them
+  const floor = innerHeight - Math.round(innerHeight * SUBTITLE_BAND);
   el.style.scrollMarginTop = top + 14 + 'px';
-  el.scrollIntoView({ behavior: 'smooth', block: el.getBoundingClientRect().height > (innerHeight - top) * 0.82 ? 'start' : 'center' });
+  // Centring the margin box centres the target between the nav and the subtitles
+  el.style.scrollMarginBottom = innerHeight - floor + 'px';
+  // Scroll only when the target isn't already in full view: nudging a visible element to the centre
+  // moved the whole page on every highlight (and on Home, resized the hero with it), which read as shake.
+  // A target taller than the space goes to the top, and the frame shows its head and first few items.
+  // Measured afresh at each check: a section still expanding when it's shown starts short and ends tall
+  const tall = r => r.height > (floor - top) * 0.9;
+  const misplaced = r => tall(r) ? Math.abs(r.top - (top + 14)) > 24 : r.top < top || r.bottom > floor;
+  const settle = r => el.scrollIntoView({ behavior: 'smooth', block: tall(r) ? 'start' : 'center' });
+  const rr = el.getBoundingClientRect();
+  if (misplaced(rr)) settle(rr);
+  // A section collapsing above the target (or the target still rendering) moves it after the scroll
+  // has finished, which left a tall one's top cut off: check again as each smooth scroll ends.
+  const t0 = performance.now(), checks = [900, 1800, 2700];
   cancelAnimationFrame(window.__vhlRaf);
   const follow = () => {
     const r = el.getBoundingClientRect(), pad = 8, y = Math.max(r.top - pad, top);
-    const bottom = Math.min(r.bottom + pad, innerHeight - 6);
+    if (checks.length && performance.now() - t0 > checks[0]) {
+      checks.shift();
+      if (misplaced(r)) settle(r);
+    }
+    // A fixed control already in the subtitle band (Ask Shikari) can't move up: frame it where it is
+    const bottom = Math.min(r.bottom + pad, r.top > floor - 40 ? innerHeight - 6 : floor);
     Object.assign(box.style, { left: (r.left - pad) / z + 'px', top: y / z + 'px',
       width: (r.width + 2 * pad) / z + 'px', height: Math.max(0, bottom - y) / z + 'px' });
     window.__vhlRaf = requestAnimationFrame(follow);
@@ -116,35 +141,66 @@ def speak_kokoro(kpython, helper, model, voices, voice, text, out, lang="en-gb",
     return _wav_seconds(out)
 
 
-def speak_google(text, out, voice, api_key, language="en-GB", speaking_rate=0.9):
+def speak_google(text, out, voice, api_key, language="en-GB", speaking_rate=0.9, ipa=None):
     # Google Cloud Text-to-Speech (Chirp 3: HD). Opt-in and NOT local: the scene text is sent to Google
     # over the REST API and an API key is required (GOOGLE_TTS_API_KEY, or --google-key). At ~7k
     # characters a render it stays well inside the free monthly tier. LINEAR16 comes back as a WAV with a
     # header, so _wav_seconds reads it straight. Chirp 3: HD takes no SSML, so there's no inter-sentence
-    # pause knob — --speed maps to speakingRate for overall pacing instead.
+    # pause knob — --speed maps to speakingRate for overall pacing. Respellings don't always
+    # land with Chirp (it read "shih-car-ee" as "chicory"), so words in the script's `ipa:` map go as
+    # customPronunciations instead, which pin the phonemes exactly.
     body = {
         "input": {"text": text},
         "voice": {"languageCode": language, "name": voice},
         "audioConfig": {"audioEncoding": "LINEAR16", "sampleRateHertz": 24000, "speakingRate": speaking_rate},
     }
+    if ipa:
+        body["input"]["customPronunciations"] = {"pronunciations": [
+            {"phrase": w, "phoneticEncoding": "PHONETIC_ENCODING_IPA", "pronunciation": p} for w, p in ipa.items()]}
     req = urllib.request.Request(
         "https://texttospeech.googleapis.com/v1/text:synthesize?key=" + api_key,
         data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req) as r:
-            payload = json.loads(r.read())
-    except urllib.error.HTTPError as e:
-        raise SystemExit(f"Google TTS request failed ({e.code}): {e.read().decode(errors='replace')}")
+    # A dropped connection ("No route to host") is retried; an HTTP error is the request's fault, so it isn't
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                payload = json.loads(r.read())
+            break
+        except urllib.error.HTTPError as e:
+            raise SystemExit(f"Google TTS request failed ({e.code}): {e.read().decode(errors='replace')}")
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            if attempt == 3:
+                raise SystemExit(f"Google TTS unreachable after 4 attempts: {e}")
+            time.sleep(5 * (attempt + 1))
     Path(out).write_bytes(base64.b64decode(payload["audioContent"]))
     return _wav_seconds(out)
 
 
-TAGLINE = "Automated Multi-vendor Threat Hunting & Detection Suite"
+def join_segments(parts, out, pause):
+    # Each segment spoken on its own, joined with `pause` seconds of silence: the narration keeps the
+    # voice's cadence inside a segment, and every segment's start is known exactly, so actions and
+    # subtitles can be pinned to it instead of to a guessed fraction of the scene.
+    spans, frames, t = [], [], 0.0
+    with wave.open(str(parts[0])) as w:
+        params = w.getparams()
+    gap = b"\0" * (int(pause * params.framerate) * params.sampwidth * params.nchannels)
+    for i, part in enumerate(parts):
+        with wave.open(str(part)) as w:
+            data = w.readframes(w.getnframes())
+            d = w.getnframes() / w.getframerate()
+        if i:
+            frames.append(gap)
+            t += pause
+        spans.append((t, d))
+        frames.append(data)
+        t += d
+    with wave.open(str(out), "wb") as w:
+        w.setparams(params)
+        w.writeframes(b"".join(frames))
+    return t, spans
+
+
 CARD_BG = (234, 236, 238)  # light, so the dark-text / two-tone-K lockup reads
-# The lockup is [perched bateleur]  SHIKARI; the tagline and footer sit under the SHIKARI wordmark only,
-# sized to fit its width and anchored to its baseline. Measured from the asset's alpha (eagle ends ~0.25):
-# wordmark runs x 0.29..0.98 of the image width, and its bottom (baseline) is y 0.688 of the height.
-WORDMARK_L, WORDMARK_R, WORDMARK_BOTTOM = 0.291, 0.982, 0.688
 
 
 def _font(size, bold=True):
@@ -169,45 +225,30 @@ def _draw_tracked(d, cx, y, text, font, fill, track):
 
 
 def card(path, lines, logo):
-    # The brand lockup (bateleur + SHIKARI, black text / gold A) over a light ground, the tagline
-    # tracked out beneath it, then any extra lines (repo + handle on the end card). The whole stack is
-    # vertically centred so title and end sit the same on screen.
+    # The brand lockup (bateleur, SHIKARI, rule and tagline, the app's own hero without its card) over a
+    # light ground, then any extra lines (repo + handle on the end card) centred under the word. The
+    # whole stack is vertically centred so title and end sit the same on screen.
     img = Image.new("RGB", (W, H), CARD_BG)
     d = ImageDraw.Draw(img)
-    # Scale the lockup so its *visible* content (the mark, ignoring the transparent padding around it)
-    # fills the frame width bar a small margin, and centre that content — the widest a 3:1 mark goes
-    # without running the eagle off the left or the final letter off the right.
     src = Image.open(logo).convert("RGBA")
-    l, _u, r, _lo = src.split()[-1].getbbox()
-    target_cw = 1656  # visible mark width, centred in the frame
-    scale = target_cw / (r - l)
+    # The word's edges and the tagline's foot, written into the PNG by scripts/brand/build_assets.py
+    word_l, word_r, tag_foot = (int(v) for v in Image.open(logo).text["word"].split(","))
+    # Scale so the visible mark (ignoring the transparent padding) fills the frame bar a margin, centred
+    l, u, r, _lo = src.split()[-1].getbbox()
+    scale = 1656 / (r - l)
     banner = src.resize((round(src.width * scale), round(src.height * scale)))
-    bw, bh = banner.size
-    bx = round(W / 2 - ((l + r) / 2 / src.width) * bw)  # centre the visible content, not the padding
-    by = (H - bh) // 2
-    wm_l, wm_r = bx + WORDMARK_L * bw, bx + WORDMARK_R * bw
-    cx = int((wm_l + wm_r) / 2)   # centre under the SHIKARI wordmark
-    avail = (wm_r - wm_l) * 0.99  # roughly the wordmark's width; the footer fits within it
-    tag = TAGLINE.upper()
-
-    def fit(s, size, bold, cap=avail):
-        f = _font(size, bold)
-        while size > 10 and _tracked_width(d, s, f, 2 if bold else 0) > cap:
-            size -= 1
-            f = _font(size, bold)
-        return f, size
-
+    fonts = [(line, _font(size, False), size, colour) for line, size, colour in lines]
+    extra = sum(size + 28 for *_, size, _c in fonts) + (40 if lines else 0)
+    top = round(u * scale)
+    stack = round(tag_foot * scale) - top + extra
+    bx = round(W / 2 - (l + r) / 2 * scale)
+    by = (H - stack) // 2 - top
     img.paste(banner, (bx, by), banner)
-    # Tagline just beneath the wordmark baseline, almost underlining SHIKARI. Pinned to a point size
-    # (near the wordmark's own width) rather than auto-fit, and only shrunk if it would hit the frame.
-    tag_font, tag_size = fit(tag, 29.2, True, W - 80)
-    y = by + WORDMARK_BOTTOM * bh + 20
-    _draw_tracked(d, cx, y, tag, tag_font, (96, 104, 117), 2)
-    y += tag_size + 40
-    for line, size, colour in lines:
-        f, s = fit(line, size, False)
+    cx = bx + round((word_l + word_r) / 2 * scale)   # centred under SHIKARI, not the ™
+    y = by + round(tag_foot * scale) + 40
+    for line, f, size, colour in fonts:
         _draw_tracked(d, cx, y, line, f, colour, 0)
-        y += s + 28
+        y += size + 28
     img.save(path)
 
 
@@ -252,17 +293,20 @@ def act(page, base, action):
         # waiting on it burned the full timeout on every scene, delaying the tab-click and highlights
         # to the end while the narration played over the default tab. Wait for the DOM instead, then a
         # short settle for layout (server-rendered Jinja, so the HTML is all there at domcontentloaded).
+        # Park the mouse off the nav first: left over a menu button it holds that menu open on the next page
+        page.mouse.move(VIEW["width"] - 20, VIEW["height"] - 20)
         page.goto(base + arg, wait_until="domcontentloaded")
         try:
             page.wait_for_load_state("networkidle", timeout=1500)
         except Exception:
             pass
-        page.evaluate("() => { document.querySelectorAll('#ask-shikari-btn').forEach(e => e.remove()); }")
     elif kind == "click":
         page.locator(arg).first.click(timeout=5000)
     elif kind == "type":
         page.locator(arg[0]).first.click()
         page.locator(arg[0]).first.press_sequentially(arg[1], delay=85)
+        # Out of the way, or whatever the filtered results slide under the pointer shows a hover state
+        page.mouse.move(VIEW["width"] - 20, VIEW["height"] - 20)
     elif kind == "clear":
         # Empty a field and fire its input event — e.g. a continuing scene clearing the group box so the
         # CVE path (mutually exclusive with it) re-enables before the CVE actions run.
@@ -279,12 +323,15 @@ def act(page, base, action):
         page.keyboard.press(arg)
     elif kind == "guide":
         page.evaluate("id => ShikariGuide.open(id)", arg)
+    elif kind == "eval":
+        # A page's own function, for what a click can't reach cleanly (e.g. Results' toggleVendor)
+        page.evaluate(f"() => {{ {arg} }}")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--base", default="http://127.0.0.1:8010")
-    parser.add_argument("--out", type=Path, default=Path.home() / "Movies" / "Shikari")
+    parser.add_argument("--out", type=Path, default=Path.home() / "Desktop" / "Staging" / "shikari" / "video")
     parser.add_argument("--piper", default=str(Path.home() / ".cache/shikari/piper/venv/bin/piper"))
     parser.add_argument("--voice", default=str(Path.home() / ".cache/shikari/piper/voices/en_GB-alan-medium.onnx"))
     parser.add_argument("--only", nargs="*", help="scene ids to include (a quick draft)")
@@ -305,16 +352,20 @@ def main():
     parser.add_argument("--kokoro-voices", default=str(kcache / "voices-v1.0.bin"))
     parser.add_argument("--kokoro-voice", default="bm_george", help="Kokoro voice id (default bm_george)")
     parser.add_argument("--lang", default="en-gb", help="Kokoro phonemisation language (default en-gb)")
-    parser.add_argument("--speed", type=float, default=0.9, help="Kokoro speaking speed (default 0.9: measured but not sluggish)")
+    parser.add_argument("--speed", type=float, default=0.85, help="speaking speed / Google speakingRate (default 0.85: measured but not sluggish)")
     parser.add_argument("--kokoro-pause", type=float, default=0.3, help="silence spliced between sentences, seconds (default 0.3)")
     parser.add_argument("--google-voice", default="en-GB-Chirp3-HD-Charon",
                         help="Google Chirp 3: HD voice (default en-GB-Chirp3-HD-Charon, male British)")
     parser.add_argument("--google-language", default="en-GB", help="Google TTS BCP-47 language code (default en-GB)")
     parser.add_argument("--google-key", default=os.environ.get("GOOGLE_TTS_API_KEY", ""),
                         help="Google Cloud API key (defaults to the GOOGLE_TTS_API_KEY env var)")
+    parser.add_argument("--google-key-file", default=os.environ.get("GOOGLE_TTS_KEY_FILE", ""),
+                        help="read the Google API key from this file instead (defaults to the GOOGLE_TTS_KEY_FILE env var)")
     args = parser.parse_args()
+    if args.tts == "google" and not args.google_key and args.google_key_file:
+        args.google_key = Path(args.google_key_file).expanduser().read_text().strip()
     if args.tts == "google" and not args.google_key:
-        parser.error("--tts google needs a key: set GOOGLE_TTS_API_KEY or pass --google-key")
+        parser.error("--tts google needs a key: set GOOGLE_TTS_API_KEY, --google-key, or --google-key-file")
     email = os.environ.get("SHIKARI_GUIDE_EMAIL", "admin@shikari.app")
     password = os.environ.get("SHIKARI_GUIDE_PASSWORD", "BigGameHunter")
 
@@ -329,20 +380,54 @@ def main():
     print(f"Narration ({args.tts}):")
     for s in scenes:
         s["text"] = " ".join(s["narration"].split())
+        # a blank line in the narration is a segment break: a longer pause than between sentences
+        s["segments"] = [" ".join(seg.split()) for seg in s["narration"].split("\n") if seg.strip()]
         s["audio"] = work / f"{s['id']}.wav"
-        spoken_text = spoken(s["text"], spec.get("say", {}))
-        if args.tts == "kokoro":
+        say = spec.get("say", {})
+        if args.tts == "google":
+            say = {w: v for w, v in say.items() if w not in spec.get("ipa", {})}
+        spoken_text = spoken(s["text"], say)
+        if args.tts == "google":
+            parts = []
+            for j, seg in enumerate(s["segments"]):
+                parts.append(work / f"{s['id']}.{j}.wav")
+                speak_google(spoken(seg, say), parts[-1], args.google_voice, args.google_key,
+                             language=args.google_language, speaking_rate=args.speed, ipa=spec.get("ipa"))
+            s["seconds"], s["spans"] = join_segments(parts, s["audio"], SEGMENT_PAUSE)
+        elif args.tts == "kokoro":
             s["seconds"] = speak_kokoro(args.kokoro_python, kokoro_helper, args.kokoro_model,
                                         args.kokoro_voices, args.kokoro_voice, spoken_text, s["audio"],
                                         lang=args.lang, speed=args.speed, pause=args.kokoro_pause)
-        elif args.tts == "google":
-            s["seconds"] = speak_google(spoken_text, s["audio"], args.google_voice, args.google_key,
-                                        language=args.google_language, speaking_rate=args.speed)
         else:
             s["seconds"] = speak_piper(args.piper, args.voice, spoken_text, s["audio"],
                                        length_scale=args.length_scale, sentence_silence=args.sentence_silence,
                                        noise_w=args.noise_w, noise_scale=args.noise_scale)
+        if "spans" not in s:
+            # the local voices speak a scene in one go: estimate each segment's span by its length
+            total_chars, t = sum(len(x) for x in s["segments"]), 0.0
+            s["spans"] = []
+            for x in s["segments"]:
+                d = s["seconds"] * len(x) / total_chars
+                s["spans"].append((t, d))
+                t += d
         print(f"  {s['id']:<18} {s['seconds']:5.1f}s")
+    # The outro is spoken over the end card, so "It's on GitHub" lands on the card that shows the link
+    outro = " ".join(spec.get("outro", "").split())
+    if outro:
+        outro_audio = work / "outro.wav"
+        if args.tts == "google":
+            outro_seconds = speak_google(spoken(outro, say), outro_audio, args.google_voice, args.google_key,
+                                         language=args.google_language, speaking_rate=args.speed,
+                                         ipa=spec.get("ipa"))
+        elif args.tts == "kokoro":
+            outro_seconds = speak_kokoro(args.kokoro_python, kokoro_helper, args.kokoro_model,
+                                         args.kokoro_voices, args.kokoro_voice, spoken(outro, say), outro_audio,
+                                         lang=args.lang, speed=args.speed, pause=args.kokoro_pause)
+        else:
+            outro_seconds = speak_piper(args.piper, args.voice, spoken(outro, say), outro_audio,
+                                        length_scale=args.length_scale, sentence_silence=args.sentence_silence,
+                                        noise_w=args.noise_w, noise_scale=args.noise_scale)
+        print(f"  {'outro':<18} {outro_seconds:5.1f}s")
 
     print("Recording:")
     with sync_playwright() as pw:
@@ -359,26 +444,41 @@ def main():
         page.wait_for_timeout(500)
         t0 = time.time()
         for s in scenes:
+            actions = list(s.get("actions", []))
+            # A scene's opening page loads before its clock starts: a heavy page (Results) otherwise left
+            # the previous scene on screen under the new narration. The load lands in the fade to black.
+            if actions and "goto" in actions[0] and "at" not in actions[0] and "seg" not in actions[0]:
+                try:
+                    act(page, args.base, actions.pop(0))
+                except Exception as e:
+                    print(f"    {s['id']}: goto failed: {str(e).splitlines()[0]}")
+                page.wait_for_timeout(300)
             s["start"] = time.time() - t0
-            actions = s.get("actions", [])
-            # Each action fires at `at` (a 0..1 fraction of the scene) when given, so a highlight lands
-            # on the beat the narration describes it; otherwise it keeps the old even split across the
-            # scene. Authored order is preserved — `at` only retimes, it doesn't reorder.
+            # `seg: n` pins an action to the start of the scene's nth segment (a blank line in the
+            # narration), and `at` then places it within that segment (0..1). `at` alone is a fraction of
+            # the whole scene; with neither, actions spread evenly. Order is kept: pins only retime.
             slot = s["seconds"] / max(1, len(actions))
             for i, a in enumerate(actions):
-                at = a.get("at")
-                off = max(0.0, min(1.0, float(at))) * s["seconds"] if at is not None else i * slot
-                wait = t0 + s["start"] + off - time.time()
+                at, seg = a.get("at"), a.get("seg")
+                if seg is not None:
+                    seg_start, seg_len = s["spans"][min(int(seg), len(s["spans"]) - 1)]
+                    off = seg_start + (float(at) if at is not None else 0.0) * seg_len - LEAD
+                elif at is not None:
+                    off = max(0.0, min(1.0, float(at))) * s["seconds"] - LEAD
+                else:
+                    off = i * slot
+                wait = t0 + s["start"] + max(0.0, off) - time.time()
                 if wait > 0:
                     page.wait_for_timeout(wait * 1000)
                 try:
-                    act(page, args.base, {k: v for k, v in a.items() if k != "at"})
+                    act(page, args.base, {k: v for k, v in a.items() if k not in ("at", "seg")})
                 except Exception as e:
                     print(f"    {s['id']}: {a} failed: {str(e).splitlines()[0]}")
             end = t0 + s["start"] + s["seconds"] + GAP
             # Keep the page moving so the screencast keeps sending frames to the end of the scene
             while time.time() < end:
                 page.wait_for_timeout(min(250, max(1, (end - time.time()) * 1000)))
+            s["end"] = time.time() - t0
             print(f"  {s['id']:<18} at {s['start']:6.1f}s")
         total = time.time() - t0
         rec.stop()
@@ -415,11 +515,15 @@ def main():
     for stale in scenes_dir.glob("scene_*.mp4"):
         stale.unlink()
     clips, concat_list = [], work / "clips.txt"
+    # A clip runs from its scene's start to its end; the time between scenes (the next page loading
+    # off the clock) is cut, and each scene's place in the video, `pos`, is the clips before it.
+    pos = 0.0
     for i, s in enumerate(scenes):
-        nxt_start = scenes[i + 1]["start"] if i + 1 < len(scenes) else total
         first = int(round(s["start"] * FPS))
-        count = max(1, int(round(nxt_start * FPS)) - first)
+        count = max(1, int(round(s["end"] * FPS)) - first)
         dur = count / FPS
+        s["pos"] = pos
+        pos += dur
         clip = scenes_dir / f"scene_{i:02}_{s['id']}.mp4"
         clips.append(clip)
         # Fade only at the edges of a same-page group: a scene marked `continues` joins the one before it
@@ -446,11 +550,19 @@ def main():
     inputs, filters = [], []
     for i, s in enumerate(scenes):
         inputs += ["-i", str(s["audio"])]
-        ms = int((TITLE_SECONDS + s["start"]) * 1000)
+        ms = int((TITLE_SECONDS + s["pos"]) * 1000)
         filters.append(f"[{i}:a]adelay={ms}|{ms},aresample=48000[a{i}]")
-    mix = "".join(f"[a{i}]" for i in range(len(scenes)))
-    length = TITLE_SECONDS + total + END_SECONDS
-    filters.append(f"{mix}amix=inputs={len(scenes)}:normalize=0,apad,atrim=0:{length:.3f},loudnorm=I=-16:TP=-1.5[a]")
+    end_seconds = END_SECONDS
+    n_audio = len(scenes)
+    if outro:
+        inputs += ["-i", str(outro_audio)]
+        ms = int((TITLE_SECONDS + pos + 0.8) * 1000)
+        filters.append(f"[{n_audio}:a]adelay={ms}|{ms},aresample=48000[a{n_audio}]")
+        n_audio += 1
+        end_seconds = max(END_SECONDS, 0.8 + outro_seconds + 2.0)
+    mix = "".join(f"[a{i}]" for i in range(n_audio))
+    length = TITLE_SECONDS + pos + end_seconds
+    filters.append(f"{mix}amix=inputs={n_audio}:normalize=0,apad,atrim=0:{length:.3f},loudnorm=I=-16:TP=-1.5[a]")
     narration = work / "narration.m4a"
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *inputs, "-filter_complex", ";".join(filters),
                     "-map", "[a]", "-c:a", "aac", "-b:a", "192k", str(narration)], check=True)
@@ -459,7 +571,7 @@ def main():
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error",
                     "-loop", "1", "-t", str(TITLE_SECONDS), "-i", str(work / "title.png"),
                     "-i", str(main_mp4),
-                    "-loop", "1", "-t", str(END_SECONDS), "-i", str(work / "end.png"),
+                    "-loop", "1", "-t", str(end_seconds), "-i", str(work / "end.png"),
                     "-i", str(narration),
                     "-filter_complex",
                     f"[0:v]fps=30,format=yuv420p,fade=t=out:st={TITLE_SECONDS - 0.5}:d=0.5[t];"
@@ -491,21 +603,30 @@ def main():
                 chunks.append(lines)
         return ["\n".join(c) for c in chunks]
 
-    cues = []
-    for s in scenes:
-        chunks = caption_cues(s["text"])
+    def timed(text, start, seconds):
+        chunks = caption_cues(text)
         weights = [len(c) for c in chunks]
-        t = TITLE_SECONDS + s["start"]
+        t = start
         for chunk, wgt in zip(chunks, weights):
-            d = s["seconds"] * wgt / sum(weights)
+            d = seconds * wgt / sum(weights)
             cues.append((t, t + d, chunk))
             t += d
+
+    # Each segment's cues share out that segment's own time, so subtitles keep pace with the voice
+    cues = []
+    for s in scenes:
+        for seg, (a, d) in zip(s["segments"], s["spans"]):
+            timed(seg, TITLE_SECONDS + s["pos"] + a, d)
+    if outro:
+        timed(outro, TITLE_SECONDS + pos + 0.8, outro_seconds)
     (out / "shikari-walkthrough.srt").write_text("".join(
         f"{i}\n{srt_time(a)} --> {srt_time(b)}\n{text}\n\n" for i, (a, b, text) in enumerate(cues, 1)))
 
-    chapters = [("0:00", "Introduction")] + [(chapter_time(TITLE_SECONDS + s["start"]), s.get("chapter", s["id"])) for s in scenes[1:]]
+    chapters = [("0:00", "Introduction")] + [(chapter_time(TITLE_SECONDS + s["pos"]), s.get("chapter", s["id"])) for s in scenes[1:]]
     (out / "youtube.txt").write_text(
-        "Shikari turns MITRE ATT&CK into detections for Google SecOps, Defender XDR, Splunk and Elastic. "
+        "Shikari turns a threat group, a CVE, a threat report or a company's domain into detections for "
+        "Google SecOps, Defender XDR, Splunk and Elastic, and shows you the coverage gaps you didn't "
+        "know you had. Every detection is mapped to MITRE ATT&CK and tied back to its evidence. "
         "This walkthrough covers every page: what it's for, who uses it, and when it helps most.\n\n"
         "https://github.com/cmdaltr/shikari\n\nChapters\n" + "".join(f"{t} {name}\n" for t, name in chapters) +
         ("\nNarrated with Google Chirp 3: HD text-to-speech.\n" if args.tts == "google"
