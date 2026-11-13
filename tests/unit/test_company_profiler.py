@@ -21,6 +21,16 @@ from unittest.mock import MagicMock, patch
 # Add shikari to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def progress_dir(tmp_path, monkeypatch):
+    """profile_domain imports write_progress itself, so its progress records land in tmp, not data/progress."""
+    from shikari.build import progress
+
+    monkeypatch.setattr(progress, "PROGRESS_DIR", str(tmp_path))
+
 
 def test_profiler_initialization():
     """Test that CompanyProfiler initializes successfully."""

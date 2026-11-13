@@ -10,6 +10,16 @@ import shikari.app as app_module
 from shikari.database.models import Base, DetectionType, LibraryCorrelation, LibraryDetection, User
 
 
+@pytest.fixture(autouse=True)
+def isolated(tmp_path, monkeypatch):
+    """Keep these tests out of the real data/: the activity log opens its own session on
+    data/shikari.db, and a finished run writes data/runs/<group>.json."""
+    from shikari.build import run_files
+
+    monkeypatch.setattr(app_module, "log_activity", lambda *a, **k: None)
+    monkeypatch.setattr(run_files, "RUNS_DIR", str(tmp_path / "runs"))
+
+
 @pytest.fixture
 def db(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path / 't.db'}")
