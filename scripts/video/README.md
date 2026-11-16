@@ -43,7 +43,7 @@ Each scene is its own section: it fades in from black and out to black, so you a
 .venv/bin/python scripts/video/make_video.py --base http://127.0.0.1:8010 --out ~/Desktop/Staging/shikari/video
 ```
 
-It writes `shikari-walkthrough.mp4` (1080p), `shikari-walkthrough.srt` (upload it to YouTube as the subtitles) and `youtube.txt` (a description with chapter times). `--only intro hunt` makes a quick draft of some scenes. The `say` list at the top of the script is how the voice pronounces what the subtitles spell (ATT&CK as "Attack", SIEM as "sim"); for the Google voice, words in the `ipa` list are pinned by their phonemes instead (Chirp read the respelling "shih-car-ee" as "chicory"). A blank line in a scene's narration starts a new segment, spoken after a short pause; `seg: n` pins an action to segment n, and the `outro` is spoken over the end card.
+It writes `shikari-walkthrough.mp4` (1080p), `shikari-walkthrough.srt` (upload it to YouTube as the subtitles) and `youtube.txt` (a description with chapter times). `--only intro hunt` makes a quick draft of some scenes. The `say` list at the top of the script is how the voice pronounces what the subtitles spell (ATT&CK as "Attack", SIEM as "sim"); for the Google voice, words in the `ipa` list are pinned by their phonemes instead (Chirp read the respelling "shih-car-ee" as "chicory"). A blank line in a scene's narration starts a new segment, spoken after a short pause; `seg: n` pins an action to segment n, and the `outro` is spoken over the end card (a list of lines is spoken with a pause between each).
 
 ### Voices
 

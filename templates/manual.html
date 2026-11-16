@@ -40,13 +40,14 @@ html, body {
 
       <div class="mn-field">
         <label for="technique" class="section-label">Technique</label>
-        <select name="technique" id="technique">
-          <option value="">Select a technique...</option>
+        <input type="text" name="technique" id="technique" list="mn-attack-techniques" autocomplete="off"
+               placeholder="e.g. Search-order hijack of a signed updater, or T1003.001: a new LSASS dump">
+        <datalist id="mn-attack-techniques">
           {% for technique in techniques %}
-          <option value="{{ technique }}">{{ technique }}</option>
+          <option value="{{ technique }}">
           {% endfor %}
-        </select>
-        <div class="technique-help">Select one technique only.</div>
+        </datalist>
+        <div class="technique-help">Name the technique in your own words. If it's a new procedure for one ATT&amp;CK already has, start with its ID (T1003.001) so Coverage counts it.</div>
       </div>
 
       <div class="mn-field">
@@ -65,7 +66,7 @@ html, body {
           <label class="option-item"><input type="checkbox" name="platforms" value="{{ platform }}"> <span class="option-label">{{ platform }}</span></label>
           {% endfor %}
         </div>
-        <div class="platforms-help">Ticked from the technique's ATT&amp;CK platforms when you choose one; change them to where you saw it.</div>
+        <div class="platforms-help">Where you saw it. Each SIEM's log sources follow from these.</div>
       </div>
 
       <div class="mn-field">
@@ -111,7 +112,6 @@ html, body {
 
   <div id="technique-list" class="mn-list"></div>
 </div>
-<script id="mn-technique-platforms" type="application/json">{{ technique_platforms | tojson }}</script>
 {% include "partials/ai_prompt.html" %}
 <script src="{{ url_for('static', path='js/auto_validate.js') }}?v={{ request.app.state.asset_version }}"></script>
 <script src="{{ url_for('static', path='js/manual.js') }}?v={{ request.app.state.asset_version }}" defer></script>

@@ -128,10 +128,12 @@
       : `<span class="ms-via is-software">Software: ${esc(a.slice('via_software:'.length))}</span>`;
   }
 
-  // ATT&CK's markdown links ([Name](url)) and code spans, as text
+  // ATT&CK's markdown links ([Name](url)) and code spans, as text; some procedures write the span as
+  // a literal <code> tag rather than backticks, which esc() has already made inert
   const procedure = p => esc(p.replace(/^\[(Software|Campaign): [^\]]+\]\s*/, ''))
     .replace(/\[([^\]]+)\]\((https:\/\/attack\.mitre\.org[^)\s]*)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>');
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/&lt;code&gt;(.*?)&lt;\/code&gt;/g, '<code>$1</code>');
 
   function indicators(ind) {
     const keys = Object.keys(ind).filter(k => k !== 'software');

@@ -48,6 +48,7 @@ VIEW, SCALE = {"width": 1920, "height": 1080}, 1.0
 # case it joins the one before it with no black between — a pause and a scroll down the same page. GAP is
 # the quiet tail after a scene's narration (the pause, held on the page or on black); FADE is each dip.
 TITLE_SECONDS, END_SECONDS, GAP, FADE, FPS = 4.0, 5.0, 1.6, 0.5, 30
+OUTRO_GAP = 1.8  # silence between outro lines, so the sign-off isn't rushed
 # SEGMENT_PAUSE: the silence between a scene's segments (a blank line in its narration). LEAD: actions
 # fire this far ahead of the words they're pinned to, so a scroll has settled by the time it's said.
 SEGMENT_PAUSE, LEAD = 0.7, 0.25
@@ -393,6 +394,10 @@ def main():
         print(f"Work folder (kept): {work}")
     # SIGTERM (a killed background run) otherwise skips the finally and leaves the frames behind
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
+    # The scene clock is wall time: a Mac that idles to sleep mid-recording freezes the browser while
+    # the clock runs on, and the frame holds for minutes under the narration. caffeinate exits with us.
+    if sys.platform == "darwin" and shutil.which("caffeinate"):
+        subprocess.Popen(["caffeinate", "-ims", "-w", str(os.getpid())])
     try:
         return render(args, spec, scenes, out, work, email, password)
     finally:
@@ -451,23 +456,31 @@ def render(args, spec, scenes, out, work, email, password):
                 s["spans"].append((t, d))
                 t += d
         print(f"  {s['id']:<18} {s['seconds']:5.1f}s")
-    # The outro is spoken over the end card, so "It's on GitHub" lands on the card that shows the link
-    outro = " ".join(spec.get("outro", "").split())
-    if outro:
-        outro_audio = work / "outro.wav"
+    # The outro is spoken over the end card, so "It's on GitHub" lands on the card that shows the link;
+    # a list is spoken line by line with OUTRO_GAP between, so the sign-off isn't rushed
+    outro_spec = spec.get("outro") or []
+    outro_lines = [" ".join(line.split()) for line in ([outro_spec] if isinstance(outro_spec, str) else outro_spec)]
+    outro_parts = []  # (text, audio, start on the end card, seconds)
+    at = 0.8
+    for k, line in enumerate(outro_lines):
+        audio = work / f"outro{k}.wav"
         if args.tts == "google":
-            outro_seconds = speak_google(spoken(outro, say), outro_audio, args.google_voice, args.google_key,
-                                         language=args.google_language, speaking_rate=args.speed,
-                                         ipa=spec.get("ipa"))
+            secs = speak_google(spoken(line, say), audio, args.google_voice, args.google_key,
+                                language=args.google_language, speaking_rate=args.speed, ipa=spec.get("ipa"))
         elif args.tts == "kokoro":
-            outro_seconds = speak_kokoro(args.kokoro_python, kokoro_helper, args.kokoro_model,
-                                         args.kokoro_voices, args.kokoro_voice, spoken(outro, say), outro_audio,
-                                         lang=args.lang, speed=args.speed, pause=args.kokoro_pause)
+            secs = speak_kokoro(args.kokoro_python, kokoro_helper, args.kokoro_model,
+                                args.kokoro_voices, args.kokoro_voice, spoken(line, say), audio,
+                                lang=args.lang, speed=args.speed, pause=args.kokoro_pause)
         else:
-            outro_seconds = speak_piper(args.piper, args.voice, spoken(outro, say), outro_audio,
-                                        length_scale=args.length_scale, sentence_silence=args.sentence_silence,
-                                        noise_w=args.noise_w, noise_scale=args.noise_scale)
-        print(f"  {'outro':<18} {outro_seconds:5.1f}s")
+            secs = speak_piper(args.piper, args.voice, spoken(line, say), audio,
+                               length_scale=args.length_scale, sentence_silence=args.sentence_silence,
+                               noise_w=args.noise_w, noise_scale=args.noise_scale)
+        outro_parts.append((line, audio, at, secs))
+        at += secs + OUTRO_GAP
+    outro = bool(outro_parts)
+    if outro:
+        outro_end = outro_parts[-1][2] + outro_parts[-1][3]
+        print(f"  {'outro':<18} {outro_end - 0.8:5.1f}s")
 
     print("Recording:")
     with sync_playwright() as pw:
@@ -510,16 +523,22 @@ def render(args, spec, scenes, out, work, email, password):
                 wait = t0 + s["start"] + max(0.0, off) - time.time()
                 if wait > 0:
                     page.wait_for_timeout(wait * 1000)
+                took = time.time()
                 try:
                     act(page, args.base, {k: v for k, v in a.items() if k not in ("at", "seg")})
                 except Exception as e:
                     print(f"    {s['id']}: {a} failed: {str(e).splitlines()[0]}")
+                # An action that stalls freezes the frame under the narration and pushes the rest late
+                took = time.time() - took
+                if took > 3 and "type" not in a:
+                    print(f"    {s['id']}: {a} took {took:.1f}s ({len(rec.frames)} frames so far)")
             end = t0 + s["start"] + s["seconds"] + GAP
             # Keep the page moving so the screencast keeps sending frames to the end of the scene
             while time.time() < end:
                 page.wait_for_timeout(min(250, max(1, (end - time.time()) * 1000)))
             s["end"] = time.time() - t0
-            print(f"  {s['id']:<18} at {s['start']:6.1f}s")
+            over = s["end"] - s["start"] - s["seconds"] - GAP
+            print(f"  {s['id']:<18} at {s['start']:6.1f}s" + (f"  OVERRAN by {over:.1f}s" if over > 2 else ""))
         total = time.time() - t0
         rec.stop()
         browser.close()
@@ -598,12 +617,13 @@ def render(args, spec, scenes, out, work, email, password):
         filters.append(f"[{i}:a]adelay={ms}|{ms},aresample=48000[a{i}]")
     end_seconds = END_SECONDS
     n_audio = len(scenes)
-    if outro:
-        inputs += ["-i", str(outro_audio)]
-        ms = int((TITLE_SECONDS + pos + 0.8) * 1000)
+    for _, audio, at, _ in outro_parts:
+        inputs += ["-i", str(audio)]
+        ms = int((TITLE_SECONDS + pos + at) * 1000)
         filters.append(f"[{n_audio}:a]adelay={ms}|{ms},aresample=48000[a{n_audio}]")
         n_audio += 1
-        end_seconds = max(END_SECONDS, 0.8 + outro_seconds + 2.0)
+    if outro:
+        end_seconds = max(END_SECONDS, outro_end + 2.0)
     mix = "".join(f"[a{i}]" for i in range(n_audio))
     length = TITLE_SECONDS + pos + end_seconds
     filters.append(f"{mix}amix=inputs={n_audio}:normalize=0,apad,atrim=0:{length:.3f},loudnorm=I=-16:TP=-1.5[a]")
@@ -661,8 +681,8 @@ def render(args, spec, scenes, out, work, email, password):
     for s in scenes:
         for seg, (a, d) in zip(s["segments"], s["spans"]):
             timed(seg, TITLE_SECONDS + s["pos"] + a, d)
-    if outro:
-        timed(outro, TITLE_SECONDS + pos + 0.8, outro_seconds)
+    for line, _, at, secs in outro_parts:
+        timed(line, TITLE_SECONDS + pos + at, secs)
     (out / "shikari-walkthrough.srt").write_text("".join(
         f"{i}\n{srt_time(a)} --> {srt_time(b)}\n{text}\n\n" for i, (a, b, text) in enumerate(cues, 1)))
 

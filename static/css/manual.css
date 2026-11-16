@@ -21,7 +21,8 @@
 /* Fields share the standard look (static/css/ui.css); here, only their size */
 .mn-page textarea,
 .mn-page select,
-.mn-page input[type="url"] { width: 100%; margin: 0; }
+.mn-page input[type="url"],
+.mn-page input[type="text"] { width: 100%; margin: 0; }
 .mn-page textarea { min-height: 96px; resize: vertical; }
 
 .technique-help, .procedures-help, .platforms-help, .indicators-help, .references-help { font-size: .85rem; color: var(--text-secondary); margin-top: 6px; }

@@ -27,7 +27,7 @@ MARKERS = {
     "azure": ("logs-azure.activitylogs", "index=azure", "microsoft azure", "azureactivity", "azure.activitylogs",
               "microsoft.compute/", "microsoft.authorization/"),
     "gcp": ("gcp_audit", "logs-gcp", "index=gcp", "google cloud", "gcp.audit", "cloudaudit"),
-    "identity": ("azure_ad", "index=identity", "identitylogonevents", "identitydirectoryevents", "signinlogs",
+    "identity": ("azure_ad", "index=identity", "index=saas", "identitylogonevents", "identitydirectoryevents", "signinlogs",
                  "okta", "logs-azure.signinlogs", "logs-azure.auditlogs", "entra"),
 }
 SIEMS = {"MicrosoftThreatProtection": "Defender XDR", "GoogleSecOps": "SecOps", "Splunk": "Splunk", "Elastic": "Elastic"}
@@ -43,7 +43,8 @@ def applies(platforms: Iterable[str]) -> List[str]:
 def providers_of(filename: str, text: str) -> Set[str]:
     """The cloud providers a detection file's logs belong to."""
     lower = text.lower()
-    found = {p for p in PROVIDERS if os.path.splitext(filename)[0].lower().endswith("_" + p)}
+    stem = os.path.splitext(filename)[0].lower()
+    found = {p for p in PROVIDERS if stem.endswith("_" + p)} | ({"identity"} if stem.endswith("_saas") else set())
     found |= {p for p, marks in MARKERS.items() if any(m in lower for m in marks)}
     if "cloudappevents" in lower and not found & {"aws", "azure", "gcp"}:
         found |= {"aws", "azure", "gcp"}
@@ -89,9 +90,13 @@ def library_index(generate_dir: str) -> Dict[str, Dict[str, Set[str]]]:
     return index
 
 
-def cloud_coverage(generate_dir: str, attack: Dict[str, Dict]) -> Dict:
-    """{providers, labels, summary: {provider: {applicable, covered}}, techniques: [...]}."""
+def cloud_coverage(generate_dir: str, attack: Dict[str, Dict], siems: Iterable[str] = ()) -> Dict:
+    """{providers, labels, summary: {provider: {applicable, covered}}, techniques: [...]}, covered
+    techniques first. `siems` (SIEMS' labels) keeps only those SIEMs' detections; empty keeps all."""
     index = library_index(generate_dir)
+    if siems:
+        keep = set(siems)
+        index = {t: {p: s & keep for p, s in have.items() if s & keep} for t, have in index.items()}
     rows = []
     for tid, obj in sorted(attack.items()):
         providers = applies(obj.get("x_mitre_platforms") or [])
@@ -104,6 +109,7 @@ def cloud_coverage(generate_dir: str, attack: Dict[str, Dict]) -> Dict:
             "platforms": obj.get("x_mitre_platforms") or [],
             "coverage": {p: (sorted(have.get(p, [])) if p in providers else None) for p in PROVIDERS},
         })
+    rows.sort(key=lambda r: not any(r["coverage"].values()))
     summary = {p: {"applicable": sum(r["coverage"][p] is not None for r in rows),
                    "covered": sum(bool(r["coverage"][p]) for r in rows)} for p in PROVIDERS}
     return {"providers": list(PROVIDERS), "labels": LABELS, "summary": summary, "techniques": rows}

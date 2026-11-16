@@ -11,12 +11,12 @@
 
 | Section | What it shows |
 |---|---|
-| Totals | Total queries, techniques covered, and the reference query count for each SIEM: Google SecOps, Defender XDR, Splunk and Elastic. Reference queries live in `bespoke/llm_references/`, one folder per SIEM |
+| Totals | Total queries, techniques covered, and the reference query count for each SIEM ticked under Profile → Environment (all four when none are ticked); the totals count those SIEMs only. Reference queries live in `bespoke/llm_references/`, one folder per SIEM |
 | Filters | Number of queries, vendor, tactic, platform, and a search box. A collapsed Filters card shows "N active" when filters still apply |
 | Coverage by Tactic | One card per tactic; open one to see its covered techniques, coloured by how many queries each has |
 | ATT&CK Matrix | Every Enterprise technique under each tactic. A technique counts its sub-techniques' queries too. **Expand all sub-techniques** and **Covered only** change the view |
 | Coverage by Technique / Platform | Compact cards: by technique (ID, name, SIEMs, platforms) or by platform (SIEMs, technique and query counts, the techniques). **Export** downloads the cards as CSV, with any filters applied |
-| Cloud coverage | ATT&CK's cloud techniques by provider: AWS, Azure, GCP, and Identity & SaaS, each with a coloured card and its logo above the table. Each cell lists the SIEMs with a saved detection over that provider's logs, **gap** where there's none, or n/a where the technique doesn't apply. **Gaps only** keeps the rows with a gap |
+| Cloud coverage | ATT&CK's cloud techniques by provider: AWS, Azure, GCP, and Identity & SaaS, each with a coloured card and its logo above the table. Each cell lists the SIEMs with a saved detection over that provider's logs (covered techniques first), **gap** where there's none, or n/a where the technique doesn't apply. **Gaps only** keeps the rows with a gap |
 | Coverage gaps | Techniques your saved detections cover in some of your SIEMs (those chosen in Profile, or all four) but not all of them: a column per SIEM, **gap** where it has none, and a chip counting each SIEM's gaps |
 
 ## Cloud coverage
@@ -28,9 +28,9 @@ Cloud coverage reads your saved detections, not the reference queries, and ignor
 | AWS | CloudTrail: the `AWS_CLOUDTRAIL` log type, `logs-aws.*`, the AWS index |
 | Azure | The Activity Log: `AzureActivity`, `logs-azure.activitylogs-*`, the Azure index |
 | GCP | Cloud Audit Logs: `GCP_AUDIT`, `logs-gcp.*`, the GCP index |
-| Identity & SaaS | Entra ID and Okta sign-in and audit logs, Defender's identity tables, the identity index |
+| Identity & SaaS | Entra ID and Okta sign-in and audit logs, Defender's identity tables, the identity and SaaS indexes |
 
-Defender's `CloudAppEvents` carries every cloud connected to Defender for Cloud Apps, so a detection on it counts for all three IaaS providers unless its query names one. A detection for a sub-technique counts for its parent too. The same table is at `GET /api/coverage/cloud`.
+Defender's `CloudAppEvents` carries every cloud connected to Defender for Cloud Apps, so a detection on it counts for all three IaaS providers unless its query names one. A detection for a sub-technique counts for its parent too. Only the SIEMs ticked under Profile → Environment are listed (all four if none is), and covered techniques come first. The same table is at `GET /api/coverage/cloud`.
 
 ## Limits
 

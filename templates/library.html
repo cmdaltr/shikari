@@ -90,7 +90,7 @@
             </div>
 
             <!-- Value Proposition -->
-            <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #8b5cf6; border-radius: 6px; padding: 16px; margin-top: 16px;">
+            <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #8b5cf6; border-radius: 6px; padding: 16px; margin: 16px 0;">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2">
                         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
@@ -98,15 +98,13 @@
                     <span style="font-weight: 600; color: #6d28d9; font-size: 1.05em;">Shikari Value Summary</span>
                 </div>
                 <div style="color: #666; font-size: 0.95em; line-height: 1.6;">
-                    You've generated <strong>{{ detections|length }}</strong> production-ready detections across <strong>{{ all_groups|length }}</strong> threat groups,
+                    You've generated <strong>{{ total_detections - total_correlations }}</strong> production-ready detections across <strong>{{ all_groups|length }}</strong> threat group{{ 's' if all_groups|length != 1 }},
                     covering <strong>{{ all_techniques|length }}</strong> MITRE ATT&CK techniques and <strong>{{ all_tactics|length }}</strong> tactics.
-                    This represents approximately <strong>{{ ((detections|length * 0.5)|round(1)) }} hours</strong> of work automated,
-                    with <strong>{{ correlations|length }}</strong> behavioral correlations that would typically require manual analysis.
+                    This represents approximately <strong>{{ hours_saved }} hours</strong> of work automated,
+                    with <strong>{{ total_correlations }}</strong> behavioural correlations that would typically require manual analysis.
                 </div>
             </div>
 
-            <!-- Horizontal Divider -->
-            <hr style="border: none; border-top: 2px solid #e0e0e0; margin: 24px 0;">
 
             <!-- Metrics Content -->
               <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
@@ -115,15 +113,7 @@
                 {% set hourly_rate = 25 %}
                 {# hours_saved is now passed from backend #}
                 {% set cost_savings = (hours_saved * hourly_rate)|round(0)|int %}
-                {% set osint_count = namespace(count=0) %}
-
-                {% for vendor in vendors %}
-                  {% for detection in vendor.detections %}
-                    {% if detection.osint_enriched %}
-                      {% set osint_count.count = osint_count.count + 1 %}
-                    {% endif %}
-                  {% endfor %}
-                {% endfor %}
+                {% set osint_count = namespace(count=osint_validated) %}
 
                 {% set osint_research_hours = (osint_count.count * 0.65)|round(1) %}
 
@@ -156,19 +146,15 @@
                 <!-- Detection Fidelity -->
                 <div style="background: linear-gradient(135deg, #38f9d7 0%, #43e97b 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                   <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Detection Fidelity</div>
-                  {% set osint_pct = 0 %}
-                  {% if detections|length > 0 %}
-                    {% set osint_pct = ((osint_count.count / detections|length) * 100)|round(0)|int %}
-                  {% endif %}
-                  {% set has_correlations = correlations|length > 0 %}
-                  {% set multi_platform = (vendors|length > 1) %}
+                  {% set has_correlations = total_correlations > 0 %}
+                  {% set multi_platform = siems_used > 1 %}
                   {% set fidelity_score = (osint_pct * 0.4) + (40 if has_correlations else 0) + (20 if multi_platform else 0) %}
                   <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
                     {{ fidelity_score|round(0)|int }}/100
                   </div>
                   <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.4;">
                     {% if has_correlations %}40 | 40 | 20 weighting*{% endif %}<br>
-                    {% if multi_platform %}Proprietry analyics scoring{% endif %}
+                    {% if multi_platform %}Proprietary analytics scoring{% endif %}
                   </div>
                 </div>
 
@@ -190,18 +176,6 @@
                   </div>
                 </div>
 
-                {% set indicator_count = namespace(total=0, detection_count=0) %}
-
-                {% for vendor in vendors %}
-                  {% for detection in vendor.detections %}
-                    {% if detection.indicators and detection.indicators|length > 0 %}
-                      {% set indicator_count.total = indicator_count.total + detection.indicators|length %}
-                      {% set indicator_count.detection_count = indicator_count.detection_count + 1 %}
-                    {% endif %}
-                  {% endfor %}
-                {% endfor %}
-
-                {% set avg_indicators = (indicator_count.total / indicator_count.detection_count)|round(1) if indicator_count.detection_count > 0 else 0 %}
 
                 <!-- Indicator Density -->
                 <div style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
@@ -211,14 +185,14 @@
                   </div>
                   <div style="font-size: 0.75em; opacity: 0.9; margin-top: 6px; line-height: 1.3;">
                     Avg indicators per detection<br>
-                    {{ indicator_count.total }} total indicators
+                    {{ indicator_total }} total indicators
                   </div>
                 </div>
 
                 <!-- Detection Reusability -->
                 <div style="background: linear-gradient(135deg, #fab1a0 0%, #ff7675 100%); border-radius: 8px; padding: 12px 16px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                   <div style="font-size: 20px; opacity: 0.9; margin-bottom: 2px;">Detection Reusability</div>
-                  {% set reusability_score = ((detections|length / all_techniques|length)|round(1)) if all_techniques|length > 0 else 0 %}
+                  {% set reusability_score = (((total_detections - total_correlations) / all_techniques|length)|round(1)) if all_techniques|length > 0 else 0 %}
                   <div style="font-size: 2.2em; font-weight: 900; line-height: 1;">
                     {{ reusability_score }}x
                   </div>
@@ -242,7 +216,7 @@
                   Shikari delivered <strong>${{ '{:,}'.format(cost_savings) }}</strong> in cost savings by automating <strong>{{ hours_saved }} hours</strong> of manual detection engineering.
                   {% if speedup > 0 %}Detections were generated <strong>{{ speedup }}x faster</strong> than manual development.{% endif %}
                   {% if osint_count.count > 0 %}With <strong>{{ osint_count.count }}</strong> detections validated against real-world threat intelligence, you have immediate production-ready coverage.{% endif %}
-                  The fidelity score of <strong>{{ fidelity_score|round(0)|int }}/100</strong> reflects multi-platform coverage, behavioral correlation, and OSINT validation.
+                  The fidelity score of <strong>{{ fidelity_score|round(0)|int }}/100</strong> reflects multi-platform coverage, behavioural correlation, and OSINT validation.
                 </div>
               </div>
 
@@ -346,9 +320,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Divider -->
-        <div style="border-top: 2px solid #e5e7eb; margin: 40px 0;"></div>
 
         <!-- Detection Rules Section -->
     <div class="detection-section">

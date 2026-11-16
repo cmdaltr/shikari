@@ -233,7 +233,7 @@ pages:
     sections:
       - selector: .summary-cards
         title: Totals
-        what: Total queries, techniques covered, and the reference query count for each SIEM (Google SecOps, Defender XDR, Splunk and Elastic).
+        what: Total queries, techniques covered, and the reference query count for each SIEM ticked under Profile → Environment (all four when none are), the totals counting those SIEMs only.
         who: Security managers.
         when: A one-line answer to "how much of ATT&CK do we cover?".
       - selector: .cv-filters
@@ -253,7 +253,7 @@ pages:
         when: Answering "what do we have for T1059.001?" or "what covers our Linux estate?".
       - selector: '#cloud-section'
         title: Cloud coverage
-        what: A coloured card per provider (AWS, Azure, GCP, Identity & SaaS), then ATT&CK's cloud techniques and which SIEMs have a detection over each provider's logs. Gaps only lists what's missing.
+        what: A coloured card per provider (AWS, Azure, GCP, Identity & SaaS), then ATT&CK's cloud techniques and which SIEMs have a detection over each provider's logs, covered techniques first. Gaps only lists what's missing.
         who: Cloud security and detection engineers.
         when: Moving workloads into a cloud, or checking control-plane logging is earning its keep.
       - selector: '#gaps-section'
@@ -507,7 +507,7 @@ pages:
         when: Recording why the run exists for whoever audits it later.
       - selector: section.mn-entry
         title: Technique entries
-        what: Choose a technique, its tactics and the platforms it ran on (ticked from ATT&CK, editable), then describe the behaviour seen in Procedures. Indicators, one per line and defanged or not, are what the queries match. Commands, file names, paths and tool names become command-line conditions, registry keys registry conditions, domains and IPs network conditions, and hashes, domains and IPs an IOC sweep. Add http(s) references, one per line, to save them with the detections as their sources. Append each, then Submit.
+        what: Name the technique in your own words (start with an ATT&CK ID if it's a new procedure for a known one), tick its tactics and the platforms it ran on, then describe the behaviour seen in Procedures. Indicators, one per line and defanged or not, are what the queries match. Commands, file names, paths and tool names become command-line conditions, registry keys registry conditions, domains and IPs network conditions, and hashes, domains and IPs an IOC sweep. Add http(s) references, one per line, to save them with the detections as their sources. Append each, then Submit.
         who: Incident responders and detection engineers.
         when: A group ATT&CK doesn't know, or your own intelligence from an incident.
       - selector: '.mn-options details.options-section'

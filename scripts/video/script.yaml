@@ -64,7 +64,9 @@ ipa:
   regex: ˈɹɛdʒɛks
 
 # Spoken over the end card, after the last scene
-outro: Any and all feedback is welcome, so please raise issues on GitHub. Thank you for watching.
+outro:
+  - Any and all feedback is welcome, so please raise issues on GitHub.
+  - Thank you for watching.
 
 scenes:
 
@@ -293,7 +295,7 @@ scenes:
         seg: 0
       - show: '#correlations'
         seg: 0
-        at: 0.03
+        at: 0.12
       - eval: toggleVendor(document.querySelector('#correlations-section-content .vendor-header'))
         seg: 1
       - show: '.detection-item:has([id="corr-Google SecOps-1-content"])'
@@ -336,7 +338,7 @@ scenes:
         seg: 0
       - show: '#cross-vendor'
         seg: 0
-        at: 0.03
+        at: 0.12
       - show: '.xv-card >> nth=0'
         seg: 2
       - click: '.xv-card >> nth=0 >> summary >> nth=0'
@@ -665,10 +667,10 @@ scenes:
       - show: '#cloud-section .cloud-summary'
         seg: 2
         at: 0.05
-      - click: '#cloud-gaps-only'
-        seg: 2
-        at: 0.55
       - show: '#cloud-table'
+        seg: 2
+        at: 0.3
+      - click: '#cloud-gaps-only'
         seg: 2
         at: 0.6
 
@@ -724,8 +726,8 @@ scenes:
 
       By default it keeps what's relevant to the industries and products you set in your Environment.
 
-      Save a watchlist and Shikari checks it as often as you set under Environment, hourly during a
-      major incident, every six hours otherwise, flagging anything new. And Analyse turns any post
+      Save a watchlist and Shikari checks it as often as you set under Environment. We recommend hourly
+      during a major incident, and every six hours otherwise. Anything new is flagged. And Analyse turns any post
       straight into detections.
     actions:
       - goto: /feed
@@ -874,15 +876,15 @@ scenes:
     narration: >
       Manual is for what ATT&CK doesn't cover.
 
-      ATT&CK is updated twice a year, so at any moment it can be six months behind what attackers are
-      doing, and some behaviour never makes it in at all.
+      MITRE ATT&CK receives a major update twice a year, so at any moment it can be six months behind
+      what attackers are doing, and some behaviour never makes it in at all.
 
       Manual lets you write detections from your own techniques, tactics and procedures, one technique
       at a time, so new tradecraft doesn't wait for the next release.
 
-      Pick the technique and its platforms tick themselves. Then list the indicators to look for, the
-      commands, file paths, registry keys and domains, and each one becomes a condition in every SIEM's
-      query.
+      Name the technique in your own words, and tick the tactics it served and the platforms you saw it
+      on. Then list the indicators to look for, the commands, file paths, registry keys and domains, and
+      each one becomes a condition in every SIEM's query.
 
       Add the references it came from, so every detection ties back to its evidence, and the same
       options as Hunt apply, from AI to correlations.
@@ -890,14 +892,19 @@ scenes:
       - goto: /manual
       - show: 'section.mn-entry'
         seg: 2
-      - eval: >-
-          const s = document.getElementById('technique');
-          const o = [...s.options].find(o => o.value.startsWith('T1003.001'));
-          if (o) { s.value = o.value; s.dispatchEvent(new Event('change', { bubbles: true })); }
+      - show: '.mn-field:has(#technique)'
         seg: 3
+      - type: ['#technique', 'LSASS dump through a renamed, signed crash-reporter']
+        seg: 3
+        at: 0.01
+      - eval: >-
+          for (const v of ['Credential Access', 'Windows'])
+            document.querySelector(`.mn-entry input[type=checkbox][value="${v}"]`).checked = true;
+        seg: 3
+        at: 0.25
       - show: '.mn-field:has(.mn-platforms)'
         seg: 3
-        at: 0.05
+        at: 0.27
       - type: ['#indicators', 'procdump64.exe -accepteula -ma lsass.exe']
         seg: 3
         at: 0.45
@@ -959,7 +966,8 @@ scenes:
       Shikari runs however suits you: on one central server for the whole team, as a local web app on
       your own machine, or as an installed desktop app.
 
-      There are installers for macOS, Windows and Linux, or run it as a Docker container.
+      There are installers for macOS, Windows and Linux, or build it from the repository with Docker
+      Compose.
 
       It's free for individuals and organisations of up to two people. Larger organisations using it for themselves need a Pro
       licence, and MSSPs and consultancies working for clients need a Services licence.

@@ -56,3 +56,15 @@ def test_sub_technique_counts_for_parent(tmp_path):
 
 def test_missing_library(tmp_path):
     assert cloud_coverage(str(tmp_path / "none"), ATTACK)["summary"]["aws"]["covered"] == 0
+
+
+def test_saas_counts_as_identity():
+    assert providers_of("x_saas.yaml", "") == {"identity"}
+    assert providers_of("x.yaml", "index=saas earliest=-1d") == {"identity"}
+
+
+def test_covered_first_and_siem_filter(tmp_path):
+    _write(tmp_path, "t1078.yaml", "technique_id: T1078.004\nquery: index=identity\n")
+    result = cloud_coverage(str(tmp_path), ATTACK)
+    assert result["techniques"][0]["technique_id"] == "T1078.004"
+    assert cloud_coverage(str(tmp_path), ATTACK, ["SecOps"])["summary"]["identity"]["covered"] == 0

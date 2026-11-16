@@ -2241,7 +2241,8 @@ async def coverage_page(request: Request, shikari_session: Optional[str] = Cooki
             user = get_user_from_session_id(shikari_session, db)
         finally:
             db.close()
-    return templates.TemplateResponse("coverage.html", {"request": request, "user": user})
+    siem_cards = [(k, SIEM_LABELS[k]) for k in (_user_siems(user) or SIEM_PLATFORMS)]
+    return templates.TemplateResponse("coverage.html", {"request": request, "user": user, "siem_cards": siem_cards})
 
 
 @app.get("/mitresaw", response_class=HTMLResponse)
@@ -3968,7 +3969,6 @@ def _manual_page(request: Request, group_name: str = "", user=None, error_messag
             "tactics": tactics,
             "techniques": techniques,
             "platforms": manual_platform_choices(),
-            "technique_platforms": attack_platforms_by_technique(getattr(app.state, "bundle", None)),
             "render_time": datetime.utcnow().isoformat() + "Z",
             **({"error_message": error_message} if error_message else {}),
         },
@@ -4474,8 +4474,12 @@ def cloud_coverage_json(request: Request, shikari_session: Optional[str] = Cooki
     auth_result = require_auth(request, shikari_session)
     if isinstance(auth_result, RedirectResponse):
         return JSONResponse({"error": "Not authenticated"}, status_code=401)
-    auth_result[1].close()
-    return cloud_coverage(GENERATE_DIR, _attack_techniques())
+    user, db = auth_result
+    # Only the SIEMs ticked under Environment, as the Coverage cards
+    labels = {"secops": "SecOps", "mde": "Defender XDR", "splunk": "Splunk", "elastic": "Elastic"}
+    siems = [labels[k] for k in _user_siems(user)]
+    db.close()
+    return cloud_coverage(GENERATE_DIR, _attack_techniques(), siems)
 
 
 @app.get("/api/coverage/siem-gaps")
@@ -7773,9 +7777,10 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
     no_detection = _no_detection(group_name)
     briefing = briefing_lib.build(attack_flow, no_detection)
 
-    # X-SIEM pivots (#8): a chain's stages re-expressed across SIEMs, with join keys
+    # X-SIEM pivots (#8): a chain's stages re-expressed across SIEMs, with join keys. Only for someone
+    # with more than one SIEM ticked under Environment (none ticked means all four)
     cross_vendor = []
-    if os.path.exists(correlation_file):
+    if len(_user_siems(user) or SIEM_PLATFORMS) > 1 and os.path.exists(correlation_file):
         try:
             with open(correlation_file, encoding="utf-8") as fh:
                 cross_vendor = json.load(fh).get("cross_vendor_correlations", []) or []
@@ -11424,10 +11429,10 @@ async def library_page(request: Request, shikari_session: Optional[str] = Cookie
                 # Add to vendors dict
                 vendors_dict[vendor].append(detection_data)
 
-            # Collect filter options
+            # Collect filter options; a saved detection's "technique" is its name, the ID is the mapping's
             all_groups.add(group_name)
-            if technique_id:
-                all_techniques.add(technique_id)
+            if detection_data["attack_id"] or technique_id:
+                all_techniques.add(detection_data["attack_id"] or technique_id)
             for tactic in tactics:
                 all_tactics.add(tactic)
 
@@ -11682,6 +11687,12 @@ async def library_page(request: Request, shikari_session: Optional[str] = Cookie
 
         # Count unique techniques
         technique_count = len(all_techniques)
+        # The quality metrics, from each saved detection rather than the per-SIEM groups
+        saved = [d for dets in vendors_dict.values() for d in dets]
+        with_indicators = [d for d in saved if d.get("indicators")]
+        osint_validated = sum(1 for d in saved if d.get("osint_enriched"))
+        indicator_total = sum(len(d["indicators"]) for d in with_indicators)
+        siems_used = sum(1 for dets in vendors_dict.values() if dets)
 
         # Calculate time saved statistics (matching results page calculation)
         # Manual approach: 2 hours per detection
@@ -11741,6 +11752,11 @@ async def library_page(request: Request, shikari_session: Optional[str] = Cookie
                 "total_detections": total_detections,
                 "total_correlations": total_correlations,
                 "technique_count": technique_count,
+                "osint_validated": osint_validated,
+                "osint_pct": round(100 * osint_validated / len(saved)) if saved else 0,
+                "indicator_total": indicator_total,
+                "avg_indicators": round(indicator_total / len(with_indicators), 1) if with_indicators else 0,
+                "siems_used": siems_used,
                 "all_groups": sorted(all_groups),
                 "all_tactics": sorted(all_tactics),
                 "all_techniques": sorted(filter(None, all_techniques)),

@@ -27,10 +27,6 @@
       } catch (_) { return true; }
     });
   }
-  function techniquePlatforms() {
-    var el = document.getElementById('mn-technique-platforms');
-    return (el && safeParse(el.textContent)) || {};
-  }
   function clearManualStorage() {
     try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
     try { localStorage.removeItem(STORAGE_GROUP_KEY); } catch (_) {}
@@ -165,19 +161,6 @@
       }
     }
 
-    // Choosing a technique ticks its ATT&CK platforms; the user can change them before Append
-    var platformsOf = techniquePlatforms();
-    var techniqueSel = document.getElementById('technique');
-    if (techniqueSel) {
-      techniqueSel.addEventListener('change', function () {
-        var tid = (techniqueSel.value.split(':')[0] || '').trim().toUpperCase();
-        var own = platformsOf[tid] || [];
-        document.querySelectorAll('input[name="platforms"]').forEach(function (box) {
-          box.checked = own.indexOf(box.value) !== -1;
-        });
-      });
-    }
-
     // Append handler
     var appendBtn = document.getElementById('append-btn');
     if (appendBtn && appendBtn.dataset.bound !== '1') {
@@ -206,6 +189,21 @@
             .map(function (s) { return s.trim(); }).filter(Boolean);
 
           if (!technique && !groupDesc && !tactics.length && !procedures.length) return;
+
+          // Nothing is filled in from ATT&CK: the entry is what was seen, so its tactics and platforms are the user's
+          var missing = [!technique && 'a technique', !tactics.length && 'a tactic', !platforms.length && 'a platform',
+                         !procedures.length && 'procedures'].filter(Boolean);
+          if (missing.length) {
+            var needMsg = document.getElementById('append-message');
+            if (needMsg) {
+              needMsg.textContent = 'Each entry needs ' + missing.join(', ').replace(/, ([^,]*)$/, ' and $1') + '.';
+              needMsg.style.display = 'block';
+              needMsg.style.color = 'darkred';
+              needMsg.setAttribute('role', 'alert');
+              clearTimeout(window.__appendMsgTimer);
+            }
+            return;
+          }
 
           var bad = badReferences(references);
           if (bad.length) {

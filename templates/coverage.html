@@ -15,7 +15,7 @@
 
 .summary-cards {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 16px;
   margin-bottom: 30px;
 }
@@ -27,27 +27,27 @@
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-.summary-card:nth-child(1) {
+.summary-card.sc-total {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.summary-card:nth-child(2) {
+.summary-card.sc-techniques {
   background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
 }
 
-.summary-card:nth-child(3) {
+.summary-card.sc-secops {
   background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
 }
 
-.summary-card:nth-child(4) {
+.summary-card.sc-mde {
   background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
 }
 
-.summary-card:nth-child(5) {
+.summary-card.sc-splunk {
   background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
 }
 
-.summary-card:nth-child(6) {
+.summary-card.sc-elastic {
   background: linear-gradient(135deg, #00796b 0%, #20c3b0 100%);
 }
 
@@ -398,30 +398,21 @@
   <div id="content" style="display: none;">
     <!-- Summary Cards -->
     <div class="summary-cards">
-      <div class="summary-card">
+      <div class="summary-card sc-total">
         <div class="number" id="total-queries">-</div>
         <div class="label">Total Queries</div>
       </div>
-      <div class="summary-card">
+      <div class="summary-card sc-techniques">
         <div class="number" id="techniques-covered">-</div>
         <div class="label">Techniques Covered</div>
       </div>
-      <div class="summary-card">
-        <div class="number" id="secops-count">-</div>
-        <div class="label">Google SecOps Queries</div>
+      {# Only the SIEMs ticked under Profile → Environment (none ticked means all) #}
+      {% for id, label in siem_cards %}
+      <div class="summary-card sc-{{ id }}">
+        <div class="number" id="{{ id }}-count">-</div>
+        <div class="label">{{ label }} Queries</div>
       </div>
-      <div class="summary-card">
-        <div class="number" id="mde-count">-</div>
-        <div class="label">Defender XDR Queries</div>
-      </div>
-      <div class="summary-card">
-        <div class="number" id="splunk-count">-</div>
-        <div class="label">Splunk Queries</div>
-      </div>
-      <div class="summary-card">
-        <div class="number" id="elastic-count">-</div>
-        <div class="label">Elastic Queries</div>
-      </div>
+      {% endfor %}
     </div>
 
     <!-- Filters: the Library's filter card. Tactics pick tactic cards and matrix columns;
@@ -557,7 +548,7 @@
         </div>
         Cloud coverage
       </h2>
-      <p class="cloud-intro">ATT&amp;CK's cloud techniques against your detections: IaaS techniques for each provider's control-plane logs, identity and SaaS techniques for sign-in and directory logs. A tick lists the SIEMs with a detection for the technique or one of its sub-techniques.</p>
+      <p class="cloud-intro">ATT&amp;CK's cloud techniques against your detections: IaaS techniques for each provider's control-plane logs, identity and SaaS techniques for sign-in and directory logs. A tick lists the SIEMs chosen in Profile (all four if none is) with a detection for the technique or one of its sub-techniques; covered techniques come first.</p>
       <div id="cloud-summary" class="cloud-summary"></div>
       <label class="cloud-gaps-toggle"><input type="checkbox" id="cloud-gaps-only"> Gaps only</label>
       <table class="coverage-table" id="cloud-table">
@@ -905,12 +896,15 @@ async function loadCoverage() {
     document.getElementById('content').style.display = 'block';
 
     // Update summary cards
-    document.getElementById('total-queries').textContent = data.summary.total_queries || 0;
-    document.getElementById('techniques-covered').textContent = (data.summary.techniques_covered || []).length;
-    document.getElementById('secops-count').textContent = data.summary.vendors?.['Google SecOps'] || 0;
-    document.getElementById('mde-count').textContent = data.summary.vendors?.MDE || 0;
-    document.getElementById('splunk-count').textContent = data.summary.vendors?.Splunk || 0;
-    document.getElementById('elastic-count').textContent = data.summary.vendors?.Elastic || 0;
+    // Counts for the SIEMs ticked under Environment only, the totals included
+    const shown = {{ siem_cards | map(attribute=1) | list | tojson }}.map(l => l === 'Defender XDR' ? 'MDE' : l);
+    const counts = data.summary.vendors || {};
+    document.getElementById('total-queries').textContent = shown.reduce((n, v) => n + (counts[v] || 0), 0);
+    document.getElementById('techniques-covered').textContent =
+      Object.values(data.by_technique || {}).filter(t => (t.vendors || []).some(v => shown.includes(v))).length;
+    {% for id, label in siem_cards %}
+    document.getElementById('{{ id }}-count').textContent = counts[{{ ('MDE' if id == 'mde' else label) | tojson }}] || 0;
+    {% endfor %}
 
     // Coverage per technique ID, and per technique with its sub-techniques rolled up
     const byTech = data.by_technique || {};

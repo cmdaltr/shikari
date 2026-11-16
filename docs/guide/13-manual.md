@@ -5,9 +5,9 @@
 ## How to use it
 
 1. **Group Description** (optional): a line about the group or your hypothesis.
-2. **Technique**: choose one ATT&CK technique from the list.
-3. **Tactics**: the tactic or tactics it served.
-4. **Platforms**: where it ran (ATT&CK's platform names, five to a row: Windows, Linux, macOS, ESXi, IaaS and so on; PRE isn't offered, because it maps to no log source). Choosing a technique ticks its own ATT&CK platforms; untick the ones that don't apply. The detections only use log sources for the platforms left ticked, so a Linux-only entry gets no Windows event sources, and the results page warns when nothing in your technology stack (Profile) runs them.
+2. **Technique**: name it in your own words, since it's usually something ATT&CK doesn't describe yet. If it's a new procedure for a technique ATT&CK already has, start with its ID (`T1003.001: ...`; the field suggests them as you type) so Coverage counts it.
+3. **Tactics**: the tactic or tactics it served. At least one.
+4. **Platforms**: where it ran (ATT&CK's platform names, five to a row: Windows, Linux, macOS, ESXi, IaaS and so on; PRE isn't offered, because it maps to no log source). At least one; nothing is ticked for you. The detections only use log sources for the platforms left ticked, so a Linux-only entry gets no Windows event sources, and the results page warns when nothing in your technology stack (Profile) runs them.
 5. **Procedures**: the attack examples, the commands or behaviour seen, one per line. This is the description: it goes into each detection, and AI reads it when you use AI, but on its own it builds no query condition.
 6. **Indicators** (optional, but what the queries are built from): what the queries should match, one per line. Defanged input is refanged (`hxxp`, `[.]`, `(.)`, `[dot]`). Each line is classified into the indicator kinds a Hunt detection gets from ATT&CK's procedure examples:
 

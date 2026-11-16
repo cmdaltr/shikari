@@ -68,7 +68,7 @@ Most correlations are a pair of techniques. A **chain** joins three, shown with 
 
 ## X-SIEM pivots
 
-A correlation joins detections within one SIEM, because across SIEMs there's no single query — YARA-L, KQL, SPL and ES\|QL don't splice. **X-SIEM pivots** take the chains that span two or more of your SIEMs and lay them out as a sequence instead: each stage with the per-SIEM query that detects it, the entity fields to join the stages on (host, user, IP, process hash — named for each SIEM), and the time window. You run each stage where that telemetry actually lives and join on the keys, in a SOAR or by hand — it's a playbook, not a query. Built from the same chains, so no AI and nothing new to tune.
+A correlation joins detections within one SIEM, because across SIEMs there's no single query — YARA-L, KQL, SPL and ES\|QL don't splice. **X-SIEM pivots** take the chains that span two or more of your SIEMs and lay them out as a sequence instead: each stage with the per-SIEM query that detects it, the entity fields to join the stages on (host, user, IP, process hash — named for each SIEM), and the time window. You run each stage where that telemetry actually lives and join on the keys, in a SOAR or by hand — it's a playbook, not a query. Built from the same chains, so no AI and nothing new to tune. The section only appears with more than one SIEM ticked under Profile → Environment (none ticked counts as all four).
 
 ## Precision checks
 
