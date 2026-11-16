@@ -88,3 +88,14 @@ def test_navigator_without_attack_data_names_samarkands_platforms(monkeypatch):
     assert layer["versions"]["attack"] == "17"
     assert layer["filters"]["platforms"] == ["Containers", "ESXi", "IaaS", "Identity Provider", "Linux",
                                              "Network Devices", "Office Suite", "PRE", "SaaS", "Windows", "macOS"]
+
+
+def test_detection_files_for_reindexes_on_change(tmp_path):
+    from shikari.visualization.navigator import detection_files_for
+
+    (tmp_path / "a.yaml").write_text("technique_id: T1003.001\nquery: x\n")
+    (tmp_path / "b.yaml").write_text("technique_id: T1003\n")
+    assert detection_files_for(str(tmp_path), "T1003.001") == ["a.yaml"]
+    assert detection_files_for(str(tmp_path), "T1059") == []
+    (tmp_path / "c.yaml").write_text("technique_id: 'T1059'\n")
+    assert detection_files_for(str(tmp_path), "T1059") == ["c.yaml"]

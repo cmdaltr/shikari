@@ -185,64 +185,6 @@ class OpenAIProvider(LLMProvider):
         return round(cost, 6)
 
 
-class GeminiProvider(LLMProvider):
-    """Google Gemini provider"""
-
-    def __init__(self, api_key: Optional[str] = None, model: str = "gemini-2.0-flash-exp"):
-        try:
-            import google.generativeai as genai
-            genai.configure(api_key=api_key or os.getenv("GOOGLE_API_KEY"))
-            self.model_obj = genai.GenerativeModel(model)
-            self.model_name = model
-        except ImportError:
-            raise ImportError("Google Generative AI package not installed. Install with: pip install google-generativeai")
-
-    def generate(
-        self,
-        prompt: str,
-        system_prompt: Optional[str] = None,
-        temperature: float = 0.7,
-        max_tokens: int = 4096
-    ) -> LLMResponse:
-        # Combine system and user prompts for Gemini
-        full_prompt = prompt
-        if system_prompt:
-            full_prompt = f"{system_prompt}\n\n{prompt}"
-
-        response = self.model_obj.generate_content(
-            full_prompt,
-            generation_config={
-                "temperature": temperature,
-                "max_output_tokens": max_tokens
-            }
-        )
-
-        # Gemini doesn't provide token counts in response
-        # Rough estimate based on character count
-        tokens_used = len(full_prompt + response.text) // 4
-
-        return LLMResponse(
-            content=response.text,
-            model=self.model_name,
-            provider="google",
-            tokens_used=tokens_used,
-            cost_estimate=self.estimate_cost(tokens_used),
-            metadata={
-                "finish_reason": response.candidates[0].finish_reason.name if response.candidates else None
-            }
-        )
-
-    def get_provider_name(self) -> str:
-        return "google"
-
-    def estimate_cost(self, tokens: int) -> float:
-        # Gemini 2.0 Flash pricing: Free tier, then $0.075 per million input
-        input_tokens = tokens * 0.7
-        output_tokens = tokens * 0.3
-        cost = (input_tokens * 0.075 / 1_000_000) + (output_tokens * 0.30 / 1_000_000)
-        return round(cost, 6)
-
-
 class OllamaProvider(LLMProvider):
     """Local Ollama provider for on-premise LLMs"""
 
@@ -312,6 +254,7 @@ _CLOUD_RATES = {
     "deepseek": (0.27, 1.10),
     "qwen": (0.50, 1.50),
     "grok": (2.00, 10.00),
+    "google": (0.30, 2.50),  # Flash; free tier below its rate limits
     "ollama": (0.0, 0.0),
     "osaurus": (0.0, 0.0),
 }
@@ -416,6 +359,20 @@ class DeepSeekProvider(OpenAICompatibleProvider):
         )
 
 
+class GeminiProvider(OpenAICompatibleProvider):
+    """Google Gemini through its OpenAI-compatible endpoint (as the agents use it): no extra package,
+    where google-generativeai was never installed and has since been deprecated."""
+
+    def __init__(self, api_key: Optional[str] = None, model: str = "gemini-flash-latest", base_url: Optional[str] = None):
+        super().__init__(
+            provider_name="google",
+            base_url=base_url or "https://generativelanguage.googleapis.com/v1beta/openai",
+            api_key=api_key or os.getenv("GOOGLE_API_KEY"),
+            model=model,
+            requires_key=True,
+        )
+
+
 class QwenProvider(OpenAICompatibleProvider):
     """Alibaba Qwen cloud provider via DashScope's OpenAI-compatible mode."""
 
@@ -485,7 +442,7 @@ class LLMFactory:
         elif provider == "openai":
             return OpenAIProvider(api_key=api_key, model=model or "gpt-4o")
         elif provider == "google" or provider == "gemini":
-            return GeminiProvider(api_key=api_key, model=model or "gemini-2.0-flash-exp")
+            return GeminiProvider(api_key=api_key, model=model or "gemini-flash-latest")
         elif provider == "ollama":
             base_url = kwargs.get("base_url", "http://localhost:11434")
             return OllamaProvider(base_url=base_url, model=model or "llama2")

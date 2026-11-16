@@ -48,7 +48,7 @@ VIEW, SCALE = {"width": 1920, "height": 1080}, 1.0
 # case it joins the one before it with no black between — a pause and a scroll down the same page. GAP is
 # the quiet tail after a scene's narration (the pause, held on the page or on black); FADE is each dip.
 TITLE_SECONDS, END_SECONDS, GAP, FADE, FPS = 4.0, 5.0, 1.6, 0.5, 30
-OUTRO_GAP = 1.8  # silence between outro lines, so the sign-off isn't rushed
+OUTRO_GAP = 0.9  # silence between outro lines, so the sign-off isn't rushed
 # SEGMENT_PAUSE: the silence between a scene's segments (a blank line in its narration). LEAD: actions
 # fire this far ahead of the words they're pinned to, so a scroll has settled by the time it's said.
 SEGMENT_PAUSE, LEAD = 0.7, 0.25
@@ -293,6 +293,24 @@ class Recorder:
         self.cdp.send("Page.stopScreencast")
 
 
+# Ask Shikari's live scene: the AI key `link_ai` saves to the guide account, from --ai-key-file, so the
+# key never sits in the script. LINKED records what was linked, to unlink when the run ends.
+AI_KEY = {"value": ""}
+LINKED = []
+
+
+def save_keys(page, base, keys):
+    r = page.request.post(base + "/api/profile/apikeys", data=keys)
+    if not r.ok or not r.json().get("success"):
+        raise RuntimeError(f"saving API keys failed: {r.status} {r.text()[:200]}")
+
+
+def set_model(page, base, provider, model):
+    r = page.request.post(base + "/api/profile/ai-settings", data={"models": {provider: model}})
+    if not r.ok or not r.json().get("success"):
+        raise RuntimeError(f"setting the {provider} model failed: {r.status} {r.text()[:200]}")
+
+
 def act(page, base, action):
     kind, arg = next(iter(action.items()))
     if kind == "goto":
@@ -333,6 +351,17 @@ def act(page, base, action):
     elif kind == "eval":
         # A page's own function, for what a click can't reach cleanly (e.g. Results' toggleVendor)
         page.evaluate(f"() => {{ {arg} }}")
+    elif kind == "link_ai":
+        # Off screen, before the page that should show Ask Shikari live: it greys out until a model is linked.
+        # `provider:model` also sets that provider's model in Profile
+        provider, _, model = arg.partition(":")
+        save_keys(page, base, {provider: AI_KEY["value"]})
+        LINKED.append(provider)
+        if model:
+            set_model(page, base, provider, model)
+    elif kind == "wait_for":
+        # Hold until something appears (an AI answer), so the next action isn't early; the scene clock runs on
+        page.locator(arg).first.wait_for(timeout=60000)
 
 
 def main():
@@ -366,6 +395,8 @@ def main():
     parser.add_argument("--google-language", default="en-GB", help="Google TTS BCP-47 language code (default en-GB)")
     parser.add_argument("--google-key", default=os.environ.get("GOOGLE_TTS_API_KEY", ""),
                         help="Google Cloud API key (defaults to the GOOGLE_TTS_API_KEY env var)")
+    parser.add_argument("--ai-key-file", default=os.environ.get("SHIKARI_GUIDE_AI_KEY_FILE", ""),
+                        help="the AI key the Ask Shikari scene links (link_ai), unlinked when the run ends")
     parser.add_argument("--google-key-file", default=os.environ.get("GOOGLE_TTS_KEY_FILE", ""),
                         help="read the Google API key from this file instead (defaults to the GOOGLE_TTS_KEY_FILE env var)")
     parser.add_argument("--keep-work", action="store_true",
@@ -377,11 +408,15 @@ def main():
         args.google_key = Path(args.google_key_file).expanduser().read_text().strip()
     if args.tts == "google" and not args.google_key:
         parser.error("--tts google needs a key: set GOOGLE_TTS_API_KEY, --google-key, or --google-key-file")
+    if args.ai_key_file:
+        AI_KEY["value"] = Path(args.ai_key_file).expanduser().read_text().strip()
     email = os.environ.get("SHIKARI_GUIDE_EMAIL", "admin@shikari.app")
     password = os.environ.get("SHIKARI_GUIDE_PASSWORD", "BigGameHunter")
 
     spec = yaml.safe_load(SCRIPT.read_text())
     scenes = [s for s in spec["scenes"] if not args.only or s["id"] in args.only]
+    if any("link_ai" in a for s in scenes for a in s.get("actions", [])) and not AI_KEY["value"]:
+        parser.error("the Ask Shikari scene links an AI model: pass --ai-key-file (or leave it out with --only)")
     out = args.out.expanduser()
     out.mkdir(parents=True, exist_ok=True)
     sweep_stale_work()
@@ -541,6 +576,14 @@ def render(args, spec, scenes, out, work, email, password):
             print(f"  {s['id']:<18} at {s['start']:6.1f}s" + (f"  OVERRAN by {over:.1f}s" if over > 2 else ""))
         total = time.time() - t0
         rec.stop()
+        # Unlink what the run linked, so the next run's Ask Shikari starts greyed out again
+        if LINKED:
+            try:
+                save_keys(page, args.base, {"_loaded": True, **{p: "" for p in LINKED}})
+                for p in LINKED:
+                    set_model(page, args.base, p, "")
+            except Exception as e:
+                print(f"    Unlink the AI key in Profile by hand: {e}")
         browser.close()
 
     # Chrome sends a frame whenever the page changes; ffmpeg wants a steady 30 a second, each the latest

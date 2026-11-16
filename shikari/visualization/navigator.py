@@ -120,19 +120,28 @@ def _detection_stamp(directory: str):
     return directory, len(entries), max((e.stat().st_mtime for e in entries), default=0)
 
 
+_files_cache: Dict[str, object] = {}
+
+
 def detection_files_for(directory: str, technique_id: str) -> List[str]:
-    """Detection files mapped to technique_id."""
-    pattern = re.compile(rf"^technique_id: *{re.escape(technique_id)}\s*$", re.M)
-    out = []
-    for entry in sorted(os.scandir(directory), key=lambda e: e.name) if os.path.isdir(directory) else []:
-        if entry.name.endswith(".yaml"):
+    """Detection files mapped to technique_id. Assessments ask once per test case (hundreds), so the
+    {technique ID: files} index is built once per change to the folder rather than read each time."""
+    stamp = _detection_stamp(directory)
+    if _files_cache.get("stamp") != stamp:
+        index: Dict[str, List[str]] = {}
+        for entry in sorted(os.scandir(directory), key=lambda e: e.name) if stamp[1] else []:
+            if not entry.name.endswith(".yaml"):
+                continue
             try:
                 with open(entry.path, encoding="utf-8") as fh:
-                    if pattern.search(fh.read()):
-                        out.append(entry.name)
+                    m = _TID.search(fh.read())
             except OSError:
-                pass
-    return out
+                continue
+            if m:
+                index.setdefault(m.group(1).strip("'\""), []).append(entry.name)
+        _files_cache.clear()
+        _files_cache.update(stamp=stamp, index=index)
+    return list(_files_cache["index"].get(technique_id, []))
 
 
 def detections_by_tactic(directory: str) -> Dict[str, Dict[str, Dict]]:

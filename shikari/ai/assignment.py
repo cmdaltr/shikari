@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 CLOUD_PROVIDERS = {
     "anthropic": ("Anthropic Claude", "claude-sonnet-5-5"),
     "openai": ("OpenAI", "gpt-4o"),
-    "google": ("Google Gemini", "gemini-2.0-flash"),
+    "google": ("Google Gemini", "gemini-flash-latest"),
     "deepseek": ("DeepSeek", "deepseek-chat"),
     "qwen": ("Qwen (DashScope)", "qwen-plus"),
     "grok": ("Grok (xAI)", "grok-2-latest"),

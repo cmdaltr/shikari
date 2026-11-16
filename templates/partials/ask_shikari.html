@@ -70,6 +70,10 @@
   .aap-msg { max-width: 92%; padding: 9px 13px; border-radius: 10px; font-size: 1em; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
   .aap-msg.user { align-self: flex-end; background: #6366f1; color: #fff; border-bottom-right-radius: 3px; }
   .aap-msg.shikari { align-self: flex-start; background: #313244; color: #cdd6f4; border-bottom-left-radius: 3px; }
+  .aap-msg.shikari code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .9em; background: #1e1e2e; padding: 1px 5px; border-radius: 4px; }
+  .aap-msg.shikari pre { margin: 6px 0; padding: 10px 12px; background: #1e1e2e; border-radius: 8px; overflow-x: auto; white-space: pre; }
+  .aap-msg.shikari pre code { padding: 0; background: none; }
+  .aap-msg.shikari .aap-h { display: block; font-weight: 700; color: #f5e0dc; }
   .aap-msg.error { align-self: flex-start; background: #3d1a1a; color: #f38ba8; border-bottom-left-radius: 3px; }
   .aap-typing { align-self: flex-start; color: #6c7086; font-size: .936em; padding: 4px 8px; }
   .aap-input-row { display: flex; gap: 8px; padding: 10px 12px 12px; border-top: 1px solid #3d3d5c; flex-shrink: 0; background: #181825; }
@@ -101,7 +105,7 @@
     <button id="aap-close" aria-label="Close">&#10005;</button>
   </div>
   <div class="aap-messages" id="aap-messages">
-    <div class="aap-msg shikari">Greetings. Ask me anything about threat detection — techniques, SIEM queries, threat groups, or anything in your generated detections.</div>
+    <div class="aap-msg shikari">Ask me about Shikari, ATT&amp;CK techniques, threat groups or SIEM queries.</div>
   </div>
   <div class="aap-provider" id="aap-provider"></div>
   <div class="aap-input-row">
@@ -172,6 +176,21 @@
     return d;
   }
 
+  // The model answers in Markdown: escape it all, then render code blocks, inline code, bold and
+  // headings, so nothing the model writes becomes markup
+  function esc(t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function inline(t) {
+    return esc(t).replace(/`([^`\n]+)`/g, '<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  }
+  function renderAnswer(md) {
+    return md.split(/```[\w-]*\n?/).map((part, i) => i % 2
+      ? `<pre><code>${esc(part.replace(/\n$/, ''))}</code></pre>`
+      : part.split('\n').map(line => {
+          const h = line.match(/^#{1,6}\s+(.*)$/);
+          return h ? `<span class="aap-h">${inline(h[1])}</span>` : inline(line);
+        }).join('\n')).join('');
+  }
+
   async function doAsk() {
     const q = input.value.trim();
     if (!q) return;
@@ -198,7 +217,10 @@
         addMsg('Error: ' + (err.detail || res.statusText), 'error');
       } else {
         const data = await res.json();
-        addMsg(data.answer, 'shikari');
+        const answer = addMsg('', 'shikari');
+        answer.innerHTML = renderAnswer(data.answer || '');
+        // Start at the top of the answer, not its end: a query and its explanation read from the top
+        msgs.scrollTop = answer.offsetTop - msgs.offsetTop - 8;
         if (data.provider) provEl.textContent = 'Powered by ' + data.provider;
       }
     } catch (e) {

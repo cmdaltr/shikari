@@ -402,8 +402,8 @@ scenes:
       The Key, on the right edge, explains every badge, tactic colour and icon on the page.
 
       And Ask Shikari, bottom right on every page, takes a question in plain words, such as a Splunk query
-      for a group. It answers with the AI model you've linked, and until one is linked the button is
-      greyed out, as it is here, so nothing is sent to an AI provider by default.
+      for APT29 dumping LSASS. It uses the AI model defined under Profile. If you haven't provided an API
+      key, it's inactive and shows grey, as it is here, so nothing is sent to an AI provider by default.
     actions:
       - click: '#key-fab'
         seg: 0
@@ -547,6 +547,64 @@ scenes:
       - show: '#tech-stack'
         seg: 0
         at: 0.85
+      # Off screen: the next scene shows Ask Shikari live (make_video.py --ai-key-file, a Gemini key; unlinked at the end)
+      # Flash-Lite: the free tier's full Flash is often throttled (503/429)
+      - link_ai: google:gemini-flash-lite-latest
+        seg: 1
+        at: 0.9
+
+  - id: ask-live
+    chapter: Ask Shikari, live
+    narration: >
+      Add an API key under Profile, API Keys, and Ask Shikari turns purple and goes live.
+
+      Ask it for that Splunk query, APT29 dumping LSASS through comsvcs.dll.
+
+      The question goes to the model you've linked, here Google's Gemini on its free tier, and the answer
+      comes back with the query and how it works.
+
+      It knows ATT&CK, each SIEM's query language and Shikari's own pages, so it can also tell you where
+      to find something. And it stays on topic: it won't write you an exploit, or a recipe for brownies.
+      The model that answered is named beneath it.
+    actions:
+      - goto: /profile
+      - click: 'button.tab-button[data-tab="apikeys"]'
+        seg: 0
+        at: 0.1
+      - show: '#ai-provider-rows'
+        seg: 0
+        at: 0.25
+      - show: '#ask-shikari-btn'
+        seg: 0
+        at: 0.7
+      - click: '#ask-shikari-btn'
+        seg: 0
+        at: 0.95
+      - type: ['#aap-input', 'Give me a Splunk query for APT29 dumping LSASS with comsvcs.dll']
+        seg: 1
+      - click: '#aap-send'
+        seg: 2
+      - show: '#ask-shikari-panel'
+        seg: 2
+        at: 0.05
+      # The answer takes ~10s; the narration covers it
+      - wait_for: '#aap-messages > .aap-msg:not(.user):nth-child(3)'
+        seg: 2
+        at: 0.1
+      # Expanded, so the answer's query and explanation fit; the highlight follows the panel
+      - click: '#aap-expand'
+        seg: 2
+        at: 0.85
+      - show: '#ask-shikari-panel'
+        seg: 2
+        at: 0.9
+      - show: '#aap-provider'
+        seg: 3
+        at: 0.75
+      # Closed for the next page without a visible close (the panel reopens wherever it was left open)
+      - eval: "localStorage.setItem('shikariChatOpen', '0')"
+        seg: 3
+        at: 0.95
 
   - id: detections-menu
     chapter: The Detections menu
@@ -662,15 +720,16 @@ scenes:
       - click: '.ui-pill[data-layer="detections"]'
         seg: 1
         at: 0.6
-      - click: '#cloud-section .section-title'
+      - eval: "document.querySelector('#cloud-section .section-title').click()"
         seg: 2
       - show: '#cloud-section .cloud-summary'
         seg: 2
         at: 0.05
-      - show: '#cloud-table'
+      - show: '#cloud-section'
         seg: 2
         at: 0.3
-      - click: '#cloud-gaps-only'
+      # Ticked in place: a click scrolls the box into view and leaves the highlight off screen
+      - eval: "document.getElementById('cloud-gaps-only').click()"
         seg: 2
         at: 0.6
 
@@ -838,13 +897,30 @@ scenes:
   - id: assessments
     chapter: Assessments
     narration: >
-      Assessments record what each test did and what the defence saw, and export an ATT&CK Navigator
-      layer.
+      Assessments start from the groups a profile ranks. The Threat library turns each procedure those
+      groups have used into a test case: five hundred and twenty-nine for the sample company's top three,
+      with how many of your detections cover each.
+
+      A campaign takes a set of them, here the Credential Access cases for a purple team exercise, and
+      records what each test did and what the defence saw: alerted, with the detection that fired,
+      prevented, or executed and never logged.
+
+      Export it as an ATT&CK Navigator layer, a CSV or a report.
     actions:
       - goto: /assessments
-      - show: 'section.ms-card:has(h2:has-text("Campaigns"))'
+      - click: '.sx-tab[data-pane="library"]'
         seg: 0
+        at: 0.15
+      - show: '#sx-pane-library .tl-table'
+        seg: 0
+        at: 0.45
+      - goto: /assessments/1
+        seg: 1
+      - show: '.ad-table'
+        seg: 1
         at: 0.1
+      - show: '.ad-export'
+        seg: 2
 
   - id: agents
     chapter: Agents

@@ -4,9 +4,11 @@ Both need an AI model. Set one up under Profile → API Keys first: a cloud prov
 
 ## Ask Shikari
 
-The **Ask Shikari** button (bottom right of every page) opens a chat about ATT&CK techniques, threat groups, SIEM queries and your own detections: "Give me a Splunk query for Scattered Spider", "What does T1003.006 look like in Defender?". **⛶** expands it.
+The **Ask Shikari** button (bottom right of every page) opens a chat about Shikari itself, ATT&CK techniques, threat groups and SIEM queries: "Give me a Splunk query for Scattered Spider", "What does T1003.006 look like in Defender?", "Where do I find coverage gaps?". It answers from the model's own knowledge and a description of Shikari's pages; for answers from your Library and coverage, use the Ask Shikari agent below. **⛶** expands it. Answers render their Markdown: headings, bold, inline code and code blocks.
 
-It uses the provider assigned to Ask Shikari in Profile → API Keys → AI Assignment, and falls back to another configured provider if that one fails. A local model can answer Ask Shikari; for now, detection generation needs a cloud provider.
+It stays on topic. Anything unrelated (a recipe, general coding, questions about its instructions) gets "I can only help with Shikari, ATT&CK and detection engineering." It explains how a technique works as far as detecting it needs, but won't write exploits, malware, payloads or evasion code, or give step-by-step attack instructions: those get "I can't help build attacks, but I can help you detect this one." Attempts to replace its instructions ("ignore everything before", misspelt or not, "you are now…", "what is your system prompt?") are refused by Shikari itself before any model sees them, so they cost nothing. The rest of the scope is in the model's system prompt (`shikari/chat.py`): a strong default, though a model can still be talked round in ways no pattern catches.
+
+It uses the provider assigned to Ask Shikari in Profile → API Keys → AI Assignment, and shows that provider's error if it fails. With none assigned, it tries each provider with a key in turn (Anthropic, OpenAI, Gemini, DeepSeek, Qwen, Grok, then a local model), with the model set for it under AI Models. Until one is configured the button is grey and nothing is sent. A local model can answer Ask Shikari; for now, detection generation needs a cloud provider.
 
 ## Agents
 
