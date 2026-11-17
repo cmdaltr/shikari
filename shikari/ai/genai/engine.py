@@ -29,7 +29,6 @@ _LOCKS_LOCK = threading.Lock()  # Lock for the locks dictionary itself
 _HAS_ADVANCED_PARSING = False
 _HAS_SEMANTIC_ANALYSIS = False
 _HAS_QUERY_VALIDATION = False
-_HAS_AI_GENERATORS = False
 
 # Try to import the parser modules (from shikari/parsers/ - one level up from genai/)
 try:
@@ -71,27 +70,17 @@ try:
 except ImportError as e:
     print(f"Semantic analysis module not available - will skip semantic analysis ({e})")
 
-# Optional local-LLM support. We attempt to import known local backends but
-# degrade gracefully to the heuristic generator if none are available.
-_HAS_LLAMA = False
-_HAS_TRANSFORMERS = False
-
-# Use importlib to check for package availability before attempting import
-if importlib.util.find_spec("llama_cpp"):
-    try:
-        import llama_cpp  # type: ignore
-
-        _HAS_LLAMA = True
-    except Exception:
-        _HAS_LLAMA = False
-
-if importlib.util.find_spec("transformers"):
-    try:
-        import transformers  # type: ignore
-
-        _HAS_TRANSFORMERS = True
-    except Exception:
-        _HAS_TRANSFORMERS = False
+def _correlation_mode(requested: str) -> str:
+    """heuristic, advanced_parsing or semantic: the requested mode where its parsers are
+    installed; an AI mode is treated as semantic"""
+    mode = (requested or "heuristic").lower()
+    if mode in ("ai_generators", "local_llm"):
+        mode = "semantic"
+    if mode == "semantic" and not _HAS_SEMANTIC_ANALYSIS:
+        mode = "advanced_parsing"
+    if mode == "advanced_parsing" and not _HAS_ADVANCED_PARSING:
+        mode = "heuristic"
+    return mode if mode in ("advanced_parsing", "semantic") else "heuristic"
 
 
 def _list_yaml_files(group_name: str, yaml_dir: str) -> List[str]:
@@ -389,28 +378,9 @@ def _combine_queries(vendor: str, query_a: str, query_b: str, a: str = None, b: 
         else:
             return _collapse_double_newlines(final_query)
 
-    # Non-heuristic modes: may use AI/advanced/semantic if available
-    ai_combined = None
+    # Advanced and semantic modes: the query parsers, where they're installed
     advanced_combined = None
     semantic_strategy = None
-
-    # Lazy-import AI generators only when explicitly requested and available
-    if _GEN_MODE in ("ai_generators", "local_llm"):
-        try:
-            from .models import get_generator, QueryGeneratorBase  # type: ignore
-
-            _local_ai_available = True
-        except Exception:
-            _local_ai_available = False
-        if _local_ai_available:
-            try:
-                ai_method = os.environ.get("GENAI_MODEL", "local").lower()
-                generator = get_generator(ai_method)
-                ai_result = generator.combine_queries(query_a, query_b, detected_vendor)
-                if isinstance(ai_result, dict) and "combined_query" in ai_result:
-                    ai_combined = ai_result.get("combined_query")
-            except Exception as e:
-                print(f"AI-based query generation failed: {e}")
 
     # Only attempt advanced parsers if in advanced mode and inputs are non-empty strings
     if _HAS_ADVANCED_PARSING and _GEN_MODE in ("advanced_parsing", "semantic"):
@@ -431,7 +401,7 @@ def _combine_queries(vendor: str, query_a: str, query_b: str, a: str = None, b: 
         except Exception as e:
             print(f"Semantic analysis failed: {e}")
 
-    # Validate advanced/AI outputs if validators available
+    # Validate the parser's output if validators are available
     def _valid(vendor_name: str, q: Optional[str]) -> bool:
         if not q or not isinstance(q, str):
             return False
@@ -452,10 +422,7 @@ def _combine_queries(vendor: str, query_a: str, query_b: str, a: str = None, b: 
     final_query = None
     generation_method = ""
 
-    if ai_combined and _valid(detected_vendor, ai_combined):
-        final_query = ai_combined
-        generation_method = "AI-assisted"
-    elif advanced_combined and _valid(detected_vendor, advanced_combined):
+    if advanced_combined and _valid(detected_vendor, advanced_combined):
         final_query = advanced_combined
         generation_method = "Parser-based"
     else:
@@ -1153,43 +1120,12 @@ def generate_correlations(group_name: str, yaml_dir: str, progress_prefix: str =
              "processed": 0, "total_pairs": 0},
         )
 
-        # If configured to use a local model, attempt it and gracefully fallback
-        mode = os.environ.get("GENAI_MODE", "heuristic").lower()
-        # print(f"GenAI: Using mode '{mode}'")
-
-        # Track available capabilities for logging only
-        available_modes = ["heuristic"]
-        if _HAS_ADVANCED_PARSING:
-            available_modes.append("advanced_parsing")
-        if _HAS_SEMANTIC_ANALYSIS:
-            available_modes.append("semantic")
-        if _HAS_AI_GENERATORS:
-            available_modes.append("ai_generators")
-        if _HAS_LLAMA or _HAS_TRANSFORMERS:
-            available_modes.append("local_llm")
-        # print(f"GenAI: Available capability modes: {', '.join(available_modes)}")
-
-        # Set global generation mode to control downstream behavior
+        # Correlation never calls a model: an AI hunt (GENAI_MODE ai_generators or local_llm)
+        # uses AI for its detections, and its correlations are paired as any other hunt's
         global _GEN_MODE
-        _GEN_MODE = mode if mode in available_modes else "heuristic"
+        _GEN_MODE = _correlation_mode(os.environ.get("GENAI_MODE", "heuristic"))
 
-        # Only run local LLM path if explicitly requested and supported
-        if _GEN_MODE == "local_llm" and (_HAS_LLAMA or _HAS_TRANSFORMERS):
-            try:
-                results = _generate_with_local_llm(group_name, files)
-                write_progress(
-                    group_name,
-                    {
-                        "status": "genai_complete",
-                        "vendor_count": len(results.get("vendor_correlations", [])),
-                        "cross_count": len(results.get("cross_vendor_correlations", [])),
-                    },
-                )
-                return results
-            except Exception as e:
-                print(f"GenAI: Local LLM generation failed: {e}, falling back to heuristic")
-                _GEN_MODE = "heuristic"
-        # Default case - run the heuristic generation
+        # Pair and combine the group's detections (_GEN_MODE picks how they're joined)
         results = _generate_with_heuristic(group_name, files)
         write_progress(
             group_name,

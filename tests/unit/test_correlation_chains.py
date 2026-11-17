@@ -4,6 +4,8 @@ pairs. Every pair stands on its own; a chain needs A-B and B-C to be pairs, and 
 technique to bring a tactic the other two don't.
 """
 
+import pytest
+
 from shikari.ai.genai import engine
 from shikari.build import correlation_files
 from shikari.build.udm import build_chain
@@ -244,3 +246,13 @@ def test_sub_techniques_expanded_from_one_parent_are_not_paired():
     assert not engine._expanded_siblings(pair("LSASSMemory", "DCSync"), info, {"T1003", "T1003.001"})
     # A report or CVE run has no attribution
     assert not engine._expanded_siblings(pair("HTMLSmuggling", "Steganography"), info, None)
+
+
+@pytest.mark.parametrize("requested,mode", [
+    ("ai_generators", "semantic"), ("local_llm", "semantic"), ("semantic", "semantic"),
+    ("advanced_parsing", "advanced_parsing"), ("heuristic", "heuristic"), ("", "heuristic"),
+    ("nonsense", "heuristic"),
+])
+def test_an_ai_hunts_correlations_get_semantic_pairing(requested, mode):
+    # AI writes a hunt's detections, never its correlations; the AI modes used to fall to heuristic
+    assert engine._correlation_mode(requested) == mode
