@@ -11,11 +11,11 @@ import argparse
 import json
 import sys
 
-from shikari import licensing
+from shikari import licence
 
 
 def _show() -> int:
-    s = licensing.status()
+    s = licence.status()
     if not s["present"]:
         print("No licence installed — Free edition.")
         return 0
@@ -56,7 +56,7 @@ def _install(path: str, accepted_by: str) -> int:
     """From the server, for when no admin can sign in to do it. Recorded like an admin's install, with
     the name given for whoever accepted the terms."""
     if not (accepted_by or "").strip():
-        version = licensing.terms()[0]
+        version = licence.terms()[0]
         print(f"Installing a licence accepts the Shikari Commercial Licence, version {version}, on the "
               "licensee's behalf. Read COMMERCIAL-LICENSE.md, then run this again with "
               '--accept-terms "Your Name <you@example.org>".', file=sys.stderr)
@@ -66,11 +66,11 @@ def _install(path: str, accepted_by: str) -> int:
     except OSError as exc:
         print(f"Could not read {path}: {exc}", file=sys.stderr)
         return 2
-    ok, message = licensing.install(text, accepted_by_name=accepted_by)
+    ok, message = licence.install(text, accepted_by_name=accepted_by)
     print(message, file=sys.stdout if ok else sys.stderr)
     if ok:
         from shikari.database.audit import EVENT_LICENCE_INSTALLED
-        s = licensing.status()
+        s = licence.status()
         _audit(EVENT_LICENCE_INSTALLED, {
             "edition": s["edition"], "licensee": s["licensee"], "seats": s["seats"],
             "licence_id": s["licence_id"], "expires": s["expires"],
@@ -81,8 +81,8 @@ def _install(path: str, accepted_by: str) -> int:
 
 def _remove() -> int:
     from shikari.database.audit import EVENT_LICENCE_REMOVED
-    had = licensing.status()
-    licensing.remove()
+    had = licence.status()
+    licence.remove()
     if had["present"]:
         _audit(EVENT_LICENCE_REMOVED, {"was": had["edition"], "licensee": had["licensee"]})
     print("Licence removed — Free edition. Nobody has been deactivated.")

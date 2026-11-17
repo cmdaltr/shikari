@@ -65,7 +65,7 @@ STATE_FILE = RUN_DIR / "service.json"
 SETTINGS_FILE = RUN_DIR / "settings.json"
 LOG_ROTATE_BYTES = 20 * 1024 * 1024
 
-DEFAULTS = {"host": "0.0.0.0", "port": 32453, "reload": True, "ollama": True, "ollama_models": ""}
+DEFAULTS = {"host": "127.0.0.1", "port": 32453, "reload": True, "ollama": True, "ollama_models": ""}
 OLLAMA_URL = "http://127.0.0.1:11434"
 # Ollama's default 4k context silently truncates agent conversations (a single tool result can be
 # 5k tokens); 16k costs ~2 GB more memory per loaded 8B model
@@ -697,7 +697,7 @@ def main(argv=None):
 
     def server_options(p):
         p.add_argument("--port", type=int, help="port (default 32453; remembered)")
-        p.add_argument("--host", help="bind address (default 0.0.0.0; remembered)")
+        p.add_argument("--host", help="bind address (default 127.0.0.1, this machine only; 0.0.0.0 for the network; remembered)")
         p.add_argument("--reload", dest="reload", action="store_true", default=None, help="restart on code changes (default)")
         p.add_argument("--no-reload", dest="reload", action="store_false", help="don't restart on code changes")
         p.add_argument("--ollama", dest="ollama", action="store_true", default=None, help="start and supervise Ollama if it isn't running (default)")

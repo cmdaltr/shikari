@@ -6,7 +6,7 @@ import requests
 
 
 class TestLogin:
-    """POST /login and GET /logout."""
+    """POST /login and POST /logout."""
 
     def test_login_page_loads(self, api, ensure_running):
         r = api.get("/login")
@@ -39,8 +39,17 @@ class TestLogin:
         fresh.close()
 
     def test_logout(self, api, ensure_running):
-        r = api.get("/logout", allow_redirects=False)
-        assert r.status_code in [200, 302, 303]
+        # Its own session: logging out the shared one would sign every later test out
+        from tests.live_auth import sign_in
+
+        fresh = requests.Session()
+        assert sign_in(fresh, api.url)
+        assert fresh.get(f"{api.url}/logout", allow_redirects=False, timeout=30).status_code == 200
+        assert fresh.get(f"{api.url}/library", allow_redirects=False, timeout=30).status_code == 200
+        r = fresh.post(f"{api.url}/logout", allow_redirects=False, timeout=30)
+        assert r.status_code == 303
+        assert fresh.get(f"{api.url}/library", allow_redirects=False, timeout=30).status_code == 303
+        fresh.close()
 
 
 class TestRegistration:

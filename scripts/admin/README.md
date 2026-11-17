@@ -18,8 +18,8 @@ purpose and expose no secret:
 
 - The licence format is signed, not encrypted. Reading and checking a line is `samarkand.licence`
   (the suite's shared package); the signing primitive (`sign()`) in the shipped
-  `shikari/licensing.py` signs samarkand's `head_of` and joins it with `line_of`, so the two can't
-  drift, and a round-trip test (`tests/test_licensing.py`) proves they stay compatible. These
+  `shikari/licence.py` signs samarkand's `head_of` and joins it with `line_of`, so the two can't
+  drift, and a round-trip test (`tests/test_licence.py`) proves they stay compatible. These
   scripts are thin CLI wrappers over that function.
 - The only secret is the **private key**, which never lives in the repo. It is read from
   `SHIKARI_LICENCE_KEY` (a path or the key itself), defaulting to `~/.config/shikari/licence-signing-key.pem`

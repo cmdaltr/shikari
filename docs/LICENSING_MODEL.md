@@ -109,7 +109,7 @@ product's `PUBLIC_KEYS` entry.
 |---|---|---|
 | Ostraka | `~/.config/ostraka/licence-signing.key` | `backend/ostraka/licence.py`: `cf9e0496…40cb1f` |
 | Rowanholt | `~/.config/rowanholt/licence-signing.key` | `src/web/backend/licence.py`: `4a048df1…f47f6d` |
-| Shikari | `~/.config/shikari/licence-signing-key.pem` | `shikari/licensing.py`: `e499f52e…ecb282` |
+| Shikari | `~/.config/shikari/licence-signing-key.pem` | `shikari/licence.py`: `e499f52e…ecb282` |
 
 ### Behaviour
 
@@ -148,7 +148,7 @@ engagement, as Ostraka's attaches to an incident).
 
 | Feature id | Free | Pro | Services | Gated at |
 |---|---|---|---|---|
-| (seats) | 2 (for example an operator and a reviewer) | Licence | Licence | `licensing.can_add_user`, at account creation: public registration and admin create-user |
+| (seats) | 2 (for example an operator and a reviewer) | Licence | Licence | `licence.can_add_user`, at account creation: public registration and admin create-user |
 | `report-branding` | — | One brand for the installation | Yes | `reports/theme.py:active_theme()`, when a report is drawn |
 | `brand-library` | — | — | A brand per client, chosen per assessment | `reports/theme.py:theme_for_assessment()`, when an assessment report is drawn |
 | `automation` | — | Yes | Yes | `webhooks.py` — `emit()` / `deliver()`, when a webhook would be sent |

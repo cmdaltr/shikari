@@ -65,14 +65,14 @@ def test_only_webhooks_that_want_the_event_get_it(home, monkeypatch):
 def test_licence_gates_webhook_delivery_but_not_registration(tmp_path, monkeypatch):
     """`automation` is checked at the send: a Free install keeps its webhook, it just doesn't fire;
     a Pro install sends. The webhook survives a lapse back to Free (docs/LICENSING_MODEL.md)."""
-    from shikari import licensing
+    from shikari import licence
 
     monkeypatch.setattr(webhooks.paths, "DATA", tmp_path)  # the real _automation_on runs here
     posted = []
     monkeypatch.setattr(webhooks, "_post", lambda *a, **k: posted.append(1) or 204)
 
     # Free: registering is open, but the send is held and says why.
-    monkeypatch.setattr(licensing, "has_feature", lambda f: False)
+    monkeypatch.setattr(licence, "has_feature", lambda f: False)
     hook = webhooks.add("https://hooks.example/x", ["run.completed"])
     free = webhooks.deliver(hook, "run.completed", {"run": "APT29"})
     assert free.get("skipped") and not free["ok"] and not posted
@@ -80,13 +80,13 @@ def test_licence_gates_webhook_delivery_but_not_registration(tmp_path, monkeypat
     assert webhooks.licence_note().startswith("Webhooks need Pro or Services")
 
     # Pro: the same, still-registered webhook now fires.
-    monkeypatch.setattr(licensing, "has_feature", lambda f: f == licensing.FEATURE_AUTOMATION)
+    monkeypatch.setattr(licence, "has_feature", lambda f: f == licence.FEATURE_AUTOMATION)
     assert webhooks._load() and webhooks._load()[0]["url"] == "https://hooks.example/x"
     assert webhooks.deliver(hook, "run.completed", {"run": "APT29"})["ok"] and posted
     assert webhooks.licence_note() == ""
 
     # Lapsed back to Free: nothing deleted, delivery held again.
-    monkeypatch.setattr(licensing, "has_feature", lambda f: False)
+    monkeypatch.setattr(licence, "has_feature", lambda f: False)
     assert webhooks._load()[0]["url"] == "https://hooks.example/x"
     assert webhooks.deliver(hook, "run.completed", {})["skipped"]
 

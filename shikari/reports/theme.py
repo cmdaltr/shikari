@@ -184,8 +184,8 @@ def active_theme() -> ReportTheme:
     # Report branding is a commercial feature: without a valid licence, reports stay stock
     # however the profile is set. The check is here, at the point of use, so it can't be
     # sidestepped by editing the stored files.
-    from shikari import licensing
-    if not licensing.has_feature(licensing.FEATURE_REPORT_BRANDING):
+    from shikari import licence
+    if not licence.has_feature(licence.FEATURE_REPORT_BRANDING):
         return DEFAULT
     colours = prof.get("colours", {})
     resolved = {name: (hex_to_rgb(colours.get(name, "")) or default) for name, _, default in SLOTS}
@@ -204,8 +204,8 @@ def theme_for_assessment(brand_id: Optional[str]) -> ReportTheme:
     the installation brand (``active_theme``), then to the stock Shikari look. The licence is checked
     here, at the render, so a saved choice can't get around it, and losing the licence loses the use
     of the brand, not the choice."""
-    from shikari import licensing
-    if brand_id and licensing.has_feature(licensing.FEATURE_BRAND_LIBRARY):
+    from shikari import licence
+    if brand_id and licence.has_feature(licence.FEATURE_BRAND_LIBRARY):
         from shikari.reports import brand_library
         brand = brand_library.get_brand(brand_id)
         if brand is not None:

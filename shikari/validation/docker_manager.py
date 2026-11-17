@@ -17,7 +17,7 @@ import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import requests
 from requests.adapters import HTTPAdapter
@@ -36,7 +36,7 @@ COMPOSE_CONTAINERS = {
     },
     "elastic": {
         "container_name": "shikari-elastic",
-        "ports": {"api": 9200, "transport": 9300},
+        "ports": {"api": 9200},
         "healthcheck_port": 9200,
         "api_port": 9200,
     },
@@ -99,17 +99,20 @@ class DockerSIEMManager:
             "memory_limit": "2g",
         },
         "elastic": {
-            "image": "docker.elastic.co/elasticsearch/elasticsearch:8.11.0",
-            "ports": {"9200": "9200", "9300": "9300"},
+            # ES|QL (GA from 8.14) is what shikari/build/elastic.py writes
+            "image": "docker.elastic.co/elasticsearch/elasticsearch:9.4.0",
+            "ports": {"9200": "9200"},
             "environment": {
                 "discovery.type": "single-node",
-                "xpack.security.enabled": "false",
-                "ES_JAVA_OPTS": "-Xms512m -Xmx512m",
+                "xpack.security.enabled": "true",
+                "xpack.security.http.ssl.enabled": "false",
+                "ELASTIC_PASSWORD": "Validation123!",
+                "ES_JAVA_OPTS": "-Xms1g -Xmx1g",
             },
             "healthcheck_port": 9200,
             "api_port": 9200,
-            "startup_timeout": 120,
-            "memory_limit": "1g",
+            "startup_timeout": 180,
+            "memory_limit": "2g",
         },
         "secops": {
             "image": "shikari-secops-simulator:latest",
@@ -504,6 +507,10 @@ if __name__ == "__main__":
                         verify=False,
                         timeout=5
                     )
+                elif instance.vendor == "elastic":
+                    response = session.get(health_url, timeout=5,
+                                           auth=(instance.credentials.get("username", "elastic"),
+                                                 instance.credentials.get("password", "")))
                 else:
                     response = session.get(health_url, timeout=5)
 
@@ -531,7 +538,7 @@ if __name__ == "__main__":
                 "hec_token": "validation-hec-token",
             }
         elif vendor == "elastic":
-            return {"username": "elastic", "password": ""}
+            return {"username": "elastic", "password": "Validation123!"}
         return {}
 
     def stop_siem(self, session_id: str, vendor: Optional[str] = None) -> None:
@@ -768,26 +775,47 @@ if __name__ == "__main__":
             return False
 
     def _ingest_elastic(self, instance: SIEMInstance, events: List[Dict]) -> bool:
-        """Ingest events into Elasticsearch via Bulk API"""
-        bulk_url = f"{instance.get_api_url()}/validation-events/_bulk"
-
-        # Build bulk request body
-        bulk_body = ""
+        """Index events into the logs-endpoint.events.* data streams the ES|QL detections read. An ECS
+        document names its own stream (data_stream); anything else goes to the process stream."""
+        lines = []
         for event in events:
-            bulk_body += json.dumps({"index": {}}) + "\n"
-            bulk_body += json.dumps(event) + "\n"
+            ds = event.get("data_stream") or {}
+            stream = (f"logs-{ds['dataset']}-{ds.get('namespace', 'default')}" if ds.get("dataset")
+                      else "logs-endpoint.events.process-validation")
+            doc = {"@timestamp": datetime.now(timezone.utc).isoformat(), **event}
+            lines.append(json.dumps({"create": {"_index": stream}}) + "\n" + json.dumps(doc) + "\n")
+        return self._bulk_elastic(instance, ["".join(lines)])
 
-        headers = {"Content-Type": "application/x-ndjson"}
-
+    def _bulk_elastic(self, instance: SIEMInstance, bodies: List[str]) -> bool:
+        """POST _bulk bodies, refreshed so a query straight after sees them; False on any item error"""
+        auth = (instance.credentials.get("username", "elastic"), instance.credentials.get("password", ""))
         try:
-            response = requests.post(bulk_url, headers=headers, data=bulk_body, timeout=30)
-            if response.status_code not in (200, 201):
-                logger.error(f"Elasticsearch bulk error: {response.text}")
-                return False
+            for body in bodies:
+                response = requests.post(f"{instance.get_api_url()}/_bulk", params={"refresh": "true"},
+                                         headers={"Content-Type": "application/x-ndjson"}, data=body.encode(),
+                                         auth=auth, timeout=120)
+                if response.status_code not in (200, 201) or response.json().get("errors"):
+                    logger.error(f"Elasticsearch bulk error: {response.text[:500]}")
+                    return False
             return True
         except requests.exceptions.RequestException as e:
             logger.error(f"Elasticsearch ingestion error: {e}")
             return False
+
+    def ingest_lab_run(self, session_id: str, run_dir: str) -> int:
+        """Index a recorded lab run (data/telemetry/lab/<run>) into a running Elastic as ECS, shifted
+        so it ends now (the detections look back a day). Returns the number of events indexed."""
+        from shikari.export import siem_telemetry
+
+        instance = self.active_instances.get(self._get_session_key("elastic", session_id))
+        if instance is None:
+            raise ValueError(f"No running elastic instance for session {session_id}")
+        manifest, events = siem_telemetry.read_run(run_dir)
+        siem_telemetry.rebase(events)
+        run = str(manifest.get("run") or os.path.basename(run_dir.rstrip("/")))
+        if not self._bulk_elastic(instance, siem_telemetry.elastic_bulk(events, run)):
+            raise RuntimeError("Elasticsearch refused the lab events")
+        return len(events)
 
     def _ingest_simulator(self, instance: SIEMInstance, events: List[Dict]) -> bool:
         """Ingest events into simulator via REST API"""
@@ -850,35 +878,15 @@ if __name__ == "__main__":
             return {"status": "error", "error": str(e)}
 
     def _query_elastic(self, instance: SIEMInstance, query: str) -> Dict[str, Any]:
-        """Execute query against Elasticsearch"""
-        # For Elasticsearch, query should be JSON Query DSL
-        search_url = f"{instance.get_api_url()}/validation-events/_search"
+        """Run ES|QL against Elasticsearch"""
+        from shikari.query.elastic import ElasticClient
 
         try:
-            if isinstance(query, str):
-                # Simple query string search
-                payload = {"query": {"query_string": {"query": query}}}
-            else:
-                payload = query
-
-            response = requests.post(
-                search_url,
-                json=payload,
-                headers={"Content-Type": "application/json"},
-                timeout=30
-            )
-
-            if response.status_code == 200:
-                data = response.json()
-                return {
-                    "status": "success",
-                    "results": [hit["_source"] for hit in data.get("hits", {}).get("hits", [])],
-                    "stats": {"total": data.get("hits", {}).get("total", {}).get("value", 0)},
-                }
-            else:
-                return {"status": "error", "error": response.text}
-
-        except requests.exceptions.RequestException as e:
+            client = ElasticClient(url=instance.get_api_url(),
+                                   username=instance.credentials.get("username", "elastic"),
+                                   password=instance.credentials.get("password", ""))
+            return client.execute_query(query)
+        except Exception as e:
             return {"status": "error", "error": str(e)}
 
     def _query_simulator(self, instance: SIEMInstance, query: str) -> Dict[str, Any]:

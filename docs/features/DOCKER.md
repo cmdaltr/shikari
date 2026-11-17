@@ -354,7 +354,9 @@ docker-compose --profile validation up -d
 | Google SecOps | `secops` | 8081 | ~512MB |
 | MDE | `mde` | 8082 | ~512MB |
 | Splunk | `splunk` | 8001, 8088, 8089 | ~2GB |
-| Elasticsearch | `elastic` | 9200 | ~1GB |
+| Elasticsearch | `elastic` | 9200 | ~1.5GB |
+
+Every port is published on `127.0.0.1` only. To reach Shikari from other machines directly, set `SHIKARI_BIND=0.0.0.0` (or put a proxy in front, as the homelab does).
 
 ### Container Management
 

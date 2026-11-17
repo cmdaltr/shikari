@@ -758,12 +758,15 @@ class HTMLReportGenerator(ReportGenerator):
         """Generate HTML report"""
 
         meta = self._prepare_metadata(metadata)
+        # Group names, techniques and queries come from reports and feeds: escaped, never markup
+        from html import escape as e
+        name = e(group_name)
 
         html = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>{group_name} Detection Report</title>
+    <title>{name} Detection Report</title>
     <style>
         body {{ font-family: 'Calibri', 'Carlito', 'Segoe UI', sans-serif; margin: 40px;
                 line-height: 1.6; color: {_hexc("ink")}; }}
@@ -789,19 +792,19 @@ class HTMLReportGenerator(ReportGenerator):
 </head>
 <body>
     {self._html_brand_header()}
-    <h1>{group_name} Detection Report</h1>
+    <h1>{name} Detection Report</h1>
 
     <div class="metadata">
         <table>
-            <tr><td>Generated:</td><td>{meta['generation_date']}</td></tr>
-            <tr><td>Threat Group:</td><td>{group_name}</td></tr>
+            <tr><td>Generated:</td><td>{e(str(meta['generation_date']))}</td></tr>
+            <tr><td>Threat Group:</td><td>{name}</td></tr>
             <tr><td>Total Detections:</td><td>{len(detections)}</td></tr>
-            <tr><td>Generator:</td><td>{meta['generator']}</td></tr>
+            <tr><td>Generator:</td><td>{e(str(meta['generator']))}</td></tr>
         </table>
     </div>
 
     <h2>Executive Summary</h2>
-    <p>This report contains {len(detections)} detection rules generated for the {group_name} threat group.</p>
+    <p>This report contains {len(detections)} detection rules generated for the {name} threat group.</p>
 """
 
         # Group by vendor
@@ -815,21 +818,21 @@ class HTMLReportGenerator(ReportGenerator):
         html += "<h2>Detection Rules</h2>"
 
         for vendor, vendor_detections in detections_by_vendor.items():
-            html += f"<h3>{vendor} ({len(vendor_detections)} rules)</h3>"
+            html += f"<h3>{e(str(vendor))} ({len(vendor_detections)} rules)</h3>"
 
             for i, det in enumerate(vendor_detections, 1):
                 html += f"""
     <div class="detection">
-        <h4>{i}. {det.get('technique', 'Unknown')}</h4>
+        <h4>{i}. {e(str(det.get('technique', 'Unknown')))}</h4>
         <table>
-            <tr><td><b>Technique ID:</b></td><td>{det.get('technique_id', 'N/A')}</td></tr>
-            <tr><td><b>Tactic:</b></td><td>{det.get('tactic', 'N/A')}</td></tr>
-            <tr><td><b>Data Source:</b></td><td>{det.get('data_source', 'N/A')}</td></tr>
+            <tr><td><b>Technique ID:</b></td><td>{e(str(det.get('technique_id', 'N/A')))}</td></tr>
+            <tr><td><b>Tactic:</b></td><td>{e(str(det.get('tactic', 'N/A')))}</td></tr>
+            <tr><td><b>Data Source:</b></td><td>{e(str(det.get('data_source', 'N/A')))}</td></tr>
         </table>
 """
                 if det.get('queries'):
                     query = det['queries'][0][:800]
-                    html += f'<p><b>Query:</b></p><div class="query">{query}...</div>'
+                    html += f'<p><b>Query:</b></p><div class="query">{e(query)}...</div>'
 
                 # OSINT enrichment
                 if det.get('osint_enriched') or det.get('osint_sources'):
@@ -839,7 +842,7 @@ class HTMLReportGenerator(ReportGenerator):
                     else:
                         html += '<p style="color: #776458;">ℹ Query compared with OSINT sources</p>'
                     if det.get('osint_sources'):
-                        html += f"<p style=\"margin-left: 20px;\">Sources: {', '.join(det['osint_sources'])}</p>"
+                        html += f"<p style=\"margin-left: 20px;\">Sources: {e(', '.join(det['osint_sources']))}</p>"
 
                 # Response actions
                 if self.response_generator:
@@ -855,13 +858,13 @@ class HTMLReportGenerator(ReportGenerator):
 
                     html += '<p><b>Response Actions:</b></p>'
                     priority_color = {'CRITICAL': '#df514e', 'HIGH': '#f59e0b', 'MEDIUM': '#8f5742', 'LOW': '#b3a29b'}
-                    html += f'<p style="font-weight: bold; color: {priority_color.get(response_data["priority"], "#000")}">Priority: {response_data["priority"]}</p>'
+                    html += f'<p style="font-weight: bold; color: {priority_color.get(response_data["priority"], "#000")}">Priority: {e(str(response_data["priority"]))}</p>'
 
                     for action_type, action_data in response_data['response_actions'].items():
-                        html += f'<p><b>{action_type.title()}:</b> <i>{action_data["description"]}</i></p>'
+                        html += f'<p><b>{e(action_type.title())}:</b> <i>{e(str(action_data["description"]))}</i></p>'
                         html += '<ol style="margin-left: 20px;">'
                         for step in action_data['steps'][:3]:  # Limit to 3 steps for HTML
-                            html += f'<li>{step}</li>'
+                            html += f'<li>{e(str(step))}</li>'
                         if len(action_data['steps']) > 3:
                             html += f'<li><i>... and {len(action_data["steps"]) - 3} more steps</i></li>'
                         html += '</ol>'
@@ -871,7 +874,7 @@ class HTMLReportGenerator(ReportGenerator):
         from shikari.reports import tlp
         html += f"""
     <div class="footer">
-        <p><span style="background:#000;color:{tlp.LEVELS[meta['tlp']]['hex']};font-weight:bold;padding:2px 6px">{meta['tlp']}</span></p>
+        <p><span style="background:#000;color:{tlp.LEVELS[meta['tlp']]['hex']};font-weight:bold;padding:2px 6px">{e(str(meta['tlp']))}</span></p>
         <p>Generated by Shikari - MITRE ATT&CK Detection Rule Generator</p>
         <p>MITRE ATT&CK® is a registered trademark of The MITRE Corporation.</p>
     </div>

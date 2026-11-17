@@ -4,6 +4,7 @@ Email sending functionality for password reset and notifications.
 Supports both SMTP and development mode (console output).
 """
 
+import html
 import os
 import smtplib
 import logging
@@ -117,11 +118,11 @@ def send_password_reset_email(email: str, token: str, full_name: Optional[str] =
                 <h1>🏹 Shikari Security Platform</h1>
             </div>
             <div class="content">
-                <p>{greeting}</p>
+                <p>{html.escape(greeting)}</p>
                 <p>We received a request to reset your password for your Shikari account.</p>
                 <p>Click the button below to reset your password:</p>
                 <p style="text-align: center;">
-                    <a href="{reset_url}" class="button">Reset Password</a>
+                    <a href="{html.escape(reset_url)}" class="button">Reset Password</a>
                 </p>
                 <p>Or copy and paste this link into your browser:</p>
                 <p style="word-break: break-all; background: #f7fafc; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px;">

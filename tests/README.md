@@ -221,7 +221,7 @@ The API test suite covers every endpoint in Shikari:
 | `GET /how-it-works` | `test_health_and_pages.py` | Page load |
 | `GET /login` | `test_auth.py` | Page load, form |
 | `POST /login` | `test_auth.py` | Valid/invalid credentials |
-| `GET /logout` | `test_auth.py` | Redirect |
+| `POST /logout` | `test_auth.py` | Redirect; `GET` only asks |
 | `GET /register` | `test_auth.py` | Page load |
 | `POST /register` | `test_auth.py` | Validation |
 | `GET /forgot-password` | `test_auth.py` | Page load |

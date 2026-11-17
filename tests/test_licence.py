@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey,
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from shikari import licensing as L
+from shikari import licence as L
 
 TODAY = date(2026, 11, 11)
 

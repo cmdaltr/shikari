@@ -2301,8 +2301,8 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
       if (errorCount > 0 && failedDetections.length > 0) {
         const failedList = failedDetections.map(f =>
           `<div style="margin: 4px 0; padding: 8px; background: #f8f9fa; border-left: 3px solid #C53030; font-size: 0.9em;">
-            <strong>${f.name}</strong><br>
-            <span style="color: #666;">Reason: ${f.reason}</span>
+            <strong>${escHtml(f.name)}</strong><br>
+            <span style="color: #666;">Reason: ${escHtml(f.reason)}</span>
           </div>`
         ).join('');
         errorMsg = `
@@ -2350,7 +2350,7 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
 
       const result = await showModal(
         'Save Complete',
-        `${detailsHtml}${errorMsg}`,
+        { html: `${detailsHtml}${errorMsg}` },
         'View Library',
         'Close'
       );
@@ -2365,8 +2365,8 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
       if (failedDetections.length > 0) {
         const failedList = failedDetections.map(f =>
           `<div style="margin: 4px 0; padding: 8px; background: #f8f9fa; border-left: 3px solid #C53030; font-size: 0.9em;">
-            <strong>${f.name}</strong><br>
-            <span style="color: #666;">Reason: ${f.reason}</span>
+            <strong>${escHtml(f.name)}</strong><br>
+            <span style="color: #666;">Reason: ${escHtml(f.reason)}</span>
           </div>`
         ).join('');
         errorMsg = `
@@ -2385,7 +2385,7 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
       }
       await showModal(
         'Save Failed',
-        errorMsg,
+        failedDetections.length > 0 ? { html: errorMsg } : errorMsg,
         'OK'
       );
     }
@@ -2683,6 +2683,10 @@ async function showFormatSelectionModal() {
 }
 
 // Custom Modal Helper Functions
+function escHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function showModal(title, message, confirmText = 'OK', cancelText = null) {
   return new Promise((resolve) => {
     const modal = document.getElementById('modal-overlay');
@@ -2693,19 +2697,16 @@ function showModal(title, message, confirmText = 'OK', cancelText = null) {
 
     modalTitle.textContent = title;
 
-    // Handle message as HTML or text
-    if (typeof message === 'string') {
-      // Check if message already contains HTML tags
-      const hasHTML = /<[^>]+>/.test(message);
-      if (hasHTML) {
-        // Message already contains HTML, use it directly
-        modalBody.innerHTML = message;
-      } else {
-        // Plain text message, wrap in paragraphs
-        modalBody.innerHTML = `<p>${message.replace(/\n/g, '</p><p>')}</p>`;
-      }
+    // A string is text, one paragraph per line (error messages carry names from reports, so it's never
+    // read as HTML); { html } is markup this page built, with anything from data already escaped
+    if (message && typeof message.html === 'string') {
+      modalBody.innerHTML = message.html;
     } else {
-      modalBody.innerHTML = message;
+      modalBody.replaceChildren(...String(message).split('\n').map(line => {
+        const p = document.createElement('p');
+        p.textContent = line;
+        return p;
+      }));
     }
 
     confirmBtn.textContent = confirmText;

@@ -1,6 +1,6 @@
 """
 Report branding: the theme model, its install-wide profile, the licence-gated activation, and the
-response-actions indicator-shape fix. The licence mechanism itself is tested in tests/test_licensing.py.
+response-actions indicator-shape fix. The licence mechanism itself is tested in tests/test_licence.py.
 """
 
 import io
@@ -11,7 +11,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from shikari import licensing
+from shikari import licence
 from shikari.reports import branded, response_actions, theme
 
 
@@ -56,16 +56,16 @@ def test_active_theme_is_gated_by_the_licence(branding_dir, monkeypatch):
     theme.save_profile({"primary": "#007a74", "secondary": "#14283c", "heading": "#50505a",
                         "dark": "#101e28"}, "Acme", True, True)
 
-    monkeypatch.setattr(licensing, "has_feature", lambda f: False)
+    monkeypatch.setattr(licence, "has_feature", lambda f: False)
     assert theme.active_theme().custom is False          # enabled, but unlicensed -> stock
 
-    monkeypatch.setattr(licensing, "has_feature", lambda f: True)
+    monkeypatch.setattr(licence, "has_feature", lambda f: True)
     th = theme.active_theme()
     assert th.custom is True and th.primary == (0, 122, 116)
 
 
 def test_active_theme_off_when_disabled(branding_dir, monkeypatch):
-    monkeypatch.setattr(licensing, "has_feature", lambda f: True)
+    monkeypatch.setattr(licence, "has_feature", lambda f: True)
     theme.save_profile({}, "", True, enabled=False)
     assert theme.active_theme().custom is False
 

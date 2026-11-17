@@ -1,6 +1,6 @@
 """
 The brand library (a Services feature): logo cleaning, the store, and which brand an assessment's
-report wears. The licence itself is tested in tests/test_licensing.py; here we check the gate at the
+report wears. The licence itself is tested in tests/test_licence.py; here we check the gate at the
 render — a client brand under Services, the installation brand under Pro.
 """
 
@@ -12,7 +12,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from shikari import licensing
+from shikari import licence
 from shikari.reports import brand_library as lib
 from shikari.reports import theme
 
@@ -83,14 +83,14 @@ def test_an_assessment_uses_its_client_brand_under_services_and_falls_back_under
     brand = lib.create_brand("Client A", {"primary": "#007a74"})
 
     # Services: brand-library and report-branding. The assessment's own brand is used.
-    monkeypatch.setattr(licensing, "has_feature",
-                        lambda f: f in (licensing.FEATURE_BRAND_LIBRARY, licensing.FEATURE_REPORT_BRANDING))
+    monkeypatch.setattr(licence, "has_feature",
+                        lambda f: f in (licence.FEATURE_BRAND_LIBRARY, licence.FEATURE_REPORT_BRANDING))
     th = theme.theme_for_assessment(brand["id"])
     assert th.custom and th.org_name == "Client A" and th.primary == (0, 122, 116)
 
     # Pro: report-branding only. The client brand is kept on the assessment but not used; the report
     # falls back to the installation brand.
-    monkeypatch.setattr(licensing, "has_feature", lambda f: f == licensing.FEATURE_REPORT_BRANDING)
+    monkeypatch.setattr(licence, "has_feature", lambda f: f == licence.FEATURE_REPORT_BRANDING)
     th = theme.theme_for_assessment(brand["id"])
     assert th.custom and th.org_name == "Installation Co" and th.primary == (16, 16, 16)
 
@@ -101,5 +101,5 @@ def test_an_assessment_uses_its_client_brand_under_services_and_falls_back_under
 def test_without_report_branding_an_assessment_report_is_stock(store, monkeypatch):
     theme.save_profile({"primary": "#101010"}, org_name="Installation Co", show_shikari=True, enabled=True)
     brand = lib.create_brand("Client A", {"primary": "#007a74"})
-    monkeypatch.setattr(licensing, "has_feature", lambda f: False)   # Free
+    monkeypatch.setattr(licence, "has_feature", lambda f: False)   # Free
     assert theme.theme_for_assessment(brand["id"]).custom is False

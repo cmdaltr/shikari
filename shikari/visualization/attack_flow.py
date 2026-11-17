@@ -331,12 +331,15 @@ def _generate_flow_html(flow: Dict) -> str:
     """Generate a simple HTML visualization of the attack flow."""
     flow_meta = next((obj for obj in flow.get("objects", []) if obj.get("type") == "attack-flow"), {})
     actions = [obj for obj in flow.get("objects", []) if obj.get("type") == "attack-action"]
+    # A flow's name is a group or report name: escaped, never markup
+    from html import escape as e
+    title = e(str(flow_meta.get("name", "Attack Flow")))
 
     html = f"""
 <!DOCTYPE html>
 <html>
 <head>
-    <title>{flow_meta.get("name", "Attack Flow")}</title>
+    <title>{title}</title>
     <style>
         body {{
             font-family: Arial, sans-serif;
@@ -385,8 +388,8 @@ def _generate_flow_html(flow: Dict) -> str:
 </head>
 <body>
     <div class="header">
-        <h1>{flow_meta.get("name", "Attack Flow")}</h1>
-        <p>{flow_meta.get("description", "")}</p>
+        <h1>{title}</h1>
+        <p>{e(str(flow_meta.get("description", "")))}</p>
     </div>
     <div class="flow-container">
 """
@@ -397,8 +400,8 @@ def _generate_flow_html(flow: Dict) -> str:
 
         html += f"""
         <div class="technique">
-            <div class="technique-id">{tech_id}</div>
-            <div class="technique-name">{tech_name}</div>
+            <div class="technique-id">{e(str(tech_id))}</div>
+            <div class="technique-name">{e(str(tech_name))}</div>
         </div>
 """
         if idx < len(actions) - 1:

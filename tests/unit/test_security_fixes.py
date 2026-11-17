@@ -118,8 +118,11 @@ class TestSsrfGuard:
             is_redirect = True
             headers = {"Location": "http://meta.test/latest/meta-data/"}
 
+            def close(self):
+                pass
+
         calls = []
-        monkeypatch.setattr(blog_analyzer.requests, "get", lambda url, **k: calls.append(url) or Redirect())
+        monkeypatch.setattr(blog_analyzer, "_get", lambda url, ip, **k: calls.append(url) or Redirect())
         with pytest.raises(ValueError):
             blog_analyzer._fetch_public_url("http://public.test/post")
         assert calls == ["http://public.test/post"], "internal hop must not be requested"

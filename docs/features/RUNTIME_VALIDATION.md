@@ -108,7 +108,7 @@ If no pre-started containers are found, the system spawns ephemeral containers o
 
 SIEM containers require:
 - **Splunk**: ~2GB RAM, ~1GB disk
-- **Elastic**: ~1GB RAM, ~500MB disk
+- **Elastic**: ~1.5GB RAM, ~1.5GB disk
 - **Google SecOps Simulator**: ~512MB RAM
 - **MDE Simulator**: ~512MB RAM
 
@@ -197,7 +197,7 @@ Docker is not running. Start the Docker daemon to enable detection validation.
 Paste your detection query into the text area. The system auto-detects the SIEM vendor based on query syntax:
 
 - **Splunk (SPL)**: `index=`, `sourcetype=`, `| stats`, `| table`
-- **Elastic (Query DSL)**: `process.command_line`, `@timestamp`, `"query"`, `"bool"`
+- **Elastic (ES|QL)**: starts `FROM <index>`; also `process.command_line`, `@timestamp`
 - **Google SecOps (YARA-L)**: `rule`, `events:`, `$e.metadata`, `re.regex(`
 - **MDE (KQL)**: `DeviceProcessEvents`, `DeviceNetworkEvents`, `| where`
 
@@ -530,10 +530,11 @@ Uses the official `splunk/splunk:latest` Docker image with:
 
 ### Elasticsearch
 
-Uses `docker.elastic.co/elasticsearch/elasticsearch:8.x` with:
-- Bulk API for data ingestion
-- Query DSL and EQL for search
-- Port: 9200
+Uses `docker.elastic.co/elasticsearch/elasticsearch:9.4.0` with:
+- Bulk API for data ingestion, into the `logs-endpoint.events.*` data streams the detections read (`ingest_lab_run` loads a recorded lab run as ECS)
+- ES|QL for search, through `shikari/query/elastic.py` ([Query Execution](QUERY_EXECUTION.md#elastic))
+- Security on, HTTP without TLS: user `elastic`, password `Validation123!`
+- Port: 9200, on 127.0.0.1
 
 ### Google SecOps Simulator
 

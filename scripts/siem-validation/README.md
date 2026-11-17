@@ -1,5 +1,7 @@
 # SIEM query execution & hit counts (#16)
 
+Elastic (#50) is validated separately: see [Query Execution](../../docs/features/QUERY_EXECUTION.md#elastic).
+
 Run a generated detection read-only against a real SIEM and report how many events it matches — a
 false-positive signal before the rule is deployed. Two backends, mirroring the same shape:
 

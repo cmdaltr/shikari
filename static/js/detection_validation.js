@@ -100,6 +100,11 @@ function detectVendorFromQuery(query) {
 
     const lowerQuery = query.toLowerCase();
 
+    // ES|QL (Elastic) starts FROM <index>
+    if (/^\s*from\s+\S/.test(lowerQuery)) {
+        return 'elastic';
+    }
+
     // KQL patterns (MDE)
     if (lowerQuery.includes('deviceprocessevents') ||
         lowerQuery.includes('devicenetworkevents') ||

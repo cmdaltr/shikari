@@ -86,7 +86,8 @@ class ShikariClient:
         r = self.session.post(f"{self.url}/login", data={
             "email": self.email, "password": self._password, "csrf_token": token.group(1), "next_url": "/",
         }, allow_redirects=False, timeout=30)
-        if "shikari_session" not in self.session.cookies:
+        # __Host-shikari_session when the server is reached over HTTPS
+        if not any(c.name.endswith("shikari_session") for c in self.session.cookies):
             hint = (" (this account uses MFA: create an API token in Profile → Security and set SHIKARI_TOKEN)"
                     if "mfa" in r.text.lower() or "/mfa" in r.headers.get("location", "") else "")
             raise ShikariError(f"Sign-in failed for {self.email}{hint}")

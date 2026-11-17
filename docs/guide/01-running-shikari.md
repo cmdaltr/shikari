@@ -21,6 +21,7 @@ shikari stop       # stop Shikari, and the Ollama it started
 | Option | What it does | Remembered |
 |---|---|---|
 | `--port 32453` | The port to serve on | Yes |
+| `--host 127.0.0.1` | The address to listen on: this machine only by default; `0.0.0.0` to serve the network directly (behind a proxy, keep the default) | Yes |
 | `--no-reload` | Don't restart the server when code changes | Yes |
 | `--no-ollama` | Don't start Ollama | Yes |
 | `--ollama-models DIR` | Where Ollama keeps its models (an external drive that isn't mounted falls back to Ollama's default folder) | Yes |

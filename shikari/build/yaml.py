@@ -635,14 +635,15 @@ def update_yaml(yamlfile, tag):
     formatted_tag = f"{tag} (Group)" if tag else ""
 
     if formatted_tag not in old_content:
-        # Insert new Threat Group
-        prefix, suffix = old_content.split("tags:\n  - ")
-        added_tags = f"{prefix}tags:\n  - {formatted_tag}\n  - {suffix}"
+        # Insert new Threat Group, first in the list: written here the items are indented
+        # ("tags:\n  - "), written by yaml.safe_dump (seeded or rewritten detections) they aren't
+        added_tags, found = re.subn(r"^tags:\n( *)- ", lambda m: f"tags:\n{m.group(1)}- {formatted_tag}\n{m.group(1)}- ",
+                                    old_content, count=1, flags=re.M)
+        if not found:
+            return
 
         # Update version
         newver = re.sub(r"(version: \d+\.)(\d+)((\.\d+)?)", increment_version, added_tags)
-        prefix = added_tags.split("version: ")[0]
-        suffix = added_tags.split("kind:")[1]
 
         with open(yamlfile, "w") as yfile:
             yfile.write(newver)

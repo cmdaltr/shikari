@@ -55,4 +55,4 @@ window; a tampered or expired licence is rejected and branding stays off.
 - `shikari/reports/branded.py` and `shikari/reports/generator.py` take the theme and recolour the
   chrome; the branded `render()` resolves `active_theme()` automatically, so every report download is
   branded without the call sites changing.
-- `shikari/licensing.py` — offline licence verification and the entitlement check.
+- `shikari/licence.py` — offline licence verification and the entitlement check.

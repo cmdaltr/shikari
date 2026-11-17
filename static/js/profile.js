@@ -278,14 +278,18 @@ function createTimelineItem(item) {
       </svg>
     </div>
     <div class="timeline-content">
-      <div class="timeline-title">${item.name}</div>
-      <div class="timeline-date">${formatDate(item.timestamp)}</div>
+      <div class="timeline-title"></div>
+      <div class="timeline-date"></div>
     </div>
     <div class="timeline-actions">
-      <button class="timeline-action-btn" onclick="downloadResults('${item.id}')">Download</button>
+      <button class="timeline-action-btn timeline-download">Download</button>
       <button class="timeline-action-btn" disabled title="Coming soon">Run Emulation (coming soon)</button>
     </div>
   `;
+  // A run's name can come from a report's title: text, not markup
+  div.querySelector('.timeline-title').textContent = item.name;
+  div.querySelector('.timeline-date').textContent = formatDate(item.timestamp);
+  div.querySelector('.timeline-download').addEventListener('click', () => downloadResults(item.id));
 
   return div;
 }

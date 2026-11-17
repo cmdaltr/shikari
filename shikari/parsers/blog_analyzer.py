@@ -31,8 +31,9 @@ FETCH_HEADERS = {
 }
 
 
-def _check_public_url(url: str) -> None:
-    """Raise ValueError unless url is http(s) and every address its host resolves to is globally routable."""
+def _check_public_url(url: str) -> str:
+    """Raise ValueError unless url is http(s) and every address its host resolves to is globally routable.
+    Returns the address to connect to."""
     import ipaddress
     import socket
     from urllib.parse import urlparse
@@ -51,19 +52,71 @@ def _check_public_url(url: str) -> None:
         # is_global excludes RFC1918, loopback, link-local, CGNAT/Tailscale (100.64/10), 0/8, multicast, reserved
         if not ip.is_global:
             raise ValueError("Access to private, internal or reserved addresses is not allowed.")
+    return infos[0][4][0].split("%")[0]
+
+
+def _pinned_session(ip: str) -> requests.Session:
+    """A session whose connections go to ip whatever the host resolves to by then: checked and fetched
+    separately, a host with a short TTL could answer the check with a public address and the fetch with
+    127.0.0.1 (DNS rebinding). The URL keeps its hostname, so Host, SNI and the certificate check are
+    unchanged. A configured proxy resolves for itself and isn't pinned."""
+    from requests.adapters import HTTPAdapter
+    from urllib3.connection import HTTPConnection, HTTPSConnection
+    from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
+
+    # Only the socket goes to ip: urllib3 reads `host` from _dns_host, and SNI and Host come from it
+    def connect_to_ip(conn, new_conn):
+        name, conn._dns_host = conn._dns_host, ip
+        try:
+            return new_conn()
+        finally:
+            conn._dns_host = name
+
+    class Conn(HTTPConnection):
+        def _new_conn(self):
+            return connect_to_ip(self, super()._new_conn)
+
+    class TLSConn(HTTPSConnection):
+        def _new_conn(self):
+            return connect_to_ip(self, super()._new_conn)
+
+    class Pool(HTTPConnectionPool):
+        ConnectionCls = Conn
+
+    class TLSPool(HTTPSConnectionPool):
+        ConnectionCls = TLSConn
+
+    class Pinned(HTTPAdapter):
+        def init_poolmanager(self, *a, **kw):
+            super().init_poolmanager(*a, **kw)
+            self.poolmanager.pool_classes_by_scheme = {"http": Pool, "https": TLSPool}
+
+    session = requests.Session()
+    session.mount("http://", Pinned())
+    session.mount("https://", Pinned())
+    return session
+
+
+def _get(url: str, ip: str, stream: bool = False, **kwargs) -> requests.Response:
+    """One request, no redirects followed, connected to ip."""
+    session = _pinned_session(ip)
+    response = session.get(url, allow_redirects=False, stream=stream, **kwargs)
+    if not stream:  # a streamed body still needs the session's connection
+        session.close()
+    return response
 
 
 def _fetch_public_url(url: str, max_redirects: int = 3, timeout: int = 30,
-                      headers: Optional[dict] = None) -> requests.Response:
+                      headers: Optional[dict] = None, stream: bool = False) -> requests.Response:
     """GET url following redirects manually so each hop is re-validated (requests would skip the check)."""
     from urllib.parse import urljoin
 
     headers = headers or FETCH_HEADERS
     for _ in range(max_redirects + 1):
-        _check_public_url(url)
-        response = requests.get(url, headers=headers, timeout=timeout, allow_redirects=False)
+        response = _get(url, _check_public_url(url), headers=headers, timeout=timeout, stream=stream)
         if not response.is_redirect:
             return response
+        response.close()
         url = urljoin(url, response.headers.get("Location", ""))
     raise ValueError(f"Too many redirects (max {max_redirects}).")
 

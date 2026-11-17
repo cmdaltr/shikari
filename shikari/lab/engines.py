@@ -356,26 +356,20 @@ def _lab_path(*parts: str) -> str:
 
 def _fetch(url: str, dest: str) -> str:
     """Download a cloud image once into the lab's image cache. Not a shell-out, so not run()."""
-    import urllib.request
-
-    from shikari.parsers.blog_analyzer import _check_public_url
+    from shikari.parsers.blog_analyzer import _fetch_public_url
 
     if os.path.isfile(dest):
         return dest
-    try:
-        _check_public_url(url)  # an image comes from the internet, not from loopback or the tailnet
-    except ValueError as e:
-        raise LabError("Couldn't download the image", f"{url}: {e}")
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     part = dest + ".part"
     try:
-        with urllib.request.urlopen(url, timeout=60) as resp, open(part, "wb") as fh:
-            while True:
-                chunk = resp.read(1 << 20)
-                if not chunk:
-                    break
+        # From the internet, not loopback or the tailnet: every redirect hop checked, connected to the
+        # address that was checked
+        with _fetch_public_url(url, timeout=60, stream=True) as resp, open(part, "wb") as fh:
+            resp.raise_for_status()
+            for chunk in resp.iter_content(1 << 20):
                 fh.write(chunk)
-    except OSError as e:
+    except (ValueError, OSError) as e:  # requests' errors are OSErrors
         raise LabError("Couldn't download the image", f"{url}: {e}")
     os.replace(part, dest)
     return dest

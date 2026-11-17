@@ -314,7 +314,7 @@ class TestAnalyzeBlogPost:
         socket_module.getaddrinfo = MagicMock(return_value=_addrinfo("93.184.216.34"))
 
         try:
-            with patch("shikari.parsers.blog_analyzer.requests.get") as mock_get:
+            with patch("shikari.parsers.blog_analyzer._get") as mock_get:
                 # Setup mocks
                 mock_response = MagicMock()
                 mock_response.is_redirect = False
@@ -360,7 +360,7 @@ class TestAnalyzeBlogPost:
         mock_response.raise_for_status = MagicMock()
 
         with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")), \
-             patch("shikari.parsers.blog_analyzer.requests.get", return_value=mock_response):
+             patch("shikari.parsers.blog_analyzer._get", return_value=mock_response):
             result = analyze_blog_post("https://www.cisa.gov/advisory")
 
         assert result["success"] is True
@@ -453,7 +453,7 @@ class TestAnalyzeBlogPost:
         with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")), \
              patch("shikari.parsers.blog_analyzer._extract_iocs",
                    return_value={"domain": ["mail.vendorcorp-support.com", "cdn.vendorcorp.example"]}), \
-             patch("shikari.parsers.blog_analyzer.requests.get", return_value=mock_response):
+             patch("shikari.parsers.blog_analyzer._get", return_value=mock_response):
             result = analyze_blog_post("https://blog.vendorcorp.com/post")
 
         assert result["iocs"]["domain"] == ["mail.vendorcorp-support.com"]
@@ -510,7 +510,7 @@ class TestAnalyzeBlogPost:
         import requests
 
         with patch("socket.getaddrinfo") as mock_dns, \
-             patch("shikari.parsers.blog_analyzer.requests.get") as mock_get:
+             patch("shikari.parsers.blog_analyzer._get") as mock_get:
 
             mock_dns.return_value = _addrinfo("93.184.216.34")
             mock_get.side_effect = requests.exceptions.Timeout("Connection timed out")
@@ -525,7 +525,7 @@ class TestAnalyzeBlogPost:
         from shikari.parsers.blog_analyzer import analyze_blog_post
 
         with patch("socket.getaddrinfo") as mock_dns, \
-             patch("shikari.parsers.blog_analyzer.requests.get") as mock_get:
+             patch("shikari.parsers.blog_analyzer._get") as mock_get:
 
             mock_dns.return_value = _addrinfo("93.184.216.34")
 

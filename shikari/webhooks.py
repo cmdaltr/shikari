@@ -43,8 +43,8 @@ def _automation_on() -> bool:
     """Webhooks fire only while the licence includes `automation` (Pro or Services). Checked here, at
     the send, not when a webhook is registered: a Free install keeps its webhooks, they just don't
     fire. See docs/LICENSING_MODEL.md and licence_note()."""
-    from shikari import licensing
-    return licensing.has_feature(licensing.FEATURE_AUTOMATION)
+    from shikari import licence
+    return licence.has_feature(licence.FEATURE_AUTOMATION)
 
 
 def licence_note() -> str:

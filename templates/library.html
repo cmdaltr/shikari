@@ -1358,10 +1358,11 @@ function updateActiveFilters() {
             if (value) {
                 const tag = document.createElement('div');
                 tag.className = 'filter-tag';
-                tag.innerHTML = `
-                    ${key}: ${value}
-                    <button onclick="removeFilter('${key}')">✕</button>
-                `;
+                // The value is whatever was typed or came in the URL: text, not markup
+                const remove = document.createElement('button');
+                remove.textContent = '✕';
+                remove.addEventListener('click', () => removeFilter(key));
+                tag.append(`${key}: ${value} `, remove);
                 tagsContainer.appendChild(tag);
             }
         });
@@ -1579,7 +1580,7 @@ function openTagsInputModal(mode) {
         `Edit tags for ${selectedIds.size} selected item(s). Separate with commas.`;
 
     document.getElementById('tags-input-title').textContent = title;
-    document.getElementById('tags-input-description').innerHTML = description;
+    document.getElementById('tags-input-description').textContent = description;
     document.getElementById('tags-input-count').textContent = selectedIds.size;
     document.getElementById('tags-input').value = '';
     document.getElementById('tags-input-modal').classList.add('show');

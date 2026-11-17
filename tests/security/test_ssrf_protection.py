@@ -95,7 +95,7 @@ def test_blog_analysis_extracts_techniques():
     mock_response.raise_for_status = MagicMock()
     mock_response.headers = {"content-type": "text/html"}
 
-    with patch("shikari.parsers.blog_analyzer.requests.get", return_value=mock_response), \
+    with patch("shikari.parsers.blog_analyzer._get", return_value=mock_response), \
          patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")):
         result = analyze_blog_post("https://example.com/threat-report")
 

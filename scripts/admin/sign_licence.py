@@ -1,7 +1,7 @@
 """Issue Shikari licences (licensor only). Run where the signing key is, never on a server.
 
     sign_licence.py keygen PATH                 a new keypair: the private key to PATH, the public to stdout
-    sign_licence.py public                      the public key to put in shikari.licensing.PUBLIC_KEYS
+    sign_licence.py public                      the public key to put in shikari.licence.PUBLIC_KEYS
     sign_licence.py sign --licensee "Northwind Ltd" --edition services --seats 25 --expires 2027-11-30
 
 The private key comes from SHIKARI_LICENCE_KEY: a path to the key file, or the key itself. Either
@@ -33,7 +33,7 @@ from cryptography.hazmat.primitives.serialization import (
 )
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from shikari import licensing  # noqa: E402
+from shikari import licence  # noqa: E402
 
 KEY_ENV = "SHIKARI_LICENCE_KEY"
 LEDGER_ENV = "LICENCE_LEDGER_DIR"
@@ -43,7 +43,7 @@ LEDGER_FIELDS = (
 )  # fmt: skip
 
 
-def _record(ledger: Path, lic: licensing.Licence, line: str) -> Path:
+def _record(ledger: Path, lic: licence.Licence, line: str) -> Path:
     """The licence into the licensing repo: its file, and a ledger row."""
     if not (ledger / "ledger.csv").is_file():
         sys.exit(f"{ledger} isn't the licensing repo (no ledger.csv).")
@@ -63,7 +63,7 @@ def _record(ledger: Path, lic: licensing.Licence, line: str) -> Path:
                 "issued": lic.issued.isoformat(),
                 "not_before": lic.not_before.isoformat() if lic.not_before else "",
                 "expires": lic.expires.isoformat() if lic.expires else "perpetual",
-                "terms_version": licensing.terms()[0],
+                "terms_version": licence.terms()[0],
                 "file": str(out.relative_to(ledger)),
             }
         )
@@ -104,7 +104,7 @@ def main() -> int:
     do = parser.add_subparsers(dest="command", required=True)
     gen = do.add_parser("keygen", help="a new signing keypair")
     gen.add_argument("path", type=Path, help="where to write the private key (PEM); it must not exist")
-    do.add_parser("public", help="the public key, hex, for shikari.licensing.PUBLIC_KEYS")
+    do.add_parser("public", help="the public key, hex, for shikari.licence.PUBLIC_KEYS")
     sign = do.add_parser("sign", help="print a licence line for a customer")
     sign.add_argument("--licensee", required=True, help="the organisation, as reports show it")
     sign.add_argument("--edition", required=True, choices=["pro", "services"])
@@ -140,22 +140,22 @@ def main() -> int:
     if expires and expires <= issued:
         sys.exit("The expiry must be after today.")
     features = tuple(f.strip() for f in args.features.split(",") if f.strip())
-    unknown = set(features) - {*licensing.FEATURES, licensing.WILDCARD}
+    unknown = set(features) - {*licence.FEATURES, licence.WILDCARD}
     if unknown:
-        sys.exit(f"Unknown feature ids: {', '.join(sorted(unknown))}. Known: {', '.join(licensing.FEATURES)}.")
-    lic = licensing.rules().licence(
-        licence_id=licensing.new_id(),
+        sys.exit(f"Unknown feature ids: {', '.join(sorted(unknown))}. Known: {', '.join(licence.FEATURES)}.")
+    lic = licence.rules().licence(
+        licence_id=licence.new_id(),
         licensee=args.licensee.strip(),
         email=args.email.strip(),
-        edition=licensing.Edition(args.edition),
+        edition=licence.Edition(args.edition),
         seats=None if args.seats == "unlimited" else int(args.seats),
         features=features,
         issued=issued,
         not_before=args.not_before,
         expires=expires,
     )
-    line = licensing.sign(key, lic)
-    licensing.parse(line)  # signed by the key Shikari trusts, or this stops here
+    line = licence.sign(key, lic)
+    licence.parse(line)  # signed by the key Shikari trusts, or this stops here
     seats = lic.seats or "unlimited"
     summary = f"{lic.edition.value} for {lic.licensee}, {seats} seats, to {lic.expires or 'no end date'}"
     if args.ledger:

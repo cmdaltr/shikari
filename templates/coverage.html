@@ -576,6 +576,8 @@
 </div>
 
 <script>
+// Tactic names, technique ids and errors come from local data and the server: text, not markup
+const escHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Vendor logos (the sprite above): the same marks as the attack flow and home page
 const VENDOR_LOGOS = {'Google SecOps': 'googlesecops', 'MDE': 'mde', 'Splunk': 'splunk', 'Elastic': 'elastic'};
 // The data says MDE; the page says Defender XDR
@@ -887,7 +889,7 @@ async function loadCoverage() {
     const data = await response.json();
 
     if (data.error) {
-      document.getElementById('loading').innerHTML = `<div class="no-data">Error: ${data.error}</div>`;
+      document.getElementById('loading').innerHTML = `<div class="no-data">Error: ${escHtml(data.error)}</div>`;
       return;
     }
 
@@ -932,7 +934,7 @@ async function loadCoverage() {
       card.className = `technique-card tactic-card ${getColorLevel(covered.length)}`;
       card.dataset.tactic = tactic;
       card.setAttribute('role', 'tab');
-      card.innerHTML = `<div class="tactic-name">${tactic}</div>
+      card.innerHTML = `<div class="tactic-name">${escHtml(tactic)}</div>
         <div class="tactic-count">${covered.length} technique${covered.length === 1 ? '' : 's'}</div>`;
       card.title = `${tactic}: ${covered.length} of ${col.techniques.length} techniques (or their sub-techniques) have reference queries`;
       card.onclick = () => switchTactic(tactic);
@@ -952,7 +954,7 @@ async function loadCoverage() {
         cell.dataset.id = id;
         cell.dataset.vendors = JSON.stringify(tech.vendors || []);
         cell.innerHTML = `
-          <div class="technique-id">${id}</div>
+          <div class="technique-id">${escHtml(id)}</div>
           <div class="technique-vendors">${getVendorIcons(tech.vendors || [])}</div>
         `;
         cell.title = `${tech.name || id}\n${tech.count} queries`;
@@ -1038,7 +1040,7 @@ async function loadCoverage() {
 
 
   } catch (error) {
-    document.getElementById('loading').innerHTML = `<div class="no-data">Failed to load coverage data: ${error.message}</div>`;
+    document.getElementById('loading').innerHTML = `<div class="no-data">Failed to load coverage data: ${escHtml(error.message)}</div>`;
   }
 }
 

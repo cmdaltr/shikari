@@ -16,8 +16,10 @@ services:
     build:
       context: .
       dockerfile: shikari/Dockerfile
+    # Published on this machine only; SHIKARI_BIND=0.0.0.0 to serve the network directly (homelab
+    # rebinds every port itself)
     ports:
-      - "32453:32453"
+      - "${SHIKARI_BIND:-127.0.0.1}:32453:32453"
     volumes:
       - ./shikari:/app/shikari
       - ./templates:/app/templates
@@ -43,9 +45,9 @@ services:
     image: splunk/splunk:latest
     container_name: shikari-splunk
     ports:
-      - "8001:8000"   # Web UI (offset to avoid conflict with Shikari)
-      - "8089:8089"   # REST API
-      - "8088:8088"   # HEC
+      - "127.0.0.1:8001:8000"   # Web UI (offset to avoid conflict with Shikari)
+      - "127.0.0.1:8089:8089"   # REST API
+      - "127.0.0.1:8088:8088"   # HEC
     environment:
       - SPLUNK_START_ARGS=--accept-license
       - SPLUNK_PASSWORD=Validation123!
@@ -63,23 +65,25 @@ services:
     networks:
       - shikari-network
 
-  # Elasticsearch for Query DSL validation (~1GB RAM)
+  # Elasticsearch for ES|QL validation (~1.5GB RAM). ES|QL is GA from 8.14. Security on, HTTP
+  # without TLS: user elastic, the password below
   elastic:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.0
     container_name: shikari-elastic
     ports:
-      - "9200:9200"
-      - "9300:9300"
+      - "127.0.0.1:9200:9200"
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
-    mem_limit: 1g
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - ELASTIC_PASSWORD=Validation123!
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    mem_limit: 2g
     profiles:
       - validation
       - elastic
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      test: ["CMD", "curl", "-f", "-u", "elastic:Validation123!", "http://localhost:9200/_cluster/health"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -95,7 +99,7 @@ services:
     image: shikari-secops-simulator:latest
     container_name: shikari-secops
     ports:
-      - "8081:8080"
+      - "127.0.0.1:8081:8080"
     mem_limit: 512m
     profiles:
       - validation
@@ -116,7 +120,7 @@ services:
     image: shikari-mde-simulator:latest
     container_name: shikari-mde
     ports:
-      - "8082:8080"
+      - "127.0.0.1:8082:8080"
     mem_limit: 512m
     profiles:
       - validation

@@ -2,7 +2,7 @@
 the terms, accept, install. The API refuses an install without acceptance (422) or for terms that
 are no longer current (409), and records who accepted which version, in the licence and the audit log.
 
-Signs with a throwaway key patched into PUBLIC_KEYS, as tests/test_licensing.py does.
+Signs with a throwaway key patched into PUBLIC_KEYS, as tests/test_licence.py does.
 """
 
 import json
@@ -17,7 +17,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import shikari.app as app_module
-from shikari import licensing as L
+from shikari import licence as L
 from shikari.database.audit import AuditLog
 from shikari.database.models import Base, User, UserRole
 

@@ -125,7 +125,7 @@ def test_url_path_reports_its_publisher():
             "<p>Background at https://www.cisa.gov/x. C2 at evil[.]com; more on vendorcorp.com.</p></article></body></html>")
     response = MagicMock(is_redirect=False, url="https://blog.vendorcorp.com/p", content=html.encode())
     with patch("socket.getaddrinfo", return_value=[(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))]), \
-         patch("shikari.parsers.blog_analyzer.requests.get", return_value=response):
+         patch("shikari.parsers.blog_analyzer._get", return_value=response):
         result = analyze_blog_post("https://blog.vendorcorp.com/p")
     assert result["iocs"]["domain"] == ["evil[.]com"]
     assert result["publisher"] == {"name": "VendorCorp Labs", "domains": ["vendorcorp.com"],

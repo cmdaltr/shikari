@@ -93,13 +93,20 @@ templates.env.globals["brand"] = branding.active_brand()
 templates.env.globals["flow_frameworks"] = FLOW_FRAMEWORKS
 
 
+def _permanent_admin(user) -> bool:
+    """User management needs Admin as the account's own role, not a temporary grant: an elevated
+    admin could otherwise make the grant permanent, or create accounts that outlive it. Everything
+    else an admin does takes at_least(user, UserRole.ADMIN)."""
+    return user is not None and user.role == UserRole.ADMIN
+
+
 def _licence_notice(user) -> str:
     """The licence warning admins see on every page: during grace (so renewal isn't missed on the one
     page nobody visits) and while a licence waits for its first day. Others never see it."""
-    from shikari import licensing
-    if user is None or getattr(user, "role", None) != UserRole.ADMIN:
+    from shikari import licence
+    if user is None or not at_least(user, UserRole.ADMIN):
         return ""
-    st = licensing.status()
+    st = licence.status()
     if st["state"] == "grace":
         return (f"The {st['edition'].title()} licence for {st['licensee']} expired on {st['expires']} and is "
                 f"in its 30-day grace period until {st['grace_ends']}. Renew it to stay on {st['edition'].title()}.")
@@ -1265,6 +1272,17 @@ def _cross_site(request: Request) -> bool:
     return urlsplit(origin).netloc not in hosts
 
 
+def _untyped_body(request: Request) -> bool:
+    """A text/plain body, or one with no type: the only bodies another site's page can post without
+    asking first (CORS), and JSON routes parse them anyway. Nothing of Shikari's sends either: its
+    pages post JSON as application/json and forms as forms. Behind the cross-site check, in case a
+    browser ever gets that wrong."""
+    ctype = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    has_body = request.headers.get("content-length", "0").strip() not in ("", "0") \
+        or "transfer-encoding" in request.headers
+    return ctype == "text/plain" or (has_body and not ctype)
+
+
 @app.middleware("http")
 async def request_guard(request: Request, call_next):
     """Refuse changes another site's page asks for (CSRF), and send the headers that stop Shikari
@@ -1272,6 +1290,8 @@ async def request_guard(request: Request, call_next):
     if (request.method in UNSAFE_METHODS and _bearer_token(request) is None
             and _cross_site(request)):
         return JSONResponse({"error": "Cross-site request refused"}, status_code=403)
+    if request.method in UNSAFE_METHODS and _untyped_body(request):
+        return JSONResponse({"error": "Send JSON as application/json, or a form"}, status_code=415)
     response = await call_next(request)
     response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
     response.headers.setdefault("Content-Security-Policy", "frame-ancestors 'self'")
@@ -1284,6 +1304,63 @@ async def request_guard(request: Request, call_next):
                for k, v in response.raw_headers]
         response.raw_headers[:] = raw
     return response
+
+
+SESSION_COOKIE = b"shikari_session"
+HOST_SESSION_COOKIE = b"__Host-shikari_session"
+
+
+class HostPrefixedSession:
+    """Over HTTPS the session cookie is __Host-shikari_session: a browser only accepts that name from
+    this exact host, over TLS, with Path=/ and no Domain, so another app on the homelab node can't
+    plant a session (fixation) or a forced login. Routes keep reading `shikari_session`: the
+    prefixed cookie is renamed on the way in and the plain one, which anyone could have set, dropped.
+    Over plain HTTP (local, the desktop app) browsers refuse the prefix, so nothing changes."""
+
+    def __init__(self, app):
+        self.app = app
+
+    @staticmethod
+    def _secure(scope) -> bool:
+        if scope.get("scheme") in ("https", "wss"):
+            return True
+        proto = dict(scope.get("headers") or []).get(b"x-forwarded-proto", b"")
+        return proto.split(b",")[0].strip() == b"https"
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] not in ("http", "websocket") or not self._secure(scope):
+            return await self.app(scope, receive, send)
+        headers = []
+        for k, v in scope["headers"]:
+            if k == b"cookie":
+                kept = []
+                for part in v.split(b";"):
+                    name, _, value = part.strip().partition(b"=")
+                    if name == SESSION_COOKIE:
+                        continue
+                    kept.append(SESSION_COOKIE + b"=" + value if name == HOST_SESSION_COOKIE else part.strip())
+                v = b"; ".join(p for p in kept if p)
+            headers.append((k, v))
+        scope = dict(scope, headers=headers)
+
+        async def send_prefixed(message):
+            if message["type"] == "http.response.start":
+                out = []
+                for k, v in message.get("headers", []):
+                    if k == b"set-cookie" and v.startswith(SESSION_COOKIE + b"="):
+                        v = b"__Host-" + v
+                        if b"secure" not in v.lower():
+                            v += b"; Secure"
+                        # and expire the unprefixed cookie an older build set
+                        out.append((k, SESSION_COOKIE + b'=""; Max-Age=0; Path=/; Secure'))
+                    out.append((k, v))
+                message = dict(message, headers=out)
+            await send(message)
+
+        await self.app(scope, receive, send_prefixed)
+
+
+app.add_middleware(HostPrefixedSession)
 
 
 BUSY_STALE_SECONDS = 15 * 60
@@ -2437,7 +2514,7 @@ async def save_correlation_params(request: Request, shikari_session: Optional[st
         return JSONResponse({"success": False, "message": "Not authenticated"}, status_code=401)
     user, db = auth_result
     db.close()
-    if user.role != UserRole.ADMIN:
+    if not at_least(user, UserRole.ADMIN):
         return JSONResponse({"success": False, "message": "Admin access required"}, status_code=403)
 
     try:
@@ -8561,8 +8638,10 @@ async def login(
         # Re-rendered forms need a live token; the submitted one is now spent
         next_csrf = generate_csrf_token(shikari_csrf_session)
 
-        # Check rate limit by IP address
-        rate_limit_key = f"login:{client_ip}"
+        # Per address and account: behind homelab's proxy every user arrives from the proxy's address,
+        # so keyed on the address alone one person's five wrong passwords locked everyone out. Guessing
+        # across accounts is still held back by each account's own lockout below.
+        rate_limit_key = f"login:{client_ip}:{(email or '').strip().lower()}"
         is_allowed, remaining = check_rate_limit(rate_limit_key, max_attempts=5, window_seconds=300)
 
         if not is_allowed:
@@ -8825,7 +8904,21 @@ def _complete_login(db, user, remember: bool, next_url: Optional[str], rate_limi
     return redirect_response
 
 
-@app.get("/logout")
+@app.get("/logout", response_class=HTMLResponse)
+async def logout_page(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """A GET can't sign anyone out (any page could link an <img> to it); this asks, and the button
+    posts, which the cross-site guard covers."""
+    if not shikari_session:
+        return RedirectResponse(url="/login", status_code=303)
+    return HTMLResponse(
+        "<!DOCTYPE html><html><head><title>Log out</title>"
+        '<link rel="stylesheet" href="/static/css/common.css"></head>'
+        '<body style="font-family:sans-serif;display:flex;justify-content:center;padding-top:20vh">'
+        '<form method="post" action="/logout"><p>Log out of Shikari?</p>'
+        '<button type="submit">Log out</button> <a href="/">Cancel</a></form></body></html>')
+
+
+@app.post("/logout")
 async def logout(
     request: Request, response: Response, shikari_session: Optional[str] = Cookie(None)
 ):
@@ -9029,14 +9122,14 @@ async def register(
 
         # Seat limit: the free tier is FREE_SEATS accounts. More need a Pro or Services licence.
         # Only new accounts are capped; existing ones keep working.
-        from shikari import licensing
+        from shikari import licence
         active_users = db.query(User).filter(User.is_active.is_(True)).count()
-        if not licensing.can_add_user(active_users):
+        if not licence.can_add_user(active_users):
             record_attempt(rate_limit_key)
             return templates.TemplateResponse(
                 request, "register.html",
                 {"request": request,
-                 "error": f"This Shikari install allows {licensing.seats_allowed()} accounts. More need a "
+                 "error": f"This Shikari install allows {licence.seats_allowed()} accounts. More need a "
                           "Pro or Services licence with more seats — an administrator can add one under "
                           "Report branding → Licence.",
                  "csrf_token": next_csrf},
@@ -9636,7 +9729,7 @@ def detections_code_config_get(request: Request, shikari_session: Optional[str] 
         return JSONResponse({"error": "Log in"}, status_code=401)
     user, db = auth
     db.close()
-    if user.role != UserRole.ADMIN:
+    if not at_least(user, UserRole.ADMIN):
         return JSONResponse({"error": "Admin access required"}, status_code=403)
     return JSONResponse(repo_config.load())
 
@@ -9652,7 +9745,7 @@ def detections_code_config_save(request: Request, repo_path: str = Form(...), re
         return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
     user, db = auth
     db.close()
-    if user.role != UserRole.ADMIN:
+    if not at_least(user, UserRole.ADMIN):
         return JSONResponse({"success": False, "error": "Admin access required"}, status_code=403)
     try:
         saved = repo_config.save(repo_path, remote_url, push_enabled in ("1", "true", "on", "yes"))
@@ -9672,7 +9765,7 @@ def detections_code_config_test(request: Request, repo_path: str = Form(...), re
         return JSONResponse({"error": "Log in"}, status_code=401)
     user, db = auth
     db.close()
-    if user.role != UserRole.ADMIN:
+    if not at_least(user, UserRole.ADMIN):
         return JSONResponse({"error": "Admin access required"}, status_code=403)
     return JSONResponse(repo_config.test_connectivity(repo_path, remote_url))
 
@@ -9686,7 +9779,7 @@ def _require_admin(request, shikari_session, json=True):
         return (JSONResponse({"error": "Log in"}, status_code=401) if json
                 else RedirectResponse(url="/login", status_code=303))
     user, db = auth
-    if user.role != UserRole.ADMIN:
+    if not at_least(user, UserRole.ADMIN):
         db.close()
         return (JSONResponse({"error": "Admin access required"}, status_code=403) if json
                 else RedirectResponse(url="/", status_code=303))
@@ -9696,7 +9789,7 @@ def _require_admin(request, shikari_session, json=True):
 @app.get("/settings/report-branding")
 def report_branding_page(request: Request, shikari_session: Optional[str] = Cookie(None)):
     """The report-branding settings page (admin only)."""
-    from shikari import licensing
+    from shikari import licence
     from shikari.reports import brand_library, theme as rtheme
 
     auth = _require_admin(request, shikari_session, json=False)
@@ -9719,11 +9812,11 @@ def report_branding_page(request: Request, shikari_session: Optional[str] = Cook
             "org_name": prof.get("org_name", ""),
             "show_shikari": bool(prof.get("show_shikari", True)),
             "colours": colours, "logos": logos, "max_logos": rtheme.MAX_LOGOS,
-            "licence": licensing.status(),
+            "licence": licence.status(),
             "places_taken": db.query(User).filter(User.is_active.is_(True)).count(),
-            "seats_total": licensing.seats_allowed(),   # None = unlimited
+            "seats_total": licence.seats_allowed(),   # None = unlimited
             # The client-brand library (Services): editable only with the brand-library feature.
-            "brand_library_on": licensing.has_feature(licensing.FEATURE_BRAND_LIBRARY),
+            "brand_library_on": licence.has_feature(licence.FEATURE_BRAND_LIBRARY),
             "brands": brand_library.list_brands(), "brand_slots": brand_slots,
         })
     finally:
@@ -9834,8 +9927,8 @@ def _brand_audit(db, request, user, event: str, **details):
 
 
 def _brand_library_allowed() -> bool:
-    from shikari import licensing
-    return licensing.has_feature(licensing.FEATURE_BRAND_LIBRARY)
+    from shikari import licence
+    return licence.has_feature(licence.FEATURE_BRAND_LIBRARY)
 
 
 @app.get("/api/report-branding/brands")
@@ -10006,14 +10099,14 @@ async def _licence_text(licence: str, file) -> Optional[str]:
 @app.get("/api/report-branding/licence/terms")
 def report_branding_licence_terms(request: Request, shikari_session: Optional[str] = Cookie(None)):
     """The commercial terms an admin accepts when installing a licence (admin only)."""
-    from shikari import licensing
+    from shikari import licence
 
     auth = _require_admin(request, shikari_session)
     if isinstance(auth, JSONResponse):
         return auth
     user, db = auth
     db.close()
-    version, text = licensing.terms()
+    version, text = licence.terms()
     return JSONResponse({"success": True, "version": version, "text": text})
 
 
@@ -10022,7 +10115,7 @@ async def report_branding_licence_check(request: Request, licence: str = Form(""
                                         file: UploadFile = File(None),
                                         shikari_session: Optional[str] = Cookie(None)):
     """What a licence says, so the admin knows whom they're accepting the terms for. Installs nothing."""
-    from shikari import licensing
+    from shikari import licence as licences  # `licence` is the form field
 
     auth = _require_admin(request, shikari_session)
     if isinstance(auth, JSONResponse):
@@ -10035,8 +10128,8 @@ async def report_branding_licence_check(request: Request, licence: str = Form(""
     if not data.strip():
         return JSONResponse({"success": False, "error": "Paste a licence or choose a file"}, status_code=400)
     try:
-        lic = licensing.check(licensing.licence_line(data))
-    except licensing.LicenceProblem as exc:
+        lic = licences.check(licences.licence_line(data))
+    except licences.LicenceProblem as exc:
         return JSONResponse({"success": False, "error": str(exc)}, status_code=422)
     return JSONResponse({
         "success": True,
@@ -10044,11 +10137,11 @@ async def report_branding_licence_check(request: Request, licence: str = Form(""
         "licensee": lic.licensee,
         "edition": lic.edition.value,
         "seats": lic.seats,             # None = unlimited
-        "features": sorted(licensing.EDITION_FEATURES[lic.edition] | set(lic.features)),
+        "features": sorted(licences.EDITION_FEATURES[lic.edition] | set(lic.features)),
         "not_before": lic.not_before.isoformat() if lic.not_before else "",
         "expires": lic.expires.isoformat() if lic.expires else "perpetual",
-        "state": licensing.standing(lic).state,
-        "terms_version": licensing.terms()[0],
+        "state": licences.standing(lic).state,
+        "terms_version": licences.terms()[0],
     })
 
 
@@ -10061,7 +10154,7 @@ async def report_branding_licence_install(request: Request, licence: str = Form(
     """Install a commercial licence (admin only), pasted as text or uploaded as a file. The admin must
     have accepted the current commercial terms on the licensee's behalf; who, when and which version
     are kept with it."""
-    from shikari import licensing
+    from shikari import licence as licences  # `licence` is the form field
 
     auth = _require_admin(request, shikari_session)
     if isinstance(auth, JSONResponse):
@@ -10074,26 +10167,26 @@ async def report_branding_licence_install(request: Request, licence: str = Form(
         if not (data or "").strip():
             return JSONResponse({"success": False, "error": "Paste a licence or choose a file"}, status_code=400)
         try:
-            lic = licensing.check(licensing.licence_line(data))
-        except licensing.LicenceProblem as exc:
+            lic = licences.check(licences.licence_line(data))
+        except licences.LicenceProblem as exc:
             return JSONResponse({"success": False, "error": str(exc)}, status_code=422)
-        problem = licensing.acceptance_problem(lic, accept_terms in ("1", "true", "on", "yes"),
+        problem = licences.acceptance_problem(lic, accept_terms in ("1", "true", "on", "yes"),
                                                terms_version or None)
         if problem:
             code, reason = problem
             return JSONResponse({"success": False, "error": reason}, status_code=code)
-        ok, message = licensing.install(data, accepted_by=user.id,
+        ok, message = licences.install(data, accepted_by=user.id,
                                         accepted_by_name=f"{user.full_name} <{user.email}>")
         if ok:
             from shikari.database.audit import EVENT_LICENCE_INSTALLED, log_audit_event
-            st = licensing.status()
+            st = licences.status()
             log_audit_event(db, EVENT_LICENCE_INSTALLED, user_id=user.id, email=user.email,
                             ip_address=request.client.host if request.client else None,
                             details=json.dumps({"edition": st["edition"], "licensee": st["licensee"],
                                                 "seats": st["seats"], "licence_id": st["licence_id"],
                                                 "expires": st["expires"],
                                                 "terms_version": st["accepted"]["terms_version"]}))
-        return JSONResponse({"success": ok, "message": message, "status": licensing.status()},
+        return JSONResponse({"success": ok, "message": message, "status": licences.status()},
                             status_code=200 if ok else 400)
     finally:
         db.close()
@@ -10102,15 +10195,15 @@ async def report_branding_licence_install(request: Request, licence: str = Form(
 @app.post("/api/report-branding/licence/remove")
 def report_branding_licence_remove(request: Request, shikari_session: Optional[str] = Cookie(None)):
     """Remove the installed licence (admin only). Reports fall back to the stock look."""
-    from shikari import licensing
+    from shikari import licence
 
     auth = _require_admin(request, shikari_session)
     if isinstance(auth, JSONResponse):
         return auth
     user, db = auth
     try:
-        had = licensing.status()
-        licensing.remove()
+        had = licence.status()
+        licence.remove()
         from shikari.database.audit import EVENT_LICENCE_REMOVED, log_audit_event
         log_audit_event(db, EVENT_LICENCE_REMOVED, user_id=user.id, email=user.email,
                         ip_address=request.client.host if request.client else None,
@@ -10167,7 +10260,7 @@ def siem_availability_get(request: Request, shikari_session: Optional[str] = Coo
         return JSONResponse({"error": "Log in"}, status_code=401)
     user, db = auth
     db.close()
-    if user.role != UserRole.ADMIN:
+    if not at_least(user, UserRole.ADMIN):
         return JSONResponse({"error": "Admin access required"}, status_code=403)
     return JSONResponse({"ingested": availability.load(),
                          "catalogue": availability.source_catalogue(GENERATE_DIR)})
@@ -10186,7 +10279,7 @@ async def siem_availability_save(request: Request, shikari_session: Optional[str
         return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
     user, db = auth
     db.close()
-    if user.role != UserRole.ADMIN:
+    if not at_least(user, UserRole.ADMIN):
         return JSONResponse({"success": False, "error": "Admin access required"}, status_code=403)
     try:
         body = await request.json()
@@ -10204,7 +10297,7 @@ def _test_data_admin(request, shikari_session):
         return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
     user, db = auth
     db.close()
-    if user.role != UserRole.ADMIN:
+    if not at_least(user, UserRole.ADMIN):
         return JSONResponse({"success": False, "error": "Admin access required"}, status_code=403)
     return user, db
 
@@ -10278,7 +10371,7 @@ def siem_schema_get(request: Request, siem: str = Query(...), shikari_session: O
         return JSONResponse({"error": "Log in"}, status_code=401)
     user, db = auth
     db.close()
-    if user.role != UserRole.ADMIN:
+    if not at_least(user, UserRole.ADMIN):
         return JSONResponse({"error": "Admin access required"}, status_code=403)
     if siem.lower() not in _SCHEMA_SIEMS:
         return JSONResponse({"error": f"Unknown SIEM '{siem}'"}, status_code=400)
@@ -10297,7 +10390,7 @@ async def siem_schema_save(request: Request, shikari_session: Optional[str] = Co
         return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
     user, db = auth
     db.close()
-    if user.role != UserRole.ADMIN:
+    if not at_least(user, UserRole.ADMIN):
         return JSONResponse({"success": False, "error": "Admin access required"}, status_code=403)
     try:
         body = await request.json()
@@ -10323,7 +10416,7 @@ def siem_schema_reset(request: Request, siem: str = Form(...), shikari_session: 
         return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
     user, db = auth
     db.close()
-    if user.role != UserRole.ADMIN:
+    if not at_least(user, UserRole.ADMIN):
         return JSONResponse({"success": False, "error": "Admin access required"}, status_code=403)
     if siem.lower() not in _SCHEMA_SIEMS:
         return JSONResponse({"success": False, "error": f"Unknown SIEM '{siem}'"}, status_code=400)
@@ -10614,11 +10707,11 @@ def assessment_detail(assessment_id: int, request: Request, shikari_session: Opt
                 "run_date": a.run_date, "brand": a.brand}
     finally:
         db.close()
-    from shikari import licensing
+    from shikari import licence
     from shikari.reports import brand_library
     return templates.TemplateResponse(request, "assessment_detail.html", {
         "request": request, "user": user, "assessment": meta, "results": rows,
-        "brand_library": licensing.has_feature(licensing.FEATURE_BRAND_LIBRARY),
+        "brand_library": licence.has_feature(licence.FEATURE_BRAND_LIBRARY),
         "brands": brand_library.list_brands()})
 
 
@@ -10976,7 +11069,7 @@ def incidents_refresh(request: Request, shikari_session: Optional[str] = Cookie(
         return JSONResponse({"error": "Log in"}, status_code=401)
     user, db = auth
     try:
-        if user.role != UserRole.ADMIN:
+        if not at_least(user, UserRole.ADMIN):
             return JSONResponse({"error": "Admin only"}, status_code=403)
     finally:
         db.close()
@@ -11045,7 +11138,7 @@ def ioc_feeds_refresh(request: Request, shikari_session: Optional[str] = Cookie(
         return JSONResponse({"error": "Log in"}, status_code=401)
     user, db = auth
     try:
-        if user.role != UserRole.ADMIN:
+        if not at_least(user, UserRole.ADMIN):
             return JSONResponse({"error": "Admin only"}, status_code=403)
     finally:
         db.close()
@@ -14144,7 +14237,7 @@ async def reset_password(request: Request):
     """
     Reset password using a valid reset token.
     """
-    from shikari.database.audit import log_audit_event, EVENT_PASSWORD_RESET_COMPLETED
+    from shikari.database.audit import log_audit_event, EVENT_PASSWORD_RESET_COMPLETE
     from shikari.auth.password_reset import validate_reset_token
 
     try:
@@ -14175,7 +14268,7 @@ async def reset_password(request: Request):
             if not user:
                 log_audit_event(
                     db=db,
-                    event_type=EVENT_PASSWORD_RESET_COMPLETED,
+                    event_type=EVENT_PASSWORD_RESET_COMPLETE,
                     ip_address=client_ip,
                     user_agent=user_agent,
                     success=False,
@@ -14189,7 +14282,7 @@ async def reset_password(request: Request):
             if not success:
                 log_audit_event(
                     db=db,
-                    event_type=EVENT_PASSWORD_RESET_COMPLETED,
+                    event_type=EVENT_PASSWORD_RESET_COMPLETE,
                     user_id=user.id,
                     email=user.email,
                     ip_address=client_ip,
@@ -14202,7 +14295,7 @@ async def reset_password(request: Request):
             # Log successful password reset
             log_audit_event(
                 db=db,
-                event_type=EVENT_PASSWORD_RESET_COMPLETED,
+                event_type=EVENT_PASSWORD_RESET_COMPLETE,
                 user_id=user.id,
                 email=user.email,
                 ip_address=client_ip,
@@ -14238,7 +14331,7 @@ async def admin_reset_user_password(request: Request, shikari_session: Optional[
 
     try:
         # Verify admin role
-        if admin_user.role != UserRole.ADMIN:
+        if not _permanent_admin(admin_user):
             return {"success": False, "error": "Unauthorized - Admin access required"}
 
         data = await request.json()
@@ -14293,7 +14386,7 @@ async def get_all_users(request: Request, shikari_session: Optional[str] = Cooki
 
     try:
         # Verify admin role
-        if admin_user.role != UserRole.ADMIN:
+        if not _permanent_admin(admin_user):
             return {"success": False, "error": "Unauthorized - Admin access required"}
 
         # Get all users
@@ -14339,7 +14432,7 @@ async def create_user(request: Request, shikari_session: Optional[str] = Cookie(
 
     try:
         # Verify admin role
-        if admin_user.role != UserRole.ADMIN:
+        if not _permanent_admin(admin_user):
             return {"success": False, "error": "Unauthorized - Admin access required"}
 
         data = await request.json()
@@ -14379,11 +14472,11 @@ async def create_user(request: Request, shikari_session: Optional[str] = Cookie(
             return {"success": False, "error": "User with this email already exists"}
 
         # Seat limit: the free tier is FREE_SEATS accounts; more need a Pro or Services licence.
-        from shikari import licensing
+        from shikari import licence
         active_users = db.query(User).filter(User.is_active.is_(True)).count()
-        if not licensing.can_add_user(active_users):
+        if not licence.can_add_user(active_users):
             return {"success": False, "requires_seats": True,
-                    "error": f"This install allows {licensing.seats_allowed()} accounts. Add a Pro or "
+                    "error": f"This install allows {licence.seats_allowed()} accounts. Add a Pro or "
                              "Services licence with more seats to create more (Report branding → Licence)."}
 
         # Create new user
@@ -14439,7 +14532,7 @@ async def update_user(request: Request, user_id: int, shikari_session: Optional[
 
     try:
         # Verify admin role
-        if admin_user.role != UserRole.ADMIN:
+        if not _permanent_admin(admin_user):
             return {"success": False, "error": "Unauthorized - Admin access required"}
 
         # Get user to update
@@ -14528,7 +14621,7 @@ async def deactivate_user(
 
     try:
         # Verify admin role
-        if admin_user.role != UserRole.ADMIN:
+        if not _permanent_admin(admin_user):
             return {"success": False, "error": "Unauthorized - Admin access required"}
 
         # Prevent admin from deactivating themselves

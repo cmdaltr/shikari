@@ -50,7 +50,7 @@ data/mitre_procedures.building.csv
 data/mitre_procedures.building.json
 data/*.sqlite
 data/*.sqlite3
-# Per-install commercial licence and report branding (shikari/licensing.py, shikari/reports/theme.py)
+# Per-install commercial licence and report branding (shikari/licence.py, shikari/reports/theme.py)
 data/licence.json
 data/branding/
 # Issued licences and signing keys (licensor only — must never be committed)

@@ -11,7 +11,7 @@ class TestAskShikari:
         r = api.post("/api/ask", json={
             "question": "What is T1059.001?",
         })
-        assert r.status_code in [200, 401, 422, 500]
+        assert r.status_code in [200, 401, 422, 500, 503]  # 503: no AI provider configured
         if r.status_code == 200:
             data = r.json()
             assert "answer" in data
@@ -22,7 +22,7 @@ class TestAskShikari:
             "question": "What techniques does this group use for initial access?",
             "context": {"group": "Scattered Spider"},
         })
-        assert r.status_code in [200, 401, 422, 500]
+        assert r.status_code in [200, 401, 422, 500, 503]  # 503: no AI provider configured
 
     def test_ask_empty_question(self, api, ensure_running):
         r = api.post("/api/ask", json={"question": ""})
@@ -32,7 +32,7 @@ class TestAskShikari:
         r = api.post("/api/ask", json={
             "question": "Write a Splunk query to detect PowerShell encoded commands",
         })
-        assert r.status_code in [200, 401, 422, 500]
+        assert r.status_code in [200, 401, 422, 500, 503]  # 503: no AI provider configured
 
 
 class TestThreatBriefing:
@@ -43,7 +43,7 @@ class TestThreatBriefing:
             "group": "Scattered Spider",
             "top_n": 5,
         })
-        assert r.status_code in [200, 401, 422, 500]
+        assert r.status_code in [200, 401, 422, 500, 503]  # 503: no AI provider configured
         if r.status_code == 200:
             data = r.json()
             assert "group_name" in data or "briefing_summary" in data or "top_techniques" in data
@@ -53,7 +53,7 @@ class TestThreatBriefing:
             "group": "APT28",
             "top_n": 3,
         })
-        assert r.status_code in [200, 401, 422, 500]
+        assert r.status_code in [200, 401, 422, 500, 503]  # 503: no AI provider configured
 
     def test_briefing_for_nonexistent_group(self, api, ensure_running):
         r = api.post("/api/threat-briefing", json={
@@ -70,4 +70,4 @@ class TestThreatBriefing:
             "group": "APT29",
             "top_n": 10,
         })
-        assert r.status_code in [200, 401, 422, 500]
+        assert r.status_code in [200, 401, 422, 500, 503]  # 503: no AI provider configured
