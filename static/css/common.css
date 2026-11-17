@@ -85,7 +85,8 @@ body::before {
     transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .nav-tab svg { width: 19px; height: 19px; flex-shrink: 0; }
-a.nav-tab:hover { background: rgba(255,255,255,0.1); color: #fff; }
+button.nav-tab { background: none; font-family: inherit; cursor: pointer; }  /* logout is a POST form */
+a.nav-tab:hover, button.nav-tab:hover { background: rgba(255,255,255,0.1); color: #fff; }
 .nav-tab.is-active { background: rgba(255,255,255,0.12); border-color: var(--accent); color: #fff; }
 .nav-tab.is-disabled { color: rgba(255,255,255,0.32); cursor: not-allowed; }
 .nav-auth { border-color: var(--accent); color: #fff; }
