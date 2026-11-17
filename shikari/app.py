@@ -7,7 +7,8 @@ from shikari.build.group_files import group_yaml_files
 from shikari.build.attack_mapping import rule_name as attack_rule_name
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from typing import List, Optional
+import time
+from typing import Dict, List, Optional
 from pydantic import BaseModel
 from shikari import paths
 
@@ -1178,29 +1179,111 @@ def _bearer_token(request: Request) -> Optional[str]:
     return auth[7:].strip() if auth[:7].lower() == "bearer " else None
 
 
+# Signed in by default: every route needs a session (or an API token) except these. Routes were
+# open unless they called require_auth, and the local penetration test (November 2026) found hunts,
+# regenerate, downloads and the validation containers reachable with no login.
+PUBLIC_PATHS = {"/login", "/login/mfa", "/register", "/logout", "/forgot-password", "/reset-password", "/health",
+                "/favicon.ico", "/api/busy", "/desktop/enter", "/api/auth/request-reset",
+                "/api/auth/reset-password",
+                "/mcp"}  # MCP answers a missing token itself; an invalid one is refused above
+PUBLIC_PREFIXES = ("/static/",)
+# SHIKARI_ALLOW_GUESTS=1: people who aren't signed in may browse (GET) for a demo, never change anything
+ALLOW_GUESTS = os.environ.get("SHIKARI_ALLOW_GUESTS", "").strip().lower() in ("1", "true", "yes")
+
+
+def _signed_in(session_id: Optional[str]) -> bool:
+    if not session_id:
+        return False
+    db = next(get_db())
+    try:
+        return get_user_from_session_id(session_id, db) is not None
+    finally:
+        db.close()
+
+
 @app.middleware("http")
 async def api_token_auth(request: Request, call_next):
     """
     Authorization: Bearer <API token> signs the request in as the token's owner. The token
     is swapped for that user's session cookie, so every route accepts it unchanged
-    (shikari/auth/tokens.py).
+    (shikari/auth/tokens.py). Then nothing but PUBLIC_PATHS is served without a session.
     """
-    token = _bearer_token(request)
-    if token is None:
-        return await call_next(request)
     from starlette.concurrency import run_in_threadpool
 
-    from shikari.auth.tokens import session_for
+    token = _bearer_token(request)
+    session_id = request.cookies.get("shikari_session")
+    if token is not None:
+        from shikari.auth.tokens import session_for
 
-    session_id = await run_in_threadpool(session_for, token)
-    if not session_id:
-        return JSONResponse({"error": "Invalid or revoked API token"}, status_code=401)
-    cookies = [c for c in (request.headers.get("cookie") or "").split(";")
-               if c.strip() and not c.strip().startswith("shikari_session=")]
-    headers = [(k, v) for k, v in request.scope["headers"] if k != b"cookie"]
-    headers.append((b"cookie", "; ".join(cookies + [f"shikari_session={session_id}"]).encode()))
-    request.scope["headers"] = headers
+        session_id = await run_in_threadpool(session_for, token)
+        if not session_id:
+            return JSONResponse({"error": "Invalid or revoked API token"}, status_code=401)
+        cookies = [c for c in (request.headers.get("cookie") or "").split(";")
+                   if c.strip() and not c.strip().startswith("shikari_session=")]
+        headers = [(k, v) for k, v in request.scope["headers"] if k != b"cookie"]
+        headers.append((b"cookie", "; ".join(cookies + [f"shikari_session={session_id}"]).encode()))
+        request.scope["headers"] = headers
+
+    path = request.url.path
+    if path in PUBLIC_PATHS or path.startswith(PUBLIC_PREFIXES):
+        return await call_next(request)
+    if not await run_in_threadpool(_signed_in, session_id):
+        if ALLOW_GUESTS and request.method in ("GET", "HEAD"):
+            return await call_next(request)
+        if request.method == "GET" and not path.startswith("/api/"):
+            from urllib.parse import quote
+
+            back = path + (f"?{request.url.query}" if request.url.query else "")
+            return RedirectResponse(url=f"/login?next_url={quote(back)}", status_code=303)
+        return JSONResponse({"error": "Log in to use Shikari"}, status_code=401)
     return await call_next(request)
+
+
+UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+def _https(request: Request) -> bool:
+    return (request.url.scheme == "https"
+            or request.headers.get("x-forwarded-proto", "").split(",")[0].strip() == "https")
+
+
+def _cross_site(request: Request) -> bool:
+    """Whether a browser sent this from another site, or another app on the same site: on the
+    homelab node every app shares one host, and ts.net is a public suffix, so SameSite=Lax alone lets
+    any of them post to Shikari. Sec-Fetch-Site says where a request came from and a page can't set
+    it; Origin is the fallback for browsers without it. A client with neither (curl, the console)
+    isn't a browser a page could drive."""
+    site = request.headers.get("sec-fetch-site")
+    if site is not None:
+        return site not in ("same-origin", "none")
+    origin = request.headers.get("origin")
+    if not origin or origin == "null":
+        return origin == "null"
+    from urllib.parse import urlsplit
+
+    hosts = {request.headers.get("host", ""), request.headers.get("x-forwarded-host", "").split(",")[0].strip()}
+    return urlsplit(origin).netloc not in hosts
+
+
+@app.middleware("http")
+async def request_guard(request: Request, call_next):
+    """Refuse changes another site's page asks for (CSRF), and send the headers that stop Shikari
+    being framed by another site, sniffed into another type, or its URLs leaking in Referer."""
+    if (request.method in UNSAFE_METHODS and _bearer_token(request) is None
+            and _cross_site(request)):
+        return JSONResponse({"error": "Cross-site request refused"}, status_code=403)
+    response = await call_next(request)
+    response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    response.headers.setdefault("Content-Security-Policy", "frame-ancestors 'self'")
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "same-origin")
+    if _https(request):
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+        # Session cookies only ever over TLS when that's how Shikari is reached
+        raw = [(k, v + b"; Secure" if k == b"set-cookie" and b"secure" not in v.lower() else v)
+               for k, v in response.raw_headers]
+        response.raw_headers[:] = raw
+    return response
 
 
 BUSY_STALE_SECONDS = 15 * 60
@@ -1289,7 +1372,7 @@ async def not_found_page(request: Request, exc):
             user = None
         finally:
             db.close()
-    return templates.TemplateResponse("404.html", {"request": request, "user": user}, status_code=404)
+    return templates.TemplateResponse(request, "404.html", {"request": request, "user": user}, status_code=404)
 
 
 async def _sweep_expired_state():
@@ -2242,7 +2325,7 @@ async def coverage_page(request: Request, shikari_session: Optional[str] = Cooki
         finally:
             db.close()
     siem_cards = [(k, SIEM_LABELS[k]) for k in (_user_siems(user) or SIEM_PLATFORMS)]
-    return templates.TemplateResponse("coverage.html", {"request": request, "user": user, "siem_cards": siem_cards})
+    return templates.TemplateResponse(request, "coverage.html", {"request": request, "user": user, "siem_cards": siem_cards})
 
 
 @app.get("/mitresaw", response_class=HTMLResponse)
@@ -2255,7 +2338,7 @@ async def mitresaw_page(request: Request, shikari_session: Optional[str] = Cooki
             user = get_user_from_session_id(shikari_session, db)
         finally:
             db.close()
-    return templates.TemplateResponse("mitresaw.html", {"request": request, "user": user})
+    return templates.TemplateResponse(request, "mitresaw.html", {"request": request, "user": user})
 
 
 @app.get("/emulate", response_class=HTMLResponse)
@@ -2271,7 +2354,7 @@ async def emulate_page(request: Request, shikari_session: Optional[str] = Cookie
     # The SIEM the page shows tables or event types for: the first of the user's, SecOps first
     chosen = _user_siems(user)
     siem = next((s for s in ("secops", "mde") if s in chosen), "secops")
-    return templates.TemplateResponse("emulate.html", {"request": request, "user": user, "siem": siem})
+    return templates.TemplateResponse(request, "emulate.html", {"request": request, "user": user, "siem": siem})
 
 
 @app.get("/cyber-powers", response_class=HTMLResponse)
@@ -2290,7 +2373,7 @@ async def cyber_powers_page(request: Request, shikari_session: Optional[str] = C
 
     data = page_data(getattr(request.app.state, "bundle", None), getattr(request.app.state, "group_metadata", {}) or {},
                      getattr(user, "country", None))
-    return templates.TemplateResponse("cyber_powers.html", {"request": request, "user": user, "powers": powers(),
+    return templates.TemplateResponse(request, "cyber_powers.html", {"request": request, "user": user, "powers": powers(),
                                                             "map_svg": MAP_PATH.read_text(encoding="utf-8"), "data": data})
 
 
@@ -2520,7 +2603,7 @@ def read_form(request: Request, shikari_session: Optional[str] = Cookie(None)):
     ]
 
     return templates.TemplateResponse(
-        "index.html",
+        request, "index.html",
         {
             "request": request,
             "user": user,
@@ -2549,7 +2632,7 @@ def how_it_works(request: Request, shikari_session: Optional[str] = Cookie(None)
 
     from shikari import capabilities
     return templates.TemplateResponse(
-        "how_it_works.html",
+        request, "how_it_works.html",
         {"request": request, "user": user, "dependencies": capabilities.dependency_matrix()},
     )
 
@@ -2573,7 +2656,7 @@ def agents_page(request: Request, shikari_session: Optional[str] = Cookie(None))
     finally:
         db.close()
     agents = [{"agent": a, "tools": a.tools(ToolContext(client=None))} for a in AGENTS.values()]
-    return templates.TemplateResponse("agents.html", {
+    return templates.TemplateResponse(request, "agents.html", {
         "request": request, "user": user, "agents": agents, "providers": providers,
         "model": llm["model"] if llm else None, "provider": llm["provider"] if llm else None,
     })
@@ -2884,6 +2967,15 @@ async def generate(
     # Called when the user clicks Generate on the index page, or Regenerate on a results
     # page (regenerate=true: rewrite every detection the run reaches, hand edits included). We first
     # check whether the provided group name maps to a known MITRE actor.
+    if regenerate == "true":
+        # Regenerate overwrites everyone's hand edits and prunes the group's old files: an operator's job
+        auth = require_auth(request, shikari_session)
+        if isinstance(auth, RedirectResponse):
+            return JSONResponse({"error": "Log in"}, status_code=401)
+        auth[1].close()
+        if not at_least(auth[0], UserRole.OPERATOR):
+            return JSONResponse({"error": "Regenerate rewrites everyone's detections, hand edits included: "
+                                          "ask an operator or admin"}, status_code=403)
 
     # Determine GENAI_MODE — an explicit ai_provider (from the Hunt-page AI
     # prompt) takes priority over the legacy ai_generators/local_llm checkboxes.
@@ -3877,7 +3969,7 @@ async def progress(
     is_cve_hunt = group_name and (group_name.upper().startswith("CVE-"))
 
     return templates.TemplateResponse(
-        "progress.html",
+        request, "progress.html",
         {"request": request, "user": user, "group_name": group_name, "is_cve_hunt": is_cve_hunt},
     )
 
@@ -3892,7 +3984,7 @@ def regex_page(request: Request, shikari_session: Optional[str] = Cookie(None)):
             user = get_user_from_session_id(shikari_session, db)
         finally:
             db.close()
-    return templates.TemplateResponse("regex.html", {"request": request, "user": user})
+    return templates.TemplateResponse(request, "regex.html", {"request": request, "user": user})
 
 
 _manual_platform_cache: dict = {}
@@ -3961,7 +4053,7 @@ def manual_platform_choices() -> list:
 def _manual_page(request: Request, group_name: str = "", user=None, error_message: str = ""):
     tactics, techniques = get_mitre_lists()
     return templates.TemplateResponse(
-        "manual.html",
+        request, "manual.html",
         {
             "request": request,
             "user": user,
@@ -4354,6 +4446,10 @@ async def progress_status(group_name: str = ""):
 
 @app.get("/correlations/{group_name}.json")
 async def correlations_json(group_name: str):
+    from shikari.build.correlation_files import plain_group_name
+
+    if not plain_group_name(group_name):
+        return JSONResponse({"ok": False, "error": "not_found"}, status_code=404)
     path = os.path.join(CORRELATE_DIR, f"{group_name}.json")
     if not os.path.exists(path):
         return JSONResponse({"ok": False, "error": "not_found"}, status_code=404)
@@ -7790,7 +7886,7 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
             cross_vendor = []
 
     return templates.TemplateResponse(
-        "results.html",
+        request, "results.html",
         {
             "request": request,
             "user": user,
@@ -7826,7 +7922,7 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
             "kept_edited": (_latest_run_record(group_name) or {}).get("kept_edited") or [],
             "stack_warnings": (_latest_run_record(group_name) or {}).get("stack_warnings") or [],
             # Regenerate re-runs a threat group through /generate
-            "can_regenerate": _is_attack_group(group_name),
+            "can_regenerate": _is_attack_group(group_name) and at_least(user, UserRole.OPERATOR),
             "no_detection": no_detection,
             "briefing": briefing,
             "briefing_ai": briefing_lib.load_summary(safe_group, briefing),
@@ -8077,6 +8173,10 @@ def download_selected_detections(group_name: str, detections: List[str] = Form([
 
 def _group_zip(group_name: str, detections: Optional[set] = None, correlations: Optional[set] = None):
     """None means every one; a set keeps only those files (and the index's matching entries)."""
+    from shikari.build.correlation_files import plain_group_name
+
+    if not plain_group_name(group_name):
+        return JSONResponse({"error": "No such group"}, status_code=404)
     print(f"\n{'='*60}")
     print(f"DOWNLOAD ALL REQUEST RECEIVED")
     print(f"Group name: {group_name}")
@@ -8178,17 +8278,25 @@ def _group_zip(group_name: str, detections: Optional[set] = None, correlations: 
 
 
 @app.get("/api/attack-flow/{filename}")
-def view_attack_flow(filename: str):
+def view_attack_flow(filename: str, request: Request, shikari_session: Optional[str] = Cookie(None)):
     """
-    Serve an attack flow HTML file for viewing.
+    Serve an attack flow file: HTML views as HTML, everything else (the JSON views and bundles,
+    which carry a group name as given) as JSON, so nothing written from input renders as a page.
     """
+    auth = require_auth(request, shikari_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in"}, status_code=401)
+    auth[1].close()
     safe_filename = sanitize_filename(filename)
     file_path = os.path.join(ATTACK_FLOWS_DIR, safe_filename)
 
     if not os.path.exists(file_path):
-        return {"error": "Attack flow not found"}, 404
+        return JSONResponse({"error": "Attack flow not found"}, status_code=404)
 
-    return FileResponse(file_path, media_type="text/html")
+    if safe_filename.endswith(".html"):
+        return FileResponse(file_path, media_type="text/html")
+    return FileResponse(file_path, media_type="application/json",
+                        headers={"X-Content-Type-Options": "nosniff"})
 
 
 @app.get("/api/download/flow/{filename}")
@@ -8312,7 +8420,7 @@ async def login_page(
 
     # Store temp session ID in a cookie for CSRF validation
     template_response = templates.TemplateResponse(
-        "login.html",
+        request, "login.html",
         {
             "request": request,
             "error": None,
@@ -8370,7 +8478,7 @@ async def reset_password_page(request: Request):
     """
     Render the password reset page.
     """
-    return templates.TemplateResponse("reset_password.html", {"request": request})
+    return templates.TemplateResponse(request, "reset_password.html", {"request": request})
 
 
 @app.post("/login")
@@ -8431,7 +8539,7 @@ async def login(
 
             retry_session = secrets.token_urlsafe(16)
             error_response = templates.TemplateResponse(
-                "login.html",
+                request, "login.html",
                 {
                     "request": request,
                     "error": "Security validation failed. Please try again.",
@@ -8468,7 +8576,7 @@ async def login(
                 details="Rate limit exceeded",
             )
             return templates.TemplateResponse(
-                "login.html",
+                request, "login.html",
                 {
                     "request": request,
                     "csrf_token": next_csrf,
@@ -8492,7 +8600,7 @@ async def login(
                 details="User not found",
             )
             return templates.TemplateResponse(
-                "login.html",
+                request, "login.html",
                 {"request": request, "csrf_token": next_csrf, "error": "Invalid email or password"},
                 status_code=401,
             )
@@ -8512,7 +8620,7 @@ async def login(
                 details=f"Account locked until {user.locked_until}",
             )
             return templates.TemplateResponse(
-                "login.html",
+                request, "login.html",
                 {
                     "request": request,
                     "csrf_token": next_csrf,
@@ -8547,7 +8655,7 @@ async def login(
                 )
 
                 return templates.TemplateResponse(
-                    "login.html",
+                    request, "login.html",
                     {
                         "request": request,
                         "csrf_token": next_csrf,
@@ -8571,7 +8679,7 @@ async def login(
             )
 
             return templates.TemplateResponse(
-                "login.html",
+                request, "login.html",
                 {"request": request, "csrf_token": next_csrf, "error": "Invalid email or password"},
                 status_code=401,
             )
@@ -8589,7 +8697,7 @@ async def login(
                 details="Account disabled",
             )
             return templates.TemplateResponse(
-                "login.html",
+                request, "login.html",
                 {
                     "request": request,
                     "csrf_token": next_csrf,
@@ -8598,53 +8706,123 @@ async def login(
                 status_code=403,
             )
 
-        # Successful login - reset failed attempts and unlock account
-        user.failed_login_attempts = 0
-        user.locked_until = None
-        db.commit()
-
-        # Reset rate limit for this IP
-        reset_rate_limit(rate_limit_key)
-
-        # Create session
         remember = remember_me == "true"
-        session_id = create_session(user.id, remember_me=remember, db=db)
+        if user.mfa_enabled and user.mfa_secret:
+            # The password was right; the session waits for the second factor (POST /login/mfa)
+            import secrets as _secrets
 
-        # Log successful login
-        log_audit_event(
-            db=db,
-            event_type=EVENT_LOGIN_SUCCESS,
-            user_id=user.id,
-            email=email,
-            ip_address=client_ip,
-            user_agent=user_agent,
-            success=True,
-            details=f"Login successful (Remember Me: {remember})",
-        )
+            token = _secrets.token_urlsafe(32)
+            _prune_pending_mfa()
+            _PENDING_MFA[token] = {"user_id": user.id, "remember": remember, "next_url": next_url,
+                                   "rate_limit_key": rate_limit_key, "expires": time.time() + MFA_STEP_SECONDS,
+                                   "tries": 0}
+            return templates.TemplateResponse(request, "login.html", {"request": request, "mfa_token": token})
 
-        # Validate next_url parameter to prevent open redirect vulnerabilities
-        # Only allow relative URLs starting with /
-        redirect_url = "/"
-        if next_url and next_url.startswith("/") and not next_url.startswith("//"):
-            redirect_url = next_url
-
-        # Set session cookie
-        redirect_response = RedirectResponse(url=redirect_url, status_code=303)
-
-        # Set cookie with appropriate max_age
-        if remember:
-            max_age = 7 * 24 * 60 * 60  # 7 days in seconds
-        else:
-            max_age = 16 * 60 * 60  # 16 hours in seconds
-
-        redirect_response.set_cookie(
-            key="shikari_session", value=session_id, max_age=max_age, httponly=True, samesite="lax"
-        )
-
-        return redirect_response
+        return _complete_login(db, user, remember, next_url, rate_limit_key, email, client_ip, user_agent)
 
     finally:
         db.close()
+
+
+# Second factor: tokens for logins whose password was right, waiting on a TOTP or backup code. In
+# memory, five minutes, five tries: a restart only means entering the password again.
+MFA_STEP_SECONDS = 300
+_PENDING_MFA: Dict[str, Dict] = {}
+
+
+def _prune_pending_mfa():
+    now = time.time()
+    for token in [t for t, p in _PENDING_MFA.items() if p["expires"] < now]:
+        _PENDING_MFA.pop(token, None)
+
+
+@app.post("/login/mfa")
+async def login_mfa(request: Request, mfa_token: str = Form(...), code: str = Form(...)):
+    """The second step of a login for an account with MFA on: a code from the authenticator app,
+    or one of the backup codes (each works once)."""
+    from shikari.auth.mfa import verify_backup_code, verify_totp_code
+
+    _prune_pending_mfa()
+    pending = _PENDING_MFA.get(mfa_token)
+    if not pending:
+        return RedirectResponse(url="/login", status_code=303)  # expired: the password again
+    db = next(get_db())
+    try:
+        user = db.query(User).filter(User.id == pending["user_id"], User.is_active == True).first()
+        code = (code or "").strip()
+        ok = False
+        if user and user.mfa_secret:
+            if verify_totp_code(user.mfa_secret, code.replace(" ", "")):
+                ok = True
+            else:
+                used, updated = verify_backup_code(user.backup_codes, code)
+                if used:
+                    user.backup_codes = updated
+                    ok = True
+        if not ok:
+            pending["tries"] += 1
+            if pending["tries"] >= 5 or not user:
+                _PENDING_MFA.pop(mfa_token, None)
+                return RedirectResponse(url="/login", status_code=303)  # too many wrong codes
+            return templates.TemplateResponse(request, "login.html", {
+                "request": request, "mfa_token": mfa_token, "error": "That code didn't match. Try the current one."})
+        _PENDING_MFA.pop(mfa_token, None)
+        return _complete_login(db, user, pending["remember"], pending["next_url"], pending["rate_limit_key"],
+                               user.email, request.client.host if request.client else "",
+                               request.headers.get("user-agent", ""))
+    finally:
+        db.close()
+
+
+def _complete_login(db, user, remember: bool, next_url: Optional[str], rate_limit_key: str, email: str,
+                    client_ip: str, user_agent: str):
+    """Everything a login does once every factor has checked out: the session, its cookie, the audit."""
+    from shikari.database.audit import EVENT_LOGIN_SUCCESS, log_audit_event
+    from shikari.security.rate_limit import reset_rate_limit
+
+    # Successful login - reset failed attempts and unlock account
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    db.commit()
+
+    # Reset rate limit for this IP
+    reset_rate_limit(rate_limit_key)
+
+    # Create session
+    session_id = create_session(user.id, remember_me=remember, db=db)
+
+    # Log successful login
+    log_audit_event(
+        db=db,
+        event_type=EVENT_LOGIN_SUCCESS,
+        user_id=user.id,
+        email=email,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        success=True,
+        details=f"Login successful (Remember Me: {remember})",
+    )
+
+    # Validate next_url parameter to prevent open redirect vulnerabilities
+    # Only allow relative URLs starting with /
+    redirect_url = "/"
+    if next_url and next_url.startswith("/") and not next_url.startswith("//"):
+        redirect_url = next_url
+
+    # Set session cookie
+    redirect_response = RedirectResponse(url=redirect_url, status_code=303)
+
+    # Set cookie with appropriate max_age
+    if remember:
+        max_age = 7 * 24 * 60 * 60  # 7 days in seconds
+    else:
+        max_age = 16 * 60 * 60  # 16 hours in seconds
+
+    redirect_response.set_cookie(
+        key="shikari_session", value=session_id, max_age=max_age, httponly=True, samesite="lax"
+    )
+
+    return redirect_response
 
 
 @app.get("/logout")
@@ -8681,7 +8859,7 @@ async def register_page(request: Request, response: Response):
 
     # Store temp session ID in a cookie for CSRF validation
     template_response = templates.TemplateResponse(
-        "register.html", {"request": request, "error": None, "csrf_token": csrf_token}
+        request, "register.html", {"request": request, "error": None, "csrf_token": csrf_token}
     )
 
     template_response.set_cookie(
@@ -8700,7 +8878,7 @@ async def forgot_password_page(request: Request):
     """
     Render the forgot-password page (request a reset link).
     """
-    return templates.TemplateResponse("forgot_password.html", {"request": request})
+    return templates.TemplateResponse(request, "forgot_password.html", {"request": request})
 
 
 @app.post("/register")
@@ -8754,7 +8932,7 @@ async def register(
 
             retry_session = secrets.token_urlsafe(16)
             error_response = templates.TemplateResponse(
-                "register.html",
+                request, "register.html",
                 {
                     "request": request,
                     "error": "Security validation failed. Please try again.",
@@ -8782,7 +8960,7 @@ async def register(
 
         if not is_allowed:
             return templates.TemplateResponse(
-                "register.html",
+                request, "register.html",
                 {
                     "request": request,
                     "error": "Too many registration attempts. Please try again in 5 minutes.",
@@ -8797,7 +8975,7 @@ async def register(
         if not re.match(email_pattern, email) or len(email) > 64:
             record_attempt(rate_limit_key)
             return templates.TemplateResponse(
-                "register.html",
+                request, "register.html",
                 {"request": request, "error": "Invalid email address", "csrf_token": next_csrf},
                 status_code=400,
             )
@@ -8807,7 +8985,7 @@ async def register(
         if existing_user:
             record_attempt(rate_limit_key)
             return templates.TemplateResponse(
-                "register.html",
+                request, "register.html",
                 {
                     "request": request,
                     "error": "An account with this email address already exists",
@@ -8821,7 +8999,7 @@ async def register(
         if len(full_name) < 2 or len(full_name) > 64:
             record_attempt(rate_limit_key)
             return templates.TemplateResponse(
-                "register.html",
+                request, "register.html",
                 {
                     "request": request,
                     "error": "Full name must be between 2 and 64 characters",
@@ -8834,7 +9012,7 @@ async def register(
         if password != password_confirm:
             record_attempt(rate_limit_key)
             return templates.TemplateResponse(
-                "register.html",
+                request, "register.html",
                 {"request": request, "error": "Passwords do not match", "csrf_token": next_csrf},
                 status_code=400,
             )
@@ -8844,7 +9022,7 @@ async def register(
         if not is_valid:
             record_attempt(rate_limit_key)
             return templates.TemplateResponse(
-                "register.html",
+                request, "register.html",
                 {"request": request, "error": error_msg, "csrf_token": next_csrf},
                 status_code=400,
             )
@@ -8856,7 +9034,7 @@ async def register(
         if not licensing.can_add_user(active_users):
             record_attempt(rate_limit_key)
             return templates.TemplateResponse(
-                "register.html",
+                request, "register.html",
                 {"request": request,
                  "error": f"This Shikari install allows {licensing.seats_allowed()} accounts. More need a "
                           "Pro or Services licence with more seats — an administrator can add one under "
@@ -8919,7 +9097,7 @@ async def profile_page(request: Request, shikari_session: Optional[str] = Cookie
 
     try:
         return templates.TemplateResponse(
-            "profile.html", {"request": request, "user": user, "profile_picture_url": None,
+            request, "profile.html", {"request": request, "user": user, "profile_picture_url": None,
                              "countries": __import__("shikari.intelligence.cyber_powers", fromlist=["countries"]).countries()}
         )
     finally:
@@ -8944,7 +9122,7 @@ def flows_page(request: Request, group: str = "", shikari_session: Optional[str]
     kinds = {}
     for f in flows:
         kinds.setdefault(f["kind"], []).append(f)
-    return templates.TemplateResponse("flows.html", {
+    return templates.TemplateResponse(request, "flows.html", {
         "request": request, "user": user, "kinds": kinds, "chosen": chosen,
         "group_name": chosen["group"] if chosen else "",
         "attack_flow": chosen["view"] if chosen else None,
@@ -8974,7 +9152,7 @@ def anatomy_page(request: Request, group: str = "", shikari_session: Optional[st
     kinds = {}
     for f in entries:
         kinds.setdefault(f["kind"], []).append(f)
-    return templates.TemplateResponse("anatomy.html", {
+    return templates.TemplateResponse(request, "anatomy.html", {
         "request": request, "user": user, "kinds": kinds, "chosen": chosen,
         "group_name": chosen["group"] if chosen else "", "anatomy": view,
     })
@@ -9001,7 +9179,7 @@ def results_osint(request: Request, kind: str = "detection", files: List[str] = 
             data.update(check_osint_enriched(p)[1] or {})
     if not data:
         return HTMLResponse('<p class="osint-empty">No OSINT details are recorded for this any more.</p>')
-    return templates.TemplateResponse("partials/osint_details.html", {"request": request, "osint": data})
+    return templates.TemplateResponse(request, "partials/osint_details.html", {"request": request, "osint": data})
 
 
 @app.get("/flow", response_class=HTMLResponse)
@@ -9033,7 +9211,7 @@ def flow_only_page(request: Request, group_name: str, shikari_session: Optional[
                 layout["state"] = load_layout(db, user.id, safe_group)
     finally:
         db.close()
-    return templates.TemplateResponse("flow_only.html", {
+    return templates.TemplateResponse(request, "flow_only.html", {
         "request": request, "user": user, "group_name": safe_group,
         "attack_flow": view, "flow_layout": layout, "flow_only": True,
     })
@@ -9070,7 +9248,7 @@ def exposure_page(request: Request, domain: str, shikari_session: Optional[str] 
         except (OSError, ValueError):
             expo = None
     from shikari.intelligence import incident_sources, manual_queries
-    return templates.TemplateResponse("exposure.html", {"request": request, "user": user,
+    return templates.TemplateResponse(request, "exposure.html", {"request": request, "user": user,
                                                         "domain": safe, "exposure": expo,
                                                         "adversaries": adversaries, "is_home": is_home,
                                                         "incident_feeds": incident_sources.status(),
@@ -9281,7 +9459,7 @@ def detections_code_page(request: Request, shikari_session: Optional[str] = Cook
     cfg = repo_config.load()
     repo = cfg["repo_path"]
     commits = detections_git.list_commits(repo, limit=50)
-    return templates.TemplateResponse("detections_code.html", {
+    return templates.TemplateResponse(request, "detections_code.html", {
         "request": request, "user": user, "runs": _runs_list(), "commits": commits,
         "lab_runs": list(_lab_runs()),
         "repo_path": repo, "remote_url": cfg["remote_url"], "push_enabled": cfg["push_enabled"],
@@ -9476,7 +9654,10 @@ def detections_code_config_save(request: Request, repo_path: str = Form(...), re
     db.close()
     if user.role != UserRole.ADMIN:
         return JSONResponse({"success": False, "error": "Admin access required"}, status_code=403)
-    saved = repo_config.save(repo_path, remote_url, push_enabled in ("1", "true", "on", "yes"))
+    try:
+        saved = repo_config.save(repo_path, remote_url, push_enabled in ("1", "true", "on", "yes"))
+    except ValueError as e:
+        return JSONResponse({"success": False, "error": str(e)}, status_code=400)
     return JSONResponse({"success": True, **saved})
 
 
@@ -9532,7 +9713,7 @@ def report_branding_page(request: Request, shikari_session: Optional[str] = Cook
         logos = [rtheme._logo_path(i).exists() for i in range(rtheme.MAX_LOGOS)]
         brand_slots = [{"name": name, "label": label.split("—")[0].strip(),
                         "default": rtheme.rgb_to_hex(default)} for name, label, default in rtheme.SLOTS]
-        return templates.TemplateResponse("report_branding.html", {
+        return templates.TemplateResponse(request, "report_branding.html", {
             "request": request, "user": user,
             "enabled": bool(prof.get("enabled")),
             "org_name": prof.get("org_name", ""),
@@ -10278,7 +10459,7 @@ def assessments_page(request: Request, shikari_session: Optional[str] = Cookie(N
         profiles = sorted(n[:-13] for n in os.listdir(profiles_dir)) if os.path.isdir(profiles_dir) else []
     finally:
         db.close()
-    return templates.TemplateResponse("assessments.html", {
+    return templates.TemplateResponse(request, "assessments.html", {
         "request": request, "user": user, "assessments": items, "cases": cases, "profiles": profiles})
 
 
@@ -10435,7 +10616,7 @@ def assessment_detail(assessment_id: int, request: Request, shikari_session: Opt
         db.close()
     from shikari import licensing
     from shikari.reports import brand_library
-    return templates.TemplateResponse("assessment_detail.html", {
+    return templates.TemplateResponse(request, "assessment_detail.html", {
         "request": request, "user": user, "assessment": meta, "results": rows,
         "brand_library": licensing.has_feature(licensing.FEATURE_BRAND_LIBRARY),
         "brands": brand_library.list_brands()})
@@ -10613,7 +10794,7 @@ def campaign_page(request: Request, campaign_slug: str, shikari_session: Optiona
     if not found:
         return RedirectResponse("/catalogue?tab=campaigns")
     from shikari.reports import tlp as tlp_mod
-    return templates.TemplateResponse("campaigns.html", {
+    return templates.TemplateResponse(request, "campaigns.html", {
         "request": request, "user": user, "campaign": campaign_report.context(found, GENERATE_DIR),
         "tlp_levels": list(tlp_mod.LEVELS), "tlp_default": tlp_mod.DEFAULT,
         "network_days": campaign_mod.NETWORK_DAYS, "hash_days": campaign_mod.HASH_DAYS})
@@ -10752,7 +10933,7 @@ def catalogue_page(request: Request, shikari_session: Optional[str] = Cookie(Non
             })
     # The user's own organisation first (starred), then most-recently profiled
     companies.sort(key=lambda c: (c["is_home"], c["timestamp"] or ""), reverse=True)
-    return templates.TemplateResponse("catalogue.html", {"request": request, "user": user, "companies": companies,
+    return templates.TemplateResponse(request, "catalogue.html", {"request": request, "user": user, "companies": companies,
                                                          "campaigns": campaign_mod.all_campaigns()})
 
 
@@ -10821,7 +11002,7 @@ def ioc_search_page(request: Request, shikari_session: Optional[str] = Cookie(No
     runs_dir = os.path.join(DATA_DIR, "runs")
     runs = sorted((n[:-5] for n in os.listdir(runs_dir) if n.endswith(".json")), key=str.lower) \
         if os.path.isdir(runs_dir) else []
-    return templates.TemplateResponse("indicator_management.html",
+    return templates.TemplateResponse(request, "indicator_management.html",
                                       {"request": request, "user": user,
                                        "sources": ioc_search.status(), "runs": runs})
 
@@ -10890,7 +11071,7 @@ def profile_progress_page(request: Request, domain: str = "", group_name: str = 
             user = get_user_from_session_id(shikari_session, db)
         finally:
             db.close()
-    return templates.TemplateResponse("profile_progress.html",
+    return templates.TemplateResponse(request, "profile_progress.html",
                                       {"request": request, "user": user, "domain": domain, "group_name": group_name})
 
 
@@ -10954,7 +11135,7 @@ def review_page(request: Request, domain: str, shikari_session: Optional[str] = 
         "risk_score": profile.get("risk_score") or 0,
     }
     from shikari.intelligence import incident_sources
-    return templates.TemplateResponse("review.html", {
+    return templates.TemplateResponse(request, "review.html", {
         "request": request, "user": user, "domain": safe, "exposure": expo,
         "summary": summary, "groups": details, "group_count": len(details),
         "adversaries": adversaries, "incident_feeds": incident_sources.status(),
@@ -11743,7 +11924,7 @@ async def library_page(request: Request, shikari_session: Optional[str] = Cookie
         attack_tactics = sum(1 for o in live if o.get("type") == "x-mitre-tactic")
 
         template_response = templates.TemplateResponse(
-            "library.html",
+            request, "library.html",
             {
                 "request": request,
                 "user": user,
@@ -13005,7 +13186,7 @@ def feed_page(request: Request, shikari_session: Optional[str] = Cookie(None)):
         return auth_result
     user, db = auth_result
     db.close()
-    return templates.TemplateResponse("feed.html", {"request": request, "user": user})
+    return templates.TemplateResponse(request, "feed.html", {"request": request, "user": user})
 
 
 @app.get("/api/feed")
@@ -13194,28 +13375,28 @@ async def api_feed_remove_source(request: Request, shikari_session: Optional[str
 
 
 @app.post("/api/profile/picture")
-async def upload_profile_picture(profile_picture: UploadFile = File(...)):
+async def upload_profile_picture(request: Request, profile_picture: UploadFile = File(...),
+                                 shikari_session: Optional[str] = Cookie(None)):
     """
-    Upload and save user profile picture.
+    Save the signed-in user's profile picture: a real PNG or JPEG (magic bytes, size cap), named by
+    user ID so no one overwrites anyone else's.
     """
-    # TODO: Add authentication check
+    from shikari.security.image_validation import get_safe_filename, validate_image_file
 
-    # Validate file type
-    if not profile_picture.content_type.startswith("image/"):
-        return {"success": False, "error": "File must be an image"}
+    auth = require_auth(request, shikari_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Log in"}, status_code=401)
+    user, db = auth
+    db.close()
+    content = await profile_picture.read(5 * 1024 * 1024 + 1)
+    ok, why = validate_image_file(content, profile_picture.filename or "")
+    if not ok:
+        return {"success": False, "error": why}
 
-    # Create profile pictures directory if it doesn't exist
     pics_dir = PROFILE_PICS_DIR
     os.makedirs(pics_dir, exist_ok=True)
-
-    # Generate unique filename
-    file_ext = os.path.splitext(profile_picture.filename)[1]
-    filename = f"user_profile{file_ext}"  # TODO: Use user ID
-    file_path = os.path.join(pics_dir, filename)
-
-    # Save file
-    with open(file_path, "wb") as f:
-        content = await profile_picture.read()
+    filename = get_safe_filename(profile_picture.filename or "", user.id)
+    with open(os.path.join(pics_dir, filename), "wb") as f:
         f.write(content)
 
     return {"success": True, "url": f"/static/profile_pictures/{filename}"}
@@ -13564,6 +13745,11 @@ async def save_ai_settings(request: Request, shikari_session: Optional[str] = Co
     try:
         update = await request.json()
         settings = load_settings(db, user.id)
+        new_endpoint = str((update.get("local") or {}).get("endpoint") or "").strip().rstrip("/")
+        if ("local" in update and new_endpoint and new_endpoint != (settings.get("local") or {}).get("endpoint")
+                and not at_least(user, UserRole.ADMIN)):
+            return JSONResponse({"success": False, "error": "Only an admin can set a local model endpoint"},
+                                status_code=403)
         try:
             settings = apply_update(settings, update, configured_providers(db, user.id, settings))
         except (ValueError, TypeError) as e:
@@ -13585,6 +13771,11 @@ async def probe_local_model(request: Request, shikari_session: Optional[str] = C
     if isinstance(auth_result, RedirectResponse):
         return JSONResponse({"error": "Not authenticated"}, status_code=401)
     user, db = auth_result
+    # The server fetches this URL, and a local model lives on loopback, so it can't be IP-filtered:
+    # only admins point Shikari at one (otherwise any user could port-scan loopback and the tailnet)
+    if not at_least(user, UserRole.ADMIN):
+        db.close()
+        return JSONResponse({"ok": False, "error": "Only an admin can set a local model endpoint"}, status_code=403)
     try:
         body = await request.json()
         key = body.get("api_key") or ""
@@ -13646,9 +13837,13 @@ async def change_password(request: Request, shikari_session: Optional[str] = Coo
         if len(new_password) < 16 or len(new_password) > 40:
             raise HTTPException(status_code=400, detail="Password must be 16-40 characters")
 
-        # Update password
+        # Update password, and end the user's other sessions (this one stays signed in)
         user.password_hash = hash_password(new_password)
         user.updated_at = datetime.utcnow()
+        from shikari.database.models import Session as UserSession
+
+        db.query(UserSession).filter(UserSession.user_id == user.id,
+                                     UserSession.session_id != shikari_session).delete()
         db.commit()
 
         # Log successful password change
@@ -14154,6 +14349,7 @@ async def create_user(request: Request, shikari_session: Optional[str] = Cookie(
         role = data.get("role", "standard").lower()
 
         # Validate email
+        from shikari.auth.password import hash_password
         from shikari.security import validate_email, sanitize_full_name
 
         email_valid, email_result = validate_email(email)
@@ -14348,12 +14544,11 @@ async def deactivate_user(
         user.is_active = False
         user.updated_at = datetime.utcnow()
 
-        # Invalidate all active sessions for this user
+        # End their sessions (Session has no is_active: updating one rolled the whole deactivation back,
+        # so the user kept access). Their API tokens resolve through an active user, so they stop too.
         from shikari.database.models import Session
 
-        db.query(Session).filter(Session.user_id == user_id, Session.is_active == True).update(
-            {"is_active": False}
-        )
+        db.query(Session).filter(Session.user_id == user_id).delete()
 
         db.commit()
 

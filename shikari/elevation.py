@@ -87,7 +87,9 @@ def decide(db, approver: User, request_id: int, approve: bool) -> RoleRequest:
         raise ElevationError("That request has already been decided")
     if req.user_id == approver.id:
         raise ElevationError("You can't approve your own request", 403)
-    if not at_least(approver, req.requested_role):
+    # The approver's own role, not a temporary one: otherwise two analysts holding one approved
+    # Admin grant could keep granting it to each other
+    if role_rank(approver.role) < role_rank(req.requested_role):
         raise ElevationError(f"Approving a {role_label(req.requested_role)} request needs that role or higher", 403)
     now = datetime.utcnow()
     req.approver_id = approver.id

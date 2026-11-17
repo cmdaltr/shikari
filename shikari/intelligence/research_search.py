@@ -120,7 +120,8 @@ def _real_url(link: str) -> str:
     """Bing wraps each link in a click-tracker; take the article's own URL out of it."""
     if "bing.com/news/apiclick" in link:
         target = parse_qs(urlparse(link).query).get("url", [""])[0]
-        return target or link
+        # The tracker's url= is the publisher's to set: only an http(s) link becomes the post's href
+        return target if urlparse(target).scheme in ("http", "https") else link
     return link
 
 

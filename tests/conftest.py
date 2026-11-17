@@ -47,3 +47,31 @@ def pytest_addoption(parser):
 def shikari_url(request):
     """Get Shikari base URL from command line or environment"""
     return request.config.getoption("--shikari-url")
+
+
+@pytest.fixture(autouse=True)
+def _login_gate_passed(request, monkeypatch):
+    """Route tests mock require_auth and test the route; the sign-in gate in front of every route
+    (shikari.app.api_token_auth) is passed for them. Tests marked login_gate get the real one."""
+    import sys
+
+    if request.node.get_closest_marker("login_gate"):
+        return
+    app_module = sys.modules.get("shikari.app")
+    if app_module is None and _uses_app(getattr(request.module, "__file__", "")):
+        import shikari.app as app_module  # a test that imports it inside the test still gets the patch
+    if app_module is not None:
+        monkeypatch.setattr(app_module, "_signed_in", lambda session_id: True)
+
+
+_APP_USERS = {}
+
+
+def _uses_app(path):
+    if path not in _APP_USERS:
+        try:
+            text = open(path, encoding="utf-8").read()
+        except OSError:
+            text = ""
+        _APP_USERS[path] = "shikari.app" in text or "from shikari import app" in text
+    return _APP_USERS[path]

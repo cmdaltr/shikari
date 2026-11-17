@@ -51,6 +51,22 @@ def _denied():
     return JSONResponse({"error": "Log in to change MITRESaw's data"}, status_code=401)
 
 
+def _operator(shikari_session: Optional[str]):
+    """The user when they may change MITRESaw's data for everyone (a run, the exclusions): an
+    operational analyst or above, as for other source edits. None otherwise."""
+    from shikari.database.models import UserRole, at_least
+
+    user = _user(shikari_session)
+    return user if at_least(user, UserRole.OPERATOR) else None
+
+
+def _not_operator(shikari_session: Optional[str]):
+    if not _user(shikari_session):
+        return _denied()
+    return JSONResponse({"error": "Runs and exclusions change every user's detections: an operator's job"},
+                        status_code=403)
+
+
 # ---------------------------------------------------------------------------
 # Procedures CSV, read once per change
 # ---------------------------------------------------------------------------
@@ -124,9 +140,9 @@ def status():
 
 @router.post("/run")
 async def run(request: Request, shikari_session: Optional[str] = Cookie(None)):
-    user = _user(shikari_session)
+    user = _operator(shikari_session)
     if not user:
-        return _denied()
+        return _not_operator(shikari_session)
     body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
     full = bool(body.get("full"))
     with _job_lock:
@@ -162,8 +178,8 @@ async def run(request: Request, shikari_session: Optional[str] = Cookie(None)):
 
 @router.post("/stop")
 def stop(shikari_session: Optional[str] = Cookie(None)):
-    if not _user(shikari_session):
-        return _denied()
+    if not _operator(shikari_session):
+        return _not_operator(shikari_session)
     if _job["state"] != "running":
         return JSONResponse({"error": "No run from this tab is in progress"}, status_code=409)
     _job["stopping"] = True
@@ -250,8 +266,8 @@ def get_exclusions():
 
 @router.post("/exclusions")
 async def save_exclusions(request: Request, shikari_session: Optional[str] = Cookie(None)):
-    if not _user(shikari_session):
-        return _denied()
+    if not _operator(shikari_session):
+        return _not_operator(shikari_session)
     rows = (await request.json()).get("exclusions", [])
     clean, seen = [], set()
     for r in rows:

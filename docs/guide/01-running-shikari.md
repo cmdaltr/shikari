@@ -49,9 +49,15 @@ The installers on the Releases page bundle everything instead, and connect to yo
 
 Open `http://localhost:32453`. The default administrator is set in the configuration and documented in [GETTING_STARTED.md](../../GETTING_STARTED.md#default-login); change its password after the first sign-in (Profile → Security).
 
-**Continue as Guest** lets someone try Shikari without an account. A guest's work isn't saved once the browser closes.
+Every page and API needs a signed-in user (or an API token): anyone else is sent to the sign-in page, and an API call gets a 401. For a demo, start the server with `SHIKARI_ALLOW_GUESTS=1` and the home page offers **Continue as Guest**: a guest can browse but not change anything, and their work isn't saved once the browser closes.
 
-Accounts are created by an administrator (Profile → Users) or by registering at `/register`. Each account can turn on two-factor authentication: see [Profile and settings](16-profile-and-settings.md#security).
+```bash
+SHIKARI_ALLOW_GUESTS=1 shikari start
+```
+
+Accounts are created by an administrator (Profile → Users) or by registering at `/register`. Each account can turn on two-factor authentication: see [Profile and settings](16-profile-and-settings.md#security). With it on, sign-in asks for a code from the authenticator app (or a backup code) after the password; five wrong codes, or five minutes, and you start again.
+
+Changing your password, or an administrator resetting it, signs that account out everywhere else.
 
 ## What happens at start-up
 

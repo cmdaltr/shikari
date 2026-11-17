@@ -81,7 +81,7 @@ def _fetch(url: str, ttl: int = _CACHE_TTL) -> Optional[bytes]:
     if feed._public_url(url):   # SSRF guard: http/https to a public address only
         return None
     try:
-        r = requests.get(url, timeout=feed.FETCH_TIMEOUT, headers=feed.HEADERS)
+        r = feed._get(url)
         r.raise_for_status()
     except requests.RequestException:
         return None

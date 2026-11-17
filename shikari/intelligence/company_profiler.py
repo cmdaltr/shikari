@@ -645,7 +645,10 @@ class CompanyProfiler:
 
             for url in careers_urls:
                 try:
-                    response = requests.get(url, timeout=5, allow_redirects=True)
+                    # Guarded: the domain is user input (it could name loopback or a tailnet host)
+                    from shikari.parsers.blog_analyzer import _fetch_public_url
+
+                    response = _fetch_public_url(url, timeout=5)
                     if response.status_code == 200:
                         content = response.text.lower()
 

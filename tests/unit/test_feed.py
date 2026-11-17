@@ -182,7 +182,9 @@ def test_nations_with_few_attack_groups_get_no_industry_profile():
 def test_custom_sources_are_checked_before_they_are_added(tmp_path, monkeypatch):
     monkeypatch.setattr(feed, "CUSTOM_SOURCES_PATH", str(tmp_path / "sources.json"))
     assert feed.add_source("", "")["error"]
-    assert "private or local" in feed.add_source("Local", "http://127.0.0.1/feed")["error"]
+    assert "private, internal or reserved" in feed.add_source("Local", "http://127.0.0.1/feed")["error"]
+    # The tailnet's CGNAT range used to pass as public
+    assert "private, internal or reserved" in feed.add_source("Tailnet", "http://100.100.1.1/feed")["error"]
     assert "already" in feed.add_source("Volexity", "https://example.com/feed")["error"]
     monkeypatch.setattr(feed, "check_source", lambda url: {"ok": True, "items": 3, "latest": None})
     assert feed.add_source("Mine", "https://example.com/rss")["ok"]

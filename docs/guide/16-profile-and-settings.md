@@ -76,6 +76,6 @@ The products are grouped into categories (shown as a 4×4×4 grid) in `shikari/m
 
 ## Users (administrators)
 
-Create, edit and remove accounts: name, email, role (Standard or Administrator) and state (an inactive account can't sign in). **Reset Password** sets a new password for the user. Users who forget their own can use **Forgot password** on the sign-in page, which emails a reset link when SMTP is configured.
+Create, edit and remove accounts: name, email, role (Analyst, Operational analyst or Admin) and state (an inactive account can't sign in, and deactivating one ends its sessions). Each role can do everything the one below it can. An Operational analyst can also regenerate a group's detections, run MITRESaw and edit its exclusions, and change validation sessions; adding or probing a local AI endpoint is for Admins. **Reset Password** sets a new password for the user. Users who forget their own can use **Forgot password** on the sign-in page, which emails a reset link when SMTP is configured.
 
 A **Sample data** toggle seeds (or removes) a clearly-labelled `[SAMPLE]` scenario across every surface, so you can see where data appears. It sits alongside real work and removes exactly what it added. The same thing runs from the CLI with `shikari test populate` / `depopulate`.

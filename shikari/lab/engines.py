@@ -358,8 +358,14 @@ def _fetch(url: str, dest: str) -> str:
     """Download a cloud image once into the lab's image cache. Not a shell-out, so not run()."""
     import urllib.request
 
+    from shikari.parsers.blog_analyzer import _check_public_url
+
     if os.path.isfile(dest):
         return dest
+    try:
+        _check_public_url(url)  # an image comes from the internet, not from loopback or the tailnet
+    except ValueError as e:
+        raise LabError("Couldn't download the image", f"{url}: {e}")
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     part = dest + ".part"
     try:
@@ -380,9 +386,15 @@ def _local_image(image: str) -> str:
     if re.match(r"^https?://", image or ""):
         return _fetch(image, _lab_path("images", os.path.basename(image.split("?", 1)[0])))
     path = os.path.abspath(os.path.expanduser(image or ""))
+    # Only disk and installer images attach to a VM: not any file on the host (a key, a database)
+    if not path.lower().endswith(DISK_IMAGE_EXTENSIONS):
+        raise LabError("Not a disk or installer image", f"{path}: use one of {', '.join(DISK_IMAGE_EXTENSIONS)}")
     if not os.path.isfile(path):
         raise LabError("No such image", path)
     return path
+
+
+DISK_IMAGE_EXTENSIONS = (".iso", ".img", ".qcow2", ".vhdx", ".vhd", ".vmdk", ".raw", ".vdi", ".dmg", ".ipsw")
 
 
 def ssh_key() -> str:

@@ -9,6 +9,7 @@ host's own git auth (SSH key, credential helper, or a token in the URL the admin
 
 import json
 import os
+import re
 import subprocess
 from typing import Dict
 
@@ -32,7 +33,22 @@ def load() -> Dict:
     return data
 
 
+# A remote is handed to git as an argument: one starting "-" is read as an option
+# (--upload-pack=<command> runs a shell command), so only plain https, ssh and scp-style URLs pass,
+# and git itself is limited to those transports
+_REMOTE = re.compile(r"^(?:https://|ssh://)[^\s'\"`;|&$<>]+$|^[\w.-]+@[\w.-]+:[\w./~-]+$")
+_GIT_ENV = {"GIT_TERMINAL_PROMPT": "0", "GIT_ALLOW_PROTOCOL": "https:ssh"}
+
+
+def valid_remote(url: str) -> bool:
+    """Whether url is a git remote Shikari will pass to git (https, ssh or user@host:path)."""
+    url = (url or "").strip()
+    return bool(_REMOTE.match(url)) and not url.startswith("-")
+
+
 def save(repo_path: str, remote_url: str = "", push_enabled: bool = False) -> Dict:
+    if (remote_url or "").strip() and not valid_remote(remote_url):
+        raise ValueError("The remote must be an https://, ssh:// or user@host:path URL")
     data = {"repo_path": (repo_path or "").strip() or DETECTIONS_REPO_DIR,
             "remote_url": (remote_url or "").strip(), "push_enabled": bool(push_enabled)}
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -68,10 +84,13 @@ def test_connectivity(repo_path: str, remote_url: str = "") -> Dict:
         out["repo_message"] = f"path error: {e}"
 
     url = (remote_url or "").strip()
-    if url:
+    if url and not valid_remote(url):
+        out["remote_ok"] = False
+        out["remote_message"] = "not an https://, ssh:// or user@host:path URL"
+    elif url:
         try:
             r = subprocess.run(["git", "ls-remote", url, "HEAD"], capture_output=True, text=True,
-                               timeout=20, env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
+                               timeout=20, env={**os.environ, **_GIT_ENV})
             out["remote_ok"] = r.returncode == 0
             out["remote_message"] = ("reachable" if r.returncode == 0
                                      else (r.stderr.strip().splitlines() or ["unreachable"])[-1][:200])
@@ -88,7 +107,9 @@ def push(repo: str, remote_url: str, branch: str = "main") -> Dict:
     """Push the repo to the configured remote using the host's own git auth. Read nothing, store nothing."""
     import subprocess as sp
 
-    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+    env = {**os.environ, **_GIT_ENV}
+    if not valid_remote(remote_url):
+        return {"success": False, "message": "the remote isn't an https://, ssh:// or user@host:path URL"}
     try:
         # Point 'origin' at the configured URL (idempotent), then push.
         sp.run(["git", "-C", repo, "remote", "remove", "origin"], capture_output=True, text=True)

@@ -53,11 +53,12 @@ def _check_public_url(url: str) -> None:
             raise ValueError("Access to private, internal or reserved addresses is not allowed.")
 
 
-def _fetch_public_url(url: str, max_redirects: int = 3, timeout: int = 30) -> requests.Response:
+def _fetch_public_url(url: str, max_redirects: int = 3, timeout: int = 30,
+                      headers: Optional[dict] = None) -> requests.Response:
     """GET url following redirects manually so each hop is re-validated (requests would skip the check)."""
     from urllib.parse import urljoin
 
-    headers = FETCH_HEADERS
+    headers = headers or FETCH_HEADERS
     for _ in range(max_redirects + 1):
         _check_public_url(url)
         response = requests.get(url, headers=headers, timeout=timeout, allow_redirects=False)

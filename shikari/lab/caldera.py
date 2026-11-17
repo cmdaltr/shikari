@@ -50,14 +50,17 @@ def settings(overrides: Optional[Dict] = None) -> Dict:
     Where the CALDERA server and key come from, in order: the environment (a throwaway run needn't
     touch anyone's config), then `overrides` — the signed-in user's own settings (Profile → Emulation
     Tools), passed in by the web layer — then the caldera: block in bespoke/config.yaml. Returns url,
-    api_key and verify_tls.
+    api_key and verify_tls. The URL and the key come from the same layer: a user's own URL is only
+    ever sent the user's own key, never the server's (which runs abilities on every enrolled agent).
     """
     from shikari.build import bespoke
 
     block = (bespoke.get_config() or {}).get("caldera") or {}
     ov = overrides or {}
-    url = os.environ.get("CALDERA_URL") or ov.get("url") or block.get("url") or ""
-    api_key = os.environ.get("CALDERA_API_KEY") or ov.get("api_key") or block.get("api_key") or ""
+    layers = [(os.environ.get("CALDERA_URL"), os.environ.get("CALDERA_API_KEY")),
+              (ov.get("url"), ov.get("api_key")),
+              (block.get("url"), block.get("api_key"))]
+    url, api_key = next(((u, k or "") for u, k in layers if u), ("", ""))
     verify = ov.get("verify_tls")
     if verify is None:
         verify = block.get("verify_tls")

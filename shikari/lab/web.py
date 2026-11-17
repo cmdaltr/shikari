@@ -773,6 +773,19 @@ def caldera_check(name: str, shikari_session: Optional[str] = Cookie(None)):
             "correlations": caldera.check_correlations(manifest, GENERATE_DIR)}
 
 
+def _same_origin(websocket: WebSocket) -> bool:
+    """A browser always sends Origin on a WebSocket handshake, and cookies go with it whatever page
+    opened it: without this, any page on the tailnet could open an operator's lab shell. A client
+    without Origin (not a browser) can't be driven by a page."""
+    from urllib.parse import urlsplit
+
+    origin = websocket.headers.get("origin")
+    if origin is None:
+        return True
+    hosts = {websocket.headers.get("host", ""), websocket.headers.get("x-forwarded-host", "").split(",")[0].strip()}
+    return urlsplit(origin).netloc in hosts - {""}
+
+
 @router.websocket("/console")
 async def console_ws(websocket: WebSocket):
     """An interactive shell on a lab machine, bridged over the WebSocket (#28).
@@ -794,6 +807,9 @@ async def console_ws(websocket: WebSocket):
     from shikari.lab.console import REGISTRY, ConsoleSession, console_argv, valid_name
     from shikari.lab.engines import engine_for
 
+    if not _same_origin(websocket):
+        await websocket.close(code=4403)
+        return
     engine = websocket.query_params.get("engine", "")
     name = websocket.query_params.get("name", "")
     sid = websocket.query_params.get("sid", "") or ""
@@ -970,6 +986,9 @@ async def desktop_ws(websocket: WebSocket):
     from shikari.lab import desktop
     from shikari.lab.console import valid_name
 
+    if not _same_origin(websocket):
+        await websocket.close(code=4403)
+        return
     engine = websocket.query_params.get("engine", "")
     name = websocket.query_params.get("name", "")
     user = _user(websocket.cookies.get("shikari_session"))

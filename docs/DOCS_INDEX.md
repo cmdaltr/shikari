@@ -139,6 +139,7 @@ Plain-language guide to every part of Shikari, one page each: what it's for, how
 | Document | Description |
 |----------|-------------|
 | [tests/README.md](../tests/README.md) | Test suite — categories, running tests |
+| [security/PENTEST-2026-11.md](security/PENTEST-2026-11.md) | November 2026 white-box security assessment: findings, fixes, dependency audit, retest |
 
 ---
 

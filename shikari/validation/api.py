@@ -5,7 +5,7 @@ FastAPI routes for the detection validation feature.
 Import these routes into the main app.py.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from typing import Dict, List, Optional, Any
 import logging
@@ -14,7 +14,26 @@ from .orchestrator import get_orchestrator
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/validation", tags=["validation"])
+def _operator_for_changes(request: Request) -> None:
+    """Anyone signed in may read Docker's status (the sign-in gate covers that); starting, stopping or
+    cleaning up the SIEM containers, and running validations on them, is an operator's job."""
+    if request.method == "GET":
+        return
+    from shikari.auth.session import get_user_from_session_id
+    from shikari.database.db import get_db
+    from shikari.database.models import UserRole, at_least
+
+    db = next(get_db())
+    try:
+        user = get_user_from_session_id(request.cookies.get("shikari_session") or "", db)
+        allowed = at_least(user, UserRole.OPERATOR)
+    finally:
+        db.close()
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Starting and stopping the validation SIEMs is an operator's job")
+
+
+router = APIRouter(prefix="/api/validation", tags=["validation"], dependencies=[Depends(_operator_for_changes)])
 
 
 # Request/Response Models

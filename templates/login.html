@@ -222,6 +222,31 @@
           <div class="tab-pane active" id="tab-profile">
 
             <div class="profile-container">
+              {% if mfa_token %}
+              <!-- Second step: the password was right; the account has MFA on -->
+              <form method="post" action="/login/mfa" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+                <input type="hidden" name="mfa_token" value="{{ mfa_token }}">
+                {% if error %}
+                <div style="background: #fee; color: #c53030; padding: 0.875rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 0.95rem; border: 1px solid #fcc; width: 50%;">
+                  {{ error }}
+                </div>
+                {% endif %}
+                <div style="width: 50%;">
+                  <div class="form-section" style="margin: 0;">
+                    <label for="mfa_code" class="form-label">Authentication code</label>
+                    <input type="text" name="code" id="mfa_code" class="form-input" inputmode="numeric"
+                           autocomplete="one-time-code" placeholder="6-digit code, or a backup code"
+                           required autofocus maxlength="20">
+                  </div>
+                </div>
+                <div style="width: 10%; margin-top: 24px;">
+                  <button type="submit" class="btn-primary" style="width: 100%;">Verify</button>
+                </div>
+                <div style="text-align: center; margin-top: 1rem; width: 50%;">
+                  <a href="/login" style="color: var(--accent); text-decoration: none; font-size: 0.9rem;">Start again</a>
+                </div>
+              </form>
+              {% else %}
               <!-- Login Form -->
               <form method="post" action="/login" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -285,6 +310,7 @@
                   <a href="/forgot-password" style="color: var(--accent); text-decoration: none; font-size: 0.9rem;">Forgot your password?</a>
                 </div>
               </form>
+              {% endif %}
             </div>
           </div>
 

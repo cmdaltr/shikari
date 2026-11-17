@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy.orm import Session as SQLAlchemySession
 
-from shikari.database.models import User, PasswordReset
+from shikari.database.models import PasswordReset, Session, User
 from shikari.auth.password import hash_password
 
 
@@ -130,6 +130,8 @@ def reset_password_with_token(token: str, new_password: str, db: SQLAlchemySessi
     db.query(PasswordReset).filter(
         PasswordReset.reset_token == token
     ).update({"used": True})
+    # A new password ends every session the old one opened
+    db.query(Session).filter(Session.user_id == user.id).delete()
 
     db.commit()
 
@@ -159,6 +161,7 @@ def admin_reset_password(user_id: int, new_password: str, db: SQLAlchemySession)
 
     # Update user's password (correct field name is password_hash)
     user.password_hash = hashed_password
+    db.query(Session).filter(Session.user_id == user.id).delete()
 
     db.commit()
 

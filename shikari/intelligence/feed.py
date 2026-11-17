@@ -301,7 +301,9 @@ def parse_feed(xml: bytes, source: str) -> List[Dict]:
         # One bad character (Rapid7's feed has some) shouldn't lose the whole feed: lxml's
         # recovering parser keeps every item it can read
         from lxml import etree
-        root = ET.fromstring(etree.tostring(etree.fromstring(xml, etree.XMLParser(recover=True, huge_tree=True))))
+        # No entity expansion, DTDs or network: a hostile feed can't blow up memory or reach anywhere
+        parser = etree.XMLParser(recover=True, resolve_entities=False, no_network=True, load_dtd=False)
+        root = ET.fromstring(etree.tostring(etree.fromstring(xml, parser)))
     atom = "{http://www.w3.org/2005/Atom}"
     items = root.findall(".//item") or root.findall(f".//{atom}entry")
     posts = []
@@ -337,23 +339,22 @@ def all_sources() -> List[tuple]:
 
 
 def _public_url(url: str) -> Optional[str]:
-    """Why the server shouldn't fetch this URL, or None: http(s) to a public address only."""
-    import ipaddress
-    import socket
-    from urllib.parse import urlparse
+    """Why the server shouldn't fetch this URL, or None: http(s) to a globally routable address only
+    (the report fetcher's check: is_global also refuses CGNAT, the tailnet's 100.64.0.0/10)."""
+    from shikari.parsers.blog_analyzer import _check_public_url
 
-    parsed = urlparse(url)
-    if parsed.scheme not in ("http", "https") or not parsed.hostname:
-        return "Use an http or https URL"
     try:
-        addresses = {info[4][0] for info in socket.getaddrinfo(parsed.hostname, parsed.port or None)}
-    except OSError:
-        return f"{parsed.hostname} doesn't resolve"
-    for address in addresses:
-        ip = ipaddress.ip_address(address.split("%")[0])
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
-            return f"{parsed.hostname} is a private or local address"
+        _check_public_url(url)
+    except ValueError as e:
+        return str(e)
     return None
+
+
+def _get(url: str):
+    """A feed fetch through the report fetcher, which re-checks every redirect hop."""
+    from shikari.parsers.blog_analyzer import _fetch_public_url
+
+    return _fetch_public_url(url, timeout=FETCH_TIMEOUT, headers=HEADERS)
 
 
 def _why(e: Exception) -> str:
@@ -371,13 +372,12 @@ def _why(e: Exception) -> str:
 
 def check_source(url: str) -> Dict:
     """Fetch and parse a feed: {ok, items, latest} or {ok: False, error}."""
-    import requests
 
     why = _public_url(url)
     if why:
         return {"ok": False, "error": why}
     try:
-        r = requests.get(url, timeout=FETCH_TIMEOUT, headers=HEADERS)
+        r = _get(url)
         r.raise_for_status()
         posts = parse_feed(r.content, "")
     except Exception as e:
@@ -424,7 +424,6 @@ _source_status: Dict[str, Dict] = {}
 
 
 def fetch_sources(days: int = FEED_DAYS, sources=None) -> List[Dict]:
-    import requests
 
     since = datetime.now(timezone.utc) - timedelta(days=days)
     everything: List[Dict] = []  # the whole of each feed, for the research archive
@@ -432,7 +431,7 @@ def fetch_sources(days: int = FEED_DAYS, sources=None) -> List[Dict]:
     def one(src):
         name, url = src
         try:
-            r = requests.get(url, timeout=FETCH_TIMEOUT, headers=HEADERS)
+            r = _get(url)  # every collection, not just when the source was added
             r.raise_for_status()
             items = parse_feed(r.content, name)
             everything.extend(items)

@@ -28,6 +28,13 @@ SUFFIX = {vendor: LANGUAGE_SUFFIX[connector] for vendor, connector in CONNECTOR.
 _NAMESPACE = uuid.UUID("8f5c1d2e-6a0b-4c7e-9a41-2f3b5d6e7c80")
 
 
+def plain_group_name(group_name: str) -> bool:
+    """Whether a group name is safe as a file or folder name: no separators (either kind: a Windows
+    build splits on \\), no "." or ".." to climb with, no glob characters, no NUL."""
+    name = str(group_name or "")
+    return bool(name) and not name.startswith(".") and not any(c in name for c in '/\\*?[]\x00')
+
+
 def group_dir(group_name: str) -> str:
     return os.path.join(CORRELATE_DIR, group_name)
 

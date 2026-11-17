@@ -332,7 +332,10 @@
           url: $('sx-misp-url').value, api_key: $('sx-misp-key').value, last: $('sx-misp-last').value });
       }
       groupName = res.synthetic_group_name;
-      $('sx-summary').innerHTML = `<strong>${res.group_name || groupName}</strong> — ${res.ttps_count} technique${res.ttps_count === 1 ? '' : 's'}, ${res.iocs_count} IOC${res.iocs_count === 1 ? '' : 's'}.`;
+      // The name comes from the imported bundle or event: text, never markup
+      const summary = $('sx-summary');
+      summary.replaceChildren(Object.assign(document.createElement('strong'), { textContent: res.group_name || groupName || '' }),
+        ` — ${Number(res.ttps_count) || 0} technique${res.ttps_count === 1 ? '' : 's'}, ${Number(res.iocs_count) || 0} IOC${res.iocs_count === 1 ? '' : 's'}.`);
       $('sx-review').hidden = false;
       state.textContent = 'Imported.';
     } catch (e) { state.textContent = e.message; }
