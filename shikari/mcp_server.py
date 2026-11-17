@@ -1,7 +1,7 @@
 """
 Shikari as an MCP server: any MCP client (Claude Code, Claude Desktop, your own agent)
 gets Shikari's tools, the same definitions Shikari's own agents use (shikari/agents/tools.py),
-plus the three agents' instructions as prompts.
+plus every agent's instructions as a prompt.
 
 It talks to a running Shikari server as a user (shikari.client), so it does what the web
 app does with that user's AI settings and keys, which never reach the MCP client.
@@ -40,7 +40,7 @@ INSTRUCTIONS = """Shikari generates SIEM detections (Google SecOps UDM searches,
 MITRE ATT&CK groups, CVEs, techniques and threat reports. Read tools look things up (coverage, results, \
 ATT&CK, the library) and check queries; hunt_* tools start runs that take minutes (follow with wait_for_run, \
 then get_run_results); save_query_fix rewrites a query in a detection file (refused while it has errors). \
-The prompts repair, ask and triage carry the instructions Shikari's own agents use."""
+One prompt per agent (repair, ask, triage, sweep, audit, tune, brief, investigate) carries the instructions Shikari's own agents use."""
 
 
 def _request_client(request) -> ShikariClient:

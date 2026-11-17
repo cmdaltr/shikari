@@ -59,7 +59,7 @@ Other methods include `hunt_cve`, `hunt_techniques`, `analyse_url`, `analyse_fil
 
 ## REST API
 
-Every page works through the HTTP API. The full, live reference is at `http://localhost:32453/docs`. Worked examples are in [API_INTEGRATION_GUIDE.md](../features/API_INTEGRATION_GUIDE.md).
+Every page works through the HTTP API. The full, live reference is at `http://localhost:32453/docs` (sign in first). Worked examples are in [API_INTEGRATION_GUIDE.md](../features/API_INTEGRATION_GUIDE.md).
 
 ## MCP server (`shikari mcp`)
 

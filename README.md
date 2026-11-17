@@ -61,10 +61,10 @@ The app launches this checkout's `.venv`, so it updates with `git pull`; it isn'
 - 🎯 **MITRE ATT&CK Integration** - Automated detection generation from threat group TTPs
 - 📤 **File Upload & Intelligence Extraction** - Upload threat intel files (PDF, TXT, JSON, CSV, XLSX, YARA, DOCX) for automatic TTP/IOC extraction
 - 🌐 **Blog Analysis** - Paste a threat intel blog URL and extract TTPs/IOCs automatically
-- 📰 **Threat Feed** - A searchable wall of the last 7 days of vendor and government research (26 sources, and admins can add their own), each post tagged with targeted industries, the attacker's nation, and opportunistic or financial motive; a keyword search of all research at any date; and watchlists, saved searches that flag new matching posts (optionally by email). No AI involved ([details](#threat-feed))
+- 📰 **Threat Feed** - A searchable wall of the last 7 days of vendor and government research (26 sources, and Operational analysts can add their own), each post tagged with targeted industries, the attacker's nation, and opportunistic or financial motive; a keyword search of all research at any date; and watchlists, saved searches that flag new matching posts (optionally by email). No AI involved ([details](#threat-feed))
 - 🌍 **Cyber Powers** - IISS cyber power tiers, ATT&CK attribution confidence and targeting on an Equal Earth world map ([guide](docs/guide/11-cyber-powers.md))
 - 🧪 **Regex tester** - Test a pattern on your own text and check it for Defender XDR and SecOps (RE2), Splunk (PCRE) or Elastic (Lucene), with per-SIEM escaping ([guide](docs/guide/14-regex.md))
-- 🧬 **Emulate** - Which logs record each technique, from 1,694 attacks recorded in public labs (Windows, Linux, macOS, ESXi and cloud): native OS logs first, with Sysmon and EDR optional; your detections' indicators checked against the recordings; and Defender XDR's own alerting per technique from Microsoft's GUIDE dataset. Recording your own lab is coming soon ([guide](docs/guide/19-emulate.md))
+- 🧬 **Emulate** - Which logs record each technique, from 1,694 attacks recorded in public labs (Windows, Linux, macOS, ESXi and cloud): native OS logs first, with Sysmon and EDR optional; your detections' indicators checked against the recordings; and Defender XDR's own alerting per technique from Microsoft's GUIDE dataset. and **Record** runs Atomic Red Team on your own lab machines and adds what they logged ([guide](docs/guide/19-emulate.md))
 - 🧱 **Technology stack** - Group hunts leave out techniques and procedures for platforms and products you don't run (Profile → Environment → Technology stack)
 - 🪚 **MITRESaw** - Every group's ATT&CK procedures and the indicators in them, rebuilt as ATT&CK changes ([guide](docs/guide/12-mitresaw.md))
 - 🗺️ **Attack Flows and Anatomy** - Every flow saved to your library on one page: pick a group, report or CVE to open its ATT&CK flow (Detections → Flows), or its plain-words anatomy workflow (Detections → Anatomy) ([guide](docs/guide/09-flows.md))
@@ -105,8 +105,8 @@ Shikari closes the loop between red and blue: it runs a real adversary and then 
 - **Company Profiling** - Industry-aware threat landscape analysis for targeted detection; every profile is kept in Intel → Catalogue, beside the emerging campaigns you research there ([guide](docs/guide/26-campaigns.md))
 - **Ordered Adversary List** - The top-10 ATT&CK groups most likely to target an organisation, ranked (no AI) from industry, geography, exposed OSINT and public incidents — VCDB, CISA KEV and ransomware.live merged with your own curated set. Shown on the exposure map; set your own domain in Profile → Organisation to auto-profile and star it ([guide](docs/guide/04-company-profile.md#ordered-adversary-list))
 - **CVE Hunting** - Generate detections from CVE IDs with NVD enrichment
-- **Query Execution** - Splunk API client, validated against a live Splunk ([Query Execution](docs/features/QUERY_EXECUTION.md)); Defender XDR planned with hit counts (#16)
-- **Running atomics from Shikari** - Coming soon; [record a lab](docs/guide/20-recording-a-lab.md) on your own VMs for now (#22)
+- **Query Execution** - Splunk API client, validated against a live Splunk ([Query Execution](docs/features/QUERY_EXECUTION.md)); a Defender XDR hit-count client (#16), unvalidated without a tenant; Elastic is next (#50)
+- **Running atomics from Shikari** - Emulate → Lab → **Record** runs Atomic Red Team in a lab machine and imports the recording ([Recording a lab](docs/guide/20-recording-a-lab.md))
 - **Threat library with red and blue outcomes (VECTR-style)** - Built (Build → Assessments, #24); CALDERA operations run from Emulate → Lab ([#30](https://github.com/cmdaltr/shikari/issues/30), [guide](docs/guide/25-caldera.md)), for the fact chaining and implant behaviour Atomic runs can't give. The MACAT *runner* was declined ([#31](https://github.com/cmdaltr/shikari/issues/31)): Atomic Red Team's macOS tests and the lab recorder already cover it
 - **VECTR interop** - The threat library and emulation plans export as **MACATable TOML** (`shikari/assessments/macat.py`), VECTR's native bulk-import format. This file export is the supported VECTR path by design — Shikari stays upstream (intel → detections) and VECTR owns the campaign lifecycle; a live GraphQL connector ([#26](https://github.com/cmdaltr/shikari/issues/26)) was assessed and declined to avoid coupling to VECTR's shifting API when a loosely-coupled file contract already covers it
 
@@ -117,7 +117,7 @@ Shikari closes the loop between red and blue: it runs a real adversary and then 
 - 📧 **Email Integration** - SMTP-based password reset with secure token delivery
 - 🔑 **API Key Encryption** - Fernet encryption for stored SIEM/AI API credentials
 - 📊 **Comprehensive Audit Logs** - Track all authentication events and admin actions
-- 🔒 **Role-Based Access Control** - Admin and Standard user roles with granular permissions
+- 🔒 **Role-Based Access Control** - Three roles (Analyst, Operational analyst, Admin), each with everything the one below it has; sign-in required by default, MFA enforced at login
 
 ---
 <br>
@@ -145,7 +145,7 @@ Posts with no technique ID, IOCs or named group, and no CVE alongside another in
 
 ### Techniques that can't produce a detection
 
-About 318 of ATT&CK's 697 techniques name no command, file, registry key or other indicator in their description or in any group's procedure examples (**T1190**, **T1566.001**, much of Reconnaissance and Resource Development). The standard pipeline can't build a query for them; only AI or OSINT can. Shikari keeps that list in `shikari/data/technique_yield.json`, rebuilt when ATT&CK's version changes:
+About 326 of ATT&CK's 706 techniques name no command, file, registry key or other indicator in their description or in any group's procedure examples (**T1190**, **T1566.001**, much of Reconnaissance and Resource Development). The standard pipeline can't build a query for them; only AI or OSINT can. Shikari keeps that list in `shikari/data/technique_yield.json`, rebuilt when ATT&CK's version changes:
 
 - A technique hunt whose techniques are all on the list, run without AI or OSINT, is refused with the reason instead of producing an empty run; `hunt/technique` says which techniques will produce nothing before it starts.
 - Every run records the techniques that produced nothing and why, shown at the top of its results page.
@@ -169,7 +169,7 @@ About 318 of ATT&CK's 697 techniques name no command, file, registry key or othe
 - **Research:** [Actor consolidation and XLSX export](docs/guide/05-research.md)
 - **Threat Briefing:** [On the Results page](docs/guide/06-results.md) | [API Reference](docs/features/API_INTEGRATION_GUIDE.md#workflow-8-threat-briefing)
 - **Ask Shikari:** [Agents and Ask Shikari](docs/guide/15-agents-and-ask-shikari.md)
-- **Emulate:** [Recorded telemetry](docs/guide/19-emulate.md) | [Recording a lab (coming soon)](docs/guide/20-recording-a-lab.md) | [CALDERA operations](docs/guide/25-caldera.md)
+- **Emulate:** [Recorded telemetry](docs/guide/19-emulate.md) | [Recording a lab](docs/guide/20-recording-a-lab.md) | [CALDERA operations](docs/guide/25-caldera.md)
 - **Agents & MCP:** [Agents guide](docs/agents/README.md) | [Minimal agent example](examples/agents/minimal_agent.py)
 - **API Integration:** [API Integration Guide](docs/features/API_INTEGRATION_GUIDE.md)
 - **Correlation Tuning:** [Correlation Engine](docs/architecture/CORRELATION_ENGINE.md) | [Quick Reference](docs/architecture/CORRELATION_QUICK_REFERENCE.md)

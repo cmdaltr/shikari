@@ -123,7 +123,7 @@ The risk goes down for hash matches and for exclusions of known-good activity.
 
 Scheduled detections run every few minutes, so a high one is worth fixing before deployment.
 
-When several queries share a card, it shows the weakest: the lowest grade, the highest risk and the highest cost. The Library shows the same badges. `/api/results/<run>` returns them as `quality`, `fp_risk` and `cost`. [Detections as code](22-detections-as-code.md#check-detections-in-ci) gates pull requests on them. `python -m shikari.validation.quality <files>` prints them for detection files. Hit counts ([#16](https://github.com/cmdaltr/shikari/issues/16)) will measure false positives against the SIEM itself.
+When several queries share a card, it shows the weakest: the lowest grade, the highest risk and the highest cost. The Library shows the same badges. `/api/results/<run>` returns them as `quality`, `fp_risk` and `cost`. [Detections as code](22-detections-as-code.md#check-detections-in-ci) gates pull requests on them. `python -m shikari.validation.quality <files>` prints them for detection files. Hit counts against the SIEM itself measure false positives: `shikari.query.mde` counts Defender XDR hits ([#16](https://github.com/cmdaltr/shikari/issues/16)), unvalidated without a tenant, and Elastic is next ([#50](https://github.com/cmdaltr/shikari/issues/50)).
 
 ## Attack flow
 

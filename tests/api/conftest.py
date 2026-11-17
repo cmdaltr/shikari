@@ -25,16 +25,11 @@ def session():
 @pytest.fixture(scope="session")
 def auth_session(session, base_url):
     """Authenticate and return session with cookies."""
+    from tests.live_auth import sign_in
+
     try:
-        session.post(
-            f"{base_url}/login",
-            data={
-                "email": os.getenv("SHIKARI_TEST_EMAIL", "admin@shikari.app"),
-                "password": os.getenv("SHIKARI_TEST_PASSWORD", "BigGameHunter"),
-            },
-            allow_redirects=False,
-        )
-    except Exception:
+        sign_in(session, base_url)
+    except requests.RequestException:
         pass
     return session
 

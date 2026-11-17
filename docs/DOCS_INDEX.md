@@ -30,8 +30,13 @@ Plain-language guide to every part of Shikari, one page each: what it's for, how
 | [Console, API and MCP](guide/17-console-api-mcp.md) | `shikari console`, the Python client, REST, `shikari mcp` |
 | [Data and updates](guide/18-data-and-updates.md) | What's downloaded, when, and where everything is kept |
 | [Emulate](guide/19-emulate.md) | Which logs record each technique (native, Sysmon, EDR; Windows, Linux, macOS, ESXi, cloud), detections checked against lab recordings, Defender XDR's own alerting |
-| [Recording a lab](guide/20-recording-a-lab.md) | **Coming soon**: Atomic Red Team on your own VMs, with Defender for Endpoint's rows, into Emulate |
+| [Recording a lab](guide/20-recording-a-lab.md) | Atomic Red Team on your own VMs (Emulate → Lab → Record), with Defender for Endpoint's rows, into Emulate |
+| [Indicator Management](guide/21-indicator-management.md) | Search reporting for an IOC; import STIX, TAXII or MISP intel as a hunt input; export a run as STIX or MISP |
+| [Detections as code](guide/22-detections-as-code.md) | Commit a run's detections to git, diff commits, export packs, a Defender XDR master hunt query, a dry-run push |
+| [Threat library and assessments](guide/23-threat-library-assessments.md) | Test cases run in campaigns that record red and blue outcomes, Navigator export |
+| [SIEM data sources](guide/24-siem-data-sources.md) | Which tables and UDM event types the estate ingests; flags detections that can't fire |
 | [CALDERA operations](guide/25-caldera.md) | Plan and run CALDERA operations on lab agents, collect each step, optionally capture its endpoint logs over the agent's own C2, check detections and correlations against it statically |
+| [Campaigns](guide/26-campaigns.md) | Profile an emerging campaign from its reports: techniques, triaged indicators, a TLP report |
 | [Glossary](guide/glossary.md) | The terms used throughout |
 
 ---

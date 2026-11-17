@@ -62,7 +62,7 @@ The **Sources** section at the foot of the page lists each source and the result
 
 Built in: Microsoft Threat Intelligence, Google Threat Intelligence (Mandiant), Unit 42, Cisco Talos, CrowdStrike, SentinelLABS, Kaspersky Securelist, ESET WeLiveSecurity, Proofpoint, The DFIR Report, Red Canary, Huntress, Elastic Security Labs, CISA, NCSC (UK), Recorded Future, Trend Micro Research, Rapid7, FortiGuard Labs, Symantec Threat Hunter, Volexity, Zscaler ThreatLabz, Sekoia, Group-IB, Bitdefender Labs and JPCERT/CC.
 
-An administrator can add any RSS or Atom feed (name and URL) and remove ones they added. Shikari checks the feed reads before adding it, and only accepts public addresses. Added sources are this installation's own (`data/feed/sources.json`, not in git).
+An Operational analyst or admin can add any RSS or Atom feed (name and URL) and remove ones they added. Shikari checks the feed reads before adding it, and only accepts public addresses. Added sources are this installation's own (`data/feed/sources.json`, not in git).
 
 ## Limits
 

@@ -33,7 +33,7 @@ Help → **Guide** shows a picture of every page with each part highlighted in t
 | Cyber Powers | Intel → Cyber Powers | National cyber capability, attribution and targeting on a map | [Cyber Powers](11-cyber-powers.md) |
 | MITRESaw | Intel → MITRESaw | ATT&CK procedures and their indicators; OSINT repository status | [MITRESaw](12-mitresaw.md) |
 | Emulate | Build → Emulate | Which logs record each technique (native OS logs first); your detections' indicators against recorded attacks; Defender XDR's own alerting | [Emulate](19-emulate.md) |
-| Recording a lab | Your own test VMs | **Coming soon**: Atomic Red Team runs, with Defender for Endpoint's rows, into Emulate | [Recording a lab](20-recording-a-lab.md) |
+| Recording a lab | Your own test VMs | Atomic Red Team runs (Emulate → Lab → Record), with Defender for Endpoint's rows, into Emulate | [Recording a lab](20-recording-a-lab.md) |
 | CALDERA operations | Build → Emulate → Lab | Chained operations on CALDERA agents (fact chaining, implant behaviour), optionally capturing each step's endpoint logs over the agent's own C2, with detections and correlations checked against what ran | [CALDERA operations](25-caldera.md) |
 | Assessments | Build → Assessments | A threat library of test cases, run in campaigns that record red and blue outcomes | [Threat library and assessments](23-threat-library-assessments.md) |
 | Agents and Ask Shikari | Build → Agents; the chat button | AI that repairs and tunes queries, answers questions, triages reports, sweeps a group's gaps, audits the Library, writes briefings and investigates indicators | [Agents and Ask Shikari](15-agents-and-ask-shikari.md) |

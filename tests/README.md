@@ -26,8 +26,10 @@ pip install pytest requests pytest-playwright pytest-html
 playwright install chromium
 
 # Ensure Shikari is running
-uvicorn shikari.app:app --host 0.0.0.0 --port 32453 --reload
+shikari start
 ```
+
+The API, input, E2E suites and the standalone runner sign in first (`tests/live_auth.py`): with `SHIKARI_TOKEN` (an API token from Profile → Security → API Tokens) when it's set, otherwise with `SHIKARI_TEST_EMAIL` and `SHIKARI_TEST_PASSWORD`. Every page and API but `/health` and the sign-in pages refuses an anonymous request.
 
 ### Run Everything
 
@@ -302,6 +304,7 @@ The API test suite covers every endpoint in Shikari:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `SHIKARI_BASE_URL` | Shikari server URL | `http://127.0.0.1:32453` |
+| `SHIKARI_TOKEN` | API token to sign in with (instead of email and password) | *(unset)* |
 | `SHIKARI_TEST_EMAIL` | Login email for tests | `admin@shikari.app` |
 | `SHIKARI_TEST_PASSWORD` | Login password for tests | *(see conftest)* |
 

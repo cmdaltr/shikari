@@ -37,6 +37,9 @@ from typing import Dict, List, Optional
 from dataclasses import dataclass
 from datetime import datetime
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from live_auth import sign_in  # noqa: E402
+
 # =============================================================================
 # TEST CONFIGURATION
 # =============================================================================
@@ -932,6 +935,10 @@ class ShikariTestSuite:
         self.log("\n[SECTION 1] Health & Connectivity Tests")
         self.log("-" * 50)
         self.test_health_endpoint()
+        start = time.time()
+        signed_in = sign_in(self.session, self.base_url)
+        self.record_result("Sign in", signed_in, time.time() - start,
+                           "" if signed_in else "Set SHIKARI_TOKEN, or SHIKARI_TEST_EMAIL and SHIKARI_TEST_PASSWORD")
         self.test_home_page()
 
         # 2. API Endpoint Tests

@@ -6,7 +6,7 @@
 
 The page opens on a planner. Pick a target — a **group**, a **CVE** or a **technique** — and Shikari assembles a plan to review before you act: for each technique, the most appropriate recorded dataset to validate against, the matching Atomic Red Team test (where a local atomics checkout is configured), the log sources to collect (native OS logs first, then Sysmon and EDR), the OS platforms to run on, and the SIEMs to validate in (your Profile SIEMs).
 
-**Deploy** doesn't run anything in-app yet — running atomics and collecting telemetry is [recording a lab](20-recording-a-lab.md) (coming soon). For now it exports the plan two ways: a **run sheet** (a Markdown table of what to run, collect and validate) and a **MACATable TOML** for [MACAT](https://www.macat.io) to run on your lab and push to VECTR. Record the outcomes in an [assessment](23-threat-library-assessments.md).
+**Deploy** doesn't run anything itself — running atomics and collecting telemetry is a lab machine's **Record** button ([recording a lab](20-recording-a-lab.md)). It exports the plan two ways: a **run sheet** (a Markdown table of what to run, collect and validate) and a **MACATable TOML** for [MACAT](https://www.macat.io) to run on your lab and push to VECTR. Record the outcomes in an [assessment](23-threat-library-assessments.md).
 
 The recorded-telemetry views below the planner are the evidence layer: they're where you confirm which logs actually captured each technique, and whether your detections' indicators appear in them.
 
@@ -21,7 +21,7 @@ The recorded-telemetry views below the planner are the evidence layer: they're w
 
 Each recording is one tool run in a lab with logging on (Sysmon, Windows auditing, PowerShell, cloud audit logs, auditd, syslog), mapped to ATT&CK by the people who recorded it. It shows that a technique can be recorded and by which log, for that tool in that lab, not every way the technique can be done.
 
-Splunk attack_data also holds Linux (auditd, syslog, auth.log, Sysmon for Linux) and macOS (osquery's Endpoint Security process events and launchd plists) recordings. The first three sources ship with Shikari: `shikari/data/telemetry_datasets.json` (each recording's techniques and event types) and `shikari/data/telemetry_values.json.gz` (the distinct values of the fields detections match on). **Update** on the page (admins) or the command below fetches only the recordings the sources have changed since:
+Splunk attack_data also holds Linux (auditd, syslog, auth.log, Sysmon for Linux) and macOS (osquery's Endpoint Security process events and launchd plists) recordings. The first three sources ship with Shikari: `shikari/data/telemetry_datasets.json` (each recording's techniques and event types) and `shikari/data/telemetry_values.json.gz` (the distinct values of the fields detections match on). **Update** on the page (Operational analysts and admins) or the command below fetches only the recordings the sources have changed since:
 
 ```
 python -m shikari.telemetry --build                  # all four
@@ -44,7 +44,7 @@ python -m shikari.telemetry --guide ~/Downloads/microsoft-security-incident-pred
 
 ## Lab: machines from inside Shikari
 
-The **Lab** section (admins) installs, creates and manages the containers and VMs a recording runs on, without leaving Shikari. It drives three engines: **Docker** and **Tart** create Linux and macOS machines from an image; **UTM** (QEMU) runs Windows 11 on ARM and other OSes, but has no create-from-image, so you build that VM in the UTM app once and Shikari then manages, snapshots, provisions and records it. (Tart can't run Windows — Apple's Virtualization.framework only takes Linux and macOS guests.) It detects and guides; it doesn't install hypervisors itself. The first time Shikari drives UTM, grant it Automation access to UTM when macOS asks.
+The **Lab** section (Operational analysts and admins) installs, creates and manages the containers and VMs a recording runs on, without leaving Shikari. It drives three engines: **Docker** and **Tart** create Linux and macOS machines from an image; **UTM** (QEMU) runs Windows 11 on ARM and other OSes, but has no create-from-image, so you build that VM in the UTM app once and Shikari then manages, snapshots, provisions and records it. (Tart can't run Windows — Apple's Virtualization.framework only takes Linux and macOS guests.) It detects and guides; it doesn't install hypervisors itself. The first time Shikari drives UTM, grant it Automation access to UTM when macOS asks.
 
 The **host card** names this machine's OS and CPU and each engine's state:
 
@@ -75,7 +75,7 @@ Beyond the Atomic recorder, the Lab also runs **CALDERA operations** against an 
 
 ## Recording your own lab
 
-No public set of attacks recorded by Defender for Endpoint, or by macOS's unified log, exists that Shikari has found, so the gaps are filled by recording your own. A machine's **Record** button (admins) drives this from inside Shikari: give it the ATT&CK technique IDs, it copies `scripts/telemetry/record-atomics.ps1` into the machine, runs the atomics, pulls each test's logs back into `data/telemetry/lab/<run>`, reverts the machine to the snapshot you name, and rebuilds **Your lab**. **Preview** shows exactly what a run would do and runs nothing; the run itself is gated on confirming the machine is snapshotted and disposable.
+No public set of attacks recorded by Defender for Endpoint, or by macOS's unified log, exists that Shikari has found, so the gaps are filled by recording your own. A machine's **Record** button (Operational analysts on their own machines, admins on any) drives this from inside Shikari: give it the ATT&CK technique IDs, it copies `scripts/telemetry/record-atomics.ps1` into the machine, runs the atomics, pulls each test's logs back into `data/telemetry/lab/<run>`, reverts the machine to the snapshot you name, and rebuilds **Your lab**. **Preview** shows exactly what a run would do and runs nothing; the run itself is gated on confirming the machine is snapshotted and disposable.
 
 The same script runs by hand on any disposable test machine (PowerShell 7, elevated) and saves each test's logs:
 
@@ -116,7 +116,7 @@ The filter card applies to whichever view is open below it, and shows only the f
 
 ## Telemetry
 
-Where the recordings come from (above), and the views over them. **Update** (admins, or `python -m shikari.telemetry --build`) fetches what the sources have changed since. The **Organise by** control switches the view between technique, group and data source; the Filters card at the top of the page applies to whichever is open.
+Where the recordings come from (above), and the views over them. **Update** (Operational analysts and admins, or `python -m shikari.telemetry --build`) fetches what the sources have changed since. The **Organise by** control switches the view between technique, group and data source; the Filters card at the top of the page applies to whichever is open.
 
 ### Organise by technique
 
@@ -147,4 +147,4 @@ Each table or UDM event type for the chosen SIEM, with how many techniques it re
 - Until you record your own, Defender XDR tables are mapped from the Windows, Linux and macOS events that record the same activity, and macOS has no unified log recordings.
 - GUIDE's grades are its customers' triage, two weeks of it; a technique's sub-techniques without figures of their own show their parent's.
 - The Windows event ID, auditd and cloud log mappings are in `shikari/mappings/telemetry_map.json`; an event type not listed there shows without a table.
-- Recording Atomic Red Team in your own lab, with Defender for Endpoint's own rows and the macOS unified log, is coming soon: the tooling is in place and the steps are in [Recording a lab](20-recording-a-lab.md), but no run has been recorded yet.
+- **Your lab** holds only what you've recorded. Defender for Endpoint's own rows need a machine onboarded to Defender, and the macOS unified log needs the macOS VM: [Recording a lab](20-recording-a-lab.md).

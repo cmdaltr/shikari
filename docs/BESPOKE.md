@@ -12,9 +12,9 @@ The `bespoke/` directory (at the project root) contains **organization-specific*
 
 2. **Edit the files** with your organization's specific exclusions and settings
 
-3. **Reload the configuration** via API or restart the server:
+3. **Reload the configuration** via API (with an API token from Profile → Security → API Tokens in `SHIKARI_TOKEN`) or restart the server:
    ```bash
-   curl -X POST http://localhost:32453/api/bespoke/reload
+   curl -X POST -H "Authorization: Bearer $SHIKARI_TOKEN" http://localhost:32453/api/bespoke/reload
    ```
 
 ## Directory Structure
@@ -140,15 +140,17 @@ Store organization-specific detection queries that are tailored for your environ
 
 ### Examples
 
+The API needs a sign-in: create a token under Profile → Security → API Tokens and `export SHIKARI_TOKEN=shik_...` first.
+
 ```bash
 # Check bespoke status
-curl http://localhost:32453/api/status/bespoke
+curl -H "Authorization: Bearer $SHIKARI_TOKEN" http://localhost:32453/api/status/bespoke
 
 # Get sample searches for a technique
-curl "http://localhost:32453/api/bespoke/sample-searches?technique_id=T1003.001"
+curl -H "Authorization: Bearer $SHIKARI_TOKEN" "http://localhost:32453/api/bespoke/sample-searches?technique_id=T1003.001"
 
 # Reload after editing config files
-curl -X POST http://localhost:32453/api/bespoke/reload
+curl -X POST -H "Authorization: Bearer $SHIKARI_TOKEN" http://localhost:32453/api/bespoke/reload
 ```
 
 ## How Exclusions Are Applied
@@ -217,8 +219,8 @@ events:
 
 1. Check that `exclusions.yaml` exists (not just `.example`)
 2. Verify YAML syntax: `python -c "import yaml; yaml.safe_load(open('exclusions.yaml'))"`
-3. Reload configuration: `curl -X POST http://localhost:32453/api/bespoke/reload`
-4. Check status: `curl http://localhost:32453/api/status/bespoke`
+3. Reload configuration: `curl -X POST -H "Authorization: Bearer $SHIKARI_TOKEN" http://localhost:32453/api/bespoke/reload`
+4. Check status: `curl -H "Authorization: Bearer $SHIKARI_TOKEN" http://localhost:32453/api/status/bespoke`
 
 ### Configuration not loading?
 

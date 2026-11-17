@@ -59,7 +59,7 @@ class TestPageRoutes:
 
     def test_home_page_has_all_tabs(self, api, ensure_running):
         r = api.get("/")
-        for tab in ["generate", "research", "upload", "profile", "emulate"]:
+        for tab in ["generate", "research", "upload", "profile"]:
             assert f'data-tab="{tab}"' in r.text, f"Missing tab: {tab}"
 
     def test_login_page_has_form(self, api, ensure_running):

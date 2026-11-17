@@ -41,7 +41,7 @@ docker compose up --build  # or: shikari docker up --build, once shikari is inst
 docker compose down        # stop
 ```
 
-Data lives in Docker volumes and survives restarts.
+Data lives in the checkout's `data/` folder (bind-mounted into the container), so it survives restarts, rebuilds and `docker compose down -v`.
 
 **Option B: local Python**
 
@@ -140,7 +140,7 @@ shikari offline correlate "APT29"             # correlations from its detections
 shikari offline hunt "PowerShell"             # one technique, by name or ID
 ```
 
-The console, the Python client, the REST API (live reference at `http://localhost:32453/docs`) and the MCP server: [Console, API and MCP](docs/guide/17-console-api-mcp.md).
+The console, the Python client, the REST API (live reference at `http://localhost:32453/docs`, once signed in) and the MCP server: [Console, API and MCP](docs/guide/17-console-api-mcp.md).
 
 ## Troubleshooting
 
@@ -149,7 +149,7 @@ The console, the Python client, the REST API (live reference at `http://localhos
 | Can't sign in with the default login | `python scripts/admin/reset_password.py`, or `scripts/admin/create_admin.py` for a new administrator |
 | Queries don't match my SIEM's tables or fields | The mapping files (above): start-up names any that are missing |
 | Port 32453 in use | `lsof -i :32453`, or `shikari start --port 8001` |
-| Docker won't start | `docker compose logs shikari`; rebuild with `docker compose down -v && docker compose up --build` |
+| Docker won't start | `docker compose logs shikari`; rebuild with `docker compose down && docker compose up --build` (your data in `data/` is kept) |
 | A page shows old data after an update | `shikari restart --skip-index` |
 
 More: the [documentation index](docs/DOCS_INDEX.md), or open an [issue](https://github.com/cmdaltr/shikari/issues).
