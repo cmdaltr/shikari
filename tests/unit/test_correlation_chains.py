@@ -123,6 +123,17 @@ def test_a_hubs_extra_pairs_give_way_to_the_next_best(monkeypatch):
     assert len(kept) == 5
 
 
+def test_the_saved_tech_freq_sets_a_hubs_partners(monkeypatch):
+    # Profile -> Config's Tech Frequency Limit reaches the scorer as pairs_per_technique
+    monkeypatch.setattr(engine, "_score_correlation", lambda corr, info: corr["score"])
+    hub = [{"a": "g/Hub_UDM.yaml", "b": f"g/T{i}_UDM.yaml", "score": 140} for i in range(4)]
+
+    kept = engine._score_and_filter_correlations(hub, {}, min_relevance=0.4, max_per_vendor=5,
+                                                 pairs_per_technique=3)
+
+    assert len(kept) == 3
+
+
 def test_a_pairs_per_table_variants_share_its_place(monkeypatch):
     # Defender XDR has a query per table: the same two techniques on three tables are one place
     monkeypatch.setattr(engine, "_score_correlation", lambda corr, info: corr["score"])

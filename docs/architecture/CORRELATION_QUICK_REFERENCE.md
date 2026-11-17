@@ -245,12 +245,12 @@ See [CORRELATION_ENGINE.md — Results Page](CORRELATION_ENGINE.md#results-page-
 
 ### Overview
 
-Shikari provides **three primary parameters** to control correlation generation quality and quantity. These can be adjusted via the **Profile → Config** page in the UI or via CLI script.
+Shikari provides **three primary parameters** to control correlation generation quality and quantity. An administrator sets them on the **Profile → Config** page; they're saved in `data/correlation_settings.json` (not in the source) and apply to the next run. `CORRELATION_MIN_RELEVANCE`, or a hunt's own threshold, overrides the saved threshold for a run.
 
 **Current Defaults:**
 - **Threshold:** 40% (minimum relevance score)
-- **Per-Vendor Limit:** 60 (max correlations per vendor)
-- **Tech Frequency:** 20 (max appearances as first technique)
+- **Per-Vendor Limit:** 60 (most technique pairs per vendor; Google SecOps keeps at least 100)
+- **Tech Frequency:** 20 (most other techniques one technique is paired with, per vendor)
 
 ---
 
@@ -290,11 +290,8 @@ Threshold = 20%, per_vendor = 25, tech_freq = 20 → 40 correlations (no change)
 - **Raise (50-60%):** If you want only the highest-quality correlations
 
 **How to change:**
-```bash
-# Via CLI script
-python scripts/test_correlation_params.py -t 50 -v 60 -f 20
-
-# Via Profile → Config page
+Profile → Config (administrators):
+```
 # Set "Relevance Threshold" to 50%
 ```
 
@@ -340,11 +337,8 @@ per_vendor = 100 → 111 correlations (+88% from 60)
 **Important:** This limit is **per vendor**. If you have MDE + Splunk, you'll get up to 120 correlations total (60 each).
 
 **How to change:**
-```bash
-# Via CLI script
-python scripts/test_correlation_params.py -t 40 -v 100 -f 20
-
-# Via Profile → Config page
+Profile → Config (administrators):
+```
 # Set "Per-Vendor Limit" to 100
 ```
 
@@ -395,11 +389,8 @@ Example: If "Credential Dumping" (T1003) is paired with 25 different techniques:
 - With tech_freq = 30: All 25 correlations are kept
 
 **How to change:**
-```bash
-# Via CLI script
-python scripts/test_correlation_params.py -t 40 -v 60 -f 30
-
-# Via Profile → Config page
+Profile → Config (administrators):
+```
 # Set "Tech Frequency Limit" to 30
 ```
 
@@ -432,24 +423,7 @@ The three parameters work together in this order:
 
 ### Testing Different Configurations
 
-Use the provided CLI script to test different parameter combinations:
-
-```bash
-# Test current defaults
-python scripts/test_correlation_params.py -t 40 -v 60 -f 20
-
-# Test for maximum coverage
-python scripts/test_correlation_params.py -t 30 -v 100 -f 40
-
-# Test for highest quality only
-python scripts/test_correlation_params.py -t 60 -v 25 -f 10
-```
-
-The script will:
-1. Update configuration files
-2. Trigger correlation generation
-3. Wait for completion
-4. Report the number of correlations generated
+Set the values on Profile → Config, rerun the group's correlation, and compare the "Kept X/Y after relevance filtering" lines the run logs per vendor.
 
 ---
 

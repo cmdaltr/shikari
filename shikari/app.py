@@ -2456,129 +2456,37 @@ async def cyber_powers_page(request: Request, shikari_session: Optional[str] = C
 
 @app.get("/api/correlation/params")
 async def get_correlation_params():
-    """Get current correlation parameters from config files."""
-    import re
+    """The correlation settings (Profile -> Correlation Parameters), as saved in data/."""
+    from shikari.correlation import settings as correlation_settings
 
-    try:
-        # Read config.py for threshold
-        config_path = os.path.join(os.path.dirname(__file__), "config.py")
-        with open(config_path, "r") as f:
-            config_content = f.read()
-
-        # Extract threshold
-        threshold_match = re.search(
-            r'correlation_min_relevance = float\(os\.getenv\("CORRELATION_MIN_RELEVANCE", "([0-9.]+)"\)\)',
-            config_content,
-        )
-        threshold = float(threshold_match.group(1)) if threshold_match else 0.40
-
-        # Read engine.py for per_vendor and tech_freq
-        engine_path = os.path.join(os.path.dirname(__file__), "ai", "genai", "engine.py")
-        with open(engine_path, "r") as f:
-            engine_content = f.read()
-
-        # Extract max_per_vendor
-        per_vendor_match = re.search(r"max_per_vendor: int = (\d+)", engine_content)
-        per_vendor = int(per_vendor_match.group(1)) if per_vendor_match else 25
-
-        # Extract tech frequency limit
-        tech_freq_match = re.search(
-            r"if max_occurrences < (\d+):\s*#.*simple correlations", engine_content
-        )
-        tech_freq = int(tech_freq_match.group(1)) if tech_freq_match else 20
-
-        return {
-            "success": True,
-            "threshold": threshold,
-            "per_vendor": per_vendor,
-            "tech_freq": tech_freq,
-        }
-
-    except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "threshold": 0.40,
-            "per_vendor": 25,
-            "tech_freq": 20,
-        }
+    return {"success": True, **correlation_settings.load(),
+            "threshold_from_env": bool(os.environ.get("CORRELATION_MIN_RELEVANCE"))}
 
 
 @app.post("/api/correlation/params")
 async def save_correlation_params(request: Request, shikari_session: Optional[str] = Cookie(None)):
-    """Save correlation parameters to config files. Admin only: this rewrites source files."""
-    import re
+    """Save correlation settings (admin). Only the settings sent change; the rest keep their values."""
+    from shikari.correlation import settings as correlation_settings
 
-    auth_result = require_auth(request, shikari_session)
-    if isinstance(auth_result, RedirectResponse):
-        return JSONResponse({"success": False, "message": "Not authenticated"}, status_code=401)
-    user, db = auth_result
-    db.close()
-    if not at_least(user, UserRole.ADMIN):
-        return JSONResponse({"success": False, "message": "Admin access required"}, status_code=403)
-
+    auth = _require_admin(request, shikari_session)
+    if isinstance(auth, Response):
+        return auth
+    auth[1].close()
     try:
         data = await request.json()
-        threshold = float(data.get("threshold", 0.40))
-        per_vendor = int(data.get("per_vendor", 25))
-        tech_freq = int(data.get("tech_freq", 20))
-
-        # Validate inputs
-        if not (0.0 <= threshold <= 1.0):
-            return {"success": False, "message": "Threshold must be between 0.0 and 1.0"}
-
-        if per_vendor < 1:
-            return {"success": False, "message": "Per-vendor limit must be at least 1"}
-
-        if tech_freq < 1:
-            return {"success": False, "message": "Tech frequency limit must be at least 1"}
-
-        # Update config.py
-        config_path = os.path.join(os.path.dirname(__file__), "config.py")
-        with open(config_path, "r") as f:
-            lines = f.readlines()
-
-        for i, line in enumerate(lines):
-            if 'correlation_min_relevance = float(os.getenv("CORRELATION_MIN_RELEVANCE"' in line:
-                lines[i] = (
-                    f'    correlation_min_relevance = float(os.getenv("CORRELATION_MIN_RELEVANCE", "{threshold}"))\n'
-                )
-
-        with open(config_path, "w") as f:
-            f.writelines(lines)
-
-        # Update engine.py
-        engine_path = os.path.join(os.path.dirname(__file__), "ai", "genai", "engine.py")
-        with open(engine_path, "r") as f:
-            content = f.read()
-
-        # Update max_per_vendor parameter default
-        content = re.sub(
-            r"max_per_vendor: int = \d+", f"max_per_vendor: int = {per_vendor}", content
-        )
-
-        # Update tech frequency limit
-        lines = content.split("\n")
-        for i, line in enumerate(lines):
-            if "if max_occurrences <" in line and "simple correlations" in line:
-                lines[i] = (
-                    f"            if max_occurrences < {tech_freq}:  # Allow each technique in up to {tech_freq} simple correlations"
-                )
-                break
-
-        with open(engine_path, "w") as f:
-            f.write("\n".join(lines))
-
-        return {
-            "success": True,
-            "message": "Correlation parameters updated successfully",
-            "threshold": threshold,
-            "per_vendor": per_vendor,
-            "tech_freq": tech_freq,
-        }
-
-    except Exception as e:
-        return {"success": False, "message": f"Error saving parameters: {str(e)}"}
+    except ValueError:
+        return JSONResponse({"success": False, "message": "Send the settings as JSON"}, status_code=400)
+    if not isinstance(data, dict):
+        return JSONResponse({"success": False, "message": "Send the settings as a JSON object"}, status_code=400)
+    changes = {k: v for k, v in data.items() if k in correlation_settings.DEFAULTS}
+    if not changes:
+        return JSONResponse({"success": False, "message": "No settings to save: send threshold, "
+                             "per_vendor or tech_freq"}, status_code=400)
+    try:
+        saved = correlation_settings.save(changes)
+    except ValueError as e:
+        return JSONResponse({"success": False, "message": str(e)}, status_code=400)
+    return {"success": True, "message": "Correlation parameters saved", **saved}
 
 
 @app.post("/api/status/osint/retry-failed")

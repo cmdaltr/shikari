@@ -38,13 +38,13 @@ Keys are stored encrypted. Keys in `.env` in the project root work too.
 
 ## Config (administrators)
 
-System-wide correlation settings, applied to every run from then on:
+System-wide correlation settings, applied to every run from then on. They're kept in `data/correlation_settings.json`; a setting you don't change keeps its value.
 
 | Setting | Meaning | Recommended |
 |---|---|---|
 | Correlation Threshold | Minimum relevance a correlation needs. Higher means fewer, stronger correlations | 30–50% |
-| Per-Vendor Limit | Most correlations kept per SIEM | 25–100 |
-| Tech Frequency Limit | Most times one technique can start a correlation | 20–40 |
+| Per-Vendor Limit | Most technique pairs kept per SIEM. Google SecOps, the primary platform, keeps at least 100 | 25–100 |
+| Tech Frequency Limit | Most other techniques one technique is paired with, per SIEM | 20–40 |
 
 ## Environment
 

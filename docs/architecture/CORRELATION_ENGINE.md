@@ -521,13 +521,13 @@ DeviceFileEvents_CredentialAccess
 
 ### Tunable Parameters ⚙️
 
-These three parameters can be adjusted via **Profile → Config** in the web UI or via the CLI script.
+An administrator sets the first three on **Profile → Config**; they're saved in `data/correlation_settings.json` (`shikari/correlation/settings.py`), not in the source.
 
 | Parameter | Default | Location | Purpose | Tunable? |
 |-----------|---------|----------|---------|----------|
-| **Min Relevance Score (Threshold)** | **40%** (56/140) | `config.py` + `engine.py` | Quality threshold | ✅ **YES** |
-| **Max Correlations/Vendor** | **60** (Google SecOps 100) | `CORRELATION_CAP` | Prevent overload. Counts technique pairs: a pair's per-table variants share one place | ✅ **YES** |
-| **Tech Frequency Limit** | **20** | `PAIRS_PER_TECHNIQUE`, applied while filling the vendor's places | Ensure diversity: a technique past its limit leaves its place to the next-best pair | ✅ **YES** |
+| **Min Relevance Score (Threshold)** | **40%** (56/140) | `threshold`; `CORRELATION_MIN_RELEVANCE` or a hunt's own threshold overrides it | Quality threshold | ✅ **YES** |
+| **Max Correlations/Vendor** | **60** (Google SecOps at least 100) | `per_vendor`, with `CORRELATION_CAP` as SecOps' floor | Prevent overload. Counts technique pairs: a pair's per-table variants share one place | ✅ **YES** |
+| **Tech Frequency Limit** | **20** | `tech_freq` (`PAIRS_PER_TECHNIQUE` when unset), applied while filling the vendor's places | Ensure diversity: a technique past its limit leaves its place to the next-best pair | ✅ **YES** |
 | **Pairs per tactic** | **3** | `PAIRS_PER_TACTIC` | Until a tactic has 3 kept pairs, its best pair above the threshold takes the next place. The score rewards techniques with many tactics, so otherwise Discovery or Collection pairs (FIN13: 0.64 against 1.0) never get a place | ✅ **YES** |
 
 **See:** [Correlation Quick Reference](CORRELATION_QUICK_REFERENCE.md) for detailed tuning guide.
@@ -762,13 +762,7 @@ ls data/groups/
 3. Frequency limiting removing correlations
 
 **Solution:**
-```python
-# Temporarily lower threshold for testing
-min_relevance = 0.65  # 65% instead of 75%
-
-# Increase max per vendor
-max_per_vendor = 50  # Instead of 25
-```
+Lower the Correlation Threshold or raise the Per-Vendor Limit on Profile → Config.
 
 ---
 

@@ -12,14 +12,13 @@ class TestCorrelationParams:
         assert r.status_code in [200, 401]
         if r.status_code == 200:
             data = r.json()
-            assert isinstance(data, dict)
+            assert {"threshold", "per_vendor", "tech_freq"} <= data.keys()
 
-    def test_set_params(self, api, ensure_running):
-        r = api.post("/api/correlation/params", json={
-            "time_window": "15m",
-            "min_techniques": 2,
-        })
-        assert r.status_code in [200, 401, 422]
+    def test_set_params_refuses_out_of_range(self, api, ensure_running):
+        # Refused before anything is saved: this suite runs against a real server, whose
+        # settings a successful save would change
+        r = api.post("/api/correlation/params", json={"threshold": 2})
+        assert r.status_code in [400, 401, 403]
 
 
 class TestCorrelationResults:

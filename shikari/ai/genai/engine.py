@@ -16,6 +16,7 @@ import threading
 from typing import List, Dict, Tuple, Optional
 from shikari.build.progress import write_progress
 from shikari.config import GENERATE_DIR, CORRELATE_DIR
+from shikari.correlation import settings as correlation_settings
 
 # Global generation mode; set in generate_correlations
 _GEN_MODE: str = "heuristic"
@@ -1032,7 +1033,7 @@ def _expanded_siblings(corr: Dict, file_info: Dict, attributed: Optional[set]) -
 
 def _score_and_filter_correlations(
     correlations: List[Dict], file_info: Dict, min_relevance: float = 0.5, max_per_vendor: int = 60,
-    on_scored=None,
+    on_scored=None, pairs_per_technique: Optional[int] = None,
 ) -> List[Dict]:
     """
     Score all correlations and return only those meeting the minimum relevance threshold.
@@ -1043,11 +1044,13 @@ def _score_and_filter_correlations(
         min_relevance: Minimum relevance score threshold (default 0.5 = 50%)
         max_per_vendor: Maximum technique pairs per vendor (default 60)
         on_scored: called with the running count as correlations are scored, for the progress bar
+        pairs_per_technique: most partners per technique (default PAIRS_PER_TECHNIQUE)
 
     Returns:
         Correlations with relevance_score >= min_relevance, best first, covering at most
-        max_per_vendor technique pairs, each technique paired with at most PAIRS_PER_TECHNIQUE others
+        max_per_vendor technique pairs, each technique paired with at most pairs_per_technique others
     """
+    pairs_per_technique = pairs_per_technique or PAIRS_PER_TECHNIQUE
     # Score each correlation
     scored_correlations = []
     for corr in correlations:
@@ -1085,7 +1088,7 @@ def _score_and_filter_correlations(
     def opens(ka, kb):
         """Whether a new place can go to this technique pair."""
         return len(places) < max_per_vendor and not any(
-            other not in partners.get(k, ()) and len(partners.get(k, ())) >= PAIRS_PER_TECHNIQUE
+            other not in partners.get(k, ()) and len(partners.get(k, ())) >= pairs_per_technique
             for k, other in ((ka, kb), (kb, ka)))
 
     first = 0
@@ -2315,11 +2318,10 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
                 print(f"   {len(corrs) - len(kept)} pairs from one expanded parent left out")
             corrs = kept
 
-            # Use config relevance threshold (default 75%)
-            from shikari.config import CoreConfig
-
-            # Read per run: a technique hunt can set its own threshold (CoreConfig is fixed at import)
-            min_relevance = float(os.getenv("CORRELATION_MIN_RELEVANCE", CoreConfig.correlation_min_relevance))
+            # Read per run: a technique hunt can set its own threshold through the environment,
+            # and an admin can change the saved settings while the server runs
+            settings = correlation_settings.load()
+            min_relevance = float(os.getenv("CORRELATION_MIN_RELEVANCE") or settings["threshold"])
 
             def _on_scored(n, base=scored_before):
                 # Same timer as pairing: scoring is quick per item, a file write isn't
@@ -2330,7 +2332,8 @@ def _generate_with_heuristic(group_name: str, files: List[str]) -> Dict:
 
             top_vendor_corrs = _score_and_filter_correlations(
                 corrs, file_info, min_relevance=min_relevance,
-                max_per_vendor=CORRELATION_CAP.get(vendor, 60), on_scored=_on_scored,
+                max_per_vendor=max(CORRELATION_CAP.get(vendor, 0), settings["per_vendor"]),
+                on_scored=_on_scored, pairs_per_technique=settings["tech_freq"],
             )
             scored_before += len(corrs)
             _scoring_progress(scored_before)

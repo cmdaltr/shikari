@@ -1125,7 +1125,7 @@
                     </label>
                     <input type="number" id="correlation-per-vendor" class="form-input" min="1" max="500" step="1" value="60">
                     <p style="margin: 6px 0 0 0; font-size: 0.85em; color: var(--text-secondary); line-height: 1.4;">
-                      Maximum correlations per vendor (Defender XDR, Splunk, etc.). <strong>Recommended: 25-100</strong>
+                      Most technique pairs kept per vendor (Defender XDR, Splunk). Google SecOps, the primary platform, keeps at least 100. <strong>Recommended: 25-100</strong>
                     </p>
                   </div>
 
@@ -1138,7 +1138,7 @@
                     </label>
                     <input type="number" id="correlation-tech-freq" class="form-input" min="1" max="100" step="1" value="20">
                     <p style="margin: 6px 0 0 0; font-size: 0.85em; color: var(--text-secondary); line-height: 1.4;">
-                      Max times a technique appears as first technique. <strong>Recommended: 20-40</strong>
+                      Most other techniques one technique is paired with, per vendor. <strong>Recommended: 20-40</strong>
                     </p>
                   </div>
                 </div>
@@ -2650,6 +2650,9 @@
                     document.getElementById('current-threshold').textContent = Math.round(data.threshold * 100) + '%';
                     document.getElementById('current-per-vendor').textContent = data.per_vendor;
                     document.getElementById('current-tech-freq').textContent = data.tech_freq;
+                    if (data.threshold_from_env) {
+                        showCorrelationStatus('CORRELATION_MIN_RELEVANCE is set on the server and overrides the saved threshold.', 'error');
+                    }
                 }
             } catch (error) {
                 console.error('Error loading correlation parameters:', error);

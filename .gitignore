@@ -41,6 +41,7 @@ profile_pictures/
 data/*.db
 # Fernet key that decrypts every stored API key (shikari/auth/encryption.py)
 data/.encryption_key
+data/correlation_settings.json
 data/.mitresaw.lock
 data/mitre_procedures.csv
 data/mitre_procedures.xlsx
