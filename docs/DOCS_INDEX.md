@@ -102,6 +102,7 @@ Plain-language guide to every part of Shikari, one page each: what it's for, how
 | Document | Description |
 |----------|-------------|
 | [ARCHITECTURE.md](architecture/ARCHITECTURE.md) | System architecture overview |
+| [shikari-architecture.pdf](architecture/shikari-architecture.pdf) | How it fits together: the web app and `shikari` on two pages (a print of the Help page diagram) |
 | [CORRELATION_ENGINE.md](architecture/CORRELATION_ENGINE.md) | Correlation generation — scoring, filtering, JOIN queries |
 | [CORRELATION_QUICK_REFERENCE.md](architecture/CORRELATION_QUICK_REFERENCE.md) | Correlation tuning parameters |
 | [PERFORMANCE_ARCHITECTURE.md](architecture/PERFORMANCE_ARCHITECTURE.md) | Performance and optimisation |

@@ -13,7 +13,8 @@ Complete architecture and design documentation for Shikari.
 
 The component architecture (web UI and `shikari`) is now a single
 theme-aware inline HTML/SVG diagram at `static/diagrams/architecture.html`,
-rendered on the Help page. The old Graphviz `cli_diagram`/`web_diagram`
+rendered on the Help page; [shikari-architecture.pdf](shikari-architecture.pdf) is a two-page print of
+it (web, then `shikari`). The old Graphviz `cli_diagram`/`web_diagram`
 DOT pipeline has been retired.
 
 #### Flow Diagrams
@@ -48,7 +49,8 @@ python update.py
 
 ```
 docs/architecture/
-├── README.md                      # This file
+├── ARCHITECTURE.md                # This file
+├── shikari-architecture.pdf       # Print of static/diagrams/architecture.html
 ├── CORRELATION_ENGINE.md          # Correlation system design
 ├── PERFORMANCE_ARCHITECTURE.md    # Performance documentation
 ├── SCHEMA_NORMALIZATION.md        # Schema design
