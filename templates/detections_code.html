@@ -77,7 +77,7 @@
     <p class="ms-note">A zip to import into your own Elastic, Splunk or Wazuh by hand: the detections in
       that SIEM's own format, created disabled, with a README of the import steps. Add a lab run and its
       events come too, shaped so the detections can fire on them. Nothing is sent anywhere.</p>
-    <div class="dc-actions">
+    <div class="dc-actions dc-pack-actions">
       <select id="dc-pack-group" class="dropdown-styled" aria-label="Run to export">
         <option value="">All detections</option>
         {% for g in runs %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
@@ -90,13 +90,13 @@
           <option value="wazuh">Wazuh</option>
         </select>
       </span>
-      <button type="button" class="btn-primary" id="dc-pack">Download pack</button>
       <select id="dc-pack-telemetry" class="dropdown-styled" aria-label="Lab run to include">
         <option value="">No lab telemetry</option>
         {% for r in lab_runs %}<option value="{{ r }}">Lab run: {{ r }}</option>{% endfor %}
       </select>
       <label class="dc-check"><input type="checkbox" id="dc-pack-rebase" checked>
         Shift the events to end now</label>
+      <button type="button" class="btn-primary" id="dc-pack">Download pack</button>
       <span class="ms-state" id="dc-pack-state" aria-live="polite"></span>
     </div>
     <div id="dc-pack-result" class="dc-result" hidden></div>
@@ -286,6 +286,8 @@
   .dc-actions .form-input, .dc-actions .dropdown-styled { width: 100%; box-sizing: border-box; }
   .dc-actions .btn-primary { white-space: nowrap; }
   .dc-actions .ms-state { grid-column: 1 / -1; min-height: 1em; }
+  .dc-pack-actions { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) max-content max-content; }
+  .dc-pack-actions .dc-check { white-space: nowrap; }
   @media (max-width: 640px) { .dc-actions { grid-template-columns: 1fr; } }
   .dc-repo { margin: 0 0 18px; padding: 10px 14px; border-radius: 10px; font-size: 0.9rem;
     display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }

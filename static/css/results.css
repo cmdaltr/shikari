@@ -358,7 +358,7 @@
 }
 
 /* Buttons */
-.btn-secondary, .btn-outline, .btn-text, .btn-icon {
+.btn-outline, .btn-text, .btn-icon {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -372,17 +372,7 @@
   text-decoration: none;
 }
 
-/* .btn-primary: static/css/ui.css */
-.btn-secondary {
-  background: white;
-  color: #C53030;
-  border: 2px solid #C53030;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: #C53030;
-  color: white;
-}
+/* .btn-primary, .btn-secondary: static/css/ui.css */
 
 .btn-outline {
   background: transparent;

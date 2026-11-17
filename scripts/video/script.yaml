@@ -45,6 +45,7 @@ say:
   TAXII: taxi
   MISP: misp
   XDR: X D R
+  comsvcs.dll: comm-services dot D L L
   EDR: E D R
   LOLBAS: lol bass
   LOLDrivers: lol drivers
@@ -331,8 +332,7 @@ scenes:
       stage where its telemetry lives, match on those keys inside the time window, and you've followed
       the attack from one platform to the next.
 
-      Running each stage straight through each SIEM's API is on the roadmap: Splunk's is already
-      built, and Defender XDR is next.
+      Splunk and Elastic stages can already be run straight through their APIs, from Shikari itself.
     actions:
       - eval: toggleCorrelationsSection(); toggleCrossVendorSection()
         seg: 0
@@ -402,8 +402,8 @@ scenes:
       The Key, on the right edge, explains every badge, tactic colour and icon on the page.
 
       And Ask Shikari, bottom right on every page, takes a question in plain words, such as a Splunk query
-      for APT29 dumping LSASS. It uses the AI model defined under Profile. If you haven't provided an API
-      key, it's inactive and shows grey, as it is here, so nothing is sent to an AI provider by default.
+      for APT29 dumping LSASS. It's only enabled if you've provided an AI model API key under Profile.
+      Otherwise it's inaccessible and unavailable, greyed out as it is here.
     actions:
       - click: '#key-fab'
         seg: 0
@@ -564,8 +564,7 @@ scenes:
       comes back with the query and how it works.
 
       It knows ATT&CK, each SIEM's query language and Shikari's own pages, so it can also tell you where
-      to find something. And it stays on topic: it won't write you an exploit, or a recipe for brownies.
-      The model that answered is named beneath it.
+      to find something. The model that answered is named beneath it.
     actions:
       - goto: /profile
       - click: 'button.tab-button[data-tab="apikeys"]'
@@ -786,8 +785,9 @@ scenes:
       By default it keeps what's relevant to the industries and products you set in your Environment.
 
       Save a watchlist and Shikari checks it as often as you set under Environment. We recommend hourly
-      during a major incident, and every six hours otherwise. Anything new is flagged. And Analyse turns any post
-      straight into detections.
+      during a major incident, and every six hours otherwise. Anything new is flagged.
+
+      And Analyse in Shikari, at the foot of every post, turns it straight into detections.
     actions:
       - goto: /feed
       - show: 'section.fd-intro'
@@ -796,6 +796,8 @@ scenes:
         seg: 1
       - show: '#fd-watch'
         seg: 2
+      - show: '#fd-wall .fd-analyse'
+        seg: 3
 
   - id: indicators
     chapter: Indicator Management

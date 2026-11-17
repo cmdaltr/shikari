@@ -230,27 +230,7 @@ main {
 /* ========== Button Styles ========== */
 /* .btn-primary: static/css/ui.css */
 
-/* Secondary button - transparent with border */
-.btn-secondary {
-    flex: 1;
-    padding: 14px 20px;
-    border: 2px solid var(--border-color);
-    border-radius: 6px;
-    background: transparent;
-    color: var(--text-primary);
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-sizing: border-box;
-    font-size: 1em;
-    font-family: 'Inter', sans-serif;
-    line-height: 1.2;
-}
-
-.btn-secondary:hover {
-    background: var(--bg-secondary);
-    border-color: var(--text-secondary);
-}
+/* .btn-secondary: static/css/ui.css */
 
 /* Danger button - red for destructive actions */
 .btn-danger {

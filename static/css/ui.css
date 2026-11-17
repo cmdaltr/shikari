@@ -90,6 +90,7 @@
 /* ---------- Buttons ---------- */
 .btn-primary,
 .btn-ghost,
+.btn-secondary,
 .mn-page .btn,
 .btn-action,
 .fd-refresh,
@@ -130,12 +131,15 @@
   transform: translateY(-1px);
   box-shadow: none;
 }
+/* .btn-secondary is the same outlined button */
 .btn-ghost,
+.btn-secondary,
 .mn-page .btn.ghost {
   background: transparent;
   color: var(--accent);
 }
 .btn-ghost:hover:not(:disabled),
+.btn-secondary:hover:not(:disabled),
 .mn-page .btn.ghost:hover:not(:disabled) { background: rgba(197, 48, 48, .06); filter: none; }
 .btn-primary svg { width: 18px; height: 18px; }
 .btn-primary:disabled, .mn-page .btn:disabled, .fd-refresh:disabled, .ag-start:disabled {
