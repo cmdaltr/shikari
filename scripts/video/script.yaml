@@ -403,7 +403,7 @@ scenes:
 
       And Ask Shikari, bottom right on every page, takes a question in plain words, such as a Splunk query
       for APT29 dumping LSASS. It's only enabled if you've provided an AI model API key under Profile.
-      Otherwise it's inaccessible and unavailable, greyed out as it is here.
+      Otherwise it's inaccessible and unavailable.
     actions:
       - click: '#key-fab'
         seg: 0
@@ -696,6 +696,7 @@ scenes:
 
   - id: coverage
     chapter: Coverage
+    ready: '#content .summary-cards'
     narration: >
       Coverage measures your reference queries: the production-tested queries Shikari learns from when it
       writes new ones, counted by SIEM.

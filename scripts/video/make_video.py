@@ -540,6 +540,12 @@ def render(args, spec, scenes, out, work, email, password):
                     act(page, args.base, actions.pop(0))
                 except Exception as e:
                     print(f"    {s['id']}: goto failed: {str(e).splitlines()[0]}")
+                # `ready:` is what a page that fills itself in after load (Coverage) shows once it's done
+                if s.get("ready"):
+                    try:
+                        page.locator(s["ready"]).first.wait_for(state="visible", timeout=60000)
+                    except Exception as e:
+                        print(f"    {s['id']}: not ready: {str(e).splitlines()[0]}")
                 page.wait_for_timeout(300)
             s["start"] = time.time() - t0
             # `seg: n` pins an action to the start of the scene's nth segment (a blank line in the
