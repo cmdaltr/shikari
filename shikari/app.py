@@ -34,6 +34,7 @@ from shikari.mitre import (
 from shikari.mitre.enterprise import check_group_in_mitre
 from shikari.build.orchestrator import process_group
 from datetime import datetime
+import bisect
 import os
 import functools
 import json
@@ -340,12 +341,6 @@ def calculate_detection_likelihood(
 
     # Ensure score is within 0-100 range
     final_score = max(0, min(100, score))
-
-    # Debug output
-    print(
-        f"[LIKELIHOOD] Technique: {technique}, Indicators: {len(indicators)}, Score: {final_score}",
-        flush=True,
-    )
 
     return final_score
 
@@ -6856,6 +6851,19 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
     # Collect detection files by vendor
     generate_dir = GENERATE_DIR
     detection_files = {}
+    # Listed once: the correlations look a YAML up for each technique they involve
+    try:
+        yaml_names = sorted(n for n in os.listdir(GENERATE_DIR) if n.endswith(".yaml"))
+    except OSError:
+        yaml_names = []
+
+    def technique_yaml(tech_name):
+        """The first of {name}_*.yaml for a technique, or None"""
+        prefix = tech_name.replace(" ", "").replace("/", "") + "_"
+        i = bisect.bisect_left(yaml_names, prefix)
+        if i < len(yaml_names) and yaml_names[i].startswith(prefix):
+            return os.path.join(GENERATE_DIR, yaml_names[i])
+        return None
     vendor_icons = {
         "splunk": "🔍",
         "mde": "🛡️",
@@ -7027,11 +7035,6 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
             is_osint_enriched, osint_data = check_osint_enriched(
                 yaml_file, file_content=file_content
             )
-
-            # Debug: Log what we're passing to template
-            if is_osint_enriched or osint_data:
-                print(f"   is_osint_enriched: {is_osint_enriched}")
-                print(f"   osint_data present: {bool(osint_data)}")
 
             # Extract the query and tactics from YAML for preview (use already-loaded yaml_data)
             query_text = yaml_data.get("query", "")
@@ -7455,12 +7458,9 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
                         # Build attack flow from ALL techniques (including merged ones)
                         seen_technique_keys = set()
                         for tech_name in techniques_involved:
-                            # Look for YAML file matching this technique name
-                            # Normalize technique name to match filename format (remove spaces)
-                            filename_pattern = tech_name.replace(" ", "").replace("/", "")
-                            pattern = os.path.join(GENERATE_DIR, f"{filename_pattern}_*.yaml")
-                            matching_files = glob.glob(pattern)
-                            yaml_data = load_yaml_file(matching_files[0]) if matching_files else None
+                            # The technique's YAML, by its filename (the name without spaces)
+                            yaml_path = technique_yaml(tech_name)
+                            yaml_data = load_yaml_file(yaml_path) if yaml_path else None
 
                             if yaml_data:
                                 formatted_name = format_technique_name(yaml_data.get("name", tech_name))
@@ -7535,12 +7535,10 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
                         techniques_by_tactic_filtered = {}
                         for tech_name in primary_technique_names:
                             # Look for YAML file to get ALL tactics (not just primary)
-                            filename_pattern = tech_name.replace(" ", "").replace("/", "")
-                            pattern = os.path.join(GENERATE_DIR, f"{filename_pattern}_*.yaml")
-                            matching_files = glob.glob(pattern)
+                            yaml_path = technique_yaml(tech_name)
 
-                            if matching_files:
-                                yaml_data = load_yaml_file(matching_files[0])
+                            if yaml_path:
+                                yaml_data = load_yaml_file(yaml_path)
                                 if yaml_data:
                                     tech_tactics = yaml_data.get("tactics", [])
                                     # Add this technique to all its tactics
@@ -7791,22 +7789,6 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
         except:
             pass
 
-    # Get MITRE ID if available
-    mitre_id = None
-    # For CVE groups, skip MITRE check (they won't be in MITRE groups)
-    if not safe_group.upper().startswith("CVE-"):
-        try:
-            from shikari.mitre.enterprise import get_stix_data
-
-            bundle = get_stix_data(
-                "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json"
-            )
-            if check_group_in_mitre(bundle, safe_group):
-                # Try to find MITRE ID from STIX data
-                mitre_id = safe_group  # Simplified
-        except:
-            pass
-
     # Load auto-validation results if they exist
     validation_results = {}
     validation_summary = {"total": 0, "passed": 0, "failed": 0, "avg_f1": 0}
@@ -7877,7 +7859,6 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
             "user": user,
             "group_name": safe_group,
             "flow_layout": flow_layout,
-            "mitre_id": mitre_id,
             "total_detections": total_detections,
             "vendor_count": len(detections),
             "correlation_count": len(correlations),
