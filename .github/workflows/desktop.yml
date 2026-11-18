@@ -55,7 +55,9 @@ jobs:
             {"os":"ubuntu-24.04","suffix":"linux-amd64"},
             {"os":"ubuntu-24.04-arm","suffix":"linux-arm64"}]'
           case "$SEL" in
-            all)           sel="macos-arm64 macos-x86_64 windows-x64 windows-arm64 linux-amd64 linux-arm64" ;;
+            # Not windows-arm64: never released (Windows on ARM runs the x64 .msi), and as a build leg
+            # its failure skipped the release; it builds on its own manual run
+            all)           sel="macos-arm64 macos-x86_64 windows-x64 linux-amd64 linux-arm64" ;;
             macos)         sel="macos-arm64 macos-x86_64" ;;
             windows)       sel="windows-x64" ;;
             windows-arm64) sel="windows-arm64" ;;
