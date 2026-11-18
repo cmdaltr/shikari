@@ -5,7 +5,7 @@ import pytest
 
 
 class TestLLMDetection:
-    """Verify /api/llm/detect returns provider info."""
+    """Verify /api/llm/detect reports the local LLM (Ollama, LM Studio and the like) Shikari found."""
 
     def test_llm_detect_returns_providers(self, api, ensure_running):
         r = api.get("/api/llm/detect")
@@ -15,11 +15,15 @@ class TestLLMDetection:
         assert isinstance(data, dict)
 
     def test_llm_detect_has_expected_fields(self, api, ensure_running):
-        r = api.get("/api/llm/detect")
-        data = r.json()
-        # Expect at least one provider key
-        provider_keys = ["anthropic", "openai", "ollama", "lm_studio", "providers"]
-        assert any(k in data for k in provider_keys) or "ok" in data
+        # The first local LLM endpoint found at startup, or {"available": False} with none running
+        data = api.get("/api/llm/detect").json()
+        assert isinstance(data["available"], bool)
+        if data["available"]:
+            for key in ["name", "provider", "url", "base_url", "models", "model"]:
+                assert key in data
+            assert isinstance(data["models"], list)
+        else:
+            assert data == {"available": False}
 
 
 class TestLLMPreference:

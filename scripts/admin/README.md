@@ -23,7 +23,7 @@ purpose and expose no secret:
   scripts are thin CLI wrappers over that function.
 - The only secret is the **private key**, which never lives in the repo. It is read from
   `SHIKARI_LICENCE_KEY` (a path or the key itself), defaulting to `~/.config/shikari/licence-signing-key.pem`
-  (keep it `chmod 600`). The matching public key is embedded in `shikari/licensing.PUBLIC_KEYS`, so
+  (keep it `chmod 600`). The matching public key is embedded in `shikari/licence.PUBLIC_KEYS`, so
   the product verifies offline with no phone-home.
 - Issued licences and the ledger are recorded in the **private licensing repo** (set
   `LICENCE_LEDGER_DIR`, or use its `scripts/licences.py` front end), not here.

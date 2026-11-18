@@ -363,6 +363,9 @@ async def ask_shikari(
     if local_llm_endpoints is None:
         single = getattr(request.app.state, "local_llm_detected", {})
         local_llm_endpoints = [single] if single.get("available") else []
+    if not payload.question.strip():
+        # Refused before any provider lookup: a blank question would otherwise spend a model call
+        raise HTTPException(status_code=400, detail="Ask a question")
     context = payload.context or {}
     if is_override_attempt(payload.question) or is_override_attempt(str(context.get("group") or "")):
         logger.warning("Ask Shikari: refused an instruction-override attempt")
@@ -446,6 +449,8 @@ async def threat_briefing(
 
     if not shikari_session:
         raise HTTPException(status_code=401, detail="Not authenticated")
+    if not payload.group.strip():
+        raise HTTPException(status_code=400, detail="Name a threat group (e.g. 'Scattered Spider' or 'G1015')")
 
     db = next(get_db())
     try:

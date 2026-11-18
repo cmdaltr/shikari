@@ -38,35 +38,71 @@ class TestLibraryAPI:
         r = api.post("/api/library/search", json={"query": ""})
         assert r.status_code in [200, 401]
 
-    def test_export_library(self, api, ensure_running):
-        r = api.post("/api/library/export", json={"format": "yaml"})
-        assert r.status_code in [200, 401, 422]
+    def test_export_needs_a_selection(self, api, ensure_running):
+        r = api.post("/api/library/export", json={"format": "json"})
+        assert r.status_code == 400
 
-    def test_save_to_library(self, api, ensure_running):
+    def test_save_refuses_a_detection_without_a_query(self, api, ensure_running):
         r = api.post("/api/library/save", json={
-            "detection": {
-                "title": "Test Detection",
-                "technique_id": "T1059.001",
-                "platform": "splunk",
-                "query": 'index=* process_name="powershell.exe"',
-            }
+            "title": "API test - no query",
+            "detection_type": "detection",
+            "content": {"technique": "T1059.001", "query": "x"},
+            "platform": "splunk",
         })
-        assert r.status_code in [200, 401, 422]
+        assert r.status_code == 400
 
-    def test_tag_detection(self, api, ensure_running):
-        r = api.post("/api/library/tags", json={
-            "detection_id": "test-id",
-            "tags": ["critical", "powershell"],
-        })
-        assert r.status_code in [200, 401, 404, 422]
+    @pytest.mark.parametrize("path", ["/api/library/tags", "/api/library/visibility", "/api/library/delete"])
+    def test_bulk_actions_need_ids(self, api, ensure_running, path):
+        r = api.post(path, json={"ids": [], "tags": ["x"], "visibility": "private"})
+        assert r.status_code == 400
 
-    def test_set_visibility(self, api, ensure_running):
-        r = api.post("/api/library/visibility", json={
-            "detection_id": "test-id",
+    @pytest.mark.parametrize("path", ["/api/library/tags", "/api/library/visibility", "/api/library/delete"])
+    def test_bulk_actions_refuse_unknown_ids(self, api, ensure_running, path):
+        r = api.post(path, json={"ids": [999999999], "tags": ["x"], "visibility": "private"})
+        assert r.status_code == 403
+
+
+class TestLibraryRoundTrip:
+    """Save a detection, tag it, share it, export it and delete it again."""
+
+    TITLE = "T1059.001 - API test: PowerShell encoded command"
+
+    @pytest.fixture
+    def detection_id(self, api, ensure_running):
+        r = api.post("/api/library/save", json={
+            "title": self.TITLE,
+            "detection_type": "detection",
             "visibility": "private",
+            "content": {
+                "technique": "T1059.001",
+                "title": "PowerShell encoded command",
+                "query": 'index=* process_name="powershell.exe" CommandLine="*-EncodedCommand*"',
+            },
+            "platform": "splunk",
+            "tags": [],
         })
-        assert r.status_code in [200, 401, 404, 422]
+        assert r.status_code == 200 and r.json()["success"]
+        detection_id = r.json()["id"]
+        yield detection_id
+        # Left behind only if a test deleted it already
+        api.post("/api/library/delete", json={"ids": [detection_id]})
 
-    def test_delete_detection(self, api, ensure_running):
-        r = api.post("/api/library/delete", json={"detection_id": "nonexistent-id"})
-        assert r.status_code in [200, 401, 404, 422]
+    def test_tag_detection(self, api, detection_id):
+        r = api.post("/api/library/tags", json={"ids": [detection_id], "tags": ["critical", "powershell"]})
+        assert r.status_code == 200 and r.json()["count"] == 1
+
+    def test_set_visibility(self, api, detection_id):
+        for visibility in ["shared", "private"]:
+            r = api.post("/api/library/visibility", json={"ids": [detection_id], "visibility": visibility})
+            assert r.status_code == 200 and r.json()["count"] == 1
+
+    def test_export_library(self, api, detection_id):
+        r = api.post("/api/library/export", json={"ids": [detection_id], "format": "json"})
+        assert r.status_code == 200
+        assert self.TITLE in r.text
+
+    def test_delete_detection(self, api, detection_id):
+        r = api.post("/api/library/delete", json={"ids": [detection_id]})
+        assert r.status_code == 200 and r.json()["deleted_count"] == 1
+        r = api.post("/api/library/delete", json={"ids": [detection_id]})
+        assert r.status_code == 403

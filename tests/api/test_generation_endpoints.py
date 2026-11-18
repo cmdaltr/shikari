@@ -6,6 +6,10 @@ Full end-to-end generation tests are in tests/features/.
 """
 import pytest
 
+# Each accepted request starts a real run in a thread; by the CVE tests a dozen are going, and
+# with them the server has taken over 30 seconds to answer a request
+START_TIMEOUT = 120
+
 
 # ---------------------------------------------------------------------------
 # Threat Group Generation
@@ -18,28 +22,28 @@ class TestGenerateByGroup:
         r = api.post("/generate", data={
             "group_name": "APT28",
             "osint_enhancement": "",
-        }, allow_redirects=False)
+        }, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 303, 401]
 
     def test_with_osint_enhancement(self, api, ensure_running):
         r = api.post("/generate", data={
             "group_name": "APT28",
             "osint_enhancement": "on",
-        }, allow_redirects=False)
+        }, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 303, 401]
 
     def test_with_correlation(self, api, ensure_running):
         r = api.post("/generate", data={
             "group_name": "APT28",
             "run_correlation": "on",
-        }, allow_redirects=False)
+        }, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 303, 401]
 
     def test_with_osint_comparison(self, api, ensure_running):
         r = api.post("/generate", data={
             "group_name": "APT28",
             "osint_comparison": "true",
-        }, allow_redirects=False)
+        }, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 303, 401]
 
     def test_with_all_options(self, api, ensure_running):
@@ -48,7 +52,7 @@ class TestGenerateByGroup:
             "osint_enhancement": "on",
             "run_correlation": "on",
             "osint_comparison": "true",
-        }, allow_redirects=False)
+        }, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 303, 401]
 
     def test_with_platform_exclusions(self, api, ensure_running):
@@ -56,7 +60,7 @@ class TestGenerateByGroup:
             "group_name": "FIN7",
             "exclude_splunk": "true",
             "exclude_secops": "true",
-        }, allow_redirects=False)
+        }, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 303, 401]
 
     def test_exclude_all_platforms_handled(self, api, ensure_running):
@@ -66,16 +70,17 @@ class TestGenerateByGroup:
             "exclude_mde": "true",
             "exclude_secops": "true",
             "exclude_elastic": "true",
-        }, allow_redirects=False)
+        }, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 303, 400, 401, 422]
 
     def test_empty_group_name_rejected(self, api, ensure_running):
-        r = api.post("/generate", data={"group_name": ""}, allow_redirects=False)
-        assert r.status_code in [200, 302, 400, 401, 422]
+        # A required form field: FastAPI refuses it before the route runs
+        r = api.post("/generate", data={"group_name": ""}, allow_redirects=False, timeout=START_TIMEOUT)
+        assert r.status_code == 422
 
     def test_whitespace_group_name_rejected(self, api, ensure_running):
-        r = api.post("/generate", data={"group_name": "   "}, allow_redirects=False)
-        assert r.status_code in [200, 302, 400, 401, 422]
+        r = api.post("/generate", data={"group_name": "   "}, allow_redirects=False, timeout=START_TIMEOUT)
+        assert r.status_code == 400
 
 
 # ---------------------------------------------------------------------------
@@ -91,18 +96,18 @@ class TestGenerateByCVE:
         "CVE-2023-4966",
     ])
     def test_valid_cve_accepted(self, api, ensure_running, cve):
-        r = api.post("/generate/cve", data={"cve_id": cve}, allow_redirects=False)
+        r = api.post("/generate/cve", data={"cve_id": cve}, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 303, 401]
 
     def test_cve_case_insensitive(self, api, ensure_running):
-        r = api.post("/generate/cve", data={"cve_id": "cve-2023-44487"}, allow_redirects=False)
+        r = api.post("/generate/cve", data={"cve_id": "cve-2023-44487"}, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 303, 401]
 
     def test_cve_with_correlation(self, api, ensure_running):
         r = api.post("/generate/cve", data={
             "cve_id": "CVE-2024-3400",
             "run_correlation": "on",
-        }, allow_redirects=False)
+        }, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 303, 401]
 
     @pytest.mark.parametrize("bad_cve", [
@@ -110,11 +115,11 @@ class TestGenerateByCVE:
         "random string", "CVE-2024-12345678",
     ])
     def test_invalid_cve_rejected(self, api, ensure_running, bad_cve):
-        r = api.post("/generate/cve", data={"cve_id": bad_cve}, allow_redirects=False)
+        r = api.post("/generate/cve", data={"cve_id": bad_cve}, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 400, 401, 422]
 
     def test_nonexistent_cve_handled(self, api, ensure_running):
-        r = api.post("/generate/cve", data={"cve_id": "CVE-2099-99999"}, allow_redirects=False)
+        r = api.post("/generate/cve", data={"cve_id": "CVE-2099-99999"}, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 303, 401, 404]
 
 
@@ -126,38 +131,45 @@ class TestHuntByTechnique:
     """POST /hunt/technique with technique_ids."""
 
     @pytest.mark.parametrize("tid", [
-        "T1059", "T1059.001", "T1566.001", "T1078.004", "T1003.001",
+        "T1059", "T1059.001", "T1078.004", "T1003.001",
     ])
     def test_valid_technique_accepted(self, api, ensure_running, tid):
         r = api.post("/hunt/technique", data={
             "technique_ids": tid,
-        }, allow_redirects=False)
+        }, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 303, 401]
+
+    def test_technique_without_indicators_refused(self, api, ensure_running):
+        # ATT&CK names no indicator for T1566.001, so without AI or OSINT the run would come
+        # back empty: shikari.build.technique_yield's preflight refuses it up front
+        r = api.post("/hunt/technique", data={"technique_ids": "T1566.001"}, allow_redirects=False, timeout=START_TIMEOUT)
+        assert r.status_code == 422
+        assert "T1566.001" in r.json()["no_detection"]
 
     def test_multiple_techniques(self, api, ensure_running):
         r = api.post("/hunt/technique", data={
             "technique_ids": "T1059.001,T1566.001,T1078",
-        }, allow_redirects=False)
+        }, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 303, 401]
 
     def test_with_osint_enhancement(self, api, ensure_running):
         r = api.post("/hunt/technique", data={
             "technique_ids": "T1003.001",
             "osint_enhancement": "true",
-        }, allow_redirects=False)
+        }, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 303, 401]
 
     def test_with_platform_exclusions(self, api, ensure_running):
         r = api.post("/hunt/technique", data={
             "technique_ids": "T1059.001",
             "exclude_elastic": "true",
-        }, allow_redirects=False)
+        }, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 303, 401]
 
     def test_duplicate_techniques_deduped(self, api, ensure_running):
         r = api.post("/hunt/technique", data={
             "technique_ids": "T1059.001,T1059.001,T1059.001",
-        }, allow_redirects=False)
+        }, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 303, 401]
 
     @pytest.mark.parametrize("bad_tid", [
@@ -166,7 +178,7 @@ class TestHuntByTechnique:
     def test_invalid_technique_rejected(self, api, ensure_running, bad_tid):
         r = api.post("/hunt/technique", data={
             "technique_ids": bad_tid,
-        }, allow_redirects=False)
+        }, allow_redirects=False, timeout=START_TIMEOUT)
         assert r.status_code in [200, 302, 400, 401, 422]
 
 

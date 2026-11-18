@@ -34,7 +34,9 @@ class TestXSSPrevention:
     @pytest.mark.parametrize("payload", XSS_PAYLOADS)
     def test_xss_in_ask_question(self, api, ensure_running, payload):
         r = api.post("/api/ask", json={"question": payload})
-        assert r.status_code in [200, 400, 401, 422, 500]
+        assert r.status_code in [200, 400, 401, 422, 500, 503]  # 503: no AI provider configured
+        if r.status_code == 503:
+            assert "No LLM provider" in r.json()["detail"]
 
 
 class TestSQLInjection:

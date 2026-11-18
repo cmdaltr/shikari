@@ -8,7 +8,9 @@ class TestResultsPage:
     """GET /results renders detection results."""
 
     def test_results_page_for_group(self, api, ensure_running):
-        r = api.get("/results", params={"group_name": "APT28"})
+        # A full group's page (every detection, several MB) takes a minute or more while the
+        # generation tests' runs are still going
+        r = api.get("/results", params={"group_name": "APT28"}, timeout=300)
         assert r.status_code in [200, 302, 404]
 
     def test_results_page_no_group(self, api, ensure_running):
@@ -32,7 +34,7 @@ class TestDownloads:
         assert r.status_code in [200, 404]
 
     def test_download_all_for_group(self, api, ensure_running):
-        r = api.get("/api/download/all/APT28")
+        r = api.get("/api/download/all/APT28", timeout=300)  # zips every detection: slow, as above
         # May or may not have generated files
         assert r.status_code in [200, 404]
         if r.status_code == 200:

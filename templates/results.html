@@ -1471,11 +1471,18 @@
   </div>
 </div>
 
-{# Detections and correlations for Save to Library and Generate Report, minus osint_data: the server restores it (with_osint) #}
-<script type="application/json" id="results-data">{{ {"detections": detections | without_osint, "correlations": correlations | without_corr_osint} | tojson }}</script>
 <script>
-// Parsed when a save or export needs it, not on page load
-const resultsData = () => JSON.parse(document.getElementById('results-data').textContent);
+// Detections and correlations for Save to Library and Generate Report, minus osint_data (the server
+// restores it: with_osint). Fetched when a save or export needs them; the server holds this page's copy
+const resultsData = (() => {
+  let pending = null;
+  const q = new URLSearchParams({ key: {{ results_key | tojson }}, group_name: {{ group_name | tojson }},
+                                  run: new URLSearchParams(location.search).get('run') || '' });
+  return () => pending || (pending = fetch('/api/results-data?' + q).then(r => {
+    if (!r.ok) { pending = null; throw new Error('Could not load the results (HTTP ' + r.status + ')'); }
+    return r.json();
+  }));
+})();
 // @ts-nocheck
 // Toggle individual vendor
 function toggleVendor(header) {
@@ -2050,7 +2057,13 @@ document.getElementById('save-to-library-btn').addEventListener('click', async f
   }
 
   const groupName = '{{ group_name }}';
-  const { detections, correlations } = resultsData();
+  let detections, correlations;
+  try {
+    ({ detections, correlations } = await resultsData());
+  } catch (e) {
+    await showModal('Save Failed', e.message, 'OK');
+    return;
+  }
 
   // Log data for debugging
   console.log('Total vendor groups:', detections.length);
@@ -2440,7 +2453,7 @@ document.getElementById('generate-report-btn').addEventListener('click', async f
     // Build export data from selected items
     const exportData = [];
     const groupName = '{{ group_name }}';
-    const { detections, correlations } = resultsData();
+    const { detections, correlations } = await resultsData();
 
     // Add selected detections
     for (const vendor of detections) {

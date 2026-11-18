@@ -25,8 +25,10 @@ class TestAskShikari:
         assert r.status_code in [200, 401, 422, 500, 503]  # 503: no AI provider configured
 
     def test_ask_empty_question(self, api, ensure_running):
-        r = api.post("/api/ask", json={"question": ""})
-        assert r.status_code in [200, 400, 401, 422]
+        # Refused before a provider is looked for, so the same with or without AI configured
+        for question in ["", "   "]:
+            r = api.post("/api/ask", json={"question": question})
+            assert r.status_code == 400
 
     def test_ask_siem_question(self, api, ensure_running):
         r = api.post("/api/ask", json={
@@ -63,7 +65,7 @@ class TestThreatBriefing:
 
     def test_briefing_empty_group(self, api, ensure_running):
         r = api.post("/api/threat-briefing", json={"group": ""})
-        assert r.status_code in [200, 400, 401, 422]
+        assert r.status_code == 400
 
     def test_briefing_custom_top_n(self, api, ensure_running):
         r = api.post("/api/threat-briefing", json={

@@ -35,6 +35,7 @@ from shikari.mitre.enterprise import check_group_in_mitre
 from shikari.build.orchestrator import process_group
 from datetime import datetime
 import bisect
+from collections import OrderedDict
 import os
 import functools
 import json
@@ -713,6 +714,30 @@ def with_osint(content):
 
 templates.env.filters["without_osint"] = without_osint
 templates.env.filters["without_corr_osint"] = without_corr_osint
+
+# The results page's Save to Library and Generate Report payload, held here for the page that rendered
+# it rather than inlined (a third of a big run's page, parsed by nobody until a save). Least recently
+# used out first; a page whose key has gone (a restart) has it rebuilt (/api/results-data).
+_RESULTS_DATA: "OrderedDict[str, str]" = OrderedDict()
+_RESULTS_DATA_MAX = 32
+_RESULTS_DATA_LOCK = threading.Lock()
+
+
+def results_payload(detections, correlations) -> str:
+    return json.dumps({"detections": without_osint(detections), "correlations": without_corr_osint(correlations)})
+
+
+def stash_results_data(detections, correlations) -> str:
+    """The payload under a fresh key for the page to fetch."""
+    import secrets
+
+    key = secrets.token_urlsafe(16)
+    blob = results_payload(detections, correlations)
+    with _RESULTS_DATA_LOCK:
+        _RESULTS_DATA[key] = blob
+        while len(_RESULTS_DATA) > _RESULTS_DATA_MAX:
+            _RESULTS_DATA.popitem(last=False)
+    return key
 def technique_key(name) -> str:
     """Technique names compared on letters and digits: 'Multi-Factor Authentication' == 'Multi-FactorAuthentication'."""
     return re.sub(r"[^a-z0-9]", "", str(name or "").lower())
@@ -2947,6 +2972,9 @@ async def generate(
     # Called when the user clicks Generate on the index page, or Regenerate on a results
     # page (regenerate=true: rewrite every detection the run reaches, hand edits included). We first
     # check whether the provided group name maps to a known MITRE actor.
+    if not group_name.strip():
+        # Not an actor, so it would go on to a blog search for nothing and land on Manual
+        return JSONResponse({"error": "Enter a threat group name"}, status_code=400)
     if regenerate == "true":
         # Regenerate overwrites everyone's hand edits and prunes the group's old files: an operator's job
         auth = require_auth(request, shikari_session)
@@ -3263,8 +3291,13 @@ async def generate_cve(
                                                excluded_vendors=siem_args.get("excluded_vendors"), run_label=run_label)
             if runtime:
                 print(f"Runtime detections: {', '.join(os.path.basename(p) for p in runtime)}")
+            # Where the vulnerable software runs at all (shikari.build.exposure_detection)
+            from shikari.build.exposure_detection import write_exposure_detections
+
+            exposure = write_exposure_detections(group_name, cve_ids, GENERATE_DIR,
+                                                 excluded_vendors=siem_args.get("excluded_vendors"), run_label=run_label)
             # Built here, not from a technique: the progress page counts them with the sweeps
-            write_progress(group_name, {"cve_detections": len(exploits) + len(runtime)})
+            write_progress(group_name, {"cve_detections": len(exploits) + len(runtime) + len(exposure)})
             _research(research_total, "Research complete")
 
             # Deduplicate
@@ -5090,6 +5123,9 @@ async def upload_file(
 
         # SECURITY: Limit file size to 50MB
         file_content = await file.read()
+        if not file_content:
+            # The parser takes empty bytes for "read it from disk" and fails on a path that isn't there
+            return JSONResponse({"success": False, "error": "The file is empty"}, status_code=400)
         max_size = 50 * 1024 * 1024  # 50MB
 
         if len(file_content) > max_size:
@@ -7867,6 +7903,7 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
             "duration": duration,
             "detections": detections,
             "correlations": grouped_correlations,
+            "results_key": stash_results_data(detections, grouped_correlations),
             "attack_flow_exists": attack_flow_exists,
             "attack_flow": attack_flow,
             # Vendor keys the user generates for (Profile → SIEM platforms; none chosen means all)
@@ -7896,6 +7933,25 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
         },
     )
 
+
+
+@app.get("/api/results-data")
+def results_data(request: Request, key: str = "", group_name: str = "", run: str = "",
+                 shikari_session: Optional[str] = Cookie(None)):
+    """What a results page's save and export send back: the page's own copy, or rebuilt when it has gone."""
+    auth_result = require_auth(request, shikari_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    auth_result[1].close()
+    with _RESULTS_DATA_LOCK:
+        blob = _RESULTS_DATA.get(key)
+    if blob is None:
+        if not group_name:
+            return JSONResponse({"error": "No results for that page"}, status_code=404)
+        page = results_page(request, group_name, run, shikari_session)
+        context = getattr(page, "context", None) or {}
+        blob = results_payload(context.get("detections"), context.get("correlations"))
+    return Response(blob, media_type="application/json", headers={"Cache-Control": "no-store"})
 
 @app.post("/api/briefing/summary")
 async def briefing_summary(request: Request, shikari_session: Optional[str] = Cookie(None)):
@@ -12797,6 +12853,8 @@ async def update_library_visibility(request: Request, shikari_session: Optional[
 
         if not detection_ids:
             raise HTTPException(status_code=400, detail="No detection IDs provided")
+        if visibility not in {v.value for v in VisibilityType}:
+            raise HTTPException(status_code=400, detail=f"Unknown visibility: {visibility}")
 
         # Validate that all detections belong to the current user
         detections = (

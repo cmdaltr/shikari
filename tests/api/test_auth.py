@@ -1,8 +1,17 @@
 """
 Tests for authentication, registration, MFA, and admin endpoints.
 """
+import re
+import uuid
+
 import pytest
 import requests
+
+
+def _csrf(session, base_url):
+    """The login form's CSRF token; the GET also sets the CSRF session cookie it is bound to."""
+    page = session.get(f"{base_url}/login", timeout=30)
+    return re.search(r'name="csrf_token" value="([^"]+)"', page.text).group(1)
 
 
 class TestLogin:
@@ -13,20 +22,49 @@ class TestLogin:
         assert r.status_code in [200, 302]
 
     def test_login_with_valid_credentials(self, api, ensure_running):
-        r = api.post("/login", data={
-            "email": "admin@shikari.app",
-            "password": "BigGameHunter",
-        }, allow_redirects=False)
-        assert r.status_code in [200, 302, 303, 401]
-
-    def test_login_with_invalid_credentials(self, api, ensure_running):
-        # Use a fresh session to avoid existing cookies
+        # A fresh session: signing the shared one in again would replace its cookie mid-run
         fresh = requests.Session()
         r = fresh.post(f"{api.url}/login", data={
-            "email": "wrong@wrong.com",
-            "password": "wrongpassword",
+            "email": "admin@shikari.app",
+            "password": "BigGameHunter",
+            "csrf_token": _csrf(fresh, api.url),
         }, allow_redirects=False, timeout=30)
-        assert r.status_code in [200, 302, 401, 403]
+        assert r.status_code == 303
+        assert "shikari_session" in fresh.cookies
+        fresh.close()
+
+    def test_login_with_invalid_credentials(self, api, ensure_running):
+        # A new address each run: the rate limit is per address and account, so a fixed one
+        # turns into a 429 after five runs in five minutes
+        fresh = requests.Session()
+        r = fresh.post(f"{api.url}/login", data={
+            "email": f"wrong-{uuid.uuid4().hex[:8]}@wrong.com",
+            "password": "wrongpassword",
+            "csrf_token": _csrf(fresh, api.url),
+        }, allow_redirects=False, timeout=30)
+        assert r.status_code == 401
+        assert "Invalid email or password" in r.text
+        fresh.close()
+
+    def test_login_without_csrf_token_refused(self, api, ensure_running):
+        fresh = requests.Session()
+        r = fresh.post(f"{api.url}/login", data={
+            "email": "admin@shikari.app",
+            "password": "BigGameHunter",
+        }, allow_redirects=False, timeout=30)
+        assert r.status_code == 422
+        fresh.close()
+
+    def test_login_with_forged_csrf_token_refused(self, api, ensure_running):
+        fresh = requests.Session()
+        _csrf(fresh, api.url)  # the CSRF session cookie, with a token that isn't its own
+        r = fresh.post(f"{api.url}/login", data={
+            "email": "admin@shikari.app",
+            "password": "BigGameHunter",
+            "csrf_token": "forged",
+        }, allow_redirects=False, timeout=30)
+        assert r.status_code == 403
+        assert "shikari_session" not in fresh.cookies
         fresh.close()
 
     def test_login_empty_fields(self, api, ensure_running):
