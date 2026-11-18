@@ -59,7 +59,7 @@
 
     {% if results %}
     <table class="ad-table">
-      <thead><tr><th>Technique</th><th>Tactic</th><th>Red</th><th>Blue</th><th>Detection</th><th>Notes</th></tr></thead>
+      <thead><tr><th>Technique</th><th>Tactic</th><th class="ad-col-red">Red</th><th class="ad-col-blue">Blue</th><th>Detection</th><th>Notes</th></tr></thead>
       <tbody>
       {% for r in results %}
         <tr data-id="{{ r.id }}">
@@ -68,10 +68,10 @@
               {% if r.detections %}· <a href="/library?q={{ r.technique_id }}">{{ r.detections }} detection{{ 's' if r.detections != 1 }}</a>{% endif %}
               <span class="ad-hunt" data-tech="{{ r.technique_id }}" hidden>· <a href="/manual">hunt this</a></span></div></td>
           <td><small>{{ r.tactic }}</small></td>
-          <td><select class="ad-f" data-f="red_outcome">
+          <td><select class="ad-f ad-outcome dropdown-styled" data-f="red_outcome" data-v="{{ r.red_outcome or 'not_run' }}" aria-label="Red outcome">
             {% for o in ['not_run','executed','failed','blocked'] %}<option value="{{ o }}" {{ 'selected' if r.red_outcome == o }}>{{ o.replace('_',' ') }}</option>{% endfor %}
           </select></td>
-          <td><select class="ad-f ad-blue" data-f="blue_outcome">
+          <td><select class="ad-f ad-outcome ad-blue dropdown-styled" data-f="blue_outcome" data-v="{{ r.blue_outcome or 'not_assessed' }}" aria-label="Blue outcome">
             {% for o in ['not_assessed','not_logged','logged','alerted','prevented'] %}<option value="{{ o }}" {{ 'selected' if r.blue_outcome == o }}>{{ o.replace('_',' ') }}</option>{% endfor %}
           </select></td>
           <td><input type="text" class="ad-f form-input" data-f="detection_file" value="{{ r.detection_file or '' }}" placeholder="file that fired"></td>
@@ -108,6 +108,7 @@
   }
   document.querySelectorAll('.ad-f').forEach(el => el.addEventListener('change', async () => {
     const row = el.closest('tr');
+    if (el.classList.contains('ad-outcome')) el.dataset.v = el.value;
     el.classList.add('ad-saving');
     try { await save(row); syncHunt(row); el.classList.remove('ad-saving'); el.classList.add('ad-saved');
       setTimeout(() => el.classList.remove('ad-saved'), 600); }
@@ -157,6 +158,30 @@
   .ad-report-text label { display: block; margin-top: 8px; font-size: 0.85em; color: var(--text-secondary); }
   .ad-report-text select { display: block; margin-top: 4px; }
   .ad-report-text textarea { width: 100%; box-sizing: border-box; margin-top: 4px; font: inherit; }
+  .ad-col-red { width: 128px; }
+  .ad-col-blue { width: 150px; }
+  /* Each outcome its own colour, VECTR-style: green the defence won, red it missed, amber in between */
+  .ad-outcome { --o-bg: var(--bg-primary); --o-fg: var(--text-primary); --o-edge: var(--border-color); }
+  .ad-table select.ad-outcome {
+    padding: .4em 2em .4em .7em !important; background-position: right .6em center !important;
+    background-color: var(--o-bg) !important; color: var(--o-fg); border-color: var(--o-edge) !important;
+    border-left-width: 4px !important; font-weight: 600; white-space: nowrap; }
+  .ad-table select.ad-outcome option { background: var(--bg-primary); color: var(--text-primary); font-weight: 400; }
+  .ad-outcome[data-v="not_run"], .ad-outcome[data-v="not_assessed"] { --o-fg: var(--text-secondary); }
+  .ad-outcome[data-v="executed"]   { --o-bg: rgba(234,88,12,.12);  --o-fg: #c2410c; --o-edge: #ea580c; }
+  .ad-outcome[data-v="failed"]     { --o-bg: rgba(100,116,139,.14); --o-fg: #475569; --o-edge: #64748b; }
+  .ad-outcome[data-v="blocked"],
+  .ad-outcome[data-v="prevented"]  { --o-bg: rgba(22,163,74,.13);  --o-fg: #15803d; --o-edge: #16a34a; }
+  .ad-outcome[data-v="alerted"]    { --o-bg: rgba(37,99,235,.12);  --o-fg: #1d4ed8; --o-edge: #2563eb; }
+  .ad-outcome[data-v="logged"]     { --o-bg: rgba(202,138,4,.14);  --o-fg: #a16207; --o-edge: #ca8a04; }
+  .ad-outcome[data-v="not_logged"] { --o-bg: rgba(220,38,38,.12);  --o-fg: #b91c1c; --o-edge: #dc2626; }
+  [data-theme="dark"] .ad-outcome[data-v="executed"]   { --o-fg: #fdba74; }
+  [data-theme="dark"] .ad-outcome[data-v="failed"]     { --o-fg: #cbd5e1; }
+  [data-theme="dark"] .ad-outcome[data-v="blocked"],
+  [data-theme="dark"] .ad-outcome[data-v="prevented"]  { --o-fg: #86efac; }
+  [data-theme="dark"] .ad-outcome[data-v="alerted"]    { --o-fg: #93c5fd; }
+  [data-theme="dark"] .ad-outcome[data-v="logged"]     { --o-fg: #fde047; }
+  [data-theme="dark"] .ad-outcome[data-v="not_logged"] { --o-fg: #fca5a5; }
   .ad-saving { opacity: 0.5; }
   .ad-saved { outline: 2px solid rgba(52,168,83,.5); }
 </style>

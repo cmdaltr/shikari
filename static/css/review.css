@@ -16,11 +16,11 @@
 .rv-domain { margin: 2px 0 0; color: var(--text-secondary, #64748b); font-size: .95rem; }
 .rv-domain a { color: #0d9488; font-weight: 600; }
 
-.rv-risk { flex: 0 0 auto; text-align: center; padding: 8px 14px; border-radius: 10px;
-  background: rgba(220,38,38,.08); border: 1px solid rgba(220,38,38,.25); line-height: 1; }
+.rv-risk { flex: 0 0 auto; text-align: center; padding: 14px 24px; border-radius: 12px;
+  background: rgba(220,38,38,.08); border: 1px solid rgba(220,38,38,.25); line-height: 1.1; }
 .rv-risk-n { font-size: 1.6rem; font-weight: 800; color: #dc2626; }
-.rv-risk-d { font-size: .9rem; color: var(--text-secondary, #64748b); }
-.rv-risk-l { display: block; margin-top: 4px; font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-secondary, #94a3b8); }
+.rv-risk-d { margin-left: 2px; font-size: .9rem; color: var(--text-secondary, #64748b); }
+.rv-risk-l { display: block; margin-top: 8px; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-secondary, #94a3b8); }
 [data-theme="dark"] .rv-risk-n { color: #f87171; }
 
 /* Summary */

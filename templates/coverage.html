@@ -194,7 +194,10 @@
   padding: 20px;
   margin-bottom: 30px;
 }
-.table-section .section-title select { margin-left: 4px; min-width: 160px; font-size: 1rem; }
+.table-section .section-title select { margin-left: 4px; min-width: 160px; }
+/* Thin enough that the collapsed card matches its neighbours' height */
+.table-section .section-title select.dropdown-styled { padding: .1em 2.2em .1em .75em !important; font-size: .92rem !important; line-height: 1.25;
+  background-position: right .75em center !important; }
 .coverage-table[hidden] { display: none; }
 /* A grid of compact cards rather than a tall table (still a table, so the filters, row
    count and CSV export work on its rows) */

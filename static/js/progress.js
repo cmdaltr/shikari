@@ -244,7 +244,7 @@ function render(p) {
     detPctShown = Math.max(detPctShown, pct);
     paint(det, {
       state: 'active', indeterminate: total === 0, pct: detPctShown,
-      count: total ? `${fmt(processed)} / ${procs(total)}${techTotal ? ` (${fmt(techTotal)} techniques)` : ''}` : '',
+      count: total ? `${fmt(processed)} / ${procs(total)}${techTotal ? ` (${fmt(techTotal)} technique${techTotal === 1 ? '' : 's'})` : ''}` : '',
       detail: p.current_technique ? `Building ${p.current_technique}` : 'Building detections',
       time: timing('detections', now, p),
     });
