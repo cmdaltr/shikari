@@ -1,5 +1,6 @@
 import os
 import json
+import threading
 import time
 from typing import Dict, Any
 from .. import filelock
@@ -14,6 +15,15 @@ def progress_path(group_name: str) -> str:
     ensure_progress_dir()
     safe = group_name.replace("/", "_")
     return os.path.join(PROGRESS_DIR, f"{safe}.json")
+
+
+# A run's own thread is started under this name: only it stops when the run is cancelled, so a page
+# request or a worker that writes the same record never sees RunCancelled
+RUN_THREAD = "shikari-run"
+
+
+class RunCancelled(Exception):
+    """Raised in a run's thread at its next progress write once the run has been cancelled."""
 
 
 def write_progress(group_name: str, data: Dict[str, Any]):
@@ -49,6 +59,10 @@ def write_progress(group_name: str, data: Dict[str, Any]):
 
                 # Merge new data into existing (new data takes precedence)
                 merged = {**existing, **data}
+                # Cancelled (cancel_run): stays so, unless the run had already finished
+                stopping = existing.get("cancel_requested") and data.get("phase") != "complete"
+                if stopping:
+                    merged["status"] = "cancelled"
                 # Stamp each phase's start, so the progress page can show real elapsed times
                 phase = data.get("phase")
                 if phase and phase != existing.get("phase"):
@@ -81,11 +95,15 @@ def write_progress(group_name: str, data: Dict[str, Any]):
                 filelock.unlock(lock_file)
                 if terminal:
                     _notify(group_name, merged)
+                if stopping and threading.current_thread().name.startswith(RUN_THREAD):
+                    raise RunCancelled(group_name)
                 return
 
             finally:
                 lock_file.close()
 
+        except RunCancelled:
+            raise
         except (IOError, OSError) as e:
             # Lock acquisition failed, retry
             if attempt < max_retries - 1:
@@ -146,6 +164,18 @@ def start_progress(group_name: str, data: Dict[str, Any]):
             os.replace(temp_path, path)
         finally:
             filelock.unlock(lock_file)
+
+
+def cancel_run(group_name: str) -> bool:
+    """
+    Stop a run: its record says cancelled now, and its thread stops at its next progress write.
+    False when it had already finished.
+    """
+    current = read_progress(group_name)
+    if not current or current.get("phase") == "complete" or current.get("status") in FAILED:
+        return False
+    write_progress(group_name, {"cancel_requested": True, "status": "cancelled", "error": "Cancelled"})
+    return True
 
 
 def read_progress(group_name: str) -> Dict[str, Any]:

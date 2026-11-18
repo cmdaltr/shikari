@@ -6,9 +6,10 @@ Full end-to-end generation tests are in tests/features/.
 """
 import pytest
 
-# Each accepted request starts a real run in a thread; by the CVE tests a dozen are going, and
-# with them the server has taken over 30 seconds to answer a request
-START_TIMEOUT = 120
+# Each accepted request starts a real run, stopped when the test ends (conftest.stop_started_runs).
+# A cancelled run stops at its next progress write, so one mid-way through a long step can still
+# hold the server up for the next request
+START_TIMEOUT = 60
 
 
 # ---------------------------------------------------------------------------

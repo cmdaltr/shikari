@@ -48,7 +48,7 @@ from urllib.parse import quote, urlencode, urlparse
 import yaml
 
 from shikari import yaml_cache
-from shikari.build.progress import read_progress, start_progress, write_progress
+from shikari.build.progress import RUN_THREAD, cancel_run, read_progress, start_progress, write_progress
 from shikari.config import (
     DATA_DIR,
     GENERATE_DIR,
@@ -3076,7 +3076,7 @@ async def generate(
             )
         except Exception:
             pass
-        threading.Thread(target=_bg, daemon=True).start()
+        threading.Thread(target=_bg, name=RUN_THREAD, daemon=True).start()
         return JSONResponse({"redirect_url": f"/progress?group_name={quote(group_name)}"})
     else:
         # Group not in ATT&CK - search blogs automatically
@@ -3519,7 +3519,7 @@ async def generate_cve(
         )
     except Exception:
         pass
-    threading.Thread(target=_bg, daemon=True).start()
+    threading.Thread(target=_bg, name=RUN_THREAD, daemon=True).start()
 
     return JSONResponse({"redirect_url": f"/progress?group_name={quote(group_name)}"})
 
@@ -3704,7 +3704,7 @@ async def hunt_technique(
         )
     except Exception:
         pass
-    threading.Thread(target=_bg, daemon=True).start()
+    threading.Thread(target=_bg, name=RUN_THREAD, daemon=True).start()
 
     return JSONResponse({"redirect_url": f"/progress?group_name={quote(group_name)}", "no_detection": doomed})
 
@@ -3938,7 +3938,7 @@ async def hunt_hypothesis(
                                     "source_type": "hypothesis", "hypothesis": text})
     except Exception:
         pass
-    threading.Thread(target=_bg, daemon=True).start()
+    threading.Thread(target=_bg, name=RUN_THREAD, daemon=True).start()
     return JSONResponse({"redirect_url": f"/progress?group_name={quote(group_name)}",
                          "extracted": found, "ai_refined": refined, "from_profile": from_profile,
                          "techniques": technique_id_list})
@@ -4439,7 +4439,7 @@ async def manual_submit(
                                     "auto_validate_enabled": (auto_validate == "true")})
     except Exception:
         pass
-    threading.Thread(target=_bg_manual, daemon=True).start()
+    threading.Thread(target=_bg_manual, name=RUN_THREAD, daemon=True).start()
 
     # Redirect user to progress page
     url = f"/progress?group_name={quote(group_name)}"
@@ -4455,6 +4455,24 @@ async def progress_status(group_name: str = ""):
     data = read_progress(group_name)
     response = {"ok": True, "progress": data}
     return JSONResponse(response)
+
+
+@app.post("/api/progress/{group_name}/cancel")
+def cancel_progress(request: Request, group_name: str, shikari_session: Optional[str] = Cookie(None)):
+    """Stop a run that's still going: the user who started it, or an admin."""
+    auth_result = require_auth(request, shikari_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"ok": False, "error": "Not authenticated"}, status_code=401)
+    user, db = auth_result
+    db.close()
+    current = read_progress(group_name)
+    if not current:
+        return JSONResponse({"ok": False, "error": "No such run"}, status_code=404)
+    if current.get("user_id") != user.id and not at_least(user, UserRole.ADMIN):
+        return JSONResponse({"ok": False, "error": "Not your run"}, status_code=403)
+    if not cancel_run(group_name):
+        return JSONResponse({"ok": False, "error": "The run has already finished"}, status_code=409)
+    return {"ok": True}
 
 
 @app.get("/correlations/{group_name}.json")
@@ -5320,7 +5338,7 @@ async def generate_from_upload(
             )
         except Exception:
             pass
-        threading.Thread(target=_bg, daemon=True).start()
+        threading.Thread(target=_bg, name=RUN_THREAD, daemon=True).start()
 
         return JSONResponse(
             {
@@ -5570,7 +5588,7 @@ async def generate_from_blog(
             )
         except Exception:
             pass
-        threading.Thread(target=_bg, daemon=True).start()
+        threading.Thread(target=_bg, name=RUN_THREAD, daemon=True).start()
 
         return JSONResponse(
             {
@@ -5814,7 +5832,7 @@ def _launch_company_profile(domain: str, shikari_session: Optional[str], use_ai:
             write_progress(group_name, {"status": "failed", "error": str(e)})
 
     import threading
-    threading.Thread(target=_profile_bg, daemon=True).start()
+    threading.Thread(target=_profile_bg, name=RUN_THREAD, daemon=True).start()
     return {"domain": domain, "group_name": group_name}
 
 
@@ -6463,7 +6481,7 @@ async def generate_detections_from_profile(
                 "stage": "queued", "created_yaml": 0, "source_type": "profile",
                 **({"current_step": f"Queued behind {groups[position - 1]}"} if position else {}),
             })
-        threading.Thread(target=_generate_bg, daemon=True).start()
+        threading.Thread(target=_generate_bg, name=RUN_THREAD, daemon=True).start()
 
         # Return progress redirect
         group_list = ", ".join(groups[:3])  # Show first 3 groups
