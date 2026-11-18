@@ -17,6 +17,13 @@ def test_a_code_execution_cve_names_its_runtime():
     assert runtimes({"description": "A command injection in the Exchange Server web UI", "cpes": []}) == ["IIS"]
 
 
+def test_a_jdk_cve_in_oracles_wording_lands_in_java():
+    # Java4Shell: a heap overflow (CWE-122) whose advisory says "takeover", not "code execution"
+    java4shell = {"description": "Vulnerability in the Oracle Java SE, Oracle GraalVM for JDK ... Successful attacks of "
+                                 "this vulnerability can result in takeover of Oracle Java SE.", "cwe": ["CWE-122"], "cpes": []}
+    assert runtimes(java4shell) == ["Java runtime"]
+
+
 def test_no_runtime_detection_without_code_execution_or_a_known_runtime():
     assert runtimes({"description": "Stored XSS in a WordPress plugin", "cwe": ["CWE-79"]}) == []
     assert runtimes({"description": "Remote code execution in FortiOS", "cpes": ["cpe:2.3:o:fortinet:fortios:7.0"]}) == []

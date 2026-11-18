@@ -61,7 +61,7 @@ def test_product_name_is_not_turned_into_guessed_files(tmp_path):
 
 def test_reference_iocs_read_write_ups_and_skip_catalogues(tmp_path):
     pages = {
-        "https://www.volexity.com/blog/cve": {"success": True, "iocs": {"ip": ["172.233.228[.]93"], "hash": ["a" * 64], "file": ["/css/bootstrap.min.css"]}},
+        "https://www.volexity.com/blog/cve": {"success": True, "iocs": {"ip": ["172.233.228[.]93"], "hash": ["9f" * 32], "file": ["/css/bootstrap.min.css"]}},
         "https://security.vendor.com/advisory": {"success": True, "iocs": {}},
     }
     seen = []
@@ -77,4 +77,4 @@ def test_reference_iocs_read_write_ups_and_skip_catalogues(tmp_path):
 
     assert seen == list(pages)  # catalogue and code host skipped, duplicate read once
     assert refs["sources"] == ["https://www.volexity.com/blog/cve"]
-    assert refs["iocs"] == {"ip": ["172.233.228[.]93"], "domain": [], "hash": ["a" * 64]}
+    assert refs["iocs"] == {"ip": ["172.233.228[.]93"], "domain": [], "hash": ["9f" * 32]}

@@ -66,6 +66,7 @@ class CVEHunter:
             # Re-derived each time (no network): a cache written by an older extractor
             # still carries its guessed indicators
             cached["iocs"] = self._extract_iocs(cached)
+            cached["techniques"] = self._map_to_attack(cached)
             # Cached before references were read, or under older extraction rules
             if (cached.get("reference_iocs") or {}).get("version") != self.REFERENCE_IOCS_VERSION:
                 cached["reference_iocs"] = self._reference_iocs(cached.get("nvd_data") or {})
@@ -344,10 +345,17 @@ class CVEHunter:
             "CWE-502": ["T1059"],  # Deserialization → Command Execution
         }
 
-        cwes = research_data.get("nvd_data", {}).get("cwe", [])
+        nvd = research_data.get("nvd_data") or {}
+        cwes = nvd.get("cwe") or []
         for cwe in cwes:
             if cwe in cwe_attack_map:
                 techniques.extend(cwe_attack_map[cwe])
+
+        # Code execution, whatever the weakness (a heap overflow, CWE-122, says nothing on its own):
+        # what the attacker runs next is the impact, as the CTID's CVE-to-ATT&CK methodology maps it
+        from shikari.build.runtime_detection import runs_code
+        if runs_code(nvd) and "T1059" not in techniques:
+            techniques.append("T1059")
 
         # Always include Initial Access for exploits
         if "T1190" not in techniques:  # Exploit Public-Facing Application
@@ -464,10 +472,34 @@ class CVEHunter:
         return iocs
 
     # Catalogues, trackers and code hosts: no indicators in the page itself
+    # Patch advisories and trackers: version lists, credits and CVSS tables, never exploitation indicators
     _NO_INDICATOR_HOSTS = ("nvd.nist.gov", "cve.org", "cve.mitre.org", "cisa.gov/known-exploited",
-                           "github.com", "twitter.com", "x.com", "exploit-db.com", "packetstormsecurity")
+                           "github.com", "twitter.com", "x.com", "exploit-db.com", "packetstormsecurity",
+                           "oracle.com/security-alerts", "access.redhat.com", "bugzilla.redhat.com",
+                           "openwall.com", "news.ycombinator.com")
     MAX_REFERENCE_PAGES = 6
-    REFERENCE_IOCS_VERSION = 2  # 2: a domain only seen in addresses isn't one (oss-security Message-IDs)
+    # 2: a domain only seen in addresses isn't one (oss-security Message-IDs)
+    # 3: advisories skipped; versions, credits and placeholder hashes dropped (Java4Shell, CVE-2026-114938)
+    REFERENCE_IOCS_VERSION = 3
+    # "version 13.3.0.1" is a dotted quad; "Quang Luong of Calif.io: CVE-…" credits the finder
+    _VERSION_CONTEXT = re.compile(r"\bversions?\b[^;:]{0,60}$", re.I)
+    _CREDIT_CONTEXT = re.compile(r"\b(?:of|from)\s+$", re.I)
+
+    @classmethod
+    def _not_indicator(cls, value: str, mentions: List[str]) -> bool:
+        """A version number, a researcher's credit, or a placeholder hash (aaaa…, 0000…)."""
+        if len(value) >= 32 and len(set(value.lower())) == 1:
+            return True
+        if not mentions:
+            return False
+        def dismissed(m):
+            i = m.lower().find(value.lower())
+            if i < 0:
+                return False
+            before, after = m[:i], m[i + len(value):]
+            return bool(cls._VERSION_CONTEXT.search(before)
+                        or (cls._CREDIT_CONTEXT.search(before) and after.lstrip().startswith(":")))
+        return all(dismissed(m) for m in mentions)
 
     def _reference_iocs(self, nvd_data: Dict) -> Dict[str, Any]:
         """
@@ -508,6 +540,9 @@ class CVEHunter:
             if found:
                 sources.append(url)
                 mentions = merge_mentions(mentions, page.get("ioc_mentions"))
+        for kind in merged:
+            merged[kind] = [v for v in merged[kind] if not self._not_indicator(v.replace("[.]", "."),
+                                                                                mentions.get(v.replace("[.]", ".")) or [])]
         return {"iocs": merged, "sources": sources, "mentions": mentions, "version": self.REFERENCE_IOCS_VERSION}
 
     MAX_POC_READMES = 5

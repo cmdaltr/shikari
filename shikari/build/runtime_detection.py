@@ -27,14 +27,20 @@ RUNTIMES = {
                                  "jenkins:jenkins", "redhat:jboss", "ibm:websphere"),
                                 re.compile(r"\b(?:Tomcat|WebLogic|JBoss|WildFly|WebSphere|Confluence|Jenkins)\b"),
                                 ("java", "java.exe", "javaw.exe", "tomcat*")),
+    # The JDK itself (Java4Shell, CVE-2026-114938: a HotSpot intrinsic): whatever Java service feeds it the data
+    "Java runtime": (("oracle:jdk", "oracle:jre", "oracle:openjdk", "oracle:graalvm"),
+                     re.compile(r"\bJava SE\b|\bGraalVM\b|\bOpenJDK\b"),
+                     ("java", "java.exe", "javaw.exe")),
     "IIS": (("microsoft:internet_information_services", "microsoft:exchange_server", "microsoft:sharepoint"),
             re.compile(r"\b(?:IIS|Exchange Server|SharePoint|ASP\.NET)\b"),
             ("w3wp.exe",)),
     "Node.js": (("nodejs:node.js",), re.compile(r"\bNode\.js\b"), ("node", "node.exe")),
 }
 # The CVE runs code: its wording, or its weakness
+# Oracle's wording for full compromise is "can result in takeover of"
 _EXECUTES = re.compile(r"remote code execution|\bRCE\b|arbitrary (?:code|commands?)|command injection|code injection|"
-                       r"execute (?:arbitrary )?(?:code|commands?)|deseriali[sz]|object injection|web ?shell", re.I)
+                       r"execute (?:arbitrary )?(?:code|commands?)|deseriali[sz]|object injection|web ?shell|"
+                       r"result in takeover", re.I)
 _EXECUTING_CWES = {"CWE-77", "CWE-78", "CWE-94", "CWE-95", "CWE-502", "CWE-434"}
 RECON = ("whoami", "whoami.exe", "id", "uname", "hostname", "curl", "wget", "nc", "ncat", "socat",
          "certutil.exe", "bitsadmin.exe", "mshta.exe")
@@ -43,10 +49,15 @@ SHELL_TERMS = ("whoami", "uname", "/etc/passwd", "curl", "wget", "/dev/tcp", "ba
                "chmod", "python", "perl", "certutil", "Invoke-WebRequest", "DownloadString")
 
 
+def runs_code(nvd: Dict) -> bool:
+    """The CVE gives the attacker code execution: its wording, or its weakness."""
+    return bool(_EXECUTES.search(nvd.get("description") or "") or _EXECUTING_CWES & set(nvd.get("cwe") or []))
+
+
 def runtimes(nvd: Dict) -> List[str]:
     """The runtimes a code-execution CVE lands in, from its CPEs or, failing those, its description."""
     text = nvd.get("description") or ""
-    if not (_EXECUTES.search(text) or _EXECUTING_CWES & set(nvd.get("cwe") or [])):
+    if not runs_code(nvd):
         return []
     cpes = [c.split(":")[3] + ":" + c.split(":")[4] for c in nvd.get("cpes") or [] if c.count(":") >= 4]
     found = [name for name, (vendors, _, _) in RUNTIMES.items()
