@@ -11,7 +11,9 @@ detection itself carries:
   context      15  description, severity, tactics, technique, data connector
   evidence     15  indicators traced to the procedure, reference queries, OSINT
 
-and grades it A (85+) to F (under 40). Each factor says why it lost points.
+and grades it A (85+) to F (under 40). Each factor says why it lost points. Form alone can't
+earn a good grade: a query whose every value is a bare binary, API or privilege name is a D at
+best, and one with no arguments, paths or hashes a C at best, however well it's written.
 
 fp_risk() predicts how noisy it will be before it's deployed: low, medium or high, with the
 reasons. It counts what makes a query match ordinary activity (bare built-in binaries, generic
@@ -27,8 +29,11 @@ GRADES = ((85, "A"), (70, "B"), (55, "C"), (40, "D"), (0, "F"))
 # Tables and event types that see most of an estate's activity: a few conditions on them match a lot
 BROAD_SOURCES = ("DeviceEvents", "DeviceNetworkEvents", "DeviceProcessEvents", "NETWORK_CONNECTION",
                  "PROCESS_LAUNCH", "NETWORK_DNS", "index=edr", "index=os", "process.name", "event.category")
-NOISY_CHECKS = {"PREC-BARE": 25, "PREC-GENERIC": 15, "PREC-PORT": 25, "PREC-CONTEXT": 30, "PREC-EMPTY": 35,
-                "PREC-API": 10}
+NOISY_CHECKS = {"PREC-BARE": 25, "PREC-BARE-BRANCH": 25, "PREC-GENERIC": 15, "PREC-PORT": 25, "PREC-CONTEXT": 30, "PREC-EMPTY": 35,
+                "PREC-API": 10, "PREC-PLACEHOLDER": 10}
+# Ceilings on the score: (check or condition, highest score, why)
+BARE_CEILING = 54     # D
+NAMES_CEILING = 69    # C
 _HASH = re.compile(r"\b[a-f0-9]{32}\b|\b[a-f0-9]{40}\b|\b[a-f0-9]{64}\b", re.I)
 _PATHLIKE = re.compile(r"[\\/].+[\\/]|^[a-z]:\\|^hk(lm|cu|ey)", re.I)
 
@@ -65,8 +70,12 @@ def quality(detection: Dict, platform: Optional[str] = None, technique_platforms
     if checked.get("platform") in ("kql", "udm", "yara_l"):
         points = max(0, 25 - sum(12 if f["severity"] == "error" else 5 for f in prec))
         notes = [f"{f['check']}: {f['message']}" for f in prec[:4]] or ["every condition can fire for the right reason"]
+    elif checked.get("platform") in ("spl", "elastic"):
+        # Only the branch checks read SPL and ES|QL: a clean result here proves less
+        points = max(0, 20 - sum(12 if f["severity"] == "error" else 5 for f in prec))
+        notes = [f"{f['check']}: {f['message']}" for f in prec[:4]] or ["no branch matches on a bare name or an ordinary word"]
     else:
-        points, notes = 20, ["precision checks cover KQL, UDM and YARA-L; not scored for this language"]
+        points, notes = 20, ["precision checks cover KQL, UDM, YARA-L, SPL and ES|QL; not scored for this language"]
     factors.append({"name": "precision", "points": points, "max": 25, "notes": notes})
 
     values = _values(detection)
@@ -116,6 +125,17 @@ def quality(detection: Dict, platform: Optional[str] = None, technique_platforms
                     "notes": notes or ["indicators from the procedure" + (", reference queries" if points > 7 else "")]})
 
     score = sum(f["points"] for f in factors)
+    caps = []
+    if any(f["check"] in ("PREC-BARE", "PREC-API", "PREC-BARE-BRANCH") for f in prec):
+        caps.append((BARE_CEILING, "every value is a bare binary, API or privilege name: it can't say what happened"))
+    elif values and not with_args and not strong:
+        caps.append((NAMES_CEILING, "matches on names alone: no arguments, paths or hashes"))
+    elif any(f["check"] == "PREC-GENERIC" for f in prec):
+        caps.append((NAMES_CEILING, "an ordinary word is enough for it to match"))
+    for ceiling, why in caps:
+        if score > ceiling:
+            score = ceiling
+            factors.append({"name": "ceiling", "points": 0, "max": 0, "notes": [why]})
     return {"score": score, "grade": next(g for floor, g in GRADES if score >= floor), "factors": factors}
 
 
@@ -148,6 +168,10 @@ def fp_risk(detection: Dict, platform: Optional[str] = None, technique_platforms
     if broad and len(used) <= 1:
         score += 10
         reasons.append(f"a high-volume source ({broad[0]}) matched on {'one value' if used else 'no indicator values'}")
+    elif broad and not any(" " in v.strip() or _HASH.search(v) for v in used):
+        # A file's own path is still just its name: C:\Windows\System32\osk.exe is every launch of it
+        score += 15
+        reasons.append(f"a high-volume source ({broad[0]}) matched on names and paths alone, no arguments")
 
     if known is None:
         known = _known(detection, names)

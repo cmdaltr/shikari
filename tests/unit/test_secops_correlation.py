@@ -28,7 +28,7 @@ def _rule(tid, name, events):
   }}"""
 
 
-PHISH = _rule("T1566", "Phishing", '$e.metadata.event_type = "PROCESS_LAUNCH"\n  re.regex($e.target.process.command_line, `mshta`) nocase')
+PHISH = _rule("T1566", "Phishing", '$e.metadata.event_type = "PROCESS_LAUNCH"\n  re.regex($e.target.process.command_line, `mshta.*http`) nocase')
 PWSH = from_yaral(_rule("T1059.001", "PowerShell", '$e.metadata.event_type = "PROCESS_LAUNCH"\n  re.regex($e.target.process.command_line, `-enc`) nocase'))
 RDP = from_yaral(_rule("T1021.001", "Remote Desktop Protocol", '$e.metadata.event_type = "NETWORK_CONNECTION"\n  $e.target.port = 3389'))
 
@@ -39,7 +39,7 @@ def test_two_searches_become_one_host_bound_join():
     assert q.startswith("// shikari_corr_t1566_then_t1059_001:")
     assert "$e." not in q and "re.regex" not in q and not q.lstrip().startswith("rule ")
     assert "$e1.principal.hostname = $host" in q and "$e2.principal.hostname = $host" in q
-    assert "$e1.target.process.command_line = /mshta/ nocase" in q
+    assert "$e1.target.process.command_line = /mshta.*http/ nocase" in q
     assert re.search(r"match:\s*\$host over 1h", q)
     # Only what Google's Search join examples use: no ordering, condition, outcome or != "" filter
     assert "event_timestamp.seconds <=" not in q and "condition:" not in q

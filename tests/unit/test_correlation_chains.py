@@ -16,7 +16,7 @@ def _udm(tid, name, expr):
     return f"// shikari_{tid.replace('.', '_')}: {name} · ATT&CK {tid}\n{expr}"
 
 
-PHISH = _udm("T1566", "Phishing", 'metadata.event_type = "PROCESS_LAUNCH" and target.process.command_line = /mshta/ nocase')
+PHISH = _udm("T1566", "Phishing", 'metadata.event_type = "PROCESS_LAUNCH" and target.process.command_line = /mshta.*http/ nocase')
 PWSH = _udm("T1059.001", "PowerShell", 'metadata.event_type = "PROCESS_LAUNCH" and target.process.command_line = /-enc/ nocase')
 DUMP = _udm("T1003.001", "LSASS Memory", 'metadata.event_type = "PROCESS_LAUNCH" and target.process.command_line = /comsvcs/ nocase')
 VALID = _udm("T1078", "Valid Accounts", 'metadata.event_type = "USER_LOGIN" and target.user.userid = /svc_/ nocase')

@@ -112,5 +112,7 @@ def test_verbatim_strings_survive_pruning_as_written():
     # has_any("C:\Windows\...", "%systemdir%\", @", ", @") — invalid KQL
     q = ('DeviceProcessEvents\n| where ProcessCommandLine has_any(@"C:\\Windows\\System32\\sethc.exe", '
          '@"%systemdir%\\", "data", "nbtstat")')
-    out, _ = prune_kql(q)
-    assert 'has_any(@"C:\\Windows\\System32\\sethc.exe", @"%systemdir%\\", "nbtstat")' in out
+    out, removed = prune_kql(q)
+    # %systemdir% is ATT&CK's prose, not a variable Windows sets: it goes, the rest stay as written
+    assert 'has_any(@"C:\\Windows\\System32\\sethc.exe", "nbtstat")' in out
+    assert any(f["check"] == "PREC-PLACEHOLDER" for f in removed)

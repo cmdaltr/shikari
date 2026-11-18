@@ -1067,3 +1067,12 @@ def construct_yaml(
       except Exception as e:
         # Elastic generation is optional - don't fail if it errors
         print(f"  ⚠️  Elastic generation failed for {name}: {e}")
+
+    # What the technique does, beside the names its procedures quote (shikari.build.behaviours)
+    try:
+        from shikari.build.behaviours import write_behaviour_detections
+
+        for path in write_behaviour_detections(tid, name, all_tactics, tag, GENERATE_DIR, excluded_vendors):
+            print(f"  ✅ Generated behaviour detection: {os.path.basename(path)}")
+    except Exception as e:
+        print(f"  ⚠️  Behaviour detection failed for {name}: {e}")

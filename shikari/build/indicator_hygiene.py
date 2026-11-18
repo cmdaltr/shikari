@@ -34,6 +34,8 @@ _SLOTS = [
     re.compile(r"\(\s*" + _SLOT_WORD + r"\s*\)", re.I),
     # Halves of a split placeholder: "v:{hostname" and "ip}"
     re.compile(r"\{" + _SLOT_WORD + r"\b(?![^{}]*\})|(?<![{\w])" + _SLOT_WORD + r"\}", re.I),
+    # and of a bracketed one: "[Responder file path]" split into "[Responder" ... "path]"
+    re.compile(r"^\[[A-Z]\w*$|^" + _SLOT_WORD + r"\]$", re.I),
 ]
 _SENTENCE_BREAK = re.compile(r"[a-z0-9][.)]\s+[A-Z][a-z]")
 # A value this common matches nearly every event on its own, so a query or rule built on it alerts on

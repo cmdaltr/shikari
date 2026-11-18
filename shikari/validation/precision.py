@@ -14,6 +14,8 @@ static_check asks "will it parse?"; these ask "can it fire for the right reason?
   PREC-BARE         warn   every value is a built-in binary's name (every wmic.exe launch)
   PREC-API          warn   every value is a Windows API name (never on a command line unless a
                            script inlines it)
+  PREC-PRIVILEGE    warn   a privilege name (SeDebugPrivilege) as text: a process enables one through
+                           AdjustTokenPrivileges, which no command line shows (Security 4703/4672 does)
 
 A correlation part needs more: one that trips PREC-BARE or PREC-API says nothing about what
 the binary did, so pairing it with another technique pairs noise (see correlation_part_ok).
@@ -131,7 +133,17 @@ _BUILTIN_BINARIES = {
     "reg.exe", "sc.exe", "schtasks.exe", "svchost.exe", "explorer.exe", "conhost.exe", "whoami.exe",
     "nltest.exe", "tasklist.exe", "taskkill.exe", "netsh.exe", "vssadmin.exe", "wevtutil.exe", "at.exe",
     "msbuild.exe", "installutil.exe", "regasm.exe", "regsvcs.exe", "cmstp.exe", "forfiles.exe", "dsquery.exe",
+    # The accessibility tools T1546.008 swaps out: launched by their users every day
+    "sethc.exe", "utilman.exe", "osk.exe", "magnify.exe", "narrator.exe", "displayswitch.exe", "atbroker.exe",
+    "runas.exe",
 }
+_PRIVILEGE = re.compile(r"^Se[A-Z]\w+Privilege$")
+# Environment variables Windows sets: anything else in %…% is ATT&CK's prose (%systemdir%)
+_REAL_ENV = {"systemroot", "windir", "systemdrive", "programfiles", "programfiles(x86)", "programw6432",
+             "programdata", "allusersprofile", "appdata", "localappdata", "temp", "tmp", "userprofile",
+             "public", "comspec", "homedrive", "homepath", "username", "userdomain", "computername",
+             "commonprogramfiles", "commonprogramfiles(x86)", "path", "pathext", "logonserver"}
+_ENV = re.compile(r"%([A-Za-z_()0-9]+)%")
 _BINARY = re.compile(r"^(?:.*[\\/])?([\w.-]+\.(?:exe|com|dll|cpl|msc))$", re.I)
 
 
@@ -142,27 +154,46 @@ def builtin_binaries() -> set:
     return _BUILTIN_BINARIES | {k for k in index.get("lolbas") or {} if _BINARY.match(k)}
 
 
+def _builtin_name(value: str, builtin: set) -> Optional[str]:
+    """The built-in binary a value names: a path or file name to one, or its bare stem (runas)."""
+    m = _BINARY.match(value)
+    if m:
+        return m.group(1).lower() if m.group(1).lower() in builtin else None
+    return value.lower() + ".exe" if re.fullmatch(r"[A-Za-z][\w-]*", value) and value.lower() + ".exe" in builtin else None
+
+
 def _whole_part(values: List[str]) -> List[Dict]:
-    """PREC-BARE / PREC-API: what every value of a query has in common, if it's nothing useful."""
+    """PREC-BARE / PREC-API: what every value of a query has in common, if it's nothing useful.
+    Placeholders are left out (they're findings of their own), and privilege and API names count
+    with the binaries: none of them says what the process did."""
     from shikari.mitre.extract import classify_name
 
-    values = [v.strip() for v in values if v.strip()]
+    values = [v.strip() for v in values if v.strip() and not is_placeholder(v.strip())]
     if not values:
         return []
-    names = [_BINARY.match(v) for v in values]
-    if all(names):
-        builtin = builtin_binaries()
-        if all(m.group(1).lower() in builtin for m in names):
-            shown = ", ".join(sorted({m.group(1).lower() for m in names}))
-            return [{"check": "PREC-BARE", "message": f"every value is a built-in binary ({shown}): it matches every launch"}]
-    if all(re.fullmatch(r"[A-Za-z]\w+", v) and classify_name(v) == "winapi" for v in values):
-        return [{"check": "PREC-API", "message": f"every value is a Windows API name ({', '.join(values[:4])}): "
+    builtin = builtin_binaries()
+    binaries = {v: _builtin_name(v, builtin) for v in values}
+    api = {v for v in values if _PRIVILEGE.match(v)
+           or (re.fullmatch(r"[A-Za-z]\w+", v) and classify_name(v) == "winapi")}
+    if all(binaries[v] or v in api for v in values):
+        if any(binaries.values()):
+            shown = ", ".join(sorted({b for b in binaries.values() if b} | api))
+            return [{"check": "PREC-BARE", "message": f"every value is a built-in binary's or API's name ({shown}): "
+                     "it matches every launch, not what the process did"}]
+        return [{"check": "PREC-API", "message": f"every value is a Windows API or privilege name ({', '.join(values[:4])}): "
                  "process command lines don't carry them"}]
     return []
 
 
+def _privilege_findings(values: Iterable[str]) -> List[Dict]:
+    return [{"check": "PREC-PRIVILEGE", "message": f"{v} is a privilege: a process enables it through an API call, "
+             "which no command line shows (Windows Security 4703/4672 records it)"}
+            for v in values if _PRIVILEGE.match(v.strip())]
+
+
 def is_placeholder(value: str) -> bool:
-    return GAP in value or bool(_PLACEHOLDER.search(value)) or any(rx.search(value) for rx in _SLOTS)
+    return (GAP in value or bool(_PLACEHOLDER.search(value)) or any(rx.search(value) for rx in _SLOTS)
+            or any(name.lower() not in _REAL_ENV for name in _ENV.findall(value)))
 
 
 def is_generic(value: str) -> bool:
@@ -213,7 +244,9 @@ def check_kql(query: str, technique_platforms: Optional[Iterable[str]] = None) -
         columns = set(_CONDITION_COLUMN.findall(query[start:stop]))
         if columns and columns <= {"RemotePort", "LocalPort"}:
             findings.append({"check": "PREC-PORT", "message": "the only condition is a port: it matches all traffic on it"})
-    findings += _whole_part([v for start, stop in _where_bodies(query) for v in _strings(query[start:stop])])
+    every = [v for start, stop in _where_bodies(query) for v in _strings(query[start:stop])]
+    findings += _privilege_findings(every)
+    findings += _whole_part(every)
     findings += _table_findings(query, technique_platforms)
     return _dedupe(findings)
 
@@ -245,7 +278,9 @@ def check_yaral(query: str) -> List[Dict]:
     for (field, v), n in ((p, pairs.count(p)) for p in set(pairs)):
         if n > 1:
             findings.append({"check": "PREC-DUPLICATE", "message": f"`{v}` is matched on {field} {n} times"})
-    findings += _whole_part([re.sub(r"\\(.)", r"\1", v) for v in values])
+    literals = [re.sub(r"\\(.)", r"\1", v) for v in values]
+    findings += _privilege_findings(literals)
+    findings += _whole_part(literals)
     fields = set(re.findall(r"\$e\.([\w.]+)", body)) - {"metadata.event_type"}
     if body.strip() and not fields:
         findings.append({"check": "PREC-EMPTY", "message": "the only condition is the event type: it matches every such event"})
@@ -284,16 +319,132 @@ def severity(check: str) -> str:
 
 
 def check(query: str, siem: Optional[str], technique_platforms: Optional[Iterable[str]] = None) -> List[Dict]:
-    """Findings ({check, severity, message}) for a KQL, UDM or YARA-L query; [] for other SIEMs."""
+    """Findings ({check, severity, message}) for a query: every check for KQL, UDM and YARA-L, the
+    branch checks for SPL and ES|QL."""
+    original = query
+    original_siem = siem
     if siem == "udm":
         # The same checks, on the rule the search amounts to (joins aren't checked)
         from shikari.build.udm import to_yaral
 
         query, siem = to_yaral(query), "yara_l"
     found = check_kql(query, technique_platforms) if siem == "kql" else check_yaral(query) if siem == "yara_l" else []
+    branchy = original_siem in ("kql", "udm", "spl", "elastic")
+    if branchy:
+        # Read from the query as written (a UDM search's own syntax, not its YARA-L form), where an
+        # "or" and an "and" can be told apart: an ordinary word only matters where it can match
+        # alone, a value repeated in different alternatives isn't a duplicate, and a parent-child
+        # pair of built-ins is a behaviour, not a bare name
+        drop = {"PREC-GENERIC"} | ({"PREC-DUPLICATE"} if original_siem == "udm" else set())
+        if compound(original, original_siem):
+            drop |= {"PREC-BARE", "PREC-API"}
+        found = [f for f in found if f["check"] not in drop]
+    found = _dedupe(found + (branch_findings(original, original_siem) if branchy else []))
     for f in found:
         f["severity"] = severity(f["check"])
     return found
+
+
+# ── Broad branches, in every query language ─────────────────────────────────
+
+# A literal in any of the four languages: "..." (KQL, SPL, ES|QL), `...` (YARA-L), /.../ after = (UDM)
+_ANY_LITERAL = re.compile(r'@"(?:[^"]|"")*"|"(?:[^"\\]|\\.)*"|`[^`]*`|(?<==\s)/(?:[^/\\]|\\.)+/')
+_AND = re.compile(r"\s(?:and|AND)\s|\bhas_all\b")
+
+
+def _filter_text(query: str, siem: str) -> str:
+    """The part of a query that decides what matches."""
+    # Successive filters narrow each other: each is a term of one "and"
+    joined = lambda parts: " and ".join(f"({p.strip()})" for p in parts if p.strip())
+    if siem == "kql":
+        return joined(query[a:b] for a, b in _where_bodies(query))
+    if siem == "spl":
+        return joined(m.group(1) for m in re.finditer(r"\|\s*(?:search|where)\s+([^|]*)", query))
+    if siem == "elastic":
+        # A WHERE runs on to the next command, across lines
+        return joined(m.group(1) for m in re.finditer(r"^\s*\|\s*WHERE\s+(.*?)(?=^\s*\||\Z)", query, re.M | re.I | re.S)
+                      if "@timestamp" not in m.group(1))
+    return "\n".join(l for l in query.splitlines() if not l.strip().startswith("//"))
+
+
+def _literal_value(lit: str) -> str:
+    """What a literal looks for: wildcards, anchors and regex escapes taken off."""
+    v = _value(lit) if lit[0] in '"@' else lit[1:-1]
+    for _ in range(2):   # ES|QL strings escape the regex's own escapes: "wevtutil\\\\.exe"
+        v = re.sub(r"\\s[+*]", " ", v)
+        v = re.sub(r"\\(.)", r"\1", v)
+    return re.sub(r"^(?:\.\*|\*|\^)+|(?:\.\*|\*|\$)+$", "", v).strip()
+
+
+def branch_findings(query: str, siem: str) -> List[Dict]:
+    """
+    PREC-BARE-BRANCH: an "or" branch that is one condition on a built-in binary's name. A query
+    matches as much as its broadest branch, so cs1="*mshta*" OR (cs1="*mshta *" cs1="*vbscript:*")
+    fires on every mshta launch however specific the rest is. PREC-GENERIC too, for the
+    languages the clause checks don't read (SPL, ES|QL).
+    """
+    if siem not in ("kql", "udm", "spl", "elastic"):
+        return []   # YARA-L ANDs its event lines: its own checks read it
+    text = _filter_text(query or "", siem)
+    if not text.strip():
+        return []
+    literals = []
+
+    def mask(m):
+        literals.append(m.group(0))
+        return f"\x00{len(literals) - 1}\x00"
+    masked = re.sub(r"\s+OR\s+", " or ", re.sub(r"\s+AND\s+", " and ", _ANY_LITERAL.sub(mask, text)))
+    builtin = builtin_binaries()
+    findings = []
+    for branch in _branches(masked):
+        values = [_literal_value(literals[int(i)]) for i in re.findall(r"\x00(\d+)\x00", branch)]
+        values = [v for v in values if v]
+        if not values or _AND.search(branch):
+            continue
+        # SPL ANDs by juxtaposition: two field=value terms in one branch narrow each other
+        if siem == "spl" and len(re.findall(r"[\w.]+\s*(?:=|!=|\bIN\b)", branch)) > 1:
+            continue
+        # One condition: each value of a list (IN, has_any) matches on its own
+        names = sorted({n for n in (_builtin_name(v, builtin) for v in values) if n})
+        if names:
+            findings.append({"check": "PREC-BARE-BRANCH", "message": f"{', '.join(names[:4])} on its own is enough for the "
+                             "query to match: every launch fires it, whatever the other conditions narrow"})
+        findings += [{"check": "PREC-GENERIC", "message": f'"{v}" is an ordinary word: it matches far more than the behaviour'}
+                     for v in values if is_generic(v)]
+    return _dedupe(findings)
+
+
+def compound(query: str, siem: str) -> bool:
+    """Some branch of the query needs two conditions at once (a parent and a child, a tool and its
+    arguments): then that every value is a built-in's name says nothing about what it matches."""
+    text = _filter_text(query or "", siem) if siem in ("kql", "udm", "spl", "elastic") else ""
+    masked = re.sub(r"\s+OR\s+", " or ", re.sub(r"\s+AND\s+", " and ", _ANY_LITERAL.sub("\x00L\x00", text)))
+    for branch in _branches(masked):
+        terms = [t for t in _top_level(_unwrap(branch), " and ") if "\x00L\x00" in t and not _STRUCTURAL.match(t)]
+        if len(terms) > 1 or re.search(r"\bhas_all\b", branch):
+            return True
+    return False
+
+
+# Conditions that pick the kind of event rather than narrow it: an "and" with one of these doesn't
+# make the other side any less broad
+_STRUCTURAL = re.compile(r"^\(?\s*(?:metadata\.event_type|ActionType|sourcetype|index|event\.(?:category|type|action))\b", re.I)
+
+
+def _branches(expr: str) -> List[str]:
+    """The query's "or" branches, looking through an "and" with the event type: event_type = X
+    and (a or b) has branches a and b."""
+    out = []
+    for branch in _top_level(expr.strip()):
+        terms = [t for t in _top_level(_unwrap(branch), " and ") if t]
+        narrowing = [t for t in terms if not _STRUCTURAL.match(t)]
+        if len(terms) > 1 and len(narrowing) == 1:
+            out += _branches(_unwrap(narrowing[0]))
+        elif len(terms) == 1 and _unwrap(branch) != branch.strip():
+            out += _branches(_unwrap(branch))
+        else:
+            out.append(branch)
+    return out
 
 
 # ── Pruning at generation time ─────────────────────────────────────────────
@@ -309,6 +460,23 @@ def _prune_list(clause: str) -> Optional[str]:
     return None if "\0" in out else out
 
 
+def _without_bare(clause: str) -> Optional[str]:
+    """A one-condition clause without its built-in binary names: None when they were all it had."""
+    if _AND.search(clause):
+        return clause
+    builtin = builtin_binaries()
+    literals = _literals(clause)
+    bare = [lit for lit in literals if _builtin_name(_value(lit).strip(), builtin)]
+    if not bare:
+        return clause
+    if len(bare) == len(literals):
+        return None
+    out = clause
+    for lit in bare:
+        out = re.sub(re.escape(lit) + r"\s*,\s*|\s*,\s*" + re.escape(lit), "", out, count=1)
+    return out
+
+
 def prune_kql(query: str, technique_platforms: Optional[Iterable[str]] = None) -> Tuple[Optional[str], List[Dict]]:
     """
     The query without the conditions that can't mean anything, and what was removed.
@@ -321,6 +489,11 @@ def prune_kql(query: str, technique_platforms: Optional[Iterable[str]] = None) -
         trailing = expr[len(expr.rstrip()):]
         kept, seen = [], set()
         for clause in _top_level(expr.strip()):
+            # A stand-in in a list costs that value, not the condition: has_any("sethc.exe", "%systemdir%\\")
+            listed = _prune_list(clause)
+            if listed and listed != clause:
+                removed += [f for f in _clause_findings(clause) if f["check"] == "PREC-PLACEHOLDER"]
+                clause = listed
             problems = [f for f in _clause_findings(clause) if f["check"] in ERRORS]
             body = _unwrap(clause)
             if problems:
@@ -343,5 +516,12 @@ def prune_kql(query: str, technique_platforms: Optional[Iterable[str]] = None) -
             kept.append(pruned)
         if not kept:
             return None, removed
+        if len(kept) > 1:
+            # Beside other conditions, a bare built-in name only makes the query fire on every launch
+            narrowed = [c for c in (_without_bare(c) for c in kept) if c]
+            if narrowed != kept:
+                removed += [{"check": "PREC-BARE-BRANCH", "message": f"bare built-in name dropped: {_unwrap(c)[:60]}"}
+                            for c in kept if _without_bare(c) != c]
+                kept = narrowed or kept
         out = out[:start] + " or ".join(kept) + trailing + out[stop:]
     return out, _dedupe(removed)

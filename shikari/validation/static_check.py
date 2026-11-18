@@ -240,7 +240,7 @@ def check_query(query: str, platform: Optional[str] = None, technique_platforms=
     from shikari.validation.precision import check as precision_check
 
     result = _check(query, platform)
-    if result["platform"] in ("kql", "yara_l", "udm") and (query or "").strip():
+    if result["platform"] in ("kql", "yara_l", "udm", "spl", "elastic") and (query or "").strip():
         result["findings"] += [{"check": f["check"], "message": f["message"]}
                                for f in precision_check(query, result["platform"], technique_platforms)]
     for f in result["findings"]:
