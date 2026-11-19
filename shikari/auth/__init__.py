@@ -11,7 +11,6 @@ from shikari.auth.password_reset import (
     create_password_reset_request,
     validate_reset_token,
     reset_password_with_token,
-    admin_reset_password
 )
 
 __all__ = [
@@ -27,5 +26,4 @@ __all__ = [
     "create_password_reset_request",
     "validate_reset_token",
     "reset_password_with_token",
-    "admin_reset_password"
 ]

@@ -1,7 +1,8 @@
 """
 Password reset functionality for Shikari.
 
-Provides token generation, validation, and password reset workflows.
+Provides token generation, validation, and password reset workflows. Resetting someone else's
+access (password and authenticator) is shikari/auth/reset_access.py.
 """
 
 import secrets
@@ -50,10 +51,12 @@ def create_password_reset_request(email: str, db: SQLAlchemySession) -> Optional
     # Calculate expiry time
     expires_at = datetime.utcnow() + timedelta(hours=TOKEN_EXPIRY_HOURS)
 
-    # Invalidate any existing reset tokens for this user
+    # Invalidate any existing emailed reset tokens for this user (not a reset-access link an admin
+    # issued: anyone can ask for an email, and that mustn't cancel it)
     db.query(PasswordReset).filter(
         PasswordReset.user_id == user.id,
-        PasswordReset.used == False
+        PasswordReset.used == False,
+        PasswordReset.kind.is_(None)
     ).update({"used": True})
 
     # Create new reset request
@@ -83,7 +86,8 @@ def validate_reset_token(token: str, db: SQLAlchemySession) -> Optional[User]:
     # Find reset request
     reset_request = db.query(PasswordReset).filter(
         PasswordReset.reset_token == token,
-        PasswordReset.used == False
+        PasswordReset.used == False,
+        PasswordReset.kind.is_(None)
     ).first()
 
     if not reset_request:
@@ -128,7 +132,8 @@ def reset_password_with_token(token: str, new_password: str, db: SQLAlchemySessi
 
     # Mark token as used
     db.query(PasswordReset).filter(
-        PasswordReset.reset_token == token
+        PasswordReset.reset_token == token,
+        PasswordReset.kind.is_(None)
     ).update({"used": True})
     # A new password ends every session the old one opened
     db.query(Session).filter(Session.user_id == user.id).delete()
@@ -137,32 +142,3 @@ def reset_password_with_token(token: str, new_password: str, db: SQLAlchemySessi
 
     return True
 
-
-def admin_reset_password(user_id: int, new_password: str, db: SQLAlchemySession) -> bool:
-    """
-    Admin-initiated password reset (bypasses token validation).
-
-    Args:
-        user_id: ID of user whose password to reset
-        new_password: New password to set
-        db: Database session
-
-    Returns:
-        True if password was reset successfully, False otherwise
-    """
-    # Get user
-    user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
-
-    if not user:
-        return False
-
-    # Hash new password
-    hashed_password = hash_password(new_password)
-
-    # Update user's password (correct field name is password_hash)
-    user.password_hash = hashed_password
-    db.query(Session).filter(Session.user_id == user.id).delete()
-
-    db.commit()
-
-    return True

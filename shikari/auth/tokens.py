@@ -59,6 +59,19 @@ def revoke_token(db, user_id: int, token_id: int) -> bool:
     return True
 
 
+def revoke_all(db, user_id: int) -> int:
+    """Revoke every token the user has (the caller commits); how many there were."""
+    from shikari.database.models import ApiToken
+
+    rows = db.query(ApiToken).filter(ApiToken.user_id == user_id).all()
+    with _lock:
+        for row in rows:
+            _sessions.pop(row.token_hash, None)
+    for row in rows:
+        db.delete(row)
+    return len(rows)
+
+
 def session_for(token: str) -> Optional[str]:
     """The session id a valid token signs in as (created on first use), else None."""
     from shikari.auth.session import create_session, get_user_from_session_id

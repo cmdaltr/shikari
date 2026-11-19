@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+{% block title %}{{ brand.name }} - {{ "Accept Invitation" if invite else "Reset Access" }}{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', path='css/validation.css') }}?v={{ request.app.state.asset_version }}">
+<style>
+    .reset-container {
+        max-width: 500px;
+        margin: 100px auto;
+        padding: 2rem;
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        box-shadow: 0 4px 12px var(--shadow);
+    }
+
+    .reset-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .reset-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .reset-header p,
+    .step-note {
+        color: var(--text-secondary);
+        margin: 0;
+    }
+
+    .step-note {
+        margin-bottom: 1.25rem;
+        line-height: 1.5;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 1rem;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        box-sizing: border-box;
+        transition: border-color 0.2s;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+
+    .reset-container .btn-primary.full {
+        width: 100%;
+    }
+
+    .error-message {
+        background: #fee;
+        color: #c53030;
+        padding: 0.875rem;
+        border-radius: 6px;
+        margin-bottom: 1.5rem;
+        font-size: 0.95rem;
+        border: 1px solid #fcc;
+    }
+
+    .password-requirements {
+        margin-top: 8px;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        background: var(--bg-primary);
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+    }
+
+    .qr-code {
+        display: block;
+        width: 200px;
+        height: 200px;
+        margin: 0 auto 1rem;
+        border-radius: 6px;
+    }
+
+    .totp-secret,
+    .backup-codes {
+        font-family: var(--font-mono, monospace);
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        color: var(--text-primary);
+    }
+
+    .totp-secret {
+        padding: 0.5rem;
+        text-align: center;
+        word-break: break-all;
+        margin-bottom: 1.5rem;
+    }
+
+    .backup-codes {
+        list-style: none;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.35rem 1rem;
+        padding: 1rem 1.25rem;
+        margin: 0 0 1.25rem 0;
+        font-size: 1.05rem;
+        text-align: center;
+    }
+
+    .codes-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .codes-actions label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        color: var(--text-primary);
+        cursor: pointer;
+    }
+
+    .back-to-login {
+        text-align: center;
+        margin-top: 1rem;
+    }
+
+    .back-to-login a {
+        color: var(--accent);
+        text-decoration: none;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reset-container">
+    <div class="reset-header">
+        <h1>{{ "Accept Invitation" if invite else "Reset Access" }}</h1>
+        <p id="account-email"></p>
+    </div>
+
+    <div id="message-container"></div>
+
+    <div id="no-token" hidden>
+        <div class="error-message">This page needs the whole link you were given. Open it again; if it has expired, ask an administrator for a new one.</div>
+        <div class="back-to-login"><a href="/login">Back to Login</a></div>
+    </div>
+
+    <form id="password-step" hidden>
+        {% if invite %}
+        <p class="step-note">Give your name and choose a password. Then you'll set up an authenticator app: every {{ brand.name }} account here signs in with one.</p>
+        <div class="form-group">
+            <label for="full_name" class="form-label">Full Name</label>
+            <input type="text" id="full_name" class="form-input" autocomplete="name" maxlength="64" required>
+        </div>
+        {% else %}
+        <p class="step-note">Choose a new password. Then you'll set up a new authenticator app: the old one, and any backup codes, stop working.</p>
+        {% endif %}
+        <div class="form-group">
+            <label for="new_password" class="form-label">New Password</label>
+            <input type="password" id="new_password" class="form-input" autocomplete="new-password" required autofocus>
+            <div class="password-requirements">
+                16-40 characters, with at least one letter, one number and one of !@£$%^&amp;()-_+=[]{}:|&lt;&gt;?
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="confirm_password" class="form-label">Confirm Password</label>
+            <input type="password" id="confirm_password" class="form-input" autocomplete="new-password" required>
+        </div>
+        <button type="submit" class="btn-primary full">Continue</button>
+    </form>
+
+    <form id="authenticator-step" hidden>
+        <p class="step-note">Scan this with your authenticator app, or enter the key by hand, then type the code it shows.</p>
+        <img id="qr-code" class="qr-code" alt="Authenticator QR code">
+        <div id="totp-secret" class="totp-secret"></div>
+        <div class="form-group">
+            <label for="code" class="form-label">Code from the authenticator</label>
+            <input type="text" id="code" class="form-input" inputmode="numeric" autocomplete="one-time-code" maxlength="8" required>
+        </div>
+        <button type="submit" class="btn-primary full">Verify and sign in</button>
+    </form>
+
+    <div id="codes-step" hidden>
+        <p class="step-note">{{ "Your account is ready and you're" if invite else "You're" }} signed in. These backup codes each work once if you lose the authenticator. They're shown only now: keep them somewhere safe.</p>
+        <ul id="backup-codes" class="backup-codes"></ul>
+        <div class="codes-actions">
+            <button type="button" id="copy-codes" class="btn-secondary">Copy codes</button>
+            <label><input type="checkbox" id="codes-saved"> I've saved these codes</label>
+            <button type="button" id="codes-continue" class="btn-primary" disabled>Continue</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', path='js/validation.js') }}?v={{ request.app.state.asset_version }}"></script>
+<script>
+(function () {
+    // The token is the fragment (/reset-access#<token>), which is never sent to the server. Take it
+    // out of the address bar once read, so it isn't left in history or a screenshot.
+    const token = decodeURIComponent(window.location.hash.slice(1));
+    if (window.location.hash) history.replaceState(null, '', window.location.pathname);
+    if (!token) {
+        document.getElementById('no-token').hidden = false;
+        return;
+    }
+    document.getElementById('password-step').hidden = false;
+    if (invite) {
+        // Who it's for, and the name the admin suggested
+        post(api + '/preview', {}).then(function (data) {
+            if (!data.success) return showError(data.error);
+            document.getElementById('account-email').textContent = data.email;
+            if (data.full_name) document.getElementById('full_name').value = data.full_name;
+        }).catch(function () {});
+    }
+    let csrf = {{ csrf_token | tojson }};
+    const api = {{ ("/api/auth/invitation" if invite else "/api/auth/reset-access") | tojson }};
+    const invite = {{ invite | tojson }};
+    let codes = [];
+    const message = document.getElementById('message-container');
+
+    function showError(text) {
+        message.innerHTML = '';
+        const div = document.createElement('div');
+        div.className = 'error-message';
+        div.textContent = text;
+        message.appendChild(div);
+    }
+
+    async function post(path, body) {
+        const response = await fetch(path, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(Object.assign({token: token, csrf_token: csrf}, body)),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (data.csrf_token) csrf = data.csrf_token;
+        if (response.status === 410) {
+            // The link is dead: nothing on this page can work now
+            ['password-step', 'authenticator-step'].forEach(function (id) { document.getElementById(id).hidden = true; });
+        }
+        return data;
+    }
+
+    document.getElementById('password-step').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        message.innerHTML = '';
+        const password = document.getElementById('new_password').value;
+        const check = validatePassword(password);
+        if (!check.valid) return showError(check.error);
+        if (password !== document.getElementById('confirm_password').value) return showError('Passwords do not match');
+        try {
+            const body = {new_password: password};
+            if (invite) body.full_name = document.getElementById('full_name').value.trim();
+            const data = await post(api + '/start', body);
+            if (!data.success) return showError(data.error || 'That password could not be used');
+            document.getElementById('account-email').textContent = data.email;
+            document.getElementById('qr-code').src = data.qr_code;
+            document.getElementById('totp-secret').textContent = data.secret;
+            this.hidden = true;
+            document.getElementById('authenticator-step').hidden = false;
+            document.getElementById('code').focus();
+        } catch (err) {
+            showError('An error occurred. Please try again.');
+        }
+    });
+
+    document.getElementById('authenticator-step').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        message.innerHTML = '';
+        try {
+            const data = await post(api + '/complete', {code: document.getElementById('code').value.trim()});
+            if (!data.success) return showError(data.error || 'That code did not match');
+            codes = data.backup_codes || [];
+            const list = document.getElementById('backup-codes');
+            codes.forEach(function (code) {
+                const item = document.createElement('li');
+                item.textContent = code;
+                list.appendChild(item);
+            });
+            this.hidden = true;
+            document.getElementById('codes-step').hidden = false;
+        } catch (err) {
+            showError('An error occurred. Please try again.');
+        }
+    });
+
+    document.getElementById('copy-codes').addEventListener('click', function () {
+        const button = this;
+        navigator.clipboard.writeText(codes.join('\n')).then(function () {
+            button.textContent = 'Copied';
+            setTimeout(function () { button.textContent = 'Copy codes'; }, 2000);
+        }).catch(function () { showError('Could not copy: select the codes and copy them by hand.'); });
+    });
+
+    document.getElementById('codes-saved').addEventListener('change', function () {
+        document.getElementById('codes-continue').disabled = !this.checked;
+    });
+
+    document.getElementById('codes-continue').addEventListener('click', function () {
+        window.location.href = '/';
+    });
+})();
+</script>
+{% endblock %}

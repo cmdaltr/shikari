@@ -224,6 +224,9 @@ All security-sensitive operations are logged to the database for compliance and 
   - `password_change`
   - `password_reset_request`
   - `password_reset_complete`
+  - `access_reset_issued` (by an admin or `shikari reset-access`; the details name which, and `tokens_revoked`)
+  - `invitation_created`, `invitation_revoked`, `account_created` (invitations)
+  - `access_reset_completed` (with `tokens_revoked`; also logged, as a failure, for each wrong authenticator code and while the account is locked)
 - **Profile Changes**:
   - `profile_update`
   - `api_key_update`
@@ -420,18 +423,23 @@ GET /api/admin/users
 }
 ```
 
-#### 2. Create User
+#### 2. Invite a User
 ```http
-POST /api/admin/users
+POST /api/admin/invitations
 Content-Type: application/json
 
 {
   "email": "user@example.com",
-  "full_name": "New User",
-  "password": "SecureP@ssw0rd123",
-  "role": "standard"
+  "role": "standard",
+  "full_name": "New User"
 }
 ```
+
+**Response**: `{"success": true, "link": "<BASE_URL>/accept-invite#<token>", "expires_in_hours": 24, "invitation": {...}}`
+
+Permanent admins only. There's no account until the person accepts: at the link they give their name, choose a password and enrol an authenticator (MFA is always on for an invited account), and the account is made with the invited role once a code from it verifies; they're signed in and shown backup codes once. The link works once, within 24 hours, and an earlier open invitation for the same email stops working. The token is in the URL fragment and only its SHA-256 hash is stored. Refused (409) for an email that already has an account (use Reset access), and (402) when the licence's seats are full, counting open invitations; seats are checked again on acceptance. `GET /api/admin/invitations` lists the open ones and `DELETE /api/admin/invitations/{id}` revokes one. Audited as `invitation_created`, `invitation_revoked` and `account_created`. From the server: `shikari invite <email> --role …`, and `scripts/admin/create_admin.py <email>` for an admin when none can sign in.
+
+There's no admin route that creates an account with a password the admin types (the old `POST /api/admin/users`), and on a server there's no self-registration: `/register` redirects to `/login?invite_only=1`. The desktop app's own local Shikari (`SHIKARI_DESKTOP=1`) keeps `/register`.
 
 #### 3. Update User
 ```http
@@ -453,13 +461,22 @@ DELETE /api/admin/users/{user_id}
 
 **Note**: Soft delete - sets `is_active` to `false` and invalidates all sessions.
 
+#### 5. Reset Access
+```http
+POST /api/admin/users/{user_id}/reset-access
+```
+
+**Response**: `{"success": true, "link": "<BASE_URL>/reset-access#<token>", "email": "...", "expires_in_hours": 24}`
+
+Permanent admins only (not a temporary grant). Ends the user's sessions, revokes their API tokens, makes any earlier reset link useless, clears a lockout, and returns a one-time link for the admin to pass on. At the link the user chooses a new password and enrols a new authenticator (required, even though MFA is otherwise optional); only once a code from it verifies are the password, MFA secret and a fresh set of backup codes saved, and the user is signed in; API tokens made since the link was issued are revoked then too. Wrong codes count towards the sign-in lockout (5 wrong, then locked for 15 minutes; a locked account is refused, 429, before the code is checked). The token is in the URL fragment, so browsers never send it to the server, and only its SHA-256 hash is stored. Both audit events record `tokens_revoked`. `shikari reset-access <email>` does the same from the server. This replaces the old `POST /api/admin/reset-password`, where the admin chose the new password.
+
 ### Admin UI
 - Located in Profile page, "Users" tab
 - Only visible to admin users
 - Real-time user management
 - View all user accounts
-- Create, update, deactivate users
-- Reset user passwords
+- Invite users (with pending invitations listed and revocable), update, deactivate
+- Reset access (a one-time link to a new password and authenticator)
 
 **Implementation**: `shikari/app.py` (lines 4578-4847)
 
@@ -593,8 +610,8 @@ DELETE /api/admin/users/{user_id}
    - Identify scope of compromise
 
 3. **Recovery**:
-   - Reset password with strong credential
-   - Enable MFA if not already enabled
+   - Reset access (Settings → Users → Reset access, or `shikari reset-access <email>`): their sessions end at once, and the one-time link sets a new password and a new authenticator, with fresh backup codes
+   - Their API tokens are revoked by the reset; they make new ones (Profile → Security) once signed in
    - Review and rotate API keys
    - Notify user if necessary
 

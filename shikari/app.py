@@ -78,9 +78,9 @@ from shikari.auth import (
     create_password_reset_request,
     validate_reset_token,
     reset_password_with_token,
-    admin_reset_password,
     validate_password,
 )
+from shikari.auth import lockout
 from shikari.database.models import User, UserRole, APIKey, at_least
 from shikari.validation.query_syntax_validator import validate_query_syntax
 from shikari.validation import get_validation_router
@@ -1213,7 +1213,9 @@ def _bearer_token(request: Request) -> Optional[str]:
 # regenerate, downloads and the validation containers reachable with no login.
 PUBLIC_PATHS = {"/login", "/login/mfa", "/register", "/logout", "/forgot-password", "/reset-password", "/health",
                 "/favicon.ico", "/api/busy", "/desktop/enter", "/api/auth/request-reset",
-                "/api/auth/reset-password",
+                "/api/auth/reset-password", "/reset-access", "/api/auth/reset-access/start",
+                "/api/auth/reset-access/complete", "/accept-invite", "/api/auth/invitation/preview",
+                "/api/auth/invitation/start", "/api/auth/invitation/complete",
                 "/mcp"}  # MCP answers a missing token itself; an invalid one is refused above
 PUBLIC_PREFIXES = ("/static/",)
 # SHIKARI_ALLOW_GUESTS=1: people who aren't signed in may browse (GET) for a demo, never change anything
@@ -8480,6 +8482,7 @@ async def login_page(
     response: Response,
     registered: Optional[str] = None,
     next_url: Optional[str] = None,
+    invite_only: Optional[str] = None,
 ):
     """
     Render the login page with CSRF protection.
@@ -8496,13 +8499,14 @@ async def login_page(
     success_message = None
     if registered == "true":
         success_message = "Registration successful! Please log in with your credentials."
+    error_message = "Accounts here are by invitation. Ask an admin for an invitation." if invite_only else None
 
     # Store temp session ID in a cookie for CSRF validation
     template_response = templates.TemplateResponse(
         request, "login.html",
         {
             "request": request,
-            "error": None,
+            "error": error_message,
             "success": success_message,
             "csrf_token": csrf_token,
             "next_url": next_url or "/",
@@ -8560,6 +8564,33 @@ async def reset_password_page(request: Request):
     return templates.TemplateResponse(request, "reset_password.html", {"request": request})
 
 
+def _one_time_link_page(request: Request, mode: str):
+    """The page a one-time link opens (shikari/auth/links.py). Its token is in the link's fragment,
+    which never reaches the server: the page reads it and posts it with this CSRF token."""
+    from shikari.security.csrf import generate_csrf_token
+    import secrets
+
+    csrf_session = secrets.token_urlsafe(16)
+    response = templates.TemplateResponse(request, "reset_access.html", {
+        "request": request, "invite": mode == "invite", "csrf_token": generate_csrf_token(csrf_session),
+    })
+    response.set_cookie(key="shikari_csrf_session", value=csrf_session, max_age=3600, httponly=True,
+                        samesite="lax")
+    return response
+
+
+@app.get("/reset-access", response_class=HTMLResponse)
+async def reset_access_page(request: Request):
+    """A reset-access link (shikari/auth/reset_access.py): a new password and a new authenticator."""
+    return _one_time_link_page(request, "reset")
+
+
+@app.get("/accept-invite", response_class=HTMLResponse)
+async def accept_invite_page(request: Request):
+    """An invitation link (shikari/auth/invitations.py): name, password and authenticator, then the account."""
+    return _one_time_link_page(request, "invite")
+
+
 @app.post("/login")
 async def login(
     request: Request,
@@ -8594,7 +8625,6 @@ async def login(
     from shikari.security.rate_limit import check_rate_limit, record_attempt, reset_rate_limit
     from shikari.database.audit import log_audit_event, EVENT_LOGIN_SUCCESS, EVENT_LOGIN_FAILURE
     from shikari.security.csrf import validate_csrf_token, consume_csrf_token, generate_csrf_token
-    from datetime import datetime, timezone
 
     db = next(get_db())
     try:
@@ -8687,9 +8717,7 @@ async def login(
             )
 
         # Check if account is locked
-        if user.locked_until and user.locked_until > datetime.now(timezone.utc).replace(
-            tzinfo=None
-        ):
+        if lockout.is_locked(user):
             log_audit_event(
                 db=db,
                 event_type=EVENT_LOGIN_FAILURE,
@@ -8712,16 +8740,8 @@ async def login(
 
         # Verify password
         if not verify_password(password, user.password_hash):
-            # Increment failed login attempts
-            user.failed_login_attempts += 1
-
-            # Lock account after 5 failed attempts
-            if user.failed_login_attempts >= 5:
-                from datetime import timedelta
-
-                user.locked_until = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(
-                    minutes=15
-                )
+            # Count it; the fifth in a row locks the account for 15 minutes
+            if lockout.record_failure(user):
                 db.commit()
 
                 log_audit_event(
@@ -8862,8 +8882,7 @@ def _complete_login(db, user, remember: bool, next_url: Optional[str], rate_limi
     from shikari.security.rate_limit import reset_rate_limit
 
     # Successful login - reset failed attempts and unlock account
-    user.failed_login_attempts = 0
-    user.locked_until = None
+    lockout.clear(user)
     db.commit()
 
     # Reset rate limit for this IP
@@ -8890,20 +8909,15 @@ def _complete_login(db, user, remember: bool, next_url: Optional[str], rate_limi
     if next_url and next_url.startswith("/") and not next_url.startswith("//"):
         redirect_url = next_url
 
-    # Set session cookie
     redirect_response = RedirectResponse(url=redirect_url, status_code=303)
-
-    # Set cookie with appropriate max_age
-    if remember:
-        max_age = 7 * 24 * 60 * 60  # 7 days in seconds
-    else:
-        max_age = 16 * 60 * 60  # 16 hours in seconds
-
-    redirect_response.set_cookie(
-        key="shikari_session", value=session_id, max_age=max_age, httponly=True, samesite="lax"
-    )
-
+    _set_session_cookie(redirect_response, session_id, remember)
     return redirect_response
+
+
+def _set_session_cookie(response, session_id: str, remember: bool) -> None:
+    """The session cookie a sign-in sets (HostPrefixedSession renames it __Host- over HTTPS)."""
+    max_age = 7 * 24 * 60 * 60 if remember else 16 * 60 * 60  # 7 days, or 16 hours
+    response.set_cookie(key="shikari_session", value=session_id, max_age=max_age, httponly=True, samesite="lax")
 
 
 @app.get("/logout", response_class=HTMLResponse)
@@ -8940,11 +8954,22 @@ async def logout(
     return redirect_response
 
 
+def _invitation_only(request: Request) -> bool:
+    """A server's accounts come by invitation only (shikari/auth/invitations.py). Self-registration is
+    left to the desktop app's own local Shikari (app.state.desktop), one person's copy."""
+    return not request.app.state.desktop
+
+
+INVITE_ONLY_REDIRECT = "/login?invite_only=1"
+
+
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request, response: Response):
     """
     Render the registration page with CSRF protection.
     """
+    if _invitation_only(request):
+        return RedirectResponse(url=INVITE_ONLY_REDIRECT, status_code=303)
     from shikari.security.csrf import generate_csrf_token
     import secrets
 
@@ -9008,6 +9033,8 @@ async def register(
     Returns:
         Redirect to login page on success, registration page with error on failure
     """
+    if _invitation_only(request):
+        return RedirectResponse(url=INVITE_ONLY_REDIRECT, status_code=303)
     from shikari.security.rate_limit import check_rate_limit, record_attempt
     from shikari.database.audit import log_audit_event, EVENT_USER_CREATED
     from shikari.security.csrf import validate_csrf_token, consume_csrf_token, generate_csrf_token
@@ -14321,50 +14348,269 @@ async def reset_password(request: Request):
         return {"success": False, "error": "An error occurred"}
 
 
-@app.post("/api/admin/reset-password")
-async def admin_reset_user_password(request: Request, shikari_session: Optional[str] = Cookie(None)):
+def _reset_access_csrf(data: dict, csrf_session: Optional[str]) -> Optional[str]:
+    """The reset-access page's CSRF token checked and spent; the next one to use, or None if it failed."""
+    from shikari.security.csrf import consume_csrf_token, generate_csrf_token, validate_csrf_token
+
+    token = str(data.get("csrf_token") or "")
+    if not csrf_session or not validate_csrf_token(token, csrf_session):
+        return None
+    consume_csrf_token(token)
+    return generate_csrf_token(csrf_session)
+
+
+RESET_ACCESS_GONE = "This link has expired or has already been used. Ask an administrator for a new one."
+RESET_ACCESS_RELOAD = "This page has been open too long. Reload it and try again."
+
+
+@app.post("/api/auth/reset-access/start")
+async def reset_access_start(request: Request, shikari_csrf_session: Optional[str] = Cookie(None)):
+    """Step one of a reset-access link: the new password. Returns a new authenticator to scan; nothing
+    about the account changes until step two."""
+    from shikari.auth.mfa import generate_qr_code
+    from shikari.auth.reset_access import ResetAccessError, open_reset, start_reset
+
+    data = await request.json()
+    next_csrf = _reset_access_csrf(data, shikari_csrf_session)
+    if next_csrf is None:
+        return JSONResponse({"success": False, "error": RESET_ACCESS_RELOAD}, status_code=403)
+    db = next(get_db())
+    try:
+        row = open_reset(db, str(data.get("token") or ""))
+        if row is None:
+            return JSONResponse({"success": False, "error": RESET_ACCESS_GONE}, status_code=410)
+        try:
+            user, secret = start_reset(db, row, str(data.get("new_password") or ""))
+        except ResetAccessError as e:
+            return JSONResponse({"success": False, "error": str(e), "csrf_token": next_csrf}, status_code=422)
+        return {"success": True, "email": user.email, "secret": secret,
+                "qr_code": generate_qr_code(user.email, secret), "csrf_token": next_csrf}
+    finally:
+        db.close()
+
+
+@app.post("/api/auth/reset-access/complete")
+async def reset_access_complete(request: Request, shikari_csrf_session: Optional[str] = Cookie(None)):
+    """Step two: a code from the new authenticator. Sets the password and MFA, spends the link, signs
+    in, and returns the new backup codes, which are shown only this once."""
+    from shikari.auth.reset_access import AccountLocked, ResetAccessError, complete_reset, open_reset
+    from shikari.security.rate_limit import reset_rate_limit
+
+    data = await request.json()
+    next_csrf = _reset_access_csrf(data, shikari_csrf_session)
+    if next_csrf is None:
+        return JSONResponse({"success": False, "error": RESET_ACCESS_RELOAD}, status_code=403)
+    client_ip = request.client.host if request.client else ""
+    db = next(get_db())
+    try:
+        row = open_reset(db, str(data.get("token") or ""))
+        if row is None:
+            return JSONResponse({"success": False, "error": RESET_ACCESS_GONE}, status_code=410)
+        try:
+            user, codes = complete_reset(db, row, str(data.get("code") or ""), ip_address=client_ip,
+                                         user_agent=request.headers.get("user-agent"))
+        except ResetAccessError as e:
+            return JSONResponse({"success": False, "error": str(e), "csrf_token": next_csrf},
+                                status_code=429 if isinstance(e, AccountLocked) else 422)
+        reset_rate_limit(f"login:{client_ip}:{user.email}")
+        session_id = create_session(user.id, remember_me=False, db=db)
+        response = JSONResponse({"success": True, "backup_codes": codes})
+        _set_session_cookie(response, session_id, remember=False)
+        return response
+    finally:
+        db.close()
+
+
+@app.post("/api/admin/users/{user_id}/reset-access")
+async def admin_reset_access(user_id: int, request: Request, shikari_session: Optional[str] = Cookie(None)):
     """
-    Admin-only endpoint to reset another user's password.
+    Admin-only: a one-time link for someone who has lost their password, authenticator or backup
+    codes, to give them by hand. Their sessions end now (shikari/auth/reset_access.py).
     """
-    # Check authentication and admin role
+    from shikari.auth.reset_access import (RESET_ACCESS_EXPIRY_HOURS, NoSuchAccount, ResetAccessError,
+                                           issue_reset_access)
+
     auth_result = require_auth(request, shikari_session)
     if isinstance(auth_result, RedirectResponse):
-        return {"success": False, "error": "Not authenticated"}
-
+        return JSONResponse({"success": False, "error": "Not authenticated"}, status_code=401)
     admin_user, db = auth_result
-
     try:
-        # Verify admin role
         if not _permanent_admin(admin_user):
-            return {"success": False, "error": "Unauthorized - Admin access required"}
+            return JSONResponse({"success": False, "error": "Unauthorized - Admin access required"},
+                                status_code=403)
+        try:
+            user, link = issue_reset_access(db, user_id=user_id, actor=admin_user,
+                                            ip_address=request.client.host if request.client else None,
+                                            user_agent=request.headers.get("user-agent"))
+        except ResetAccessError as e:
+            return JSONResponse({"success": False, "error": str(e)},
+                                status_code=404 if isinstance(e, NoSuchAccount) else 409)
+        return {"success": True, "link": link, "email": user.email, "expires_in_hours": RESET_ACCESS_EXPIRY_HOURS}
+    finally:
+        db.close()
 
+
+INVITATION_GONE = "This invitation has expired, been replaced, or already been used. Ask an admin for a new one."
+
+
+def _invitation_error_status(e) -> int:
+    from shikari.auth.invitations import AccountExists, AdminExists, SeatsFull
+
+    if isinstance(e, SeatsFull):
+        return 402
+    return 409 if isinstance(e, (AccountExists, AdminExists)) else 422
+
+
+@app.post("/api/auth/invitation/preview")
+async def invitation_preview(request: Request):
+    """Who an invitation is for, so its page can say so (the token is the credential: no sign-in)."""
+    from shikari.auth.invitations import open_invitation
+
+    data = await request.json()
+    db = next(get_db())
+    try:
+        invitation = open_invitation(db, str(data.get("token") or ""))
+        if invitation is None:
+            return JSONResponse({"success": False, "error": INVITATION_GONE}, status_code=410)
+        return {"success": True, "email": invitation.email, "role": invitation.role.value,
+                "full_name": invitation.full_name or "", "expires_at": invitation.expires_at.isoformat() + "Z"}
+    finally:
+        db.close()
+
+
+@app.post("/api/auth/invitation/start")
+async def invitation_start(request: Request, shikari_csrf_session: Optional[str] = Cookie(None)):
+    """Step one of an invitation: name and password. Returns a new authenticator to scan; no account
+    exists until step two."""
+    from shikari.auth.invitations import InvitationError, open_invitation, start_invitation
+    from shikari.auth.mfa import generate_qr_code
+
+    data = await request.json()
+    next_csrf = _reset_access_csrf(data, shikari_csrf_session)
+    if next_csrf is None:
+        return JSONResponse({"success": False, "error": RESET_ACCESS_RELOAD}, status_code=403)
+    db = next(get_db())
+    try:
+        invitation = open_invitation(db, str(data.get("token") or ""))
+        if invitation is None:
+            return JSONResponse({"success": False, "error": INVITATION_GONE}, status_code=410)
+        try:
+            secret = start_invitation(db, invitation, str(data.get("full_name") or ""),
+                                      str(data.get("new_password") or ""))
+        except InvitationError as e:
+            return JSONResponse({"success": False, "error": str(e), "csrf_token": next_csrf}, status_code=422)
+        return {"success": True, "email": invitation.email, "secret": secret,
+                "qr_code": generate_qr_code(invitation.email, secret), "csrf_token": next_csrf}
+    finally:
+        db.close()
+
+
+@app.post("/api/auth/invitation/complete")
+async def invitation_complete(request: Request, shikari_csrf_session: Optional[str] = Cookie(None)):
+    """Step two: a code from the new authenticator. Creates the account, spends the link, signs in, and
+    returns the backup codes, shown only this once."""
+    from shikari.auth.invitations import InvitationError, complete_invitation, open_invitation
+
+    data = await request.json()
+    next_csrf = _reset_access_csrf(data, shikari_csrf_session)
+    if next_csrf is None:
+        return JSONResponse({"success": False, "error": RESET_ACCESS_RELOAD}, status_code=403)
+    db = next(get_db())
+    try:
+        invitation = open_invitation(db, str(data.get("token") or ""))
+        if invitation is None:
+            return JSONResponse({"success": False, "error": INVITATION_GONE}, status_code=410)
+        try:
+            user, codes = complete_invitation(db, invitation, str(data.get("code") or ""),
+                                              ip_address=request.client.host if request.client else None,
+                                              user_agent=request.headers.get("user-agent"))
+        except InvitationError as e:
+            return JSONResponse({"success": False, "error": str(e), "csrf_token": next_csrf},
+                                status_code=_invitation_error_status(e))
+        session_id = create_session(user.id, remember_me=False, db=db)
+        response = JSONResponse({"success": True, "backup_codes": codes})
+        _set_session_cookie(response, session_id, remember=False)
+        return response
+    finally:
+        db.close()
+
+
+def _invitation_out(invitation) -> dict:
+    return {"id": invitation.id, "email": invitation.email, "role": invitation.role.value,
+            "full_name": invitation.full_name, "invited_by": invitation.invited_by,
+            "created_at": invitation.created_at.isoformat() + "Z",
+            "expires_at": invitation.expires_at.isoformat() + "Z",
+            "expired": invitation.expires_at <= datetime.utcnow()}
+
+
+def _admin_for_invitations(request: Request, shikari_session: Optional[str]):
+    """(admin, db), or the JSONResponse refusing: user management is for permanent admins."""
+    auth_result = require_auth(request, shikari_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Not authenticated"}, status_code=401)
+    admin_user, db = auth_result
+    if not _permanent_admin(admin_user):
+        db.close()
+        return JSONResponse({"success": False, "error": "Unauthorized - Admin access required"}, status_code=403)
+    return admin_user, db
+
+
+@app.post("/api/admin/invitations")
+async def admin_invite(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """Admin-only: invite someone by email and role (name optional). Returns the one-time link to give
+    them; the account is made when they accept (shikari/auth/invitations.py)."""
+    from shikari.auth.invitations import INVITATION_EXPIRY_HOURS, InvitationError, create_invitation
+
+    allowed = _admin_for_invitations(request, shikari_session)
+    if isinstance(allowed, JSONResponse):
+        return allowed
+    admin_user, db = allowed
+    try:
         data = await request.json()
-        user_id = data.get("user_id")
-        new_password = data.get("new_password", "")
+        try:
+            invitation, link = create_invitation(
+                db, email=str(data.get("email") or ""), role=data.get("role") or "standard",
+                full_name=data.get("full_name"), actor=admin_user,
+                ip_address=request.client.host if request.client else None,
+                user_agent=request.headers.get("user-agent"))
+        except InvitationError as e:
+            return JSONResponse({"success": False, "error": str(e)}, status_code=_invitation_error_status(e))
+        return {"success": True, "link": link, "expires_in_hours": INVITATION_EXPIRY_HOURS,
+                "invitation": _invitation_out(invitation)}
+    finally:
+        db.close()
 
-        if not user_id:
-            return {"success": False, "error": "User ID is required"}
 
-        if not new_password:
-            return {"success": False, "error": "New password is required"}
+@app.get("/api/admin/invitations")
+async def admin_list_invitations(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """Admin-only: invitations not yet accepted or revoked (expired ones flagged)."""
+    from shikari.auth.invitations import pending
 
-        # Validate password
-        is_valid, error_message = validate_password(new_password)
-        if not is_valid:
-            return {"success": False, "error": error_message}
+    allowed = _admin_for_invitations(request, shikari_session)
+    if isinstance(allowed, JSONResponse):
+        return allowed
+    _, db = allowed
+    try:
+        return {"success": True, "invitations": [_invitation_out(i) for i in pending(db)]}
+    finally:
+        db.close()
 
-        # Reset password
-        success = admin_reset_password(user_id, new_password, db)
 
-        if not success:
-            return {"success": False, "error": "User not found"}
+@app.delete("/api/admin/invitations/{invitation_id}")
+async def admin_revoke_invitation(invitation_id: int, request: Request,
+                                  shikari_session: Optional[str] = Cookie(None)):
+    """Admin-only: stop an invitation's link working."""
+    from shikari.auth.invitations import revoke
 
-        return {"success": True, "message": "Password has been reset successfully"}
-
-    except Exception as e:
-        logger.error(f"Error in admin password reset: {e}")
-        return {"success": False, "error": "An error occurred"}
-
+    allowed = _admin_for_invitations(request, shikari_session)
+    if isinstance(allowed, JSONResponse):
+        return allowed
+    admin_user, db = allowed
+    try:
+        if not revoke(db, invitation_id, admin_user, ip_address=request.client.host if request.client else None,
+                      user_agent=request.headers.get("user-agent")):
+            return JSONResponse({"success": False, "error": "No such open invitation."}, status_code=404)
+        return {"success": True}
     finally:
         db.close()
 
@@ -14416,103 +14662,6 @@ async def get_all_users(request: Request, shikari_session: Optional[str] = Cooki
 
     except Exception as e:
         logger.error(f"Error getting users: {e}")
-        return {"success": False, "error": "An error occurred"}
-
-    finally:
-        db.close()
-
-
-@app.post("/api/admin/users")
-async def create_user(request: Request, shikari_session: Optional[str] = Cookie(None)):
-    """
-    Create a new user (Admin only).
-    """
-    # Check authentication and admin role
-    auth_result = require_auth(request, shikari_session)
-    if isinstance(auth_result, RedirectResponse):
-        return {"success": False, "error": "Not authenticated"}
-
-    admin_user, db = auth_result
-
-    try:
-        # Verify admin role
-        if not _permanent_admin(admin_user):
-            return {"success": False, "error": "Unauthorized - Admin access required"}
-
-        data = await request.json()
-        email = data.get("email", "").strip().lower()
-        full_name = data.get("full_name", "").strip()
-        password = data.get("password", "")
-        role = data.get("role", "standard").lower()
-
-        # Validate email
-        from shikari.auth.password import hash_password
-        from shikari.security import validate_email, sanitize_full_name
-
-        email_valid, email_result = validate_email(email)
-        if not email_valid:
-            return {"success": False, "error": email_result}
-        email = email_result
-
-        # Validate full name
-        name_valid, name_result = sanitize_full_name(full_name)
-        if not name_valid:
-            return {"success": False, "error": name_result}
-        full_name = name_result
-
-        # Validate password
-        is_valid, error_message = validate_password(password)
-        if not is_valid:
-            return {"success": False, "error": error_message}
-
-        # Validate role (admin, operator or standard)
-        valid_roles = {r.value for r in UserRole}
-        if role not in valid_roles:
-            return {"success": False, "error": f"Invalid role. Must be one of: {', '.join(sorted(valid_roles))}"}
-
-        # Check if user already exists
-        existing_user = db.query(User).filter(User.email == email).first()
-        if existing_user:
-            return {"success": False, "error": "User with this email already exists"}
-
-        # Seat limit: the free tier is FREE_SEATS accounts; more need a Pro or Services licence.
-        from shikari import licence
-        active_users = db.query(User).filter(User.is_active.is_(True)).count()
-        if not licence.can_add_user(active_users):
-            return {"success": False, "requires_seats": True,
-                    "error": f"This install allows {licence.seats_allowed()} accounts. Add a Pro or "
-                             "Services licence with more seats to create more (Report branding → Licence)."}
-
-        # Create new user
-        user_role = UserRole(role)
-        hashed_password = hash_password(password)
-
-        new_user = User(
-            email=email,
-            full_name=full_name,
-            password_hash=hashed_password,
-            role=user_role,
-            is_active=True,
-        )
-
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-
-        return {
-            "success": True,
-            "message": "User created successfully",
-            "user": {
-                "id": new_user.id,
-                "email": new_user.email,
-                "full_name": new_user.full_name,
-                "role": new_user.role.value,
-            },
-        }
-
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Error creating user: {e}")
         return {"success": False, "error": "An error occurred"}
 
     finally:

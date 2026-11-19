@@ -1191,7 +1191,7 @@ async function trackProgress(groupName) {
 
 Current rate limits:
 - `/login`: 5 requests per 5 minutes per IP
-- `/register`: 5 requests per 5 minutes per IP
+- `/register`: 5 requests per 5 minutes per IP (the desktop app's local Shikari only; a server takes invitations)
 - Account lockout: 15 minutes after 5 failed login attempts
 
 **Handling Rate Limits**:
