@@ -8,7 +8,11 @@ import json
 import os
 import sys
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+from urllib.parse import parse_qs, urlsplit
+
+from samarkand._http import Response
+from samarkand.siem import Call
 
 # Add shikari to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -65,39 +69,15 @@ class TestSplunkQueryExecution:
     """Tests for Splunk query execution."""
 
     def test_execute_query_makes_request(self):
-        """Test that execute_query makes HTTP request."""
+        """execute_query dispatches a search job and reads its results."""
         from shikari.query.splunk import SplunkClient
 
-        client = SplunkClient(
-            host="splunk.local",
-            port=8089,
-            username="admin",
-            password="pass",
-        )
-
-        with patch("shikari.query.splunk.requests.post") as mock_post:
-            mock_response = MagicMock()
-            mock_response.status_code = 201
-            mock_response.json.return_value = {"sid": "job123"}
-            mock_post.return_value = mock_response
-
-            # Mock the job results endpoint too
-            with patch("shikari.query.splunk.requests.get") as mock_get:
-                mock_results = MagicMock()
-                mock_results.status_code = 200
-                mock_results.json.return_value = {
-                    "results": [{"count": 10}]
-                }
-                mock_get.return_value = mock_results
-
-                try:
-                    result = client.execute_query("index=main | stats count")
-                except Exception:
-                    # Expected if implementation differs
-                    pass
-
-                # Verify request was attempted
-                assert mock_post.called or mock_get.called
+        client = SplunkClient(host="splunk.local", port=8089, username="admin", password="pass")
+        with Answers(_resp(200, {"sessionKey": "k"}), _resp(201, {"sid": "job123"}), _job(count=1),
+                     _resp(200, {"results": [{"count": 10}]})) as sent:
+            result = client.execute_query("index=main | stats count")
+        assert result["status"] == "success" and result["results"] == [{"count": 10}]
+        assert sent[1].url == "https://splunk.local:8089/services/search/jobs"
 
     def test_query_validation_syntax(self):
         """Test SPL query syntax validation."""
@@ -141,17 +121,42 @@ class TestSplunkQueryGeneration:
 
 
 def _resp(status=200, body=None, headers=None):
-    r = MagicMock()
-    r.status_code = status
-    r.json.return_value = body if body is not None else {}
-    r.headers = headers or {}
-    r.text = json.dumps(body or {})
-    return r
+    return Response(status, json.dumps(body if body is not None else {}).encode(),
+                    {k.lower(): v for k, v in (headers or {}).items()})
 
 
 def _job(done=True, count=0, failed=False, messages=None):
     return _resp(200, {"entry": [{"content": {"isDone": done, "resultCount": count, "dispatchState": "FAILED" if failed else "DONE",
                                               "messages": messages or []}}]})
+
+
+class Answers:
+    """samarkand's HTTP faked with scripted answers (an exception is raised instead); yields the calls sent"""
+
+    def __init__(self, *answers):
+        self.answers, self.sent, self.slept = list(answers), [], []
+
+    def _request(self, method, url, **kw):
+        self.sent.append(Call(method, url, kw.get("body"), kw.get("headers") or {}))
+        answer = self.answers.pop(0)
+        if isinstance(answer, BaseException):
+            raise answer
+        return answer
+
+    def __enter__(self):
+        self._patches = [patch("samarkand._http.request", self._request),
+                         patch("samarkand.siem.time.sleep", self.slept.append)]
+        for p in self._patches:
+            p.start()
+        return self.sent
+
+    def __exit__(self, *exc):
+        for p in self._patches:
+            p.stop()
+
+
+def _form(call):
+    return {k: v[0] for k, v in parse_qs(urlsplit(call.url).query or (call.body or b"").decode()).items()}
 
 
 class TestSplunkLive44:
@@ -168,7 +173,10 @@ class TestSplunkLive44:
 
     def test_urls_keep_services(self):
         # urljoin(base, "/search/jobs") dropped /services: every call went to the wrong path
-        assert self._client()._url("/search/jobs") == "https://splunk.local:8089/services/search/jobs"
+        with Answers(_resp(201, {"sid": "1"}), _job(count=0)) as sent:
+            self._client().execute_query("index=x")
+        assert [c.url.split("?")[0] for c in sent] == ["https://splunk.local:8089/services/search/jobs",
+                                                       "https://splunk.local:8089/services/search/jobs/1"]
 
     def test_leading_command(self):
         from shikari.query.splunk import SplunkClient
@@ -176,68 +184,56 @@ class TestSplunkLive44:
         assert SplunkClient.search_string(" | tstats count") == "| tstats count"
         assert SplunkClient.search_string("search index=main") == "search index=main"
 
-    def test_bearer_token_header(self):
-        c = self._client()
-        with patch("shikari.query.splunk.requests.request") as req:
-            req.side_effect = [_resp(201, {"sid": "1"}), _job(count=0)]
-            assert c.execute_query("| makeresults")["status"] == "success"
-            assert req.call_args_list[0].kwargs["headers"] == {"Authorization": "Bearer tok"}
+    def test_window_and_bearer_token(self):
+        with Answers(_resp(201, {"sid": "1"}), _job(count=0)) as sent:
+            assert self._client().execute_query("| makeresults", earliest_time="-7d")["status"] == "success"
+        assert sent[0].headers["Authorization"] == "Bearer tok"
+        assert _form(sent[0]) | {"search": "| makeresults", "earliest_time": "-7d", "latest_time": "now"} == _form(sent[0])
 
     def test_pages_until_done(self):
-        c = self._client()
         pages = [_resp(200, {"results": [{"n": i} for i in range(a, b)]}) for a, b in ((0, 1000), (1000, 2000), (2000, 2500))]
-        with patch("shikari.query.splunk.requests.request") as req:
-            req.side_effect = [_resp(201, {"sid": "1"}), _job(count=2500), *pages]
-            r = c.execute_query("index=x", max_results=0, page_size=1000)
-        assert r["stats"]["row_count"] == 2500 and not r["stats"]["truncated"]
-        assert [k.kwargs["params"]["offset"] for k in req.call_args_list[2:]] == [0, 1000, 2000]
+        with Answers(_resp(201, {"sid": "1"}), _job(count=2500), *pages) as sent:
+            r = self._client().execute_query("index=x", max_results=0)
+        assert r["stats"]["row_count"] == 2500 and not r["stats"]["truncated"] and r["sid"] == "1"
+        assert r["stats"]["result_count"] == 2500
+        assert [_form(k)["offset"] for k in sent[2:]] == ["0", "1000", "2000"]
 
     def test_bad_spl_reported_once(self):
-        c = self._client()
         msg = {"messages": [{"type": "FATAL", "text": "Error in 'stats'"}, {"type": "FATAL", "text": "Error in 'stats'"}]}
-        with patch("shikari.query.splunk.requests.request", return_value=_resp(400, msg)):
-            assert c.execute_query("index=x | stats count by") == {"status": "error", "error": "Error in 'stats'"}
+        with Answers(_resp(400, msg)):
+            assert self._client().execute_query("index=x | stats count by") == {"status": "error", "error": "Error in 'stats'"}
 
     def test_expired_token_reported(self):
-        c = self._client()
-        with patch("shikari.query.splunk.requests.request",
-                   return_value=_resp(401, {"messages": [{"text": "call not properly authenticated"}]})):
-            r = c.execute_query("index=x")
+        with Answers(_resp(401, {"messages": [{"text": "call not properly authenticated"}]})):
+            r = self._client().execute_query("index=x")
         assert r["status"] == "error" and "token expired" in r["error"]
 
     def test_rate_limit_waits_then_runs(self):
-        c = self._client()
-        with patch("shikari.query.splunk.requests.request") as req, patch("shikari.query.splunk.time.sleep") as slept:
-            req.side_effect = [_resp(503, headers={"Retry-After": "1"}), _resp(429), _resp(201, {"sid": "1"}), _job(count=0)]
-            assert c.execute_query("index=x")["status"] == "success"
-        assert [k.args[0] for k in slept.call_args_list] == [1.0, 2]
+        answers = Answers(_resp(503, headers={"Retry-After": "1"}), _resp(429), _resp(201, {"sid": "1"}), _job(count=0))
+        with answers:
+            assert self._client().execute_query("index=x")["status"] == "success"
+        assert answers.slept == [1.0, 2]
 
     def test_rate_limit_that_persists_is_reported(self):
-        c = self._client()
-        with patch("shikari.query.splunk.requests.request", return_value=_resp(503, {"messages": [{"text": "too many searches"}]})), \
-             patch("shikari.query.splunk.time.sleep"):
-            assert c.execute_query("index=x") == {"status": "error", "error": "too many searches"}
+        with Answers(*[_resp(503, {"messages": [{"text": "too many searches"}]})] * 4):
+            assert self._client().execute_query("index=x") == {"status": "error", "error": "too many searches"}
 
     def test_failed_job_reported(self):
-        c = self._client()
-        with patch("shikari.query.splunk.requests.request") as req:
-            req.side_effect = [_resp(201, {"sid": "1"}), _job(failed=True, messages=[{"text": "index not found"}])]
-            assert c.execute_query("index=x")["error"] == "index not found"
+        with Answers(_resp(201, {"sid": "1"}), _job(failed=True, messages=[{"text": "index not found"}])):
+            assert self._client().execute_query("index=x")["error"] == "index not found"
 
     def test_unreachable_reported(self):
-        import requests
-        c = self._client()
-        with patch("shikari.query.splunk.requests.request", side_effect=requests.ConnectionError("refused")):
-            assert c.execute_query("index=x")["error"].startswith("Splunk unreachable")
+        with Answers(ConnectionRefusedError("refused")):
+            assert self._client().execute_query("index=x")["error"].startswith("Couldn't reach splunk.local:8089")
 
     def test_session_key_renewed_once(self):
         from shikari.query.splunk import SplunkClient
         c = SplunkClient(host="s", username="u", password="p")
-        with patch("shikari.query.splunk.requests.post", return_value=_resp(200, {"sessionKey": "k"})) as login, \
-             patch("shikari.query.splunk.requests.request") as req:
-            req.side_effect = [_resp(401), _resp(201, {"sid": "1"}), _job(count=0)]
+        with Answers(_resp(200, {"sessionKey": "k"}), _resp(401), _resp(200, {"sessionKey": "k2"}),
+                     _resp(201, {"sid": "1"}), _job(count=0)) as sent:
             assert c.execute_query("index=x")["status"] == "success"
-        assert login.call_count == 2
+        assert [k.url.endswith("/auth/login") for k in sent].count(True) == 2
+        assert sent[-1].headers["Authorization"] == "Splunk k2"
 
 
 def test_splunk_client():
