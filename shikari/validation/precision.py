@@ -147,11 +147,19 @@ _ENV = re.compile(r"%([A-Za-z_()0-9]+)%")
 _BINARY = re.compile(r"^(?:.*[\\/])?([\w.-]+\.(?:exe|com|dll|cpl|msc))$", re.I)
 
 
+# Built once per LOL index (load_index keeps one until the file changes): a results page asks
+# thousands of times, and rebuilding the set each time was a tenth of its load
+_builtin_cache = {"index": None, "names": None}
+
+
 def builtin_binaries() -> set:
     from shikari.build.lol import load_index
 
     index = load_index() or {}
-    return _BUILTIN_BINARIES | {k for k in index.get("lolbas") or {} if _BINARY.match(k)}
+    if _builtin_cache["index"] is not index or _builtin_cache["names"] is None:
+        _builtin_cache.update(index=index, names=frozenset(
+            _BUILTIN_BINARIES | {k for k in index.get("lolbas") or {} if _BINARY.match(k)}))
+    return _builtin_cache["names"]
 
 
 def _builtin_name(value: str, builtin: set) -> Optional[str]:

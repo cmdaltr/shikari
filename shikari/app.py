@@ -35,6 +35,8 @@ from shikari.mitre.enterprise import check_group_in_mitre
 from shikari.build.orchestrator import process_group
 from datetime import datetime
 import bisect
+import hashlib
+import pickle
 from collections import OrderedDict
 import os
 import functools
@@ -6805,17 +6807,54 @@ def _is_attack_group(group_name: str) -> bool:
         return False
 
 
+# A detection's grade, by its contents and the LOL and OSINT indexes' versions: grading every query on
+# every load was most of the results page (APT29's 872 detections: 2 s on an M2, far more on an Intel
+# Mac). Pickled, so each caller gets its own copy. Least recently used out first.
+_ASSESSED: "OrderedDict[tuple, bytes]" = OrderedDict()
+_ASSESSED_MAX = 8192
+_ASSESSED_LOCK = threading.Lock()
+
+
+def _index_versions() -> tuple:
+    from shikari.build import lol, osint_index
+
+    versions = []
+    for path in (lol.INDEX_PATH, osint_index.INDEX_PATH):
+        try:
+            versions.append(path.stat().st_mtime)
+        except OSError:
+            versions.append(None)
+    return tuple(versions)
+
+
 def _assessment(doc: dict) -> dict:
     """Quality grade and false-positive risk for a detection (shikari.validation.quality, #33)."""
     if not doc.get("query"):
         return {}
     try:
+        key = (hashlib.sha1(pickle.dumps(doc, protocol=pickle.HIGHEST_PROTOCOL)).digest(), _index_versions())
+    except Exception:
+        key = None
+    if key:
+        with _ASSESSED_LOCK:
+            blob = _ASSESSED.get(key)
+            if blob is not None:
+                _ASSESSED.move_to_end(key)
+        if blob is not None:
+            return pickle.loads(blob)
+    try:
         from shikari.validation.quality import assess
 
-        return assess(doc)
+        result = assess(doc)
     except Exception as e:
         print(f"⚠️  Couldn't assess {doc.get('name')}: {e}")
         return {}
+    if key:
+        with _ASSESSED_LOCK:
+            _ASSESSED[key] = pickle.dumps(result, protocol=pickle.HIGHEST_PROTOCOL)
+            if len(_ASSESSED) > _ASSESSED_MAX:
+                _ASSESSED.popitem(last=False)
+    return result
 
 
 def library_group_name(group_name: str) -> str:
