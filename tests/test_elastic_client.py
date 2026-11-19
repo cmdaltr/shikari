@@ -1,21 +1,19 @@
 """The Elasticsearch ES|QL client (#50): requests are faked here; the live run is in
 docs/features/QUERY_EXECUTION.md."""
+import base64
+import json
 import os
+import socket
 from unittest.mock import patch
 
 import pytest
-import requests
+from samarkand._http import Response
 
 from shikari.query.elastic import ElasticClient
 
 
-class Reply:
-    def __init__(self, status=200, body=None, headers=None):
-        self.status_code, self._body, self.headers = status, body or {}, headers or {}
-        self.text = str(body)
-
-    def json(self):
-        return self._body
+def Reply(status=200, body=None, headers=None):
+    return Response(status, json.dumps(body or {}).encode(), {k.lower(): v for k, v in (headers or {}).items()})
 
 
 def rows(*values, columns=("@timestamp", "_id", "process.name")):
@@ -23,20 +21,34 @@ def rows(*values, columns=("@timestamp", "_id", "process.name")):
                        "values": [list(v) for v in values], "took": 3})
 
 
-def client(replies, sent=None):
-    c = ElasticClient(url="http://es:9200", api_key="k")
-    queue = list(replies)
+class Fake:
+    """samarkand's HTTP faked with scripted replies (an exception is raised instead)"""
 
-    def request(method, url, **kw):
-        if sent is not None:
-            sent.append(kw.get("json", {}).get("query"))
-        r = queue.pop(0)
-        if isinstance(r, Exception):
+    def __init__(self, replies, sent=None):
+        self.queue, self.sent, self.waits = list(replies), sent, []
+
+    def request(self, method, url, **kw):
+        if self.sent is not None:
+            self.sent.append(json.loads(kw["body"])["query"])
+        r = self.queue.pop(0)
+        if isinstance(r, BaseException):
             raise r
         return r
 
-    c.session.request = request
-    return c
+
+def run(replies, query, sent=None, **kw):
+    fake = Fake(replies, sent)
+    with patch("samarkand._http.request", fake.request), patch("samarkand.siem.time.sleep", fake.waits.append):
+        r = ElasticClient(url="http://es:9200", api_key="k").execute_query(query, **kw)
+    return r, fake
+
+
+def client(replies, sent=None):
+    """Something with execute_query that runs against the replies"""
+    class Runner:
+        def execute_query(self, query, **kw):
+            return run(replies, query, sent, **kw)[0]
+    return Runner()
 
 
 def test_credentials_required():
@@ -47,9 +59,9 @@ def test_credentials_required():
 def test_api_key_and_basic_auth():
     with patch.dict(os.environ, {"ELASTIC_HOST": "es", "ELASTIC_API_KEY": "abc"}, clear=True):
         c = ElasticClient()
-    assert c.url == "https://es:9200" and c.session.headers["Authorization"] == "ApiKey abc"
+    assert c.url == "https://es:9200" and c.client.auth == "ApiKey abc"
     c = ElasticClient(url="http://es:9200/", username="elastic", password="pw")
-    assert c.url == "http://es:9200" and c.session.auth == ("elastic", "pw")
+    assert c.url == "http://es:9200" and c.client.auth == "Basic " + base64.b64encode(b"elastic:pw").decode()
 
 
 def test_summary_query_runs_once_and_says_when_full():
@@ -64,18 +76,18 @@ def test_summary_query_runs_once_and_says_when_full():
 def test_event_query_is_paged_by_timestamp_and_id():
     q = 'FROM logs-endpoint.events.process-*\n| WHERE process.name == "whoami.exe"'
     sent = []
-    c = client([rows(("t1", "a", "x"), ("t1", "b", "x")), rows(("t2", "c", "x"))], sent)
-    r = c.execute_query(q, max_results=0, page_size=2)
-    assert [x["_id"] for x in r["results"]] == ["a", "b", "c"]
-    assert r["stats"] == {**r["stats"], "row_count": 3, "truncated": False, "pages": 2}
+    first = rows(*[("t1", f"a{i:04}", "x") for i in range(1000)])
+    r = client([first, rows(("t2", "c", "x"))], sent).execute_query(q, max_results=0)
+    assert len(r["results"]) == 1001 and r["results"][-1]["_id"] == "c"
+    assert r["stats"] == {**r["stats"], "row_count": 1001, "truncated": False, "pages": 2}
     assert sent[0].startswith("FROM logs-endpoint.events.process-* METADATA _id")
-    assert sent[0].endswith("| SORT @timestamp ASC, _id ASC\n| LIMIT 2") and "TO_DATETIME" not in sent[0]
-    assert '@timestamp > TO_DATETIME("t1") OR (@timestamp == TO_DATETIME("t1") AND _id > "b")' in sent[1]
+    assert sent[0].endswith("| SORT @timestamp ASC, _id ASC\n| LIMIT 1000") and "TO_DATETIME" not in sent[0]
+    assert '@timestamp > TO_DATETIME("t1") OR (@timestamp == TO_DATETIME("t1") AND _id > "a0999")' in sent[1]
 
 
 def test_max_results_stops_paging_and_marks_truncated():
     q = "FROM logs-*"
-    r = client([rows(("t1", "a", "x"), ("t1", "b", "x"))]).execute_query(q, max_results=2, page_size=5)
+    r = client([rows(("t1", "a", "x"), ("t1", "b", "x"))]).execute_query(q, max_results=2)
     assert r["stats"]["row_count"] == 2 and r["stats"]["truncated"] is True
 
 
@@ -87,10 +99,10 @@ def test_existing_metadata_keeps_its_fields():
 @pytest.mark.parametrize("reply,expected", [
     (Reply(400, {"error": {"root_cause": [{"type": "parsing_exception",
                                            "reason": "line 1:6: mismatched input"}]}}), "mismatched input"),
-    (Reply(401, {"error": {"reason": "unable to authenticate with provided credentials"}}), "Not authorised"),
+    (Reply(401, {"error": {"reason": "unable to authenticate with provided credentials"}}), "refused the credentials"),
     (Reply(403, {"error": {"reason": "action [indices:data/read/esql] is unauthorized"}}), "Not allowed"),
-    (requests.ConnectTimeout("slow"), "timeout"),
-    (requests.ConnectionError("refused"), "unreachable"),
+    (socket.timeout("timed out"), "timed out"),
+    (ConnectionRefusedError("refused"), "couldn't reach es:9200"),
 ])
 def test_failures_come_back_as_errors(reply, expected):
     r = client([reply]).execute_query("FROM logs-* | STATS c = COUNT(*)")
@@ -98,16 +110,12 @@ def test_failures_come_back_as_errors(reply, expected):
 
 
 def test_busy_cluster_is_retried_honouring_retry_after():
-    waits = []
-    with patch("shikari.query.elastic.time.sleep", waits.append):
-        r = client([Reply(429, headers={"Retry-After": "7"}), Reply(503),
-                    rows(("a",), columns=("ok",))]).execute_query("ROW ok = 1")
-    assert r["status"] == "success" and waits == [7.0, 2.0]
+    r, fake = run([Reply(429, headers={"Retry-After": "7"}), Reply(503), rows(("a",), columns=("ok",))], "ROW ok = 1")
+    assert r["status"] == "success" and fake.waits == [7.0, 2.0]
 
 
 def test_gives_up_after_the_retries():
-    with patch("shikari.query.elastic.time.sleep"):
-        r = client([Reply(429)] * 4).execute_query("ROW ok = 1")
+    r, _ = run([Reply(429)] * 4, "ROW ok = 1")
     assert r["status"] == "error"
 
 

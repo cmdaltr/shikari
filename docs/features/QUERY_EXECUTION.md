@@ -1,6 +1,6 @@
 # Query Execution
 
-Running a generated query against the SIEM and reading the results back.
+Running a generated query against the SIEM and reading the results back. Each client here is a thin front on `samarkand.siem` (samarkand 0.2.0), the clients Ostraka queries its SIEMs with, so the requests, paging, retries and error messages are samarkand's; Shikari's keep their environment variables and their `{"status", "results", "stats"}` answers.
 
 ## Splunk
 
@@ -25,7 +25,7 @@ else:
 
 - **Authentication**: a token goes as `Authorization: Bearer`; a username and password get a session key, renewed once if it expires mid-run.
 - **SPL**: a bare search gets the `search` command in front; one starting with `|` (`| tstats`, `| makeresults`) is sent as written. A time term in the SPL (`earliest=-1d`) wins over `earliest_time`.
-- **Paging**: `page_size` results per request (1,000 by default) until `max_results` or the job's result count; `stats.truncated` says when `max_results` cut it short.
+- **Paging**: 1,000 results per request until `max_results` or the job's result count; `stats.truncated` says when `max_results` cut it short.
 - **Errors are returned, not raised**: bad SPL (Splunk's parser message), an expired or revoked token, a failed job, a timeout (the job is cancelled), Splunk unreachable. 429 and 503 are retried three times, honouring `Retry-After`.
 
 ### Validated
@@ -54,7 +54,7 @@ else:
 
 - **Authentication**: an API key goes as `Authorization: ApiKey`; a username and password as basic auth.
 - **ES|QL**: run as written. Its own `WHERE @timestamp >= NOW() - 1 day` is the window; the generated detections read the `logs-endpoint.events.*` data streams (Elastic Defend's names).
-- **Paging**: ES|QL has no cursor. A query that returns events (no `STATS`, no `LIMIT` of its own, no `KEEP`, `DROP` or `RENAME`) is paged by `@timestamp` and `_id`, `page_size` rows a request (at most the cluster's `esql.query.result_truncation_max_size`, 10,000 by default), until `max_results`. Any other query runs once; `stats.truncated` says it came back full (its `LIMIT`, or ES|QL's default 1,000), and `stats.partial` that a shard didn't answer.
+- **Paging**: ES|QL has no cursor. A query that returns events (no `STATS`, no `LIMIT` of its own, no `KEEP`, `DROP` or `RENAME`) is paged by `@timestamp` and `_id`, 1,000 rows a request, until `max_results`. Any other query runs once; `stats.truncated` says it came back full (its `LIMIT`, or ES|QL's default 1,000), and `stats.partial` that a shard didn't answer.
 - **Errors are returned, not raised**: bad ES|QL (Elasticsearch's parser or verifier message), an unknown field, a wrong password, an expired or revoked key, a missing index privilege, a timeout, Elasticsearch unreachable. 429 and 503 are retried three times, honouring `Retry-After`.
 
 ### Validated
@@ -63,4 +63,12 @@ Against Elasticsearch 9.4.0 (the Docker image, security on, on the MacBook), 17 
 
 ## Defender XDR
 
-Not implemented. It will be built with hit counts ([#16](https://github.com/cmdaltr/shikari/issues/16)) on Microsoft Graph's `runHuntingQuery` (application permission `ThreatHunting.Read.All`), reusing the token and query code in `shikari/telemetry/mde.py`.
+`shikari/query/mde.py` (`MDEClient`) runs KQL through Microsoft Graph's `runHuntingQuery` for hit counts ([#16](https://github.com/cmdaltr/shikari/issues/16)), as an app registration with the `ThreatHunting.Read.All` application permission: `SHIKARI_MDE_TENANT_ID`, `SHIKARI_MDE_CLIENT_ID` and `SHIKARI_MDE_CLIENT_SECRET`, read on first use. The lab's telemetry export (`python -m shikari.telemetry --mde-export`) uses the same client.
+
+```python
+from shikari.query.mde import MDEClient
+
+hits = MDEClient().hit_count(kql)   # the query with `| count` appended; None if it failed
+```
+
+Errors are returned as `{"status": "error", "error": ...}`, as the others' are. Advanced Hunting has no paging: it answers at most 100,000 rows over its own 30-day window. Not yet run against a live tenant.
