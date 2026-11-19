@@ -30,8 +30,8 @@ For detailed documentation on each category, see:
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| **create_admin.py** | Create administrator accounts | `python scripts/admin/create_admin.py` |
-| **reset_password.py** | Reset user passwords | `python scripts/admin/reset_password.py <email>` |
+| **create_admin.py** | An admin invitation link, for a first admin or when none can sign in | `python scripts/admin/create_admin.py <email> [--force]` |
+| **reset_password.py** | Reset access: a one-time link to a new password and authenticator | `python scripts/admin/reset_password.py <email>` |
 
 **Documentation**: [scripts/admin/WEB_APP.md](../scripts/admin/WEB_APP.md)
 
@@ -105,11 +105,14 @@ python scripts/validation/verify_schema.py
 ### Admin Tasks
 
 ```bash
-# Create admin user
-python scripts/admin/create_admin.py
+# Invite someone (prints a one-time link; the account is made when they accept)
+shikari invite user@example.com --role standard
 
-# Reset user password
-python scripts/admin/reset_password.py user@example.com
+# An admin invitation when no admin can sign in
+python scripts/admin/create_admin.py admin@example.com
+
+# Reset access for someone who can't sign in (prints a one-time link)
+shikari reset-access user@example.com
 ```
 
 ### AI/LLM Tasks
@@ -192,29 +195,25 @@ python scripts/ai/train_ai.py custom --import queries.json
 ### Admin Scripts
 
 #### create_admin.py
-**Purpose**: Create administrator user accounts.
-
-**Interactive prompts**:
-- Email address
-- Password (with confirmation)
+**Purpose**: An admin invitation from the server, for a first admin or for getting back in when no admin is left. The same as `shikari invite <email> --bootstrap`. It prints a one-time link, valid for 24 hours, where the person chooses a password and sets up an authenticator; the admin account is made then. Refused while an active admin exists (exit code 3), unless `--force`; only the newest such link works.
 
 **Example**:
 ```bash
-$ python scripts/admin/create_admin.py
-Enter email: admin@company.com
-Enter password: ••••••••••••
-Confirm password: ••••••••••••
-✓ Admin user created
+$ python scripts/admin/create_admin.py admin@company.com
+Invitation for admin@company.com (admin). Give them this link, which works once within 24 hours:
+
+  http://localhost:32453/accept-invite#...
 ```
 
 ---
 
 #### reset_password.py
-**Purpose**: Reset user passwords.
+**Purpose**: Reset access for an account that can't sign in. The same as `shikari reset-access <email>`: it prints a one-time link, valid for 24 hours, where the person chooses a new password and sets up a new authenticator (required, even though MFA is otherwise optional). Their sessions end and their API tokens are revoked at once, and any earlier reset link stops working.
 
 **Usage**:
 ```bash
 python scripts/admin/reset_password.py user@company.com
+docker compose exec shikari python scripts/admin/reset_password.py user@company.com   # Docker
 ```
 
 ---

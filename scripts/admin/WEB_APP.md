@@ -5,35 +5,35 @@ User administration and management utilities.
 ## Scripts
 
 ### create_admin.py
-Create a new administrator user for Shikari.
+An admin invitation from the server, for a first admin or for getting back in when no admin is left. The same as `shikari invite <email> --bootstrap`; everyone else is invited from Settings → Users → Invite, or with `shikari invite <email> --role standard|operator|admin`.
 
 **Usage**:
 ```bash
-python scripts/admin/create_admin.py
+python scripts/admin/create_admin.py <email> [--force]
+docker compose exec shikari python scripts/admin/create_admin.py <email>   # Docker
 ```
 
-**Interactive Prompts**:
-- Email address
-- Password
-- Confirm password
+It's refused while an active admin exists (the seeded `admin@shikari.app` counts), unless `--force`. Each run revokes the previous bootstrap link.
 
 **Example**:
 ```bash
-$ python scripts/admin/create_admin.py
-Enter email: security-admin@company.com
-Enter password: ••••••••••••
-Confirm password: ••••••••••••
-✓ Admin user created successfully
+$ python scripts/admin/create_admin.py security-admin@company.com
+Invitation for security-admin@company.com (admin). Give them this link, which works once within 24 hours:
+
+  http://localhost:32453/accept-invite#...
 ```
+
+The link opens a page where they give their name, choose a password and set up an authenticator app (always required); the account is made when a code from it checks out, and they see their backup codes once. Issuing and accepting are recorded in the audit log (`invitation_created`, `account_created`).
 
 ---
 
 ### reset_password.py
-Reset a user's password.
+Reset access for an account that can't sign in: a lost password, authenticator or backup codes. The same as `shikari reset-access <email>`.
 
 **Usage**:
 ```bash
 python scripts/admin/reset_password.py <email>
+docker compose exec shikari python scripts/admin/reset_password.py <email>   # Docker
 ```
 
 **Arguments**:
@@ -42,12 +42,14 @@ python scripts/admin/reset_password.py <email>
 **Example**:
 ```bash
 $ python scripts/admin/reset_password.py user@company.com
-Enter new password: ••••••••••••
-Confirm password: ••••••••••••
-✓ Password reset successfully
+Access reset for user@company.com; their sessions have ended. Give them this link, which works once within 24 hours:
+
+  http://localhost:32453/reset-access#...
 ```
 
-**Alternative**: Use the web interface at Settings → Users → Reset Password
+The link opens a page where they choose a new password and set up a new authenticator app (required, even if they never used MFA), then see fresh backup codes once and are signed in. Their sessions end and their API tokens are revoked when the link is made; the old password, authenticator and backup codes stop working when it's used, and any API token made in between is revoked then. Wrong codes on the page count towards the sign-in lockout (5, then 15 minutes). The token is in the link's fragment (after `#`), so it never reaches server or proxy logs; the link's host is `BASE_URL` (as in reset emails). Issuing and using it are recorded in the audit log (`access_reset_issued`, `access_reset_completed`).
+
+**Alternative**: an admin can do the same from Settings → Users → Reset access
 
 ---
 

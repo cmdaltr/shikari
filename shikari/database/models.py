@@ -9,6 +9,7 @@ This module defines SQLAlchemy models for:
 - ApiTokens: Personal API tokens (hashed) for the CLI, MCP server and scripts
 - AgentRuns: Agent session traces
 - SecurityQuestions: For password reset fallback
+- Invitations: one-time links that open an account
 """
 
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, Enum, UniqueConstraint
@@ -280,18 +281,24 @@ class SecurityQuestion(Base):
 
 class PasswordReset(Base):
     """
-    Password reset tokens for email-based password recovery.
+    One-time links for getting back into an account.
 
-    Stores temporary tokens sent via email for password reset.
-    Tokens expire after 1 hour.
+    kind NULL: the emailed password reset, which expires after 1 hour (shikari/auth/password_reset.py).
+    kind "access": reset access, issued by an admin or the server, which replaces the password and the
+    authenticator and expires after a few days (shikari/auth/reset_access.py). Its reset_token is the
+    token's SHA-256 hash, never the token, and the pending_* columns hold what the person has chosen
+    until a code from the new authenticator checks out.
     """
     __tablename__ = "password_resets"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    reset_token = Column(String(64), unique=True, nullable=False, index=True)  # UUID
+    reset_token = Column(String(64), unique=True, nullable=False, index=True)
     expires_at = Column(DateTime, nullable=False)
     used = Column(Boolean, default=False, nullable=False)
+    kind = Column(String(16), nullable=True)
+    pending_password_hash = Column(String(255), nullable=True)  # bcrypt hash
+    pending_mfa_secret = Column(String(32), nullable=True)  # TOTP secret (base32), as User.mfa_secret
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
@@ -303,6 +310,34 @@ class PasswordReset(Base):
 
     def __repr__(self):
         return f"<PasswordReset(id={self.id}, user_id={self.user_id}, used={self.used})>"
+
+
+class Invitation(Base):
+    """
+    An invitation to open an account (shikari/auth/invitations.py): a one-time link an admin, or the
+    server's command line, gives someone. The account is made, with this role, only once they've chosen
+    a password and a code from their new authenticator has checked out. token_hash is the SHA-256 of
+    the token, never the token; the pending_* columns hold what they've chosen until then.
+    """
+    __tablename__ = "invitations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), nullable=False, index=True)
+    role = Column(Enum(UserRole), nullable=False, default=UserRole.STANDARD)
+    full_name = Column(String(255), nullable=True)  # the admin's suggestion; the person can change it
+    token_hash = Column(String(64), unique=True, nullable=False, index=True)
+    invited_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # NULL: the command line
+    expires_at = Column(DateTime, nullable=False)
+    accepted_at = Column(DateTime, nullable=True)
+    revoked_at = Column(DateTime, nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # the account it made
+    pending_full_name = Column(String(255), nullable=True)
+    pending_password_hash = Column(String(255), nullable=True)  # bcrypt hash
+    pending_mfa_secret = Column(String(32), nullable=True)  # TOTP secret (base32), as User.mfa_secret
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f"<Invitation(id={self.id}, email='{self.email}', role='{self.role}')>"
 
 
 class DetectionType(str, enum.Enum):

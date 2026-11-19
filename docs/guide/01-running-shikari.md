@@ -39,6 +39,8 @@ The same command covers everything else Shikari does from a terminal:
 | `shikari offline generate\|correlate\|hunt\|emulate` | The pipeline without the server: [USAGE.md](../USAGE.md) |
 | `shikari clear-cache` | Clear server-side caches and reset browser preferences |
 | `shikari app install\|uninstall\|open` | Shikari as a desktop app (below) |
+| `shikari invite <email> --role standard\|operator\|admin` | A one-time link that opens an account with that role ([Users](16-profile-and-settings.md#users-administrators)); `scripts/admin/create_admin.py <email>` is an admin one, when no admin can sign in |
+| `shikari reset-access <email>` | A one-time link for someone who can't sign in, to a new password and authenticator ([Users](16-profile-and-settings.md#users-administrators)); in Docker, `docker compose exec shikari python shikari/service.py reset-access <email>` |
 
 ## As a desktop app
 
@@ -56,9 +58,9 @@ Every page and API needs a signed-in user (or an API token): anyone else is sent
 SHIKARI_ALLOW_GUESTS=1 shikari start
 ```
 
-Accounts are created by an administrator (Profile → Users) or by registering at `/register`. Each account can turn on two-factor authentication: see [Profile and settings](16-profile-and-settings.md#security). With it on, sign-in asks for a code from the authenticator app (or a backup code) after the password; five wrong codes, or five minutes, and you start again.
+On a server, accounts come by invitation: an administrator invites someone (Profile → Users → Invite, or `shikari invite <email> --role …` on the server) and they accept a one-time link, choosing a password and setting up an authenticator. There's no self-registration there; the desktop app's own local Shikari keeps `/register`. Each account can turn on two-factor authentication: see [Profile and settings](16-profile-and-settings.md#security). With it on, sign-in asks for a code from the authenticator app (or a backup code) after the password; five wrong codes, or five minutes, and you start again.
 
-Changing your password, or an administrator resetting it, signs that account out everywhere else.
+Changing your password signs that account out everywhere else; an administrator resetting someone's access (a one-time link to a new password and authenticator) signs them out everywhere at once.
 
 ## What happens at start-up
 

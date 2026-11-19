@@ -24,6 +24,8 @@ or as shikari.service (the pip-installed shikari).
     shikari update [--check]       pull the latest code, update dependencies, restart if running
     shikari app install [--dock]   Shikari as a desktop app (Dock, Start menu, app menu); see shikari/desktop.py
     shikari docker <args>          docker compose with the project's docker-compose.yml
+    shikari reset-access <email>   a one-time link for someone who can't sign in (new password and authenticator)
+    shikari invite <email> --role R  a one-time link that opens an account (standard, operator or admin)
 
 Options given to start or restart are remembered in settings.json in the state directory:
 ~/Library/Application Support/Shikari (macOS) or $XDG_STATE_HOME/shikari (Linux), or
@@ -677,6 +679,8 @@ HANDOVER = {
     "caldera": ("shikari.cli.caldera", False),
     "export": ("shikari.cli.export", False),
     "licence": ("shikari.cli.licence", False),
+    "reset-access": ("shikari.cli.reset_access", False),
+    "invite": ("shikari.cli.invite", False),
 }
 
 
@@ -690,7 +694,7 @@ def main(argv=None):
         prog = "shikari" if keep_name else f"shikari {argv[0]}"
         os.chdir(ROOT)
         os.execv(python(), [python(), "-c", f"import sys; sys.path.insert(0, {str(ROOT)!r}); from {module} import main; "
-                            f"sys.argv = [{prog!r}] + sys.argv[1:]; main()"] + rest)
+                            f"sys.argv = [{prog!r}] + sys.argv[1:]; sys.exit(main())"] + rest)
 
     parser = argparse.ArgumentParser(prog="shikari", description="Shikari's command line: the server, the console and the pipeline.")
     sub = parser.add_subparsers(dest="command")
@@ -728,7 +732,9 @@ def main(argv=None):
                      "caldera provision|enrol|list (provision + enrol CALDERA agents) · "
                      "export siem|runs (a pack for your own Elastic, Splunk or Wazuh) · "
                      "test populate|depopulate|status (sample data for a guided tour) · "
-                     "app install|uninstall|open (a desktop app with a Dock / Start menu entry)")
+                     "app install|uninstall|open (a desktop app with a Dock / Start menu entry) · "
+                     "reset-access <email> (a one-time link to a new password and authenticator) · "
+                     "invite <email> --role standard|operator|admin [--name N] (a one-time link to a new account)")
 
     args = parser.parse_args(argv)
     commands = {"start": cmd_start, "stop": cmd_stop, "restart": cmd_restart, "status": cmd_status,

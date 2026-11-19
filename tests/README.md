@@ -222,11 +222,12 @@ The API test suite covers every endpoint in Shikari:
 | `GET /login` | `test_auth.py` | Page load, form |
 | `POST /login` | `test_auth.py` | Valid/invalid credentials |
 | `POST /logout` | `test_auth.py` | Redirect; `GET` only asks |
-| `GET /register` | `test_auth.py` | Page load |
-| `POST /register` | `test_auth.py` | Validation |
+| `GET /register` | `test_auth.py`, `unit/test_invitations.py` | Page load; a server redirects to /login |
+| `POST /register` | `test_auth.py`, `unit/test_invitations.py` | Validation; closed on a server |
 | `GET /forgot-password` | `test_auth.py` | Page load |
 | `POST /api/auth/request-reset` | `test_auth.py` | Email enumeration safe |
 | `POST /api/auth/reset-password` | `test_auth.py` | Invalid token |
+| `GET /reset-access`, `POST /api/auth/reset-access/start`, `/complete` | `unit/test_reset_access.py` | New password and authenticator, single use |
 | `GET /api/mfa/status` | `test_auth.py` | MFA state |
 | `POST /api/mfa/setup` | `test_auth.py` | MFA init |
 | `POST /api/mfa/verify` | `test_auth.py` | Invalid code |
@@ -293,10 +294,11 @@ The API test suite covers every endpoint in Shikari:
 | `POST /api/profile/apikeys` | `test_auth.py` | Create API key |
 | `GET /api/users` | `test_auth.py` | User list |
 | `GET /api/admin/users` | `test_auth.py` | Admin user list |
-| `POST /api/admin/users` | `test_auth.py` | Create user |
+| `POST /api/admin/invitations`, `GET`, `DELETE /{id}` | `test_auth.py`, `unit/test_invitations.py` | Invite, list, revoke |
+| `GET /accept-invite`, `POST /api/auth/invitation/preview`, `/start`, `/complete` | `unit/test_invitations.py` | Accepting makes the account, single use |
 | `PUT /api/admin/users/{id}` | `test_auth.py` | Update user |
 | `DELETE /api/admin/users/{id}` | `test_auth.py` | Delete user |
-| `POST /api/admin/reset-password` | `test_auth.py` | Admin reset |
+| `POST /api/admin/users/{id}/reset-access` | `test_auth.py`, `unit/test_reset_access.py` | Reset access link |
 | `GET /api/activities` | `test_auth.py` | Activity log |
 
 ## Environment Variables

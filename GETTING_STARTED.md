@@ -69,13 +69,36 @@ Email: admin@shikari.app
 Password: BigGameHunter
 ```
 
-Change the password after the first sign-in (Profile → Security). More administrators:
+Change the password after the first sign-in (Profile → Security).
+
+### Adding people
+
+Accounts on a Shikari server come by invitation. An admin invites someone from Settings → Users → Invite (email, role, and a name if you like) and gives them the link; or, from the server:
 
 ```bash
-python scripts/admin/create_admin.py                       # local
-docker compose exec shikari python scripts/admin/create_admin.py   # Docker
-python scripts/admin/reset_password.py                     # a forgotten password
+shikari invite user@example.org --role standard            # local; --role operator or admin, --name "Full Name"
+docker compose exec shikari python shikari/service.py invite user@example.org --role standard   # Docker
 ```
+
+The link works once, within 24 hours: they give their name, choose a password and set up an authenticator app (always required for an invited account), and the account is made, with that role, when a code from it checks out. They're signed in and see their backup codes once. Pending invitations are listed under Users, where they can be revoked. Each open invitation counts towards the licence's seats until it's accepted, revoked or expires. There's no self-registration on a server: `/register` sends people to the sign-in page to ask for an invitation (the desktop app's own local Shikari keeps it).
+
+An admin invitation from the server, when there's no admin to send one:
+
+```bash
+python scripts/admin/create_admin.py admin@example.org                          # local
+docker compose exec shikari python scripts/admin/create_admin.py admin@example.org   # Docker
+```
+
+It's refused while an active admin exists (the default one counts) unless you add `--force`.
+
+Someone who can't sign in (a forgotten password, a lost authenticator or backup codes) gets a one-time link from an admin, Settings → Users → Reset access, or from the server when no admin can sign in:
+
+```bash
+shikari reset-access user@example.org                      # local (or: python scripts/admin/reset_password.py user@example.org)
+docker compose exec shikari python shikari/service.py reset-access user@example.org   # Docker
+```
+
+The link works once, within 24 hours: they choose a new password and set up a new authenticator, then see fresh backup codes once. Their sessions end and their API tokens are revoked as soon as the link is made.
 
 ## Tell Shikari about your environment
 
@@ -146,7 +169,7 @@ The console, the Python client, the REST API (live reference at `http://localhos
 
 | Problem | Fix |
 |---|---|
-| Can't sign in with the default login | `python scripts/admin/reset_password.py`, or `scripts/admin/create_admin.py` for a new administrator |
+| Can't sign in | `shikari reset-access <email>` prints a one-time link to a new password and authenticator; or `scripts/admin/create_admin.py <email>` for an admin invitation |
 | Queries don't match my SIEM's tables or fields | The mapping files (above): start-up names any that are missing |
 | Port 32453 in use | `lsof -i :32453`, or `shikari start --port 8001` |
 | Docker won't start | `docker compose logs shikari`; rebuild with `docker compose down && docker compose up --build` (your data in `data/` is kept) |

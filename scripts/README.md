@@ -33,10 +33,10 @@ python scripts/ai/setup_local_llm.py
 
 ### Admin Tasks
 ```bash
-# Create admin user
-python scripts/admin/create_admin.py
+# An admin invitation link (others: shikari invite <email> --role standard)
+python scripts/admin/create_admin.py admin@example.com
 
-# Reset password
+# Reset access for someone who can't sign in (prints a one-time link)
 python scripts/admin/reset_password.py user@example.com
 
 # Regenerate groups after a change to how detections are built (an API token from Profile → Security)

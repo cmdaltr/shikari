@@ -5,8 +5,8 @@ running app and are never invoked by it.
 
 | Script | Purpose |
 |---|---|
-| `create_admin.py` | Create the initial admin account |
-| `reset_password.py` | Reset an existing admin account's password |
+| `create_admin.py` | An admin invitation link, for a first admin or when none can sign in (as `shikari invite <email> --bootstrap`) |
+| `reset_password.py` | Reset access for an account that can't sign in: prints a one-time link to a new password and authenticator (as `shikari reset-access <email>`) |
 | `regenerate.py` | Regenerate hunted ATT&CK groups one at a time, as the Results page's Regenerate button does |
 | [`WEB_APP.md`](WEB_APP.md) | Notes on the web-app admin scripts |
 | `sign_licence.py`, `issue-licence.sh` | **Licence issuing — licensor only** (see below) |

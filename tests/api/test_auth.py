@@ -91,7 +91,7 @@ class TestLogin:
 
 
 class TestRegistration:
-    """POST /register creates new accounts."""
+    """/register: open only in the desktop app's local Shikari; a server sends it to /login (invitations)."""
 
     def test_register_page_loads(self, api, ensure_running):
         r = api.get("/register")
@@ -193,20 +193,19 @@ class TestAdminEndpoints:
         r = api.get("/api/admin/users")
         assert r.status_code in [200, 401, 403]
 
-    def test_admin_create_user(self, api, ensure_running):
-        r = api.post("/api/admin/users", json={
-            "email": "newuser@test.com",
-            "password": "TestPassword123!",
-            "role": "user",
-        })
-        assert r.status_code in [200, 401, 403, 409, 422]
+    def test_admin_invite(self, api, ensure_running):
+        # An address that fails validation: a real one would leave a live invitation behind
+        r = api.post("/api/admin/invitations", json={"email": "not-an-email", "role": "standard"})
+        assert r.status_code in [401, 403, 422]
 
-    def test_admin_reset_password(self, api, ensure_running):
-        r = api.post("/api/admin/reset-password", json={
-            "user_id": "nonexistent-id",
-            "new_password": "Reset123!",
-        })
-        assert r.status_code in [200, 400, 401, 403, 404]
+    def test_admin_invitations_list(self, api, ensure_running):
+        r = api.get("/api/admin/invitations")
+        assert r.status_code in [200, 401, 403]
+
+    def test_admin_reset_access(self, api, ensure_running):
+        # An id nobody has: a real one would sign that account out
+        r = api.post("/api/admin/users/999999999/reset-access")
+        assert r.status_code in [401, 403, 404]
 
     def test_users_list(self, api, ensure_running):
         r = api.get("/api/users")
