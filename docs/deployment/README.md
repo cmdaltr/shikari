@@ -205,8 +205,8 @@ Install, and the post-install script creates the `shikari` user and data dir, se
 SELinux port when enforcing, and enables + starts the service:
 
 ```bash
-sudo apt install ./dist/shikari-server_2.0.0-1_amd64.deb      # Debian/Ubuntu
-sudo dnf install ./dist/shikari-server-2.0.0-1.*.rpm          # Rocky/RHEL
+sudo apt install ./dist/shikari-server_2.1.0-1_amd64.deb      # Debian/Ubuntu
+sudo dnf install ./dist/shikari-server-2.1.0-1.*.rpm          # Rocky/RHEL
 ```
 
 Upgrade by installing the newer package; `/etc/shikari/shikari.env` is generated on first install and left
@@ -246,7 +246,7 @@ pwsh -File deploy\packaging\build_server_pkg_windows.ps1 -Arch x86_64   # or aar
 On the server, unpack and install in an elevated PowerShell:
 
 ```powershell
-Expand-Archive shikari-server_2.0.0_windows-x64.zip -DestinationPath C:\Temp\shikari
+Expand-Archive shikari-server_2.1.0_windows-x64.zip -DestinationPath C:\Temp\shikari
 cd C:\Temp\shikari
 .\install.ps1          # -> C:\Program Files\Shikari, data in %ProgramData%\Shikari, service "Shikari"
 ```
