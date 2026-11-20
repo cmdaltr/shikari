@@ -437,3 +437,43 @@ def test_lockout_counts_to_the_threshold_then_clears():
     assert lockout.record_failure(u) and lockout.is_locked(u)
     lockout.clear(u)
     assert u.failed_login_attempts == 0 and not lockout.is_locked(u)
+
+
+@pytest.mark.unit
+class TestDeadLinksAndRaces:
+    def test_the_old_password_cant_sign_in_while_a_reset_is_open(self, client, db_factory, user, monkeypatch):
+        from shikari.security import csrf, rate_limit
+
+        monkeypatch.setattr(csrf, "validate_csrf_token", lambda *a: True)
+        monkeypatch.setattr(rate_limit, "check_rate_limit", lambda key, **kw: (True, 5))
+        _issue(db_factory)
+        client.cookies.set("shikari_csrf_session", "x")
+        r = client.post("/login", data={"email": user.email, "password": "Old-passw0rd-1234567!", "csrf_token": "t"})
+        assert r.status_code == 403 and "being reset" in r.text
+
+    def test_a_link_completes_once_when_two_try_at_the_same_time(self, db_factory, user):
+        token = _token(_issue(db_factory))
+        first, second = db_factory(), db_factory()
+        ra.start_reset(first, ra.open_reset(first, token), NEW_PASSWORD)
+        row_one, row_two = ra.open_reset(first, token), ra.open_reset(second, token)
+        code = pyotp.TOTP(row_one.pending_mfa_secret).now()
+        ra.complete_reset(first, row_one, code)
+        with pytest.raises(ra.ResetAccessError, match="already been used"):
+            ra.complete_reset(second, row_two, code)
+        first.close(), second.close()
+
+    def test_a_replaced_link_keeps_nothing_chosen(self, db_factory, user):
+        token = _token(_issue(db_factory))
+        db = db_factory()
+        ra.start_reset(db, ra.open_reset(db, token), NEW_PASSWORD)
+        db.close()
+        _issue(db_factory)
+        db = db_factory()
+        old = db.query(PasswordReset).filter(PasswordReset.reset_token == ra.token_hash(token)).one()
+        assert old.used and old.pending_password_hash is None and old.pending_mfa_secret is None
+        db.close()
+
+    def test_without_base_url_the_link_names_the_address_the_admin_used(self, db_factory, user, monkeypatch):
+        monkeypatch.delenv("BASE_URL", raising=False)
+        assert _issue(db_factory, base_url="https://shikari.example.net/").startswith(
+            "https://shikari.example.net/reset-access#")

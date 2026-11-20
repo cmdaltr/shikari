@@ -285,7 +285,7 @@ class PasswordReset(Base):
 
     kind NULL: the emailed password reset, which expires after 1 hour (shikari/auth/password_reset.py).
     kind "access": reset access, issued by an admin or the server, which replaces the password and the
-    authenticator and expires after a few days (shikari/auth/reset_access.py). Its reset_token is the
+    authenticator and expires after 24 hours (shikari/auth/reset_access.py). Its reset_token is the
     token's SHA-256 hash, never the token, and the pending_* columns hold what the person has chosen
     until a code from the new authenticator checks out.
     """

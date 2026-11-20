@@ -12,6 +12,7 @@ import sys
 
 
 def reset_access(email: str) -> int:
+    from shikari.auth import links
     from shikari.auth.reset_access import RESET_ACCESS_EXPIRY_HOURS, ResetAccessError, issue_reset_access
     from shikari.database.db import Base, SessionLocal, _add_missing_columns, engine
 
@@ -27,6 +28,9 @@ def reset_access(email: str) -> int:
         return 1
     finally:
         db.close()
+    if not links.base_url_set():
+        print("BASE_URL isn't set, so this link names localhost. Set BASE_URL to the address people "
+              "open Shikari at, or change the start of the link by hand.", file=sys.stderr)
     print(f"Access reset for {email}; their sessions have ended. Give them this link, which works once "
           f"within {RESET_ACCESS_EXPIRY_HOURS} hours:\n\n  {link}\n")
     return 0

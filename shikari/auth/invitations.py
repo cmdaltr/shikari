@@ -42,8 +42,8 @@ class AdminExists(InvitationError):
     """create_admin.py without --force while an active admin exists."""
 
 
-def invitation_link(token: str) -> str:
-    return links.link("/accept-invite", token)
+def invitation_link(token: str, base: Optional[str] = None) -> str:
+    return links.link("/accept-invite", token, base)
 
 
 def _open_ones(db, now: datetime):
@@ -70,8 +70,8 @@ def _seat_problem(db, *, pending_too: bool, except_email: Optional[str] = None) 
 
 def create_invitation(db: SQLAlchemySession, *, email: str, role, full_name: Optional[str] = None,
                       actor: Optional[User] = None, via: Optional[str] = None, check_seats: bool = True,
-                      ip_address: Optional[str] = None, user_agent: Optional[str] = None
-                      ) -> Tuple[Invitation, str]:
+                      ip_address: Optional[str] = None, user_agent: Optional[str] = None,
+                      base_url: Optional[str] = None) -> Tuple[Invitation, str]:
     """A new invitation and its link. An earlier open invitation for the same email is revoked, so only
     the newest link works. `actor` is the admin who asked; None means the command line (`via` says
     which). Raises InvitationError (AccountExists, SeatsFull) with the reason."""
@@ -99,7 +99,8 @@ def create_invitation(db: SQLAlchemySession, *, email: str, role, full_name: Opt
 
     now = datetime.utcnow()
     db.query(Invitation).filter(Invitation.email == email, Invitation.accepted_at.is_(None),
-                                Invitation.revoked_at.is_(None)).update({"revoked_at": now})
+                                Invitation.revoked_at.is_(None)).update({"revoked_at": now, **links.CLEARED,
+                                                                         "pending_full_name": None})
     token = links.new_token()
     invitation = Invitation(email=email, role=role, full_name=full_name, token_hash=links.token_hash(token),
                             invited_by=actor.id if actor else None,
@@ -110,7 +111,7 @@ def create_invitation(db: SQLAlchemySession, *, email: str, role, full_name: Opt
                 ip_address=ip_address, user_agent=user_agent, invitation_id=invitation.id, role=role.value,
                 actor_email=actor.email if actor else None, via=via or ("admin" if actor else "cli"),
                 expires_in_hours=INVITATION_EXPIRY_HOURS)
-    return invitation, invitation_link(token)
+    return invitation, invitation_link(token, base_url)
 
 
 def bootstrap_admin(db: SQLAlchemySession, email: str, *, force: bool = False) -> Tuple[Invitation, str]:
@@ -123,7 +124,7 @@ def bootstrap_admin(db: SQLAlchemySession, email: str, *, force: bool = False) -
                           "→ Invite), or run this again with --force.")
     db.query(Invitation).filter(Invitation.invited_by.is_(None), Invitation.role == UserRole.ADMIN,
                                 Invitation.accepted_at.is_(None), Invitation.revoked_at.is_(None)
-                                ).update({"revoked_at": datetime.utcnow()})
+                                ).update({"revoked_at": datetime.utcnow(), **links.CLEARED, "pending_full_name": None})
     db.commit()
     # Getting back in when no admin is left always works; adding one beside them takes a seat
     return create_invitation(db, email=email, role=UserRole.ADMIN, via="bootstrap", check_seats=bool(admins))
@@ -143,6 +144,7 @@ def revoke(db: SQLAlchemySession, invitation_id: int, actor: User, ip_address: O
     if invitation is None:
         return False
     invitation.revoked_at = datetime.utcnow()
+    invitation.pending_full_name = invitation.pending_password_hash = invitation.pending_mfa_secret = None
     db.commit()
     links.audit(db, EVENT_INVITATION_REVOKED, user_id=actor.id, email=invitation.email, ip_address=ip_address,
                 user_agent=user_agent, invitation_id=invitation.id, actor_email=actor.email)
@@ -172,6 +174,13 @@ def start_invitation(db: SQLAlchemySession, invitation: Invitation, full_name: s
     return secret
 
 
+def _bootstrap_with_no_admin(db, invitation: Invitation) -> bool:
+    """The server's admin invitation while no admin is left, which bootstrap_admin issued without a
+    seat: getting back in always works, so it completes without one too."""
+    return (invitation.invited_by is None and invitation.role == UserRole.ADMIN
+            and not db.query(User).filter(User.role == UserRole.ADMIN, User.is_active.is_(True)).count())
+
+
 def complete_invitation(db: SQLAlchemySession, invitation: Invitation, code: str,
                         ip_address: Optional[str] = None, user_agent: Optional[str] = None
                         ) -> Tuple[User, List[str]]:
@@ -185,8 +194,19 @@ def complete_invitation(db: SQLAlchemySession, invitation: Invitation, code: str
     if db.query(User.id).filter(User.email == invitation.email).first():
         raise AccountExists(f"{invitation.email} already has an account. Sign in, or ask an admin to "
                             "reset your access.")
-    if problem := _seat_problem(db, pending_too=False):
+    if invitation.invited_by is not None:
+        inviter = db.query(User).filter(User.id == invitation.invited_by).first()
+        if not (inviter and inviter.is_active and inviter.role == UserRole.ADMIN):
+            raise InvitationError("The admin who invited you no longer can. Ask an admin for a new invitation.")
+    if not _bootstrap_with_no_admin(db, invitation) and (problem := _seat_problem(db, pending_too=False)):
         raise SeatsFull(problem)
+    # Claim the invitation before making the account: of two acceptances at once, only one gets through
+    claimed = db.query(Invitation).filter(Invitation.id == invitation.id, Invitation.accepted_at.is_(None),
+                                          Invitation.revoked_at.is_(None)
+                                          ).update({"accepted_at": datetime.utcnow()}, synchronize_session=False)
+    if not claimed:
+        db.rollback()
+        raise InvitationError("This invitation has already been used.")
 
     user = User(email=invitation.email, full_name=invitation.pending_full_name, role=invitation.role,
                 is_active=True, password_hash=invitation.pending_password_hash, failed_login_attempts=0)

@@ -18,6 +18,7 @@ ADMIN_EXISTS = 3
 
 def invite(email: str, role: str, name: str | None = None, *, bootstrap: bool = False,
            force: bool = False) -> int:
+    from shikari.auth import links
     from shikari.auth.invitations import (INVITATION_EXPIRY_HOURS, AdminExists, InvitationError,
                                           bootstrap_admin, create_invitation)
     from shikari.database.audit import Base as AuditBase
@@ -42,6 +43,9 @@ def invite(email: str, role: str, name: str | None = None, *, bootstrap: bool = 
         return 1
     finally:
         db.close()
+    if not links.base_url_set():
+        print("BASE_URL isn't set, so this link names localhost. Set BASE_URL to the address people "
+              "open Shikari at, or change the start of the link by hand.", file=sys.stderr)
     print(f"Invitation for {email} ({role}). Give them this link, which works once within "
           f"{INVITATION_EXPIRY_HOURS} hours:\n\n  {link}\n")
     return 0

@@ -22,11 +22,23 @@ def token_hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def link(path: str, token: str) -> str:
-    """<BASE_URL><path>#<token>, BASE_URL as the reset emails use it."""
+def base_url_set() -> bool:
+    import os
+
+    return bool(os.getenv("BASE_URL"))
+
+
+def link(path: str, token: str, base: Optional[str] = None) -> str:
+    """<base><path>#<token>. BASE_URL when it's set; otherwise `base`, the address the admin asked from,
+    so a server without BASE_URL doesn't hand out a localhost link; the email default last."""
     from shikari.auth.email import BASE_URL
 
-    return f"{BASE_URL.rstrip('/')}{path}#{token}"
+    root = BASE_URL if base_url_set() or not base else base
+    return f"{root.rstrip('/')}{path}#{token}"
+
+
+# What a dead link's row still holds: cleared when it's replaced, revoked or claimed
+CLEARED = {"pending_password_hash": None, "pending_mfa_secret": None}
 
 
 def audit(db, event: str, *, user_id: Optional[int], email: Optional[str], success: bool = True,

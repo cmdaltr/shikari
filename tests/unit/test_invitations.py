@@ -402,3 +402,57 @@ class TestCommandLine:
         from shikari import service
 
         assert service.HANDOVER["invite"] == ("shikari.cli.invite", False)
+
+
+def _held(db_factory, link):
+    """Name and password chosen on the invitation; returns a current code from its new authenticator."""
+    db = db_factory()
+    invitation = inv.open_invitation(db, _token(link))
+    secret = inv.start_invitation(db, invitation, "New Person", PASSWORD)
+    db.close()
+    return pyotp.TOTP(secret).now()
+
+
+@pytest.mark.unit
+class TestDeadLinksAndRaces:
+    def test_the_bootstrap_completes_when_seats_are_full(self, db_factory, monkeypatch):
+        monkeypatch.setattr(licence, "seats_allowed", lambda: 1)
+        _add_user(db_factory, "only.user@example.org")
+        db = db_factory()
+        link = inv.bootstrap_admin(db, "first.admin@example.org")[1]
+        db.close()
+        code = _held(db_factory, link)
+        db = db_factory()
+        user, _ = inv.complete_invitation(db, inv.open_invitation(db, _token(link)), code)
+        assert user.role == UserRole.ADMIN
+        db.close()
+
+    def test_an_invitation_dies_with_its_admins_role(self, db_factory, admin):
+        link = _invite(db_factory, role="admin", actor=admin)
+        code = _held(db_factory, link)
+        db = db_factory()
+        db.query(User).filter(User.id == admin.id).update({"role": UserRole.STANDARD})
+        db.commit()
+        with pytest.raises(inv.InvitationError, match="no longer can"):
+            inv.complete_invitation(db, inv.open_invitation(db, _token(link)), code)
+        db.close()
+
+    def test_an_invitation_is_accepted_once_when_two_try_at_the_same_time(self, db_factory, admin):
+        link = _invite(db_factory, actor=admin)
+        code = _held(db_factory, link)
+        first, second = db_factory(), db_factory()
+        one, two = inv.open_invitation(first, _token(link)), inv.open_invitation(second, _token(link))
+        inv.complete_invitation(first, one, code)
+        with pytest.raises(inv.InvitationError):
+            inv.complete_invitation(second, two, code)
+        first.close(), second.close()
+
+    def test_a_revoked_invitation_keeps_nothing_chosen(self, db_factory, admin):
+        link = _invite(db_factory, actor=admin)
+        _held(db_factory, link)
+        db = db_factory()
+        invitation = db.query(Invitation).one()
+        assert inv.revoke(db, invitation.id, admin)
+        db.refresh(invitation)
+        assert not (invitation.pending_password_hash or invitation.pending_mfa_secret or invitation.pending_full_name)
+        db.close()

@@ -46,8 +46,8 @@ class AccountLocked(ResetAccessError):
 token_hash = links.token_hash
 
 
-def reset_link(token: str) -> str:
-    return links.link("/reset-access", token)
+def reset_link(token: str, base: Optional[str] = None) -> str:
+    return links.link("/reset-access", token, base)
 
 
 def _audit(db, event: str, user: User, **kw) -> None:
@@ -56,7 +56,7 @@ def _audit(db, event: str, user: User, **kw) -> None:
 
 def issue_reset_access(db: SQLAlchemySession, *, email: Optional[str] = None, user_id: Optional[int] = None,
                        actor: Optional[User] = None, ip_address: Optional[str] = None,
-                       user_agent: Optional[str] = None) -> Tuple[User, str]:
+                       user_agent: Optional[str] = None, base_url: Optional[str] = None) -> Tuple[User, str]:
     """A one-time reset-access link for the account with this email or id. The account's sessions
     end now, its API tokens are revoked, earlier unused reset links (either kind) stop working, and a
     lockout is cleared.
@@ -78,7 +78,7 @@ def issue_reset_access(db: SQLAlchemySession, *, email: Optional[str] = None, us
 
     token = links.new_token()
     db.query(PasswordReset).filter(PasswordReset.user_id == user.id,
-                                   PasswordReset.used == False).update({"used": True})  # noqa: E712
+                                   PasswordReset.used == False).update({"used": True, **links.CLEARED})  # noqa: E712
     db.add(PasswordReset(user_id=user.id, reset_token=token_hash(token), kind=RESET_ACCESS_KIND,
                          expires_at=datetime.utcnow() + timedelta(hours=RESET_ACCESS_EXPIRY_HOURS)))
     db.query(Session).filter(Session.user_id == user.id).delete()
@@ -90,7 +90,16 @@ def issue_reset_access(db: SQLAlchemySession, *, email: Optional[str] = None, us
            actor_id=actor.id if actor else None, actor_email=actor.email if actor else None,
            via="admin" if actor else "cli", expires_in_hours=RESET_ACCESS_EXPIRY_HOURS,
            tokens_revoked=tokens_revoked)
-    return user, reset_link(token)
+    return user, reset_link(token, base_url)
+
+
+def pending_for(db: SQLAlchemySession, user_id: int) -> bool:
+    """Whether the account has an open reset-access link. Sign-in waits for it: the reset may be
+    because someone else has the old password and authenticator."""
+    return db.query(PasswordReset.id).filter(PasswordReset.user_id == user_id,
+                                             PasswordReset.kind == RESET_ACCESS_KIND,
+                                             PasswordReset.used == False,  # noqa: E712
+                                             PasswordReset.expires_at > datetime.utcnow()).first() is not None
 
 
 def open_reset(db: SQLAlchemySession, token: str) -> Optional[PasswordReset]:
@@ -142,6 +151,12 @@ def complete_reset(db: SQLAlchemySession, row: PasswordReset, code: str, ip_addr
                                 f"{lockout.LOCK_MINUTES} minutes.")
         raise ResetAccessError(links.WRONG_CODE)
 
+    # Claim the link before using it: of two completions at once, only one gets through
+    claimed = db.query(PasswordReset).filter(PasswordReset.id == row.id, PasswordReset.used == False  # noqa: E712
+                                             ).update({"used": True}, synchronize_session=False)
+    if not claimed:
+        db.rollback()
+        raise ResetAccessError("This link has already been used.")
     codes = links.apply_choice(row, user)
     row.used = True
     db.query(Session).filter(Session.user_id == user.id).delete()

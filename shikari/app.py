@@ -8807,6 +8807,20 @@ async def login(
                 status_code=403,
             )
 
+        from shikari.auth.reset_access import pending_for
+
+        if pending_for(db, user.id):
+            # The reset may be because someone else has this password: only the link gets in now
+            log_audit_event(db=db, event_type=EVENT_LOGIN_FAILURE, user_id=user.id, email=email,
+                            ip_address=client_ip, user_agent=user_agent, success=False,
+                            details="Access reset pending")
+            return templates.TemplateResponse(
+                request, "login.html",
+                {"request": request, "csrf_token": next_csrf,
+                 "error": "Your access is being reset. Use the link your admin gave you."},
+                status_code=403,
+            )
+
         remember = remember_me == "true"
         if user.mfa_enabled and user.mfa_secret:
             # The password was right; the session waits for the second factor (POST /login/mfa)
@@ -14441,7 +14455,8 @@ async def admin_reset_access(user_id: int, request: Request, shikari_session: Op
         try:
             user, link = issue_reset_access(db, user_id=user_id, actor=admin_user,
                                             ip_address=request.client.host if request.client else None,
-                                            user_agent=request.headers.get("user-agent"))
+                                            user_agent=request.headers.get("user-agent"),
+                                            base_url=str(request.base_url))
         except ResetAccessError as e:
             return JSONResponse({"success": False, "error": str(e)},
                                 status_code=404 if isinstance(e, NoSuchAccount) else 409)
@@ -14572,7 +14587,7 @@ async def admin_invite(request: Request, shikari_session: Optional[str] = Cookie
                 db, email=str(data.get("email") or ""), role=data.get("role") or "standard",
                 full_name=data.get("full_name"), actor=admin_user,
                 ip_address=request.client.host if request.client else None,
-                user_agent=request.headers.get("user-agent"))
+                user_agent=request.headers.get("user-agent"), base_url=str(request.base_url))
         except InvitationError as e:
             return JSONResponse({"success": False, "error": str(e)}, status_code=_invitation_error_status(e))
         return {"success": True, "link": link, "expires_in_hours": INVITATION_EXPIRY_HOURS,
