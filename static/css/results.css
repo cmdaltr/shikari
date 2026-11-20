@@ -1175,3 +1175,11 @@
 #validation-checklist .validation-step summary { color: var(--k-red) !important; }
 #validation-warning { background: rgba(223, 81, 77, .08) !important; border-color: var(--k-red) !important; color: #9f2f2b !important; }
 [data-theme="dark"] #validation-warning { background: rgba(223, 81, 77, .14) !important; color: #f08a86 !important; }
+
+/* Select by grade, beside Select All / Deselect All */
+.grade-pick { display: inline-flex; align-items: center; gap: 4px; }
+.grade-pick[hidden] { display: none; }
+.grade-pick-label { font-size: .8rem; color: var(--text-secondary); margin-right: 2px; }
+.grade-pick .grade-pill { padding: 3px 9px; font-size: .8rem; font-weight: 700; }
+.grade-pick .grade-count { font-weight: 400; opacity: .75; margin-left: 2px; }
+.grade-pick .grade-pill:disabled { opacity: .35; cursor: default; }

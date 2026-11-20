@@ -540,6 +540,11 @@
             </svg>
             Deselect All
           </button>
+          {# Keep only the grades pressed: A and B ticks those and unticks the rest #}
+          <div class="grade-pick" id="grade-pick" role="group" aria-label="Select by quality grade">
+            <span class="grade-pick-label">Grades</span>
+            {% for g in ['A', 'B', 'C', 'D', 'F'] %}<button type="button" class="ui-pill grade-pill" data-grade="{{ g }}" aria-pressed="false" title="Select only the detections graded {{ g }} (with any others pressed)">{{ g }} <span class="grade-count"></span></button>{% endfor %}
+          </div>
           <span class="expand-btn" onclick="toggleAllVendors()">Expand All</span>
           <span id="detections-section-toggle" class="expand-btn" style="transition: all 0.3s ease; cursor: pointer;" onclick="toggleDetectionsSection()">Collapse</span>
         </div>
@@ -585,7 +590,7 @@
             <div class="detection-item" data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}">
               <div class="detection-title card-row" style="position: relative;">
                 <div style="display: flex; align-items: center; flex: 1; flex-wrap: wrap; gap: 4px; min-width: 0;">
-                  <input type="checkbox" class="detection-checkbox" checked data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}" data-files='{{ detection.files|tojson }}' title="Include in downloads and library saves">
+                  <input type="checkbox" class="detection-checkbox" checked data-grade="{{ detection.quality.grade if detection.quality else '' }}" data-technique="{{ detection.technique }}" data-vendor="{{ vendor.name }}" data-files='{{ detection.files|tojson }}' title="Include in downloads and library saves">
                   {% set in_lib = (detection.files or [])|select('in', library_saved.get(vendor.name, []))|list|length %}
                   {% if in_lib %}<span class="lib-saved" title="{{ in_lib }} of {{ (detection.files or [])|length }} file{{ 's' if (detection.files or [])|length != 1 }} already saved to your Library">In Library{% if in_lib < (detection.files or [])|length %} ({{ in_lib }}/{{ (detection.files or [])|length }}){% endif %}</span>{% endif %}
 
@@ -1809,6 +1814,32 @@ function deselectAllDetections() {
   });
 }
 
+// Select by grade: the detections whose grade is pressed, and no others
+(function () {
+  const pills = [...document.querySelectorAll('.grade-pill')];
+  const boxes = () => [...document.querySelectorAll('.detection-checkbox')];
+  pills.forEach(p => {
+    const n = boxes().filter(cb => cb.dataset.grade === p.dataset.grade).length;
+    p.querySelector('.grade-count').textContent = n;
+    p.disabled = !n;
+  });
+  pills.forEach(p => p.addEventListener('click', () => {
+    const on = p.getAttribute('aria-pressed') !== 'true';
+    p.setAttribute('aria-pressed', on);
+    p.classList.toggle('is-active', on);
+    const wanted = new Set(pills.filter(x => x.getAttribute('aria-pressed') === 'true').map(x => x.dataset.grade));
+    if (!wanted.size) return;   // the last grade let go: leave the ticks as they are
+    boxes().forEach(cb => {
+      const keep = wanted.has(cb.dataset.grade);
+      if (cb.checked !== keep) { cb.checked = keep; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+    });
+  }));
+  // Select All / Deselect All take over from the grades
+  const reset = () => pills.forEach(p => { p.setAttribute('aria-pressed', 'false'); p.classList.remove('is-active'); });
+  window.selectAllDetections = (orig => function () { reset(); return orig.apply(this, arguments); })(selectAllDetections);
+  window.deselectAllDetections = (orig => function () { reset(); return orig.apply(this, arguments); })(deselectAllDetections);
+})();
+
 // Select/Deselect all correlations
 function selectAllCorrelations() {
   document.querySelectorAll('.correlation-checkbox').forEach(cb => {
@@ -2855,11 +2886,13 @@ function toggleDetectionsSection() {
     content.style.maxHeight = '100000px';
     toggleText.textContent = 'Collapse';
     localStorage.setItem('detectionsSectionCollapsed', 'false');
+    document.getElementById('grade-pick').hidden = false;
   } else {
     // Collapse
     content.style.maxHeight = '0px';
     toggleText.textContent = 'Expand';
     localStorage.setItem('detectionsSectionCollapsed', 'true');
+    document.getElementById('grade-pick').hidden = true;
   }
 }
 
@@ -2924,6 +2957,8 @@ document.addEventListener('DOMContentLoaded', function() {
     detectionsContent.style.maxHeight = '100000px';
     detectionsToggleText.textContent = 'Collapse';
   }
+  // The grade pills only act on detections in view
+  document.getElementById('grade-pick').hidden = detectionsCollapsed;
 
   // Initialize X-SIEM pivots state (collapsed unless opened before), like the sections above
   const crossVendorContent = document.getElementById('cross-vendor-section-content');

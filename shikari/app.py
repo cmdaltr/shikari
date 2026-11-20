@@ -613,9 +613,10 @@ def get_platform_from_data_source(data_source: str) -> str:
     elif "mcafee" in data_source_lower:
         return "McAfee"
     else:
-        # Default: title case the data source
+        # Default: title case the data source, keeping acronyms such as Behaviour_UDM's
         return DATA_SOURCE_DISPLAY_NAMES.get(
-            data_source_lower, data_source.replace("_", " ").title()
+            data_source_lower,
+            " ".join(w if w.isupper() else w.title() for w in data_source.replace("_", " ").split()),
         )
 
 
