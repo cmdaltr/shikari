@@ -41,6 +41,17 @@ services:
       - PYTHONDONTWRITEBYTECODE=1
       # Where people open Shikari, for the links in invitations, access resets and emails (.env)
       - BASE_URL=${BASE_URL:-}
+      # Email (shikari/auth/email.py), for Forgot password: compose passes only what's listed here, so
+      # SMTP settings in .env reach the container only through these lines. Off unless EMAIL_ENABLED=true
+      - EMAIL_ENABLED=${EMAIL_ENABLED:-false}
+      - SMTP_HOST=${SMTP_HOST:-localhost}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USE_TLS=${SMTP_USE_TLS:-true}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@shikari.local}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-Shikari Security Platform}
+      - SMTP_TIMEOUT=${SMTP_TIMEOUT:-10}
     restart: unless-stopped
     networks:
       - shikari-network
