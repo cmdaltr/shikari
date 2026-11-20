@@ -218,3 +218,22 @@ def test_a_late_event_naming_two_entities_is_counted_once():
                1: {"splunk": [{"_time": "2026-11-09T16:00:00Z", "host": "ws5", "user": "svc"}]}}
     late = [u for u in consolidate(playbook, results)["unjoined"] if u["reason"] == "outside_window"]
     assert [u["events"] for u in late] == [1]
+
+
+def test_defender_runs_share_one_client_so_its_token_is_reused(monkeypatch):
+    from shikari import app as app_module
+
+    for name, value in (("SHIKARI_MDE_TENANT_ID", "t"), ("SHIKARI_MDE_CLIENT_ID", "c"),
+                        ("SHIKARI_MDE_CLIENT_SECRET", "s")):
+        monkeypatch.setenv(name, value)
+    app_module._pivot_mde.cache_clear()
+    made = []
+    monkeypatch.setattr("shikari.query.mde.MDEClient.__init__",
+                        lambda self, client=None: made.append(self))
+    app_module._pivot_clients()
+    app_module._pivot_clients()
+    assert len(made) == 1
+    monkeypatch.setenv("SHIKARI_MDE_CLIENT_SECRET", "rotated")
+    app_module._pivot_clients()
+    assert len(made) == 2
+    app_module._pivot_mde.cache_clear()

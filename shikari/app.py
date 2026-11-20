@@ -6929,11 +6929,18 @@ PIVOT_UPLOAD_BYTES = 25 * 1024 * 1024
 PIVOT_RUN_ROWS = 50000
 
 
+@functools.lru_cache(maxsize=1)
+def _pivot_mde(tenant_id: str, client_id: str, client_secret: str):
+    """One Defender XDR client while its app registration is the same, so its sign-in token is reused
+    across stages and runs (samarkand keeps it until shortly before it expires)."""
+    from shikari.query.mde import MDEClient
+    return MDEClient()
+
+
 def _pivot_clients() -> dict:
     """The SIEMs a pivot stage can be run in from here: those whose query client is configured
     (docs/features/QUERY_EXECUTION.md), by the vendor keys playbooks use."""
     from shikari.query.elastic import ElasticClient
-    from shikari.query.mde import MDEClient
     from shikari.query.splunk import SplunkClient
 
     env = os.environ.get
@@ -6944,7 +6951,8 @@ def _pivot_clients() -> dict:
             env("ELASTIC_API_KEY") or (env("ELASTIC_USERNAME") and env("ELASTIC_PASSWORD"))):
         clients["elastic"] = lambda q: ElasticClient().execute_query(q, max_results=PIVOT_RUN_ROWS)
     if env("SHIKARI_MDE_TENANT_ID") and env("SHIKARI_MDE_CLIENT_ID") and env("SHIKARI_MDE_CLIENT_SECRET"):
-        clients["mde"] = lambda q: MDEClient().execute_query(q, max_results=PIVOT_RUN_ROWS)
+        mde = _pivot_mde(env("SHIKARI_MDE_TENANT_ID"), env("SHIKARI_MDE_CLIENT_ID"), env("SHIKARI_MDE_CLIENT_SECRET"))
+        clients["mde"] = lambda q: mde.execute_query(q, max_results=PIVOT_RUN_ROWS)
     return clients
 
 

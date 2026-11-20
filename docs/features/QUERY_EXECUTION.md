@@ -1,6 +1,6 @@
 # Query Execution
 
-Running a generated query against the SIEM and reading the results back. Each client here is a thin front on `samarkand.siem` (samarkand 0.2.0), the clients Ostraka queries its SIEMs with, so the requests, paging, retries and error messages are samarkand's; Shikari's keep their environment variables and their `{"status", "results", "stats"}` answers.
+Running a generated query against the SIEM and reading the results back. Each client here is a thin front on `samarkand.siem` (samarkand 0.2.3), the clients Ostraka queries its SIEMs with, so the requests, paging, retries and error messages are samarkand's; Shikari's keep their environment variables and their `{"status", "results", "stats"}` answers.
 
 ## Splunk
 
