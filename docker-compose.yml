@@ -31,6 +31,11 @@ services:
       # bridge, not 127.0.0.1, and uvicorn ignores X-Forwarded-Proto from anywhere it doesn't trust:
       # pages then link their CSS and JS over http and browsers block it as mixed content
       - FORWARDED_ALLOW_IPS=127.0.0.1,::1,172.16.0.0/12
+      # The code is mounted from the host: bytecode the container writes there is root's, and the
+      # host can't then replace the folder (homelab's update)
+      - PYTHONDONTWRITEBYTECODE=1
+      # Where people open Shikari, for the links in invitations, access resets and emails (.env)
+      - BASE_URL=${BASE_URL:-}
     restart: unless-stopped
     networks:
       - shikari-network
