@@ -77,6 +77,7 @@ from shikari.auth import (
     decrypt_api_key,
 )
 from shikari.auth import lockout
+from shikari.auth.links import request_origin
 from shikari.database.models import User, UserRole, APIKey, at_least
 from shikari.validation.query_syntax_validator import validate_query_syntax
 from shikari.validation import get_validation_router
@@ -14499,7 +14500,7 @@ async def admin_reset_access(user_id: int, request: Request, shikari_session: Op
             user, link = issue_reset_access(db, user_id=user_id, actor=admin_user,
                                             ip_address=request.client.host if request.client else None,
                                             user_agent=request.headers.get("user-agent"),
-                                            base_url=str(request.base_url))
+                                            base_url=request_origin(request))
         except ResetAccessError as e:
             return JSONResponse({"success": False, "error": str(e)},
                                 status_code=404 if isinstance(e, NoSuchAccount) else 409)
@@ -14634,7 +14635,7 @@ async def admin_invite(request: Request, shikari_session: Optional[str] = Cookie
                 db, email=str(data.get("email") or ""), role=data.get("role") or "standard",
                 full_name=data.get("full_name"), actor=admin_user,
                 ip_address=request.client.host if request.client else None,
-                user_agent=request.headers.get("user-agent"), base_url=str(request.base_url))
+                user_agent=request.headers.get("user-agent"), base_url=request_origin(request))
         except InvitationError as e:
             return JSONResponse({"success": False, "error": str(e)}, status_code=_invitation_error_status(e))
         return {"success": True, "link": link, "expires_in_hours": INVITATION_EXPIRY_HOURS,

@@ -7,6 +7,7 @@ proxies and Referer headers; the page posts it in a request body. Only its SHA-2
 
 import hashlib
 import json
+import re
 import secrets
 from typing import Optional
 
@@ -38,6 +39,25 @@ def warn_if_no_base_url() -> None:
 
     if not base_url_set():
         print(NO_BASE_URL_WARNING, file=sys.stderr)
+
+
+# An origin or host as a browser or proxy sends it: nothing after the port, so a header can't add a path
+_ORIGIN = re.compile(r"^https?://([A-Za-z0-9.\-]+|\[[0-9A-Fa-f:.]+\])(:\d{1,5})?$")
+_HOST = re.compile(r"^([A-Za-z0-9.\-]+|\[[0-9A-Fa-f:.]+\])(:\d{1,5})?$")
+
+
+def request_origin(request) -> str:
+    """The address an admin's request came to, for their links when BASE_URL isn't set, as Ostraka and
+    Rowanholt find it: the page's Origin (a browser sends it with every POST, and it's the address in the
+    address bar, whatever proxies sit between), else the proxy's X-Forwarded-Host with the scheme uvicorn
+    took from its trusted proxies, else the request's own. Never used for an emailed link."""
+    origin = (request.headers.get("origin") or "").strip()
+    if _ORIGIN.match(origin):
+        return origin
+    forwarded = (request.headers.get("x-forwarded-host") or "").split(",")[0].strip()
+    if _HOST.match(forwarded):
+        return f"{request.url.scheme}://{forwarded}"
+    return str(request.base_url).rstrip("/")
 
 
 def link(path: str, token: str, base: Optional[str] = None) -> str:

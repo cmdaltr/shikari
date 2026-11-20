@@ -48,17 +48,28 @@ def bind_host(argv=None) -> Optional[str]:
     desktop app runs uvicorn in-process on 127.0.0.1 and passes nothing. None when nothing says, which
     is uvicorn's own default, 127.0.0.1."""
     argv = sys.argv if argv is None else argv
+    # uvicorn listens on --uds, else --fd, else --host: a socket handed over says nothing about who can
+    # reach it (a proxy, or systemd socket activation on any address), so it never counts as loopback
+    uds, fd = _option(argv, "--uds", "UVICORN_UDS"), _option(argv, "--fd", "UVICORN_FD")
+    if uds:
+        return f"unix:{uds}"
+    if fd:
+        return f"fd:{fd}"
+    return _option(argv, "--host", "UVICORN_HOST") or os.environ.get("SHIKARI_HOST") or None
+
+
+def _option(argv, flag: str, env: str) -> Optional[str]:
     for i, arg in enumerate(argv):
-        if arg == "--host" and i + 1 < len(argv):
+        if arg == flag and i + 1 < len(argv):
             return argv[i + 1]
-        if arg.startswith("--host="):
+        if arg.startswith(f"{flag}="):
             return arg.split("=", 1)[1]
-    return os.environ.get("UVICORN_HOST") or os.environ.get("SHIKARI_HOST") or None
+    return os.environ.get(env) or None
 
 
 def loopback_only(host: Optional[str]) -> bool:
-    """Whether a bind address reaches this machine alone. 0.0.0.0, ::, a LAN or tailnet address and any
-    name other than localhost don't."""
+    """Whether a bind address reaches this machine alone. 0.0.0.0, ::, a LAN or tailnet address, a socket
+    handed over with --uds or --fd, and any name other than localhost don't."""
     if host is None:
         return True
     host = host.strip().strip("[]")
