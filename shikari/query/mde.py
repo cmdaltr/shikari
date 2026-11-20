@@ -15,6 +15,9 @@ from samarkand import siem
 
 from shikari.telemetry.mde import client as defender
 
+# What a failed request can raise: samarkand's own errors, and a token answer missing its access_token
+_FAILURES = (siem.SiemProblem, RuntimeError, KeyError, ValueError)
+
 
 class MDEClient:
     """Read-only Advanced Hunting client for measuring how often a detection fires."""
@@ -33,7 +36,7 @@ class MDEClient:
         """Run a KQL hunting query. Returns ``{status, results, stats: {row_count}}`` or ``{status, error}``."""
         try:
             result = self.client.query(query, max_rows=max_results)
-        except (siem.SiemProblem, RuntimeError) as e:
+        except _FAILURES as e:
             return {"status": "error", "error": str(e)}
         return {"status": "success", "results": result.rows,
                 "stats": {"row_count": len(result.rows), "truncated": result.truncated}}
@@ -45,7 +48,10 @@ class MDEClient:
         falling back to counting rows directly if a query resists the appended operator.
         """
         r = self.execute_query(f"{query}\n| count")
-        if r["status"] == "success" and r["results"] and "Count" in r["results"][0]:
+        if r["status"] != "success":
+            # Unreachable or refused: running the whole query unbounded would fail the same way
+            return None
+        if r["results"] and "Count" in r["results"][0]:
             return int(r["results"][0]["Count"])
         r = self.execute_query(query)
         return r["stats"]["row_count"] if r["status"] == "success" else None
@@ -55,6 +61,6 @@ class MDEClient:
         try:
             self.client.check()
             return True
-        except (siem.SiemProblem, RuntimeError) as e:
+        except _FAILURES as e:
             print(f"Defender XDR connection test failed: {e}")
             return False

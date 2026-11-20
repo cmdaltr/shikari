@@ -215,7 +215,8 @@ class DockerSIEMManager:
                 vendor=vendor,
                 session_id="compose",  # Special session ID for compose containers
                 container_id=container_id,
-                host="localhost",
+                # Not "localhost": samarkand connects to the first address only, ::1 on macOS
+                host="127.0.0.1",
                 port=first_port,
                 api_port=api_port,
                 status="running",
@@ -361,7 +362,7 @@ class DockerSIEMManager:
                 vendor=vendor,
                 session_id=session_id,
                 container_id=container_id,
-                host="localhost",
+                host="127.0.0.1",
                 port=first_host_port,
                 api_port=api_host_port,
                 status="starting",
@@ -487,9 +488,9 @@ if __name__ == "__main__":
 
         # Vendor-specific health endpoints
         if instance.vendor == "splunk":
-            health_url = f"https://localhost:{instance.api_port}/services/server/health/splunkd"
+            health_url = f"https://127.0.0.1:{instance.api_port}/services/server/health/splunkd"
         elif instance.vendor == "elastic":
-            health_url = f"http://localhost:{instance.api_port}/_cluster/health"
+            health_url = f"http://127.0.0.1:{instance.api_port}/_cluster/health"
 
         session = requests.Session()
         retries = Retry(total=3, backoff_factor=0.5)
@@ -755,7 +756,7 @@ if __name__ == "__main__":
     def _ingest_splunk(self, instance: SIEMInstance, events: List[Dict]) -> bool:
         """Ingest events into Splunk via HEC"""
         hec_port = int(list(self.SIEM_CONFIGS["splunk"]["ports"].keys())[2])  # HEC port
-        hec_url = f"http://localhost:{instance.port + (hec_port - 8000)}/services/collector/event"
+        hec_url = f"http://127.0.0.1:{instance.port + (hec_port - 8000)}/services/collector/event"
 
         headers = {
             "Authorization": f"Splunk {instance.credentials.get('hec_token', '')}",
@@ -867,7 +868,7 @@ if __name__ == "__main__":
 
         try:
             client = SplunkClient(
-                host="localhost",
+                host="127.0.0.1",
                 port=instance.api_port,
                 username=instance.credentials.get("username", "admin"),
                 password=instance.credentials.get("password", ""),

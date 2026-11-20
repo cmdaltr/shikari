@@ -81,6 +81,14 @@ def test_hit_count_falls_back_to_row_count(graph):
 def test_hit_count_of_a_failed_query_is_none(graph):
     graph.status = 400
     assert MDEClient().hit_count("Q") is None
+    assert len(graph.hunts) == 1   # a refused count isn't retried as the whole query, unbounded
+
+
+def test_token_answer_without_a_token_is_an_error(graph):
+    real = graph.request
+    graph.request = lambda method, url, **kw: ok({}) if "login.microsoftonline.com" in url else real(method, url, **kw)
+    with patch("samarkand._http.request", graph.request):
+        assert MDEClient().execute_query("Q")["status"] == "error"
 
 
 def test_connection_ok_and_fail(graph):
