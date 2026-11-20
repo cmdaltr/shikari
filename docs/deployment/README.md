@@ -6,6 +6,21 @@ Server 2022+, with TLS, upgrades, backups and monitoring (#29).
 
 For a single-user machine, `shikari start` or the desktop app is enough — you don't need any of this.
 
+## The first admin
+
+A team server runs with `SHIKARI_MODE=server` (every route on this page sets it, and so does `docker-compose.yml`). It seeds no account, and there's no self-registration: accounts come by invitation. The first admin accepts a one-time invitation, as in Ostraka:
+
+- `deploy/linux/install.sh --admin you@example.org` (or answer its prompt) writes `SHIKARI_ADMIN_EMAIL` to `/etc/shikari/shikari.env` and prints the link at the end.
+- `deploy/windows/install-service.ps1 -AdminEmail you@example.org` sets it for the Windows task; the Windows service reads it from `%ProgramData%\Shikari\shikari.env`.
+- Docker: `SHIKARI_ADMIN_EMAIL=you@example.org docker compose up -d`, then the link is in `docker compose logs shikari`.
+- With no active admin, each start logs the link for `SHIKARI_ADMIN_EMAIL` if no first-admin invitation is open; on demand, `shikari first-admin you@example.org` (Docker: `docker compose exec shikari python shikari/service.py first-admin you@example.org`).
+
+The link works once, within 24 hours (the token is after `#`, so it never reaches a log), and names `BASE_URL`: set that in the env file to the address people use. It opens a page to choose a password and set up an authenticator; then that admin invites everyone else (Settings → Users → Invite). `first-admin` is refused (exit status 5) once an active admin exists, unless `--force`, and only the newest such link works. Without `BASE_URL` the link names localhost, and the start-up message and the command line warn about it on stderr each time they print one.
+
+### People locked out later
+
+An admin's Settings → Users → Reset access, or `shikari reset-access <email>` on the server, gives a one-time link to a new password and authenticator (24 hours; the account's sessions end and its API tokens are revoked). With email set up (`EMAIL_ENABLED=true`, the `SMTP_*` settings) and `BASE_URL` set, people can ask for the same link themselves from **Forgot password** on the sign-in page; without both, that page tells them to ask an administrator. Five wrong passwords, or five wrong codes on a reset link, lock the account for 15 minutes (HTTP 429). Deactivating an account ends its sessions and revokes its API tokens.
+
 ## What you get
 
 | | Linux | Windows Server |
@@ -34,8 +49,14 @@ sudo deploy/linux/install.sh
 ```
 
 It creates the `shikari` system user, copies the code to `/opt/shikari`, builds a virtualenv, writes
-`/etc/shikari/shikari.env`, installs and starts `shikari.service`, and waits for `/health`. Re-running it
+`/etc/shikari/shikari.env` (with `SHIKARI_MODE=server`), installs and starts `shikari.service`, waits for
+`/health`, and prints the first admin's invitation link (`--admin EMAIL`, or it asks; see
+[The first admin](#the-first-admin)). Re-running it
 is an in-place upgrade (new code + dependencies, then restart) — it never touches `/var/lib/shikari`.
+
+The service runs from `/var/lib/shikari`, the one folder it may write: the database (`data/shikari.db`)
+and generated files live there, and `/opt/shikari` stays read-only. The `shikari` command line follows
+`SHIKARI_HOME` the same way, so it works on the server's own data.
 
 ```bash
 systemctl status shikari

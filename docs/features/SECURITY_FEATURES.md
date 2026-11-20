@@ -27,8 +27,10 @@ Shikari implements comprehensive security features to protect user accounts and 
 Shikari uses cookie-based session authentication with role-based access control (RBAC).
 
 ### User Roles
-- **Admin**: Full system access, user management capabilities
-- **Standard**: Regular user access, cannot manage other users
+Each role has everything the one below it has (`UserRole` in `shikari/database/models.py`):
+- **Admin** (`admin`): user management, secrets and integration settings
+- **Operational analyst** (`operator`): the lab (own machines), telemetry rebuilds, source edits
+- **Analyst** (`standard`): hunt, view, author detections, watchlists
 
 ### Implementation Details
 - **Location**: `shikari/auth/session.py`, `shikari/app.py`
@@ -38,13 +40,20 @@ Shikari uses cookie-based session authentication with role-based access control 
   - Remember Me: 7 days
 - **Session ID**: 64-character UUID
 
-### Default Credentials
+### First admin
+
+A **local** Shikari (the desktop app, or `shikari start` from a checkout) seeds a default admin into an empty database:
+
 ```
-Email: admin@shikari.app
-Password: BigGameHunter
+Sign in as: admin
+Password:   BigGameHunter
 ```
 
-**⚠️ IMPORTANT**: Change the default admin password immediately after first login!
+`admin` is a username: the one account whose login isn't an email, stored as exactly `admin`, which no validated email can be, so no invitation or admin edit can give it to anyone else. It's seeded only while Shikari listens on loopback, and the seeding is audited (`default_admin_seeded`). The bind is read as uvicorn decides it: the `--host` it was given (every launcher passes one: `shikari start`/`serve`/`app`, the systemd unit, the Windows service and Scheduled Task, the Dockerfile, `python -m shikari.app`; `--reload` and `--workers` children inherit the same command line), else `UVICORN_HOST`, else `SHIKARI_HOST`; the desktop app's in-process server is always `127.0.0.1`. A socket passed with `--fd` or `--uds` isn't seen. On a network address there's no default admin and the log says to use `shikari first-admin`. An older database's `admin@shikari.app` is renamed to `admin` on a local start (audited as `default_admin_renamed`). **Change its password after the first sign-in.**
+
+A **team server** (`SHIKARI_MODE=server`, set by `docker-compose.yml`, `deploy/linux/install.sh` and the Windows service) seeds no account. With no active admin, its first start issues `SHIKARI_ADMIN_EMAIL` a one-time first-admin invitation (24 hours, the token after `#`) and logs the link; `shikari first-admin <email>` (or `scripts/admin/create_admin.py <email>`) issues one on demand, refused (exit status 5) once an active admin exists unless `--force`, and only the newest works; each replaced one is audited as `invitation_revoked` with `reason: replaced`. Links name `BASE_URL`; without it the command line and the start-up message name localhost and warn on stderr every time they print one. If a server still has an account with the public default password, every start logs a warning.
+
+*Decided 19 November 2026 (Ben), the same across Ostraka, Rowanholt and Shikari: a known-password default admin only on a local install listening on loopback; every team server's first admin by one-time invitation; the server flag explicit (`SHIKARI_MODE=server`, since `SHIKARI_SERVER` is already the desktop app's server URL), keying both the closed `/register` and the absence of a seeded account. A server's existing `admin@shikari.app` is neither renamed nor removed, only warned about while its password is still the default.*
 
 ---
 
@@ -71,14 +80,18 @@ from shikari.auth.password import validate_password_strength
 is_valid, message = validate_password_strength("MyP@ssw0rd123")
 ```
 
-### Password Reset Flow
-1. User requests password reset via email
-2. System generates unique reset token (1-hour expiration)
-3. Token sent via email
-4. User clicks link, validates token, sets new password
-5. Token marked as used (single-use only)
+### Forgot Password (self-service reset access)
+**Forgot password** on the sign-in page emails the account a reset-access link, the same link an admin issues (see Reset Access below): one use, within 24 hours, a new password and a new authenticator, fresh backup codes. It works only with email sending set up (`EMAIL_ENABLED=true` and the `SMTP_*` settings) and `BASE_URL` set; without them the page says to ask an administrator and `POST /api/auth/reset-access/request` answers 503. `BASE_URL` is required because an emailed link built from the request's `Host` header would point wherever the person asking chose.
 
-**Implementation**: `shikari/auth/password_reset.py`
+- The answer is the same whether or not an account matched ("If that address has an account, a link is on its way"), and the email is sent after the response, so its timing doesn't tell either.
+- Limited to 3 requests an hour per address and 20 per IP (429 beyond).
+- Asking ends no sessions, revokes no tokens and clears no lockout, since anyone can ask; the link's completion does the first two.
+- A new request replaces an earlier open self-service link, never an open admin-issued one (that request is audited as a failed `access_reset_issued` and sends nothing).
+- Audited as `access_reset_issued` with `via: self-service`.
+
+The old 1-hour `?token=` password-only reset (`/reset-password`, `/api/auth/request-reset`, `/api/auth/reset-password`, `shikari/auth/password_reset.py`) is gone; rows it left in `password_resets` (kind NULL) are never accepted.
+
+**Implementation**: `shikari/auth/reset_access.py`
 
 ---
 
@@ -100,7 +113,8 @@ is_valid, message = validate_password_strength("MyP@ssw0rd123")
 ### Session Termination
 - Manual logout
 - Session expiration
-- User deactivation
+- User deactivation (`PUT /api/admin/users/{id}` with `is_active: false`, or `DELETE`): sessions end and API tokens are revoked, audited as `user_deactivated` with `tokens_revoked`
+- Reset access: issued by an admin or the server, and completed
 - Password change (optional: invalidate all sessions)
 
 **Implementation**: `shikari/auth/session.py`
@@ -190,7 +204,9 @@ if not validate_csrf_token(token, session_id):
 
 ### Lockout Behavior
 - **Duration**: 15 minutes (configurable)
-- **Effect**: All login attempts rejected during lockout
+- **Effect**: All login attempts rejected during lockout, with HTTP 429 (the attempt that locks it too), at sign-in and on a reset-access link alike
+- **Wrong codes on a reset-access link** count towards the same lockout
+- **Audited** as `account_locked` (with `via`: `sign-in` or `reset-access`) wherever a lock is applied
 - **Database Field**: `locked_until` timestamp in User model
 - **Counter**: `failed_login_attempts` in User model
 
@@ -222,18 +238,19 @@ All security-sensitive operations are logged to the database for compliance and 
   - `logout`
 - **Password Operations**:
   - `password_change`
-  - `password_reset_request`
-  - `password_reset_complete`
-  - `access_reset_issued` (by an admin or `shikari reset-access`; the details name which, and `tokens_revoked`)
-  - `invitation_created`, `invitation_revoked`, `account_created` (invitations)
-  - `access_reset_completed` (with `tokens_revoked`; also logged, as a failure, for each wrong authenticator code and while the account is locked)
+  - `access_reset_issued` (`via`: `admin`, `cli` or `self-service`, and `tokens_revoked`; a failure when a self-service request meets an open admin-issued reset)
+  - `access_reset_completed` (with `via`, admin, cli or self-service, and `tokens_revoked`)
+  - `access_reset_failed` (each wrong authenticator code, and attempts while the account is locked)
+  - `invitation_created`, `invitation_revoked` (`reason: replaced` when a newer invitation replaced it), `account_created` (invitations)
+  - `invitation_wrong_code` (each wrong code on an invitation, with `attempt`) and `invitation_closed` (the fifth)
+  - `default_admin_seeded`, `default_admin_renamed` (a local Shikari's `admin`)
 - **Profile Changes**:
   - `profile_update`
   - `api_key_update`
 - **Admin Operations**:
   - `user_created`
   - `user_updated`
-  - `user_deactivated`
+  - `user_deactivated` (with `tokens_revoked`)
 - **Security Events**:
   - `account_locked`
   - `account_unlocked`
@@ -301,15 +318,14 @@ export BASE_URL=https://your-domain.com
 
 ### Development Mode
 When `EMAIL_ENABLED=false`:
-- Emails logged to console instead of sending
-- Useful for local development/testing
-- Shows full email content in logs
+- Forgot password isn't offered: the page says to ask an administrator, and `POST /api/auth/reset-access/request` answers 503
+- Any other email (watchlist digests) is logged to the console instead of sent, with its full content
 
 ### Email Types
-1. **Password Reset Emails**
+1. **Reset-access emails** (Forgot password)
    - Branded HTML template
    - Plain text fallback
-   - 1-hour expiration notice
+   - The link's 24-hour, one-use notice
    - Security warnings included
 
 ### Email Security Features
@@ -343,6 +359,8 @@ class User(Base):
 4. User confirms setup with TOTP code
 5. Backup codes generated and displayed once
 6. Future logins require TOTP code
+
+An invited account, and an account whose access was reset, enrols its authenticator at the link, so MFA is on from the start; the self-registered accounts of a local Shikari and its default `admin` turn it on here.
 
 ### Supported Authenticator Apps
 - Google Authenticator
@@ -412,7 +430,7 @@ GET /api/admin/users
   "users": [
     {
       "id": 1,
-      "email": "admin@shikari.app",
+      "email": "boss@example.org",
       "full_name": "Admin User",
       "role": "admin",
       "is_active": true,
@@ -437,9 +455,9 @@ Content-Type: application/json
 
 **Response**: `{"success": true, "link": "<BASE_URL>/accept-invite#<token>", "expires_in_hours": 24, "invitation": {...}}`
 
-Permanent admins only. There's no account until the person accepts: at the link they give their name, choose a password and enrol an authenticator (MFA is always on for an invited account), and the account is made with the invited role once a code from it verifies; they're signed in and shown backup codes once. The link works once, within 24 hours, and an earlier open invitation for the same email stops working. The token is in the URL fragment and only its SHA-256 hash is stored. Refused (409) for an email that already has an account (use Reset access), and (402) when the licence's seats are full, counting open invitations; seats are checked again on acceptance. `GET /api/admin/invitations` lists the open ones and `DELETE /api/admin/invitations/{id}` revokes one. Audited as `invitation_created`, `invitation_revoked` and `account_created`. From the server: `shikari invite <email> --role …`, and `scripts/admin/create_admin.py <email>` for an admin when none can sign in.
+Permanent admins only. There's no account until the person accepts: at the link they give their name, choose a password and enrol an authenticator (MFA is always on for an invited account), and the account is made with the invited role once a code from it verifies; they're signed in and shown backup codes once. The link works once, within 24 hours, and an earlier open invitation for the same email stops working. The token is in the URL fragment and only its SHA-256 hash is stored. Opening the link again shows the same authenticator (the secret is made on the first start and reused), and a later name or password replaces the earlier one. Each wrong code is audited (`invitation_wrong_code`); the fifth closes the invitation (`invitation_closed`, what was chosen cleared) and the admin must issue a new one. An expired link answers 410 with its own "has expired" message (for as long as its row is kept); a used, revoked, replaced, closed or unknown one answers 404 with the same "isn't valid" message whichever it was. Anything chosen on a link is cleared when it's replaced, revoked, used, closed or found expired. Refused (409) for an email that already has an account (use Reset access), and (402) when the licence's seats are full, counting open invitations; seats are checked again on acceptance, as is the inviter, who must still be an active admin. `GET /api/admin/invitations` lists the open ones and `DELETE /api/admin/invitations/{id}` revokes one. Audited as `invitation_created`, `invitation_revoked` and `account_created`. From the server: `shikari invite <email> --role …`, and `scripts/admin/create_admin.py <email>` for an admin when none can sign in.
 
-There's no admin route that creates an account with a password the admin types (the old `POST /api/admin/users`), and on a server there's no self-registration: `/register` redirects to `/login?invite_only=1`. The desktop app's own local Shikari (`SHIKARI_DESKTOP=1`) keeps `/register`.
+There's no admin route that creates an account with a password the admin types (the old `POST /api/admin/users`), and on a team server (`SHIKARI_MODE=server`), or a local Shikari listening on a network address, there's no self-registration: `/register` redirects to `/login?invite_only=1`. Only a local Shikari on loopback keeps `/register`: the same guard as seeding the default admin.
 
 #### 3. Update User
 ```http
@@ -454,12 +472,14 @@ Content-Type: application/json
 }
 ```
 
+Setting `is_active` to `false` here is a deactivation: the account's sessions end and its API tokens are revoked, as with `DELETE`.
+
 #### 4. Deactivate User
 ```http
 DELETE /api/admin/users/{user_id}
 ```
 
-**Note**: Soft delete - sets `is_active` to `false` and invalidates all sessions.
+**Note**: Soft delete - sets `is_active` to `false`, ends all sessions and revokes the account's API tokens (audited as `user_deactivated`).
 
 #### 5. Reset Access
 ```http
@@ -468,7 +488,7 @@ POST /api/admin/users/{user_id}/reset-access
 
 **Response**: `{"success": true, "link": "<BASE_URL>/reset-access#<token>", "email": "...", "expires_in_hours": 24}`
 
-Permanent admins only (not a temporary grant). Ends the user's sessions, revokes their API tokens, makes any earlier reset link useless, clears a lockout, and returns a one-time link for the admin to pass on. At the link the user chooses a new password and enrols a new authenticator (required, even though MFA is otherwise optional); only once a code from it verifies are the password, MFA secret and a fresh set of backup codes saved, and the user is signed in; API tokens made since the link was issued are revoked then too. Wrong codes count towards the sign-in lockout (5 wrong, then locked for 15 minutes; a locked account is refused, 429, before the code is checked). The token is in the URL fragment, so browsers never send it to the server, and only its SHA-256 hash is stored. Both audit events record `tokens_revoked`. `shikari reset-access <email>` does the same from the server. This replaces the old `POST /api/admin/reset-password`, where the admin chose the new password.
+Permanent admins only (not a temporary grant). Ends the user's sessions, revokes their API tokens, makes any earlier reset link (a self-service one too) useless, clears a lockout, and returns a one-time link for the admin to pass on. The old password and authenticator keep working until the link is completed: nothing refuses sign-in because a reset is open (Ben's decision, 20 November 2026). Opening the link again shows the same authenticator; an expired link says so (410), a used or replaced one gets the generic "isn't valid" (404). At the link the user chooses a new password and enrols a new authenticator (required, even though MFA is otherwise optional); only once a code from it verifies are the password, MFA secret and a fresh set of backup codes saved, and the user is signed in; API tokens made since the link was issued are revoked then too. Wrong codes count towards the sign-in lockout (5 wrong, then locked for 15 minutes; a locked account is refused, 429, before the code is checked). The token is in the URL fragment, so browsers never send it to the server, and only its SHA-256 hash is stored. Both audit events record `tokens_revoked`. `shikari reset-access <email>` does the same from the server. This replaces the old `POST /api/admin/reset-password`, where the admin chose the new password.
 
 ### Admin UI
 - Located in Profile page, "Users" tab
@@ -478,7 +498,7 @@ Permanent admins only (not a temporary grant). Ends the user's sessions, revokes
 - Invite users (with pending invitations listed and revocable), update, deactivate
 - Reset access (a one-time link to a new password and authenticator)
 
-**Implementation**: `shikari/app.py` (lines 4578-4847)
+**Implementation**: `shikari/app.py` (`/api/admin/users`, `/api/admin/invitations`), `shikari/auth/invitations.py`, `shikari/auth/reset_access.py`
 
 ---
 
@@ -487,7 +507,7 @@ Permanent admins only (not a temporary grant). Ends the user's sessions, revokes
 ### For Administrators
 
 1. **Change Default Credentials**
-   - Change admin password immediately
+   - On a local Shikari, change the default `admin` password immediately (a team server has no default account)
    - Use strong, unique password
    - Enable MFA for admin account
 
@@ -565,8 +585,8 @@ Permanent admins only (not a temporary grant). Ends the user's sessions, revokes
 ## Security Checklist
 
 ### Initial Setup
-- [ ] Change default admin password
-- [ ] Configure SMTP for email delivery
+- [ ] Local Shikari: change the default `admin` password. Team server: set `SHIKARI_ADMIN_EMAIL` (or run `shikari first-admin <email>`) and accept the first admin's invitation
+- [ ] Configure SMTP for email delivery (Forgot password needs it, and `BASE_URL`)
 - [ ] Set strong CSRF secret key
 - [ ] Review rate limiting settings
 - [ ] Enable MFA for admin accounts
@@ -579,12 +599,12 @@ Permanent admins only (not a temporary grant). Ends the user's sessions, revokes
 - [ ] Backup database regularly
 
 ### Before Production Deployment
-- [ ] Change all default credentials
+- [ ] Change all default credentials (a server still holding `admin@shikari.app` or `admin` with the default password logs a warning at every start)
 - [ ] Configure production SMTP server
 - [ ] Set production BASE_URL
 - [ ] Enable HTTPS/TLS
 - [ ] Review all environment variables
-- [ ] Test password reset flow
+- [ ] Test an invitation, Reset access and Forgot password
 - [ ] Test MFA flow
 - [ ] Run security tests
 - [ ] Review audit logging
@@ -596,10 +616,8 @@ Permanent admins only (not a temporary grant). Ends the user's sessions, revokes
 ### Suspected Account Compromise
 
 1. **Immediate Actions**:
-   - Lock the affected account
-   - Invalidate all active sessions
-   - Review audit logs for unauthorized activity
-   - Change password
+   - Deactivate the account (Settings → Users), which ends its sessions and revokes its API tokens, or reset its access
+   - Review audit logs for unauthorised activity
 
 2. **Investigation**:
    - Check audit logs for:

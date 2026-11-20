@@ -148,7 +148,7 @@ engagement, as Ostraka's attaches to an incident).
 
 | Feature id | Free | Pro | Services | Gated at |
 |---|---|---|---|---|
-| (seats) | 2 (for example an operator and a reviewer) | Licence | Licence | `licence.can_add_user`: when an invitation is issued (active accounts plus open invitations) and again when it's accepted; registration in the desktop app's local Shikari |
+| (seats) | 2 (for example an operator and a reviewer) | Licence | Licence | `licence.can_add_user`: when an invitation is issued (active accounts plus open invitations) and again when it's accepted; registration on a local Shikari |
 | `report-branding` | — | One brand for the installation | Yes | `reports/theme.py:active_theme()`, when a report is drawn |
 | `brand-library` | — | — | A brand per client, chosen per assessment | `reports/theme.py:theme_for_assessment()`, when an assessment report is drawn |
 | `automation` | — | Yes | Yes | `webhooks.py` — `emit()` / `deliver()`, when a webhook would be sent |

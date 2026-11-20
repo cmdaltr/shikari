@@ -8,8 +8,10 @@ Wants=network-online.target
 Type=simple
 User=shikari
 Group=shikari
-# The checkout (code). install.sh rewrites this to where it put Shikari.
-WorkingDirectory=/opt/shikari
+# The data home (SHIKARI_HOME), not the code: Shikari writes paths relative to the working directory
+# (data/shikari.db, data/groups, bespoke/…), and the code is read-only below. install.sh rewrites
+# this to its --data-dir.
+WorkingDirectory=/var/lib/shikari
 # SHIKARI_HOME, SHIKARI_HOST, SHIKARI_PORT, SHIKARI_WORKERS live here.
 EnvironmentFile=/etc/shikari/shikari.env
 # Foreground uvicorn — no shikari supervisor (systemd does restart/boot). Single worker: Shikari

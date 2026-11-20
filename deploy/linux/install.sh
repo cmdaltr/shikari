@@ -6,7 +6,10 @@
 # safe to re-run to pick up a new checkout or dependency changes.
 #
 # Usage (as root, from a Shikari checkout):
-#     sudo deploy/linux/install.sh [--code-dir /opt/shikari] [--data-dir /var/lib/shikari]
+#     sudo deploy/linux/install.sh [--code-dir /opt/shikari] [--data-dir /var/lib/shikari] [--admin EMAIL]
+#
+# A team server seeds no account. --admin (or the prompt, or SHIKARI_ADMIN_EMAIL in shikari.env) names
+# the first admin: the install prints their one-time invitation link, as Ostraka's does.
 #
 # TLS, firewall and SELinux port labelling are reported, not forced — see docs/deployment/README.md.
 set -euo pipefail
@@ -16,11 +19,13 @@ DATA_DIR=/var/lib/shikari
 CONF_DIR=/etc/shikari
 SERVICE_USER=shikari
 UNIT=/etc/systemd/system/shikari.service
+ADMIN=
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --code-dir) CODE_DIR=$2; shift 2 ;;
         --data-dir) DATA_DIR=$2; shift 2 ;;
+        --admin) ADMIN=$2; shift 2 ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
 done
@@ -74,11 +79,25 @@ if [ ! -f "$CONF_DIR/shikari.env" ]; then
 else
     echo "    kept existing $CONF_DIR/shikari.env"
 fi
+# A team server, whatever an older shikari.env says (shikari/deployment.py)
+env_set() {  # KEY VALUE: replace the line, or add it
+    if grep -q "^$1=" "$CONF_DIR/shikari.env"; then
+        sed -i "s#^$1=.*#$1=$2#" "$CONF_DIR/shikari.env"
+    else
+        printf '%s=%s\n' "$1" "$2" >> "$CONF_DIR/shikari.env"
+    fi
+}
+env_set SHIKARI_MODE server
+[ -n "$ADMIN" ] || ADMIN=$(. "$CONF_DIR/shikari.env"; echo "${SHIKARI_ADMIN_EMAIL:-}")
+if [ -z "$ADMIN" ] && [ -t 0 ]; then
+    read -r -p "    First admin's email (they get a one-time invitation; blank to skip): " ADMIN || true
+fi
+[ -z "$ADMIN" ] || env_set SHIKARI_ADMIN_EMAIL "$ADMIN"
 chmod 640 "$CONF_DIR/shikari.env"
 
 # --- systemd unit ----------------------------------------------------------------------------------
 echo "==> installing systemd unit"
-sed -e "s#^WorkingDirectory=.*#WorkingDirectory=$CODE_DIR#" \
+sed -e "s#^WorkingDirectory=.*#WorkingDirectory=$DATA_DIR#" \
     -e "s#^ExecStart=.*#ExecStart=$CODE_DIR/.venv/bin/python -m uvicorn shikari.app:app --host \${SHIKARI_HOST} --port \${SHIKARI_PORT} --workers \${SHIKARI_WORKERS}#" \
     -e "s#^ReadWritePaths=.*#ReadWritePaths=$DATA_DIR#" \
     "$HERE/shikari.service" > "$UNIT"
@@ -118,6 +137,26 @@ else
     echo "    NOT healthy yet — check: journalctl -u shikari -n 50" >&2
 fi
 
+# --- first admin: an invitation, never a seeded account ----------------------------------------
+INVITE_LINK=
+if [ -n "$ok" ] && [ -n "$ADMIN" ]; then
+    echo "==> first admin"
+    rc=0
+    # As the service runs it: its user, its working directory, its shikari.env. Exit 5: an admin exists
+    out=$(cd "$DATA_DIR" && set -a && . "$CONF_DIR/shikari.env" && set +a \
+        && runuser -u "$SERVICE_USER" -- "$CODE_DIR/.venv/bin/python" -m shikari.cli.first_admin --link-only "$ADMIN" 2>&1) \
+        || rc=$?
+    if [ "$rc" = 0 ]; then
+        INVITE_LINK=$(printf '%s\n' "$out" | grep -E '/accept-invite#' | tail -1)
+        echo "    invitation for $ADMIN (admin): open it within 24 hours, choose a password and scan the QR code"
+    elif [ "$rc" = 5 ]; then
+        echo "    Shikari already has an admin: they invite everyone else (Settings -> Users -> Invite)."
+    else
+        printf '%s\n' "$out" >&2
+        echo "    couldn't make the invitation; later: sudo deploy/linux/install.sh --admin $ADMIN" >&2
+    fi
+fi
+
 cat <<EOF
 
 Shikari is installed as a systemd service.
@@ -128,3 +167,9 @@ Shikari is installed as a systemd service.
 Next: put TLS in front of it (reverse proxy on 443 -> 127.0.0.1:$PORT) and open the firewall.
 See docs/deployment/README.md for TLS, firewall, upgrade, and backup/restore.
 EOF
+if [ -n "$INVITE_LINK" ]; then
+    printf '\nFirst admin (%s), works once within 24 hours:\n\n  %s\n\n' "$ADMIN" "$INVITE_LINK"
+elif [ -z "$ADMIN" ]; then
+    printf '\nNo admin yet. Make the first one with:\n  sudo deploy/linux/install.sh --admin you@example.org\n'
+    printf 'or set SHIKARI_ADMIN_EMAIL in %s and restart (the link goes to journalctl -u shikari).\n' "$CONF_DIR/shikari.env"
+fi

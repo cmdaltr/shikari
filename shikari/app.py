@@ -75,10 +75,6 @@ from shikari.auth import (
     delete_session,
     encrypt_api_key,
     decrypt_api_key,
-    create_password_reset_request,
-    validate_reset_token,
-    reset_password_with_token,
-    validate_password,
 )
 from shikari.auth import lockout
 from shikari.database.models import User, UserRole, APIKey, at_least
@@ -95,6 +91,12 @@ from shikari import branding
 templates.env.globals["brand"] = branding.active_brand()
 # Attack flow tabs (partials/attack_flow.html): the Cyber Kill Chain and Targeted Attack Lifecycle mappings
 templates.env.globals["flow_frameworks"] = FLOW_FRAMEWORKS
+# A team server (SHIKARI_MODE=server) or a local Shikari: the sign-in page offers Register only on a
+# local one listening on this machine alone
+from shikari.deployment import is_server as _is_server, registration_open as _registration_open
+
+templates.env.globals["is_server"] = _is_server
+templates.env.globals["registration_open"] = _registration_open
 
 
 def _permanent_admin(user) -> bool:
@@ -1212,9 +1214,9 @@ def _bearer_token(request: Request) -> Optional[str]:
 # Signed in by default: every route needs a session (or an API token) except these. Routes were
 # open unless they called require_auth, and the local penetration test (November 2026) found hunts,
 # regenerate, downloads and the validation containers reachable with no login.
-PUBLIC_PATHS = {"/login", "/login/mfa", "/register", "/logout", "/forgot-password", "/reset-password", "/health",
-                "/favicon.ico", "/api/busy", "/desktop/enter", "/api/auth/request-reset",
-                "/api/auth/reset-password", "/reset-access", "/api/auth/reset-access/start",
+PUBLIC_PATHS = {"/login", "/login/mfa", "/register", "/logout", "/forgot-password", "/health",
+                "/favicon.ico", "/api/busy", "/desktop/enter", "/api/auth/reset-access/request",
+                "/reset-access", "/api/auth/reset-access/start",
                 "/api/auth/reset-access/complete", "/accept-invite", "/api/auth/invitation/preview",
                 "/api/auth/invitation/start", "/api/auth/invitation/complete",
                 "/mcp"}  # MCP answers a missing token itself; an invalid one is refused above
@@ -8665,14 +8667,6 @@ async def desktop_enter(request: Request, token: str = ""):
     return response
 
 
-@app.get("/reset-password", response_class=HTMLResponse)
-async def reset_password_page(request: Request):
-    """
-    Render the password reset page.
-    """
-    return templates.TemplateResponse(request, "reset_password.html", {"request": request})
-
-
 def _one_time_link_page(request: Request, mode: str):
     """The page a one-time link opens (shikari/auth/links.py). Its token is in the link's fragment,
     which never reaches the server: the page reads it and posts it with this CSRF token."""
@@ -8844,7 +8838,7 @@ async def login(
                     "csrf_token": next_csrf,
                     "error": "Account is temporarily locked due to multiple failed login attempts. Please try again later.",
                 },
-                status_code=403,
+                status_code=429,
             )
 
         # Verify password
@@ -8863,6 +8857,7 @@ async def login(
                     success=False,
                     details=f"Account locked after {user.failed_login_attempts} failed attempts",
                 )
+                lockout.audit_lock(db, user, via="sign-in", ip_address=client_ip, user_agent=user_agent)
 
                 return templates.TemplateResponse(
                     request, "login.html",
@@ -8871,7 +8866,7 @@ async def login(
                         "csrf_token": next_csrf,
                         "error": "Account locked due to multiple failed login attempts. Please try again in 15 minutes.",
                     },
-                    status_code=403,
+                    status_code=429,
                 )
 
             db.commit()
@@ -8913,20 +8908,6 @@ async def login(
                     "csrf_token": next_csrf,
                     "error": "Account is disabled. Please contact an administrator.",
                 },
-                status_code=403,
-            )
-
-        from shikari.auth.reset_access import pending_for
-
-        if pending_for(db, user.id):
-            # The reset may be because someone else has this password: only the link gets in now
-            log_audit_event(db=db, event_type=EVENT_LOGIN_FAILURE, user_id=user.id, email=email,
-                            ip_address=client_ip, user_agent=user_agent, success=False,
-                            details="Access reset pending")
-            return templates.TemplateResponse(
-                request, "login.html",
-                {"request": request, "csrf_token": next_csrf,
-                 "error": "Your access is being reset. Use the link your admin gave you."},
                 status_code=403,
             )
 
@@ -9078,9 +9059,13 @@ async def logout(
 
 
 def _invitation_only(request: Request) -> bool:
-    """A server's accounts come by invitation only (shikari/auth/invitations.py). Self-registration is
-    left to the desktop app's own local Shikari (app.state.desktop), one person's copy."""
-    return not request.app.state.desktop
+    """A team server's accounts come by invitation only (shikari/auth/invitations.py), and so do a local
+    Shikari's while it listens on a network address. Only a local one on loopback (the desktop app, or
+    `shikari start` from a checkout) keeps self-registration: the same guard as seeding the default
+    admin (shikari/deployment.py)."""
+    from shikari.deployment import registration_open
+
+    return not registration_open()
 
 
 INVITE_ONLY_REDIRECT = "/login?invite_only=1"
@@ -9118,10 +9103,10 @@ async def register_page(request: Request, response: Response):
 
 @app.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_page(request: Request):
-    """
-    Render the forgot-password page (request a reset link).
-    """
-    return templates.TemplateResponse(request, "forgot_password.html", {"request": request})
+    """Forgot password: ask for a reset-access link by email (shikari/auth/reset_access.py), or, with
+    no email set up, a note to ask an administrator."""
+    return templates.TemplateResponse(request, "forgot_password.html",
+                                      {"request": request, "self_service": _self_service_reset()})
 
 
 @app.post("/register")
@@ -14336,139 +14321,62 @@ async def get_users(request: Request, shikari_session: Optional[str] = Cookie(No
 # =============================================================================
 
 
-@app.post("/api/auth/request-reset")
-async def request_password_reset(request: Request):
-    """
-    Request a password reset. Generates a reset token and sends email (or logs in dev mode).
-    """
+def _self_service_reset() -> bool:
+    """Forgot password works only with email sending set up (shikari/auth/email.py) and BASE_URL set:
+    an emailed link mustn't be built from the request's Host header, which whoever asks controls."""
+    from shikari.auth import links
+    from shikari.auth.email import EMAIL_ENABLED
+
+    return EMAIL_ENABLED and links.base_url_set()
+
+
+SELF_SERVICE_SENT = "If that address has an account, a link is on its way. It works once, within 24 hours."
+SELF_SERVICE_PER_ADDRESS, SELF_SERVICE_PER_IP = 3, 20  # requests an hour
+SELF_SERVICE_OFF = "Resetting access by email isn't set up here. Ask an administrator to reset your access."
+
+
+@app.post("/api/auth/reset-access/request")
+async def reset_access_request(request: Request):
+    """Forgot password: email the account a reset-access link, the same link an admin issues. The same
+    answer whether or not an account matched, limited per address and per IP."""
+    from starlette.background import BackgroundTask
+
+    from shikari.auth.email import send_reset_access_email
+    from shikari.auth.reset_access import RESET_ACCESS_EXPIRY_HOURS, request_self_service
+    from shikari.security.rate_limit import check_rate_limit, record_attempt
+
+    if not _self_service_reset():
+        return JSONResponse({"success": False, "error": SELF_SERVICE_OFF}, status_code=503)
     try:
         data = await request.json()
-        email = data.get("email", "").strip().lower()
-
-        if not email:
-            return {"success": False, "error": "Email is required"}
-
-        db = next(get_db())
-        try:
-            # Get user to get their full name for personalization
-            user = db.query(User).filter(User.email == email, User.is_active == True).first()
-
-            # Create reset request
-            token = create_password_reset_request(email, db)
-
-            # Same response whether or not the account exists (no enumeration)
-            response = {
-                "success": True,
-                "message": "If an account exists with this email, a password reset link has been sent.",
-            }
-            if not token:
-                return response
-
-            from shikari.auth.email import send_password_reset_email, EMAIL_ENABLED
-
-            if EMAIL_ENABLED:
-                # SMTP is blocking; keep it off the event loop
-                await run_in_threadpool(
-                    send_password_reset_email, email=email, token=token, full_name=user.full_name if user else None
-                )
-            else:
-                # Never return the token to the requester: anyone could reset any account.
-                # With email disabled the link goes to the server log for the operator.
-                logger.warning("EMAIL_ENABLED=false; password reset link for %s: /reset-password?token=%s", email, token)
-
-            return response
-
-        finally:
-            db.close()
-
-    except Exception as e:
-        logger.error(f"Error requesting password reset: {e}")
-        return {"success": False, "error": "An error occurred"}
-
-
-@app.post("/api/auth/reset-password")
-async def reset_password(request: Request):
-    """
-    Reset password using a valid reset token.
-    """
-    from shikari.database.audit import log_audit_event, EVENT_PASSWORD_RESET_COMPLETE
-    from shikari.auth.password_reset import validate_reset_token
-
+    except Exception:
+        data = {}
+    login = str(data.get("email") or "").strip().lower()[:255]
+    if not login:
+        return JSONResponse({"success": False, "error": "Enter your email address."}, status_code=422)
+    client_ip = request.client.host if request.client else ""
+    # Per address, so nobody's inbox can be flooded; per IP more loosely, since behind a proxy everyone
+    # arrives from the proxy's address
+    limits = ((f"forgot:address:{login}", SELF_SERVICE_PER_ADDRESS), (f"forgot:ip:{client_ip}", SELF_SERVICE_PER_IP))
+    keys = [key for key, _ in limits]
+    if not all(check_rate_limit(key, max_attempts=most, window_seconds=3600)[0] for key, most in limits):
+        return JSONResponse({"success": False, "error": "Too many requests. Try again in an hour."},
+                            status_code=429)
+    for key in keys:
+        record_attempt(key)
+    task = None
+    db = next(get_db())
     try:
-        data = await request.json()
-        token = data.get("token", "").strip()
-        new_password = data.get("new_password", "")
-
-        # Get client IP and user agent for logging
-        client_ip = request.client.host if request.client else None
-        user_agent = request.headers.get("user-agent")
-
-        if not token:
-            return {"success": False, "error": "Reset token is required"}
-
-        if not new_password:
-            return {"success": False, "error": "New password is required"}
-
-        # Validate password
-        is_valid, error_message = validate_password(new_password)
-        if not is_valid:
-            return {"success": False, "error": error_message}
-
-        db = next(get_db())
-        try:
-            # Validate token and get user first
-            user = validate_reset_token(token, db)
-
-            if not user:
-                log_audit_event(
-                    db=db,
-                    event_type=EVENT_PASSWORD_RESET_COMPLETE,
-                    ip_address=client_ip,
-                    user_agent=user_agent,
-                    success=False,
-                    details="Invalid or expired reset token",
-                )
-                return {"success": False, "error": "Invalid or expired reset token"}
-
-            # Reset password
-            success = reset_password_with_token(token, new_password, db)
-
-            if not success:
-                log_audit_event(
-                    db=db,
-                    event_type=EVENT_PASSWORD_RESET_COMPLETE,
-                    user_id=user.id,
-                    email=user.email,
-                    ip_address=client_ip,
-                    user_agent=user_agent,
-                    success=False,
-                    details="Failed to reset password",
-                )
-                return {"success": False, "error": "Invalid or expired reset token"}
-
-            # Log successful password reset
-            log_audit_event(
-                db=db,
-                event_type=EVENT_PASSWORD_RESET_COMPLETE,
-                user_id=user.id,
-                email=user.email,
-                ip_address=client_ip,
-                user_agent=user_agent,
-                success=True,
-                details="Password reset completed successfully",
-            )
-
-            return {
-                "success": True,
-                "message": "Password has been reset successfully. You can now log in with your new password.",
-            }
-
-        finally:
-            db.close()
-
-    except Exception as e:
-        logger.error(f"Error resetting password: {e}")
-        return {"success": False, "error": "An error occurred"}
+        issued = request_self_service(db, login, ip_address=client_ip or None,
+                                      user_agent=request.headers.get("user-agent"))
+        if issued:
+            user, link = issued
+            # Sent after the response, so how long it takes doesn't say whether an account matched
+            task = BackgroundTask(send_reset_access_email, user.email, link, user.full_name,
+                                  RESET_ACCESS_EXPIRY_HOURS)
+    finally:
+        db.close()
+    return JSONResponse({"success": True, "message": SELF_SERVICE_SENT}, background=task)
 
 
 def _reset_access_csrf(data: dict, csrf_session: Optional[str]) -> Optional[str]:
@@ -14482,7 +14390,25 @@ def _reset_access_csrf(data: dict, csrf_session: Optional[str]) -> Optional[str]
     return generate_csrf_token(csrf_session)
 
 
-RESET_ACCESS_GONE = "This link has expired or has already been used. Ask an administrator for a new one."
+RESET_ACCESS_EXPIRED = "This link has expired: it worked for 24 hours. Ask an administrator for a new one."
+RESET_ACCESS_EXPIRED_SELF = ("This link has expired: it worked for 24 hours. Ask an administrator for a new one, or "
+                             "use Forgot password on the sign-in page.")
+
+
+def _reset_access_expired() -> str:
+    """Forgot password is offered only where it works (_self_service_reset)."""
+    return RESET_ACCESS_EXPIRED_SELF if _self_service_reset() else RESET_ACCESS_EXPIRED
+RESET_ACCESS_GONE = "This link isn't valid. It may have been used or replaced. Ask an administrator for a new one."
+
+
+def _dead_link(state: str, expired: str, gone: str) -> JSONResponse:
+    """An expired link says so, with 410; a used, revoked, replaced or unknown one gets 404 and the
+    same message whichever it was (shikari/auth/links.py)."""
+    from shikari.auth import links
+
+    if state == links.EXPIRED:
+        return JSONResponse({"success": False, "error": expired, "expired": True}, status_code=410)
+    return JSONResponse({"success": False, "error": gone}, status_code=404)
 RESET_ACCESS_RELOAD = "This page has been open too long. Reload it and try again."
 
 
@@ -14491,7 +14417,7 @@ async def reset_access_start(request: Request, shikari_csrf_session: Optional[st
     """Step one of a reset-access link: the new password. Returns a new authenticator to scan; nothing
     about the account changes until step two."""
     from shikari.auth.mfa import generate_qr_code
-    from shikari.auth.reset_access import ResetAccessError, open_reset, start_reset
+    from shikari.auth.reset_access import ResetAccessError, find_reset, start_reset
 
     data = await request.json()
     next_csrf = _reset_access_csrf(data, shikari_csrf_session)
@@ -14499,9 +14425,9 @@ async def reset_access_start(request: Request, shikari_csrf_session: Optional[st
         return JSONResponse({"success": False, "error": RESET_ACCESS_RELOAD}, status_code=403)
     db = next(get_db())
     try:
-        row = open_reset(db, str(data.get("token") or ""))
+        row, state = find_reset(db, str(data.get("token") or ""))
         if row is None:
-            return JSONResponse({"success": False, "error": RESET_ACCESS_GONE}, status_code=410)
+            return _dead_link(state, _reset_access_expired(), RESET_ACCESS_GONE)
         try:
             user, secret = start_reset(db, row, str(data.get("new_password") or ""))
         except ResetAccessError as e:
@@ -14516,7 +14442,7 @@ async def reset_access_start(request: Request, shikari_csrf_session: Optional[st
 async def reset_access_complete(request: Request, shikari_csrf_session: Optional[str] = Cookie(None)):
     """Step two: a code from the new authenticator. Sets the password and MFA, spends the link, signs
     in, and returns the new backup codes, which are shown only this once."""
-    from shikari.auth.reset_access import AccountLocked, ResetAccessError, complete_reset, open_reset
+    from shikari.auth.reset_access import AccountLocked, ResetAccessError, complete_reset, find_reset
     from shikari.security.rate_limit import reset_rate_limit
 
     data = await request.json()
@@ -14526,9 +14452,9 @@ async def reset_access_complete(request: Request, shikari_csrf_session: Optional
     client_ip = request.client.host if request.client else ""
     db = next(get_db())
     try:
-        row = open_reset(db, str(data.get("token") or ""))
+        row, state = find_reset(db, str(data.get("token") or ""))
         if row is None:
-            return JSONResponse({"success": False, "error": RESET_ACCESS_GONE}, status_code=410)
+            return _dead_link(state, _reset_access_expired(), RESET_ACCESS_GONE)
         try:
             user, codes = complete_reset(db, row, str(data.get("code") or ""), ip_address=client_ip,
                                          user_agent=request.headers.get("user-agent"))
@@ -14574,28 +14500,32 @@ async def admin_reset_access(user_id: int, request: Request, shikari_session: Op
         db.close()
 
 
-INVITATION_GONE = "This invitation has expired, been replaced, or already been used. Ask an admin for a new one."
+INVITATION_EXPIRED = "This invitation has expired: it worked for 24 hours. Ask an admin for a new one."
+INVITATION_GONE = ("This invitation isn't valid. It may have been used, revoked or replaced. Ask an admin for a "
+                   "new one.")
 
 
 def _invitation_error_status(e) -> int:
-    from shikari.auth.invitations import AccountExists, AdminExists, SeatsFull
+    from shikari.auth.invitations import AccountExists, AdminExists, InvitationClosed, SeatsFull
 
     if isinstance(e, SeatsFull):
         return 402
+    if isinstance(e, InvitationClosed):
+        return 404  # the link is dead now, as a revoked one is
     return 409 if isinstance(e, (AccountExists, AdminExists)) else 422
 
 
 @app.post("/api/auth/invitation/preview")
 async def invitation_preview(request: Request):
     """Who an invitation is for, so its page can say so (the token is the credential: no sign-in)."""
-    from shikari.auth.invitations import open_invitation
+    from shikari.auth.invitations import find_invitation
 
     data = await request.json()
     db = next(get_db())
     try:
-        invitation = open_invitation(db, str(data.get("token") or ""))
+        invitation, state = find_invitation(db, str(data.get("token") or ""))
         if invitation is None:
-            return JSONResponse({"success": False, "error": INVITATION_GONE}, status_code=410)
+            return _dead_link(state, INVITATION_EXPIRED, INVITATION_GONE)
         return {"success": True, "email": invitation.email, "role": invitation.role.value,
                 "full_name": invitation.full_name or "", "expires_at": invitation.expires_at.isoformat() + "Z"}
     finally:
@@ -14606,7 +14536,7 @@ async def invitation_preview(request: Request):
 async def invitation_start(request: Request, shikari_csrf_session: Optional[str] = Cookie(None)):
     """Step one of an invitation: name and password. Returns a new authenticator to scan; no account
     exists until step two."""
-    from shikari.auth.invitations import InvitationError, open_invitation, start_invitation
+    from shikari.auth.invitations import InvitationError, find_invitation, start_invitation
     from shikari.auth.mfa import generate_qr_code
 
     data = await request.json()
@@ -14615,9 +14545,9 @@ async def invitation_start(request: Request, shikari_csrf_session: Optional[str]
         return JSONResponse({"success": False, "error": RESET_ACCESS_RELOAD}, status_code=403)
     db = next(get_db())
     try:
-        invitation = open_invitation(db, str(data.get("token") or ""))
+        invitation, state = find_invitation(db, str(data.get("token") or ""))
         if invitation is None:
-            return JSONResponse({"success": False, "error": INVITATION_GONE}, status_code=410)
+            return _dead_link(state, INVITATION_EXPIRED, INVITATION_GONE)
         try:
             secret = start_invitation(db, invitation, str(data.get("full_name") or ""),
                                       str(data.get("new_password") or ""))
@@ -14633,7 +14563,7 @@ async def invitation_start(request: Request, shikari_csrf_session: Optional[str]
 async def invitation_complete(request: Request, shikari_csrf_session: Optional[str] = Cookie(None)):
     """Step two: a code from the new authenticator. Creates the account, spends the link, signs in, and
     returns the backup codes, shown only this once."""
-    from shikari.auth.invitations import InvitationError, complete_invitation, open_invitation
+    from shikari.auth.invitations import InvitationError, complete_invitation, find_invitation
 
     data = await request.json()
     next_csrf = _reset_access_csrf(data, shikari_csrf_session)
@@ -14641,9 +14571,9 @@ async def invitation_complete(request: Request, shikari_csrf_session: Optional[s
         return JSONResponse({"success": False, "error": RESET_ACCESS_RELOAD}, status_code=403)
     db = next(get_db())
     try:
-        invitation = open_invitation(db, str(data.get("token") or ""))
+        invitation, state = find_invitation(db, str(data.get("token") or ""))
         if invitation is None:
-            return JSONResponse({"success": False, "error": INVITATION_GONE}, status_code=410)
+            return _dead_link(state, INVITATION_EXPIRED, INVITATION_GONE)
         try:
             user, codes = complete_invitation(db, invitation, str(data.get("code") or ""),
                                               ip_address=request.client.host if request.client else None,
@@ -14819,8 +14749,9 @@ async def update_user(request: Request, user_id: int, shikari_session: Optional[
 
         data = await request.json()
 
-        # Update email if provided
-        if "email" in data:
+        # Update email if provided. Unchanged is left alone: the local default admin's is `admin`, which
+        # no validated email can be (and so nobody else can be given it)
+        if "email" in data and data["email"].strip().lower() != user.email:
             from shikari.security import validate_email
 
             email = data["email"].strip().lower()
@@ -14852,12 +14783,17 @@ async def update_user(request: Request, user_id: int, shikari_session: Optional[
             user.role = UserRole(role)
 
         # Update active status if provided
+        deactivated = False
         if "is_active" in data:
+            deactivated = user.is_active and not bool(data["is_active"])
             user.is_active = bool(data["is_active"])
 
         user.updated_at = datetime.utcnow()
+        tokens_revoked = _end_access(db, user) if deactivated else 0
         db.commit()
         db.refresh(user)
+        if deactivated:
+            _audit_deactivation(db, request, admin_user, user, tokens_revoked)
 
         return {
             "success": True,
@@ -14878,6 +14814,29 @@ async def update_user(request: Request, user_id: int, shikari_session: Optional[
 
     finally:
         db.close()
+
+
+def _end_access(db, user) -> int:
+    """A deactivated account's sessions ended and API tokens revoked (the caller commits); how many
+    tokens. Session has no is_active: updating one once rolled the whole deactivation back, so the user
+    kept access."""
+    from shikari.auth.tokens import revoke_all
+    from shikari.database.models import Session
+
+    db.query(Session).filter(Session.user_id == user.id).delete()
+    return revoke_all(db, user.id)
+
+
+def _audit_deactivation(db, request: Request, admin_user, user, tokens_revoked: int) -> None:
+    import json
+
+    from shikari.database.audit import EVENT_USER_DEACTIVATED, log_audit_event
+
+    log_audit_event(db, EVENT_USER_DEACTIVATED, user_id=user.id, email=user.email,
+                    ip_address=request.client.host if request.client else None,
+                    user_agent=request.headers.get("user-agent"),
+                    details=json.dumps({"actor_id": admin_user.id, "actor_email": admin_user.email,
+                                        "tokens_revoked": tokens_revoked}))
 
 
 @app.delete("/api/admin/users/{user_id}")
@@ -14911,16 +14870,13 @@ async def deactivate_user(
             return {"success": False, "error": "User not found"}
 
         # Deactivate user
+        was_active = user.is_active
         user.is_active = False
         user.updated_at = datetime.utcnow()
-
-        # End their sessions (Session has no is_active: updating one rolled the whole deactivation back,
-        # so the user kept access). Their API tokens resolve through an active user, so they stop too.
-        from shikari.database.models import Session
-
-        db.query(Session).filter(Session.user_id == user_id).delete()
-
+        tokens_revoked = _end_access(db, user)
         db.commit()
+        if was_active:
+            _audit_deactivation(db, request, admin_user, user, tokens_revoked)
 
         return {"success": True, "message": f"User {user.email} has been deactivated"}
 

@@ -37,9 +37,11 @@ cd shikari
 **Option A: Docker**
 
 ```bash
-docker compose up --build  # or: shikari docker up --build, once shikari is installed
+SHIKARI_ADMIN_EMAIL=you@example.org BASE_URL=http://localhost:32453 docker compose up --build
 docker compose down        # stop
 ```
+
+Docker runs Shikari as a team server (`SHIKARI_MODE=server`, set in `docker-compose.yml`): there's no default admin. On its first start with no admin, it issues `SHIKARI_ADMIN_EMAIL` a one-time first-admin invitation and prints the link in `docker compose logs shikari`; open it within 24 hours to choose a password and set up an authenticator. Without the variable, or to issue a new link, run `docker compose exec shikari python shikari/service.py first-admin you@example.org`. `BASE_URL` is the address the link names. To run the container as a local Shikari instead, set `SHIKARI_MODE=local`; it still won't seed the default admin, because inside the container Shikari listens on `0.0.0.0`.
 
 Data lives in the checkout's `data/` folder (bind-mounted into the container), so it survives restarts, rebuilds and `docker compose down -v`.
 
@@ -60,36 +62,38 @@ Day-to-day running, start-up options and what Shikari updates when it starts: [R
 
 Open `http://localhost:32453`.
 
-### Default login
+### Default login (local Shikari)
 
-The default administrator is part of the configuration:
+A local Shikari (`shikari start` from a checkout, or the desktop app running Shikari on your computer) seeds a default administrator into an empty database:
 
 ```
-Email: admin@shikari.app
-Password: BigGameHunter
+Sign in as: admin
+Password:   BigGameHunter
 ```
 
-Change the password after the first sign-in (Profile → Security).
+`admin` is a username, not an email: it's the one account that signs in without one. Change the password after the first sign-in (Profile → Security). The account is created (and recorded in the audit log, `default_admin_seeded`) only while Shikari listens on this machine alone (`127.0.0.1`, the default). Started with `--host 0.0.0.0`, `UVICORN_HOST` or `SHIKARI_HOST` set to a network address, it creates no default admin, because the password is public; get one with `shikari first-admin you@example.org` instead. A database from before this change has `admin@shikari.app`, which a local Shikari renames to `admin` on start.
+
+A team server (Docker, `deploy/linux/install.sh`, the Windows service: anything with `SHIKARI_MODE=server`) seeds no account at all. Its first admin comes from a one-time invitation: the install asks for the admin's email and prints the link, the first start logs one for `SHIKARI_ADMIN_EMAIL`, and `shikari first-admin <email>` issues one on demand (refused, exit status 5, once an active admin exists, unless `--force`; only the newest works). Links name `BASE_URL`; without it they name localhost, and the command line and the start-up message warn about that on stderr each time.
 
 ### Adding people
 
-Accounts on a Shikari server come by invitation. An admin invites someone from Settings → Users → Invite (email, role, and a name if you like) and gives them the link; or, from the server:
+Accounts on a team server come by invitation. An admin invites someone from Settings → Users → Invite (email, role, and a name if you like) and gives them the link; or, from the server:
 
 ```bash
 shikari invite user@example.org --role standard            # local; --role operator or admin, --name "Full Name"
 docker compose exec shikari python shikari/service.py invite user@example.org --role standard   # Docker
 ```
 
-The link works once, within 24 hours: they give their name, choose a password and set up an authenticator app (always required for an invited account), and the account is made, with that role, when a code from it checks out. They're signed in and see their backup codes once. Pending invitations are listed under Users, where they can be revoked. Each open invitation counts towards the licence's seats until it's accepted, revoked or expires. There's no self-registration on a server: `/register` sends people to the sign-in page to ask for an invitation (the desktop app's own local Shikari keeps it).
+The link works once, within 24 hours: they give their name, choose a password and set up an authenticator app (always required for an invited account), and the account is made, with that role, when a code from it checks out. Opening the link again (a second tab, or clicking it again) shows the same authenticator, so one already scanned still works. Five wrong codes close the invitation, and the admin issues a new one. An expired link says it has expired; a used, revoked or replaced one says it isn't valid. They're signed in and see their backup codes once. Pending invitations are listed under Users, where they can be revoked. Each open invitation counts towards the licence's seats until it's accepted, revoked or expires. There's no self-registration on a team server, or on a local Shikari listening on a network address: `/register` sends people to the sign-in page to ask for an invitation. A local Shikari on `127.0.0.1` keeps it.
 
-An admin invitation from the server, when there's no admin to send one:
+A first admin's invitation, when there's no admin to send one:
 
 ```bash
-python scripts/admin/create_admin.py admin@example.org                          # local
-docker compose exec shikari python scripts/admin/create_admin.py admin@example.org   # Docker
+shikari first-admin admin@example.org                     # local (or: python scripts/admin/create_admin.py admin@example.org)
+docker compose exec shikari python shikari/service.py first-admin admin@example.org   # Docker
 ```
 
-It's refused while an active admin exists (the default one counts) unless you add `--force`.
+It's refused, with exit status 5, while an active admin exists (a local Shikari's default `admin` counts) unless you add `--force`.
 
 Someone who can't sign in (a forgotten password, a lost authenticator or backup codes) gets a one-time link from an admin, Settings → Users → Reset access, or from the server when no admin can sign in:
 
@@ -98,7 +102,9 @@ shikari reset-access user@example.org                      # local (or: python s
 docker compose exec shikari python shikari/service.py reset-access user@example.org   # Docker
 ```
 
-The link works once, within 24 hours: they choose a new password and set up a new authenticator, then see fresh backup codes once. Their sessions end and their API tokens are revoked as soon as the link is made.
+The link works once, within 24 hours: they choose a new password and set up a new authenticator, then see fresh backup codes once. Their sessions end and their API tokens are revoked as soon as the link is made, and again when it's used. Until then their old password and authenticator keep working: nothing refuses sign-in because a reset is open. Wrong codes on the link count towards the sign-in lockout (five, then 15 minutes).
+
+With email set up (`EMAIL_ENABLED=true`, the `SMTP_*` settings, and `BASE_URL`), people can also use **Forgot password** on the sign-in page: they enter their email, and if it has an active account Shikari emails the same reset-access link. The answer is the same whether or not an account matched, and requests are limited per address and per IP. Asking ends no sessions and revokes nothing (anyone could ask); that happens when the link is used. A new request replaces an earlier emailed link but never an open one an admin issued. Without email, the page says to ask an administrator. The old 1-hour `?token=` password-reset email is gone.
 
 ## Tell Shikari about your environment
 
@@ -169,7 +175,7 @@ The console, the Python client, the REST API (live reference at `http://localhos
 
 | Problem | Fix |
 |---|---|
-| Can't sign in | `shikari reset-access <email>` prints a one-time link to a new password and authenticator; or `scripts/admin/create_admin.py <email>` for an admin invitation |
+| Can't sign in | `shikari reset-access <email>` prints a one-time link to a new password and authenticator; or `shikari first-admin <email>` for an admin invitation |
 | Queries don't match my SIEM's tables or fields | The mapping files (above): start-up names any that are missing |
 | Port 32453 in use | `lsof -i :32453`, or `shikari start --port 8001` |
 | Docker won't start | `docker compose logs shikari`; rebuild with `docker compose down && docker compose up --build` (your data in `data/` is kept) |

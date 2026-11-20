@@ -114,8 +114,8 @@ Shikari closes the loop between red and blue: it runs a real adversary and then 
 ### Security & User Management
 - 🔐 **Enterprise Authentication** - Bcrypt password hashing, session management, MFA support (TOTP)
 - 🛡️ **Security Features** - Rate limiting, CSRF protection, account lockout, audit logging
-- 👥 **Admin User Management** - Complete CRUD API for user accounts (create, read, update, deactivate)
-- 📧 **Email Integration** - SMTP-based password reset with secure token delivery
+- 👥 **Admin User Management** - Accounts by one-time invitation (24 hours, authenticator required); list, update and deactivate (which ends sessions and revokes API tokens); reset access with a one-time link to a new password and authenticator. A team server (`SHIKARI_MODE=server`) seeds no account and gets its first admin from `shikari first-admin <email>`; a local Shikari on 127.0.0.1 seeds `admin` / `BigGameHunter`
+- 📧 **Email Integration** - Forgot password emails the same one-time reset-access link, when SMTP and `BASE_URL` are set
 - 🔑 **API Key Encryption** - Fernet encryption for stored SIEM/AI API credentials
 - 📊 **Comprehensive Audit Logs** - Track all authentication events and admin actions
 - 🔒 **Role-Based Access Control** - Three roles (Analyst, Operational analyst, Admin), each with everything the one below it has; sign-in required by default, MFA enforced at login

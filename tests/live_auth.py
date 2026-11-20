@@ -23,7 +23,7 @@ def sign_in(session: requests.Session, base_url: str) -> bool:
         session.post(
             f"{base_url}/login",
             data={
-                "email": os.getenv("SHIKARI_TEST_EMAIL", "admin@shikari.app"),
+                "email": os.getenv("SHIKARI_TEST_EMAIL", "admin"),
                 "password": os.getenv("SHIKARI_TEST_PASSWORD", "BigGameHunter"),
                 "csrf_token": csrf.group(1) if csrf else "",
             },

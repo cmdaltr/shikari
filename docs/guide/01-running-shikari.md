@@ -39,7 +39,7 @@ The same command covers everything else Shikari does from a terminal:
 | `shikari offline generate\|correlate\|hunt\|emulate` | The pipeline without the server: [USAGE.md](../USAGE.md) |
 | `shikari clear-cache` | Clear server-side caches and reset browser preferences |
 | `shikari app install\|uninstall\|open` | Shikari as a desktop app (below) |
-| `shikari invite <email> --role standard\|operator\|admin` | A one-time link that opens an account with that role ([Users](16-profile-and-settings.md#users-administrators)); `scripts/admin/create_admin.py <email>` is an admin one, when no admin can sign in |
+| `shikari invite <email> --role standard\|operator\|admin` | A one-time link that opens an account with that role ([Users](16-profile-and-settings.md#users-administrators)); `shikari first-admin <email>` is an admin one, for a team server's first admin or when no admin can sign in |
 | `shikari reset-access <email>` | A one-time link for someone who can't sign in, to a new password and authenticator ([Users](16-profile-and-settings.md#users-administrators)); in Docker, `docker compose exec shikari python shikari/service.py reset-access <email>` |
 
 ## As a desktop app
@@ -50,7 +50,7 @@ The installers on the Releases page bundle everything instead, and connect to yo
 
 ## Signing in
 
-Open `http://localhost:32453`. The default administrator is set in the configuration and documented in [GETTING_STARTED.md](../../GETTING_STARTED.md#default-login); change its password after the first sign-in (Profile → Security).
+Open `http://localhost:32453`. A local Shikari (`shikari start`, `shikari app`, or the desktop app running Shikari on your computer) has a default administrator: sign in as `admin` with the password `BigGameHunter`, and change it after the first sign-in (Profile → Security). It's created only while Shikari listens on `127.0.0.1`; bound to a network address there's no default admin, and `shikari first-admin you@example.org` gives you one by invitation. A team server (Docker, `deploy/linux/install.sh`, the Windows service, anything with `SHIKARI_MODE=server`) has no default account: its first admin accepts a one-time invitation the install prints. See [GETTING_STARTED.md](../../GETTING_STARTED.md#default-login-local-shikari).
 
 Every page and API needs a signed-in user (or an API token): anyone else is sent to the sign-in page, and an API call gets a 401. For a demo, start the server with `SHIKARI_ALLOW_GUESTS=1` and the home page offers **Continue as Guest**: a guest can browse but not change anything, and their work isn't saved once the browser closes.
 
@@ -58,7 +58,7 @@ Every page and API needs a signed-in user (or an API token): anyone else is sent
 SHIKARI_ALLOW_GUESTS=1 shikari start
 ```
 
-On a server, accounts come by invitation: an administrator invites someone (Profile → Users → Invite, or `shikari invite <email> --role …` on the server) and they accept a one-time link, choosing a password and setting up an authenticator. There's no self-registration there; the desktop app's own local Shikari keeps `/register`. Each account can turn on two-factor authentication: see [Profile and settings](16-profile-and-settings.md#security). With it on, sign-in asks for a code from the authenticator app (or a backup code) after the password; five wrong codes, or five minutes, and you start again.
+On a team server, accounts come by invitation: an administrator invites someone (Profile → Users → Invite, or `shikari invite <email> --role …` on the server) and they accept a one-time link, choosing a password and setting up an authenticator. There's no self-registration there, nor on a local Shikari listening on a network address; a local Shikari on `127.0.0.1` keeps `/register`. Each account can turn on two-factor authentication: see [Profile and settings](16-profile-and-settings.md#security). With it on, sign-in asks for a code from the authenticator app (or a backup code) after the password; five wrong codes, or five minutes, and you start again.
 
 Changing your password signs that account out everywhere else; an administrator resetting someone's access (a one-time link to a new password and authenticator) signs them out everywhere at once.
 

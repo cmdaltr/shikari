@@ -1203,8 +1203,9 @@ async function trackProgress(groupName) {
 
 Current rate limits:
 - `/login`: 5 requests per 5 minutes per IP
-- `/register`: 5 requests per 5 minutes per IP (the desktop app's local Shikari only; a server takes invitations)
-- Account lockout: 15 minutes after 5 failed login attempts
+- `/register`: 5 requests per 5 minutes per IP (a local Shikari on 127.0.0.1 only; a team server, or a local one on a network address, takes invitations)
+- `POST /api/auth/reset-access/request` (Forgot password): 3 an hour per address, 20 an hour per IP
+- Account lockout: 15 minutes after 5 failed sign-in attempts or 5 wrong codes on a reset-access link; a locked account gets 429 at sign-in and at the reset page
 
 **Handling Rate Limits**:
 ```python

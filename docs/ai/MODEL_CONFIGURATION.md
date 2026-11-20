@@ -67,7 +67,7 @@ Shikari supports multiple AI model backends for different use cases:
    uvicorn shikari.app:app --reload --port 32453
 
    # Access at http://localhost:32453
-   # Login: admin@shikari.app / BigGameHunter
+   # Login: admin / BigGameHunter
    ```
 
    **For CLI**:
@@ -134,7 +134,7 @@ The Shikari web application is built with **FastAPI** and uses **Uvicorn** as th
 docker-compose up --build
 
 # Access at http://localhost:32453
-# Default login: admin@shikari.app / BigGameHunter
+# Default login: admin / BigGameHunter
 ```
 
 **Option 2: Local Python**
@@ -300,7 +300,7 @@ Once the web app is running:
 
 1. **Access the application**: Navigate to `http://localhost:32453`
 2. **Login**: Use default credentials (change immediately!)
-   - Email: `admin@shikari.app`
+   - Sign in as: `admin`
    - Password: `BigGameHunter`
 3. **Test AI generation**:
    - Navigate to **Generate** page
@@ -557,7 +557,7 @@ docker-compose up --build
 uvicorn shikari.app:app --reload --port 32453
 
 # Access the web app at http://localhost:32453
-# Default login: admin@shikari.app / BigGameHunter
+# Default login: admin / BigGameHunter
 ```
 
 ---

@@ -48,8 +48,8 @@ The app checks GitHub for a newer release once a day, in the background, and say
 
 The first launch asks how to use it:
 
-- **Connect to your organisation's Shikari**: the app becomes a window onto the central server, with that server's users, library, detections and mappings. Nothing is stored or run locally apart from the login session, and upgrading the server upgrades everyone.
-- **Run Shikari on this computer**: the app runs its own server (on 127.0.0.1 only, port 32453 or the next free one) and stops it when the window closes. The first run takes a minute or two while it builds its caches.
+- **Connect to your organisation's Shikari**: the app becomes a window onto the central server, with that server's users (by invitation; a server has no default admin), library, detections and mappings. Nothing is stored or run locally apart from the login session, and upgrading the server upgrades everyone.
+- **Run Shikari on this computer**: the app runs its own server (on 127.0.0.1 only, port 32453 or the next free one) and stops it when the window closes. The first run takes a minute or two while it builds its caches. Sign in as `admin` with the password `BigGameHunter` (seeded into the empty database, since the server listens on 127.0.0.1 only) and change it under Profile → Security.
 
 Shikari > Change Server switches later. Data made in local mode stays on that computer.
 

@@ -180,7 +180,6 @@ def stage_payload(machine, root):
     # allows writes to. Imports come from the .pth (absolute) and templates/static from paths.ROOT, so
     # the cwd doesn't affect code loading.
     unit = (HERE.parent / "linux" / "shikari.service").read_text()
-    unit = unit.replace("WorkingDirectory=/opt/shikari", "WorkingDirectory=/var/lib/shikari")
     unit = unit.replace("/opt/shikari/.venv/bin/python",
                         f"/{PREFIX}/python/bin/python3")
     (unit_dir / "shikari.service").write_text(unit)

@@ -78,9 +78,11 @@ python scripts/deployment/start_clean.py
 
 **Default admin account** (after clean start):
 ```
-Email: admin@shikari.app
-Password: BigGameHunter
+Sign in as: admin
+Password:   BigGameHunter
 ```
+
+(A local Shikari on 127.0.0.1; a team server seeds no account: `shikari first-admin <email>`.)
 
 ---
 

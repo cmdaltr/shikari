@@ -26,3 +26,17 @@ def record_failure(user) -> bool:
 def clear(user) -> None:
     user.failed_login_attempts = 0
     user.locked_until = None
+
+
+def audit_lock(db, user, *, via: str, ip_address=None, user_agent=None) -> None:
+    """The account_locked event, recorded wherever a lock is applied (`via` says where: sign-in or a
+    reset-access link), on top of the failure that caused it."""
+    import json
+
+    from shikari.database.audit import EVENT_ACCOUNT_LOCKED, log_audit_event
+
+    log_audit_event(db, EVENT_ACCOUNT_LOCKED, user_id=user.id, email=user.email, ip_address=ip_address,
+                    user_agent=user_agent, success=True,
+                    details=json.dumps({"via": via, "attempts": user.failed_login_attempts,
+                                        "locked_until": f"{user.locked_until:%Y-%m-%d %H:%M:%S}",
+                                        "minutes": LOCK_MINUTES}))

@@ -97,7 +97,8 @@ if sys.platform == "win32":
             data.mkdir(parents=True, exist_ok=True)
             config = load_env(data / "shikari.env")
 
-            env = dict(os.environ)
+            # Everything in shikari.env reaches the server (SHIKARI_MODE, SHIKARI_ADMIN_EMAIL, BASE_URL...)
+            env = {**os.environ, **config}
             home = config.get("SHIKARI_HOME", str(data))
             env["SHIKARI_HOME"] = home
 
