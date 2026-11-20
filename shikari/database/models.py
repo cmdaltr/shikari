@@ -281,13 +281,12 @@ class SecurityQuestion(Base):
 
 class PasswordReset(Base):
     """
-    One-time links for getting back into an account.
-
-    kind NULL: the emailed password reset, which expires after 1 hour (shikari/auth/password_reset.py).
-    kind "access": reset access, issued by an admin or the server, which replaces the password and the
-    authenticator and expires after 24 hours (shikari/auth/reset_access.py). Its reset_token is the
-    token's SHA-256 hash, never the token, and the pending_* columns hold what the person has chosen
-    until a code from the new authenticator checks out.
+    One-time links for getting back into an account: reset access (shikari/auth/reset_access.py), which
+    replaces the password and the authenticator and expires after 24 hours. kind is "access"; rows of
+    the old 1-hour emailed password reset (kind NULL) are never accepted. via says who issued it: NULL
+    for an admin or the command line, "self-service" for Forgot password on the sign-in page. Its
+    reset_token is the token's SHA-256 hash, never the token, and the pending_* columns hold what the
+    person has chosen until a code from the new authenticator checks out.
     """
     __tablename__ = "password_resets"
 
@@ -297,6 +296,7 @@ class PasswordReset(Base):
     expires_at = Column(DateTime, nullable=False)
     used = Column(Boolean, default=False, nullable=False)
     kind = Column(String(16), nullable=True)
+    via = Column(String(16), nullable=True)  # NULL: an admin or the command line; "self-service"
     pending_password_hash = Column(String(255), nullable=True)  # bcrypt hash
     pending_mfa_secret = Column(String(32), nullable=True)  # TOTP secret (base32), as User.mfa_secret
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -318,6 +318,7 @@ class Invitation(Base):
     server's command line, gives someone. The account is made, with this role, only once they've chosen
     a password and a code from their new authenticator has checked out. token_hash is the SHA-256 of
     the token, never the token; the pending_* columns hold what they've chosen until then.
+    failed_attempts counts wrong codes: the fifth closes the link (revoked_at).
     """
     __tablename__ = "invitations"
 
@@ -334,6 +335,8 @@ class Invitation(Base):
     pending_full_name = Column(String(255), nullable=True)
     pending_password_hash = Column(String(255), nullable=True)  # bcrypt hash
     pending_mfa_secret = Column(String(32), nullable=True)  # TOTP secret (base32), as User.mfa_secret
+    # Nullable so an existing database gains it (shikari/database/db.py, _add_missing_columns)
+    failed_attempts = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     def __repr__(self):

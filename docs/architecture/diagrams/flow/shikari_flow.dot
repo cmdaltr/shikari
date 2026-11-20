@@ -36,7 +36,7 @@ digraph ShikariFlow {
     profile [label="Profile\n(/profile)", fillcolor="#ffe680"];
     profile_config [label="Config Tab\n(Correlation Params)", fillcolor="#ffeb99"];
     how_it_works [label="How It Works\n(/how-it-works)", fillcolor="#ffe680"];
-    login [label="Login/Register\n(/login)", fillcolor="#ffe680"];
+    login [label="Sign in, invitation, reset access\n(/login, /accept-invite, /reset-access,\n/forgot-password; /register local only)", fillcolor="#ffe680"];
   }
 
   // ============================================
@@ -62,7 +62,7 @@ digraph ShikariFlow {
     endpoint_correlation_params [label="/api/correlation/params\n(GET/POST)", fillcolor="#90ee90"];
 
     // Auth endpoints
-    endpoint_auth [label="/login, /logout\n/register", fillcolor="#90ee90"];
+    endpoint_auth [label="/login, /logout\n/api/auth/invitation/*\n/api/auth/reset-access/*\n/register (local, 127.0.0.1 only)", fillcolor="#90ee90"];
 
     // File upload
     endpoint_upload [label="/upload\n(File Analysis)", fillcolor="#90ee90"];

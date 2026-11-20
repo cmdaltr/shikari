@@ -28,6 +28,18 @@ def base_url_set() -> bool:
     return bool(os.getenv("BASE_URL"))
 
 
+NO_BASE_URL_WARNING = ("BASE_URL isn't set, so this link names localhost. Set BASE_URL to the address people "
+                       "open Shikari at, or change the start of the link by hand.")
+
+
+def warn_if_no_base_url() -> None:
+    """On stderr, every time the command line or start-up prints a link while BASE_URL is unset."""
+    import sys
+
+    if not base_url_set():
+        print(NO_BASE_URL_WARNING, file=sys.stderr)
+
+
 def link(path: str, token: str, base: Optional[str] = None) -> str:
     """<base><path>#<token>. BASE_URL when it's set; otherwise `base`, the address the admin asked from,
     so a server without BASE_URL doesn't hand out a localhost link; the email default last."""
@@ -37,8 +49,21 @@ def link(path: str, token: str, base: Optional[str] = None) -> str:
     return f"{root.rstrip('/')}{path}#{token}"
 
 
-# What a dead link's row still holds: cleared when it's replaced, revoked or claimed
+# What a dead link's row still holds: cleared when it's replaced, revoked, claimed, closed or found expired
 CLEARED = {"pending_password_hash": None, "pending_mfa_secret": None}
+
+# What a link is when someone opens it. Only an expired one says so (for as long as its row is kept);
+# used, revoked, replaced and unknown links all get the same "not valid", so the page can't be used to
+# learn which tokens were ever real
+OPEN, EXPIRED, INVALID = "open", "expired", "invalid"
+
+
+def clear_choice(row) -> None:
+    """Forget what the person chose on a link that can no longer be completed. The caller commits."""
+    for column in CLEARED:
+        setattr(row, column, None)
+    if hasattr(row, "pending_full_name"):
+        row.pending_full_name = None
 
 
 def audit(db, event: str, *, user_id: Optional[int], email: Optional[str], success: bool = True,
@@ -57,18 +82,20 @@ WRONG_CODE = "That code didn't match. Try the current one from the new authentic
 
 
 def hold_choice(row, new_password: str) -> str:
-    """Check the password by the full rule and keep its hash, with a new TOTP secret, on the row;
-    returns the secret to scan. Starting again replaces both. Raises ValueError with the rule broken."""
+    """Check the password by the full rule and keep its hash, with the link's TOTP secret, on the row;
+    returns the secret to scan. The first start makes the secret and later ones reuse it, so a second
+    tab or the link opened again shows the authenticator already scanned; a later password replaces the
+    earlier one. Raises ValueError with the rule broken."""
     from shikari.auth.mfa import generate_totp_secret
     from shikari.auth.password import hash_password, validate_password
 
     ok, problem = validate_password(new_password)
     if not ok:
         raise ValueError(problem)
-    secret = generate_totp_secret()
     row.pending_password_hash = hash_password(new_password)
-    row.pending_mfa_secret = secret
-    return secret
+    if not row.pending_mfa_secret:
+        row.pending_mfa_secret = generate_totp_secret()
+    return row.pending_mfa_secret
 
 
 def has_choice(row) -> bool:

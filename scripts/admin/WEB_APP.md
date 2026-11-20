@@ -5,15 +5,15 @@ User administration and management utilities.
 ## Scripts
 
 ### create_admin.py
-An admin invitation from the server, for a first admin or for getting back in when no admin is left. The same as `shikari invite <email> --bootstrap`; everyone else is invited from Settings → Users → Invite, or with `shikari invite <email> --role standard|operator|admin`.
+A first admin's invitation, for a fresh team server or for getting back in when no admin is left. The same as `shikari first-admin <email>`; everyone else is invited from Settings → Users → Invite, or with `shikari invite <email> --role standard|operator|admin`.
 
 **Usage**:
 ```bash
-python scripts/admin/create_admin.py <email> [--force]
+python scripts/admin/create_admin.py <email> [--force] [--link-only]
 docker compose exec shikari python scripts/admin/create_admin.py <email>   # Docker
 ```
 
-It's refused while an active admin exists (the seeded `admin@shikari.app` counts), unless `--force`. Each run revokes the previous bootstrap link.
+It's refused, with exit status 5, while an active admin exists (a local Shikari's default `admin` counts), unless `--force`, which then needs a free licence seat. Each run revokes the previous first-admin link, so only the newest works.
 
 **Example**:
 ```bash
@@ -47,7 +47,7 @@ Access reset for user@company.com; their sessions have ended. Give them this lin
   http://localhost:32453/reset-access#...
 ```
 
-The link opens a page where they choose a new password and set up a new authenticator app (required, even if they never used MFA), then see fresh backup codes once and are signed in. Their sessions end and their API tokens are revoked when the link is made; the old password, authenticator and backup codes stop working when it's used, and any API token made in between is revoked then. Wrong codes on the page count towards the sign-in lockout (5, then 15 minutes). The token is in the link's fragment (after `#`), so it never reaches server or proxy logs; the link's host is `BASE_URL` (as in reset emails). Issuing and using it are recorded in the audit log (`access_reset_issued`, `access_reset_completed`).
+The link opens a page where they choose a new password and set up a new authenticator app (required, even if they never used MFA), then see fresh backup codes once and are signed in. Their sessions end and their API tokens are revoked when the link is made; the old password, authenticator and backup codes keep working until it's used (nothing refuses sign-in while a reset is open), and any API token or session made in between is ended then. Wrong codes on the page count towards the sign-in lockout (5, then 15 minutes). The token is in the link's fragment (after `#`), so it never reaches server or proxy logs; the link's host is `BASE_URL` (as in the Forgot password email), and the command warns on stderr when it isn't set. Issuing and using it are recorded in the audit log (`access_reset_issued`, `access_reset_completed`).
 
 **Alternative**: an admin can do the same from Settings → Users → Reset access
 

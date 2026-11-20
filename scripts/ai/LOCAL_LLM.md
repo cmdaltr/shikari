@@ -121,8 +121,8 @@ Access at: `http://localhost:32453`
 ### Default Login
 
 ```
-Email: admin@shikari.app
-Password: BigGameHunter
+Sign in as: admin
+Password:   BigGameHunter
 ```
 
 ## Troubleshooting

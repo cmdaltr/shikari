@@ -30,7 +30,7 @@ For detailed documentation on each category, see:
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| **create_admin.py** | An admin invitation link, for a first admin or when none can sign in | `python scripts/admin/create_admin.py <email> [--force]` |
+| **create_admin.py** | A first admin's invitation link (as `shikari first-admin`) | `python scripts/admin/create_admin.py <email> [--force]` |
 | **reset_password.py** | Reset access: a one-time link to a new password and authenticator | `python scripts/admin/reset_password.py <email>` |
 
 **Documentation**: [scripts/admin/WEB_APP.md](../scripts/admin/WEB_APP.md)
@@ -195,7 +195,7 @@ python scripts/ai/train_ai.py custom --import queries.json
 ### Admin Scripts
 
 #### create_admin.py
-**Purpose**: An admin invitation from the server, for a first admin or for getting back in when no admin is left. The same as `shikari invite <email> --bootstrap`. It prints a one-time link, valid for 24 hours, where the person chooses a password and sets up an authenticator; the admin account is made then. Refused while an active admin exists (exit code 3), unless `--force`; only the newest such link works.
+**Purpose**: An admin invitation from the server, for a first admin or for getting back in when no admin is left. The same as `shikari first-admin <email>`. It prints a one-time link, valid for 24 hours, where the person chooses a password and sets up an authenticator; the admin account is made then. Refused while an active admin exists (exit status 5, as in Ostraka and Rowanholt), unless `--force`; only the newest such link works.
 
 **Example**:
 ```bash
@@ -239,9 +239,11 @@ docker compose exec shikari python scripts/admin/reset_password.py user@company.
 
 **Creates default admin**:
 ```
-Email: admin@shikari.app
-Password: BigGameHunter
+Sign in as: admin
+Password:   BigGameHunter
 ```
+
+(A local Shikari only, on 127.0.0.1. A team server seeds no account: `shikari first-admin <email>`.)
 
 ---
 

@@ -40,7 +40,7 @@ def authenticated_session(session, base_url):
         response = session.post(
             f"{base_url}/login",
             data={
-                "email": "admin@shikari.app",
+                "email": "admin",
                 "password": "BigGameHunter"
             },
             allow_redirects=False

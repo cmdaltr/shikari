@@ -16,7 +16,7 @@
   const KEY_RECENT = 'shikari.tips.recent';
   const KEY_SESSION = 'shikari.started';
   const RECENT = 10;
-  const NO_STARTUP = ['/login', '/register', '/forgot-password', '/reset-password', '/reset-access', '/accept-invite', '/clear-browser-cache'];
+  const NO_STARTUP = ['/login', '/register', '/forgot-password', '/reset-access', '/accept-invite', '/clear-browser-cache'];
 
   const store = {
     get(k, fallback) { try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); } catch (e) { return fallback; } },

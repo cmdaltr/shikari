@@ -38,15 +38,14 @@ def init_db():
     """
     Initialize database tables.
 
-    Creates all tables defined in models if they don't exist.
-    Also creates a default admin account if no users exist.
+    Creates all tables defined in models if they don't exist, then the first admin: the default one
+    on a local Shikari, an invitation on a server (shikari/deployment.py).
     """
     Base.metadata.create_all(bind=engine)
     AuditBase.metadata.create_all(bind=engine)
     _add_missing_columns(Base)
     print(f"✓ Database initialized at {DB_PATH}")
 
-    # Create default admin account if no users exist
     _create_default_admin()
 
 
@@ -102,49 +101,15 @@ def get_db_session() -> SQLAlchemySession:
 
 
 def _create_default_admin():
-    """
-    Create default admin account if no users exist.
-
-    Default credentials:
-    - Email: admin@shikari.app
-    - Password: BigGameHunter
-    - Full Name: Admin User
-    - Role: Admin
-    """
-    from shikari.database.models import User, UserRole
-    from shikari.auth.password import hash_password
+    """A local Shikari's default admin (`admin` / BigGameHunter, on loopback only), or a server's
+    first-admin invitation: shikari/deployment.py."""
+    from shikari.deployment import ensure_first_admin
 
     db = SessionLocal()
     try:
-        # Check if any users exist
-        user_count = db.query(User).count()
-
-        if user_count == 0:
-            # Create default admin account
-            admin = User(
-                email="admin@shikari.app",
-                full_name="Admin User",
-                password_hash=hash_password("BigGameHunter"),
-                role=UserRole.ADMIN,
-                is_active=True,
-                failed_login_attempts=0
-            )
-
-            db.add(admin)
-            db.commit()
-
-            print("=" * 60)
-            print("✓ Default admin account created")
-            print("=" * 60)
-            print("  Email: admin@shikari.app")
-            print("  Password: BigGameHunter")
-            print("")
-            print("  ⚠️  WARNING: YOU MUST CHANGE THIS PASSWORD IMMEDIATELY!")
-            print("  This is a default password and is publicly known.")
-            print("  Change it through the Profile page after logging in.")
-            print("=" * 60)
+        ensure_first_admin(db)
     except Exception as e:
-        print(f"Note: Could not create default admin account: {e}")
+        print(f"Note: could not set up the first admin: {e}")
         db.rollback()
     finally:
         db.close()

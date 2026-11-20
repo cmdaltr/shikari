@@ -59,7 +59,7 @@ def main():
     parser.add_argument("--base", default="http://127.0.0.1:8010")
     parser.add_argument("--only", nargs="*", help="page ids to capture (the rest keep their pictures)")
     args = parser.parse_args()
-    email = os.environ.get("SHIKARI_GUIDE_EMAIL", "admin@shikari.app")
+    email = os.environ.get("SHIKARI_GUIDE_EMAIL", "admin")
     password = os.environ.get("SHIKARI_GUIDE_PASSWORD", "BigGameHunter")
 
     spec = yaml.safe_load(PAGES.read_text())["pages"]

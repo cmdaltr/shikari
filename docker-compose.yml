@@ -27,6 +27,11 @@ services:
       - ./data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
+      # A team server (shikari/deployment.py): accounts by invitation, no seeded admin. With no admin
+      # yet, the first start prints a first-admin invitation link for SHIKARI_ADMIN_EMAIL to
+      # `docker compose logs shikari`; BASE_URL (below) is the address that link (and every other) names
+      - SHIKARI_MODE=${SHIKARI_MODE:-server}
+      - SHIKARI_ADMIN_EMAIL=${SHIKARI_ADMIN_EMAIL:-}
       # Behind an HTTPS proxy (the homelab's Caddy) the proxy reaches the container from the Docker
       # bridge, not 127.0.0.1, and uvicorn ignores X-Forwarded-Proto from anywhere it doesn't trust:
       # pages then link their CSS and JS over http and browsers block it as mixed content

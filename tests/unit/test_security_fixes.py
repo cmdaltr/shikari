@@ -8,10 +8,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import shikari.app as app_module
-from shikari.auth.password import hash_password, validate_password, verify_password
-from shikari.auth.password_reset import create_password_reset_request, reset_password_with_token
+from shikari.auth.password import hash_password, validate_password
 from shikari.build.queries import _q
-from shikari.database.models import Base, PasswordReset, User, UserRole
+from shikari.database.models import Base, User, UserRole
 from shikari.parsers import blog_analyzer
 
 
@@ -73,24 +72,7 @@ class TestDrafts:
 
 
 @pytest.mark.unit
-class TestPasswordReset:
-    def test_reset_flow_round_trip(self, db_factory, user):
-        db = db_factory()
-        token = create_password_reset_request(user.email, db)
-        assert token and db.query(PasswordReset).filter_by(reset_token=token, used=False).count() == 1
-        assert reset_password_with_token(token, "New-passw0rd-1234567", db)
-        refreshed = db.query(User).get(user.id)
-        assert verify_password("New-passw0rd-1234567", refreshed.password_hash)
-        assert not reset_password_with_token(token, "Another-passw0rd-123", db), "token must be single use"
-        db.close()
-
-    def test_request_reset_never_returns_token(self, client, user, monkeypatch):
-        monkeypatch.setattr("shikari.auth.email.EMAIL_ENABLED", False)
-        known = client.post("/api/auth/request-reset", json={"email": user.email}).json()
-        unknown = client.post("/api/auth/request-reset", json={"email": "nobody@example.org"}).json()
-        assert "token" not in known and "reset_url" not in known
-        assert known == unknown, "response must not reveal whether the account exists"
-
+class TestPasswordRule:
     def test_multibyte_password_over_72_bytes_rejected(self):
         pw = "a1!" + "密" * 30  # 33 characters, 93 bytes
         ok, _ = validate_password(pw)

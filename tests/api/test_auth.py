@@ -25,7 +25,7 @@ class TestLogin:
         # A fresh session: signing the shared one in again would replace its cookie mid-run
         fresh = requests.Session()
         r = fresh.post(f"{api.url}/login", data={
-            "email": "admin@shikari.app",
+            "email": "admin",
             "password": "BigGameHunter",
             "csrf_token": _csrf(fresh, api.url),
         }, allow_redirects=False, timeout=30)
@@ -49,7 +49,7 @@ class TestLogin:
     def test_login_without_csrf_token_refused(self, api, ensure_running):
         fresh = requests.Session()
         r = fresh.post(f"{api.url}/login", data={
-            "email": "admin@shikari.app",
+            "email": "admin",
             "password": "BigGameHunter",
         }, allow_redirects=False, timeout=30)
         assert r.status_code == 422
@@ -59,7 +59,7 @@ class TestLogin:
         fresh = requests.Session()
         _csrf(fresh, api.url)  # the CSRF session cookie, with a token that isn't its own
         r = fresh.post(f"{api.url}/login", data={
-            "email": "admin@shikari.app",
+            "email": "admin",
             "password": "BigGameHunter",
             "csrf_token": "forged",
         }, allow_redirects=False, timeout=30)
@@ -105,26 +105,26 @@ class TestRegistration:
         assert r.status_code in [200, 302, 400, 422]
 
 
-class TestPasswordReset:
-    """Password reset flow."""
+class TestForgotPassword:
+    """Forgot password: a reset-access link by email (unit/test_reset_access.py has the detail)."""
 
     def test_forgot_password_page(self, api, ensure_running):
         r = api.get("/forgot-password")
         assert r.status_code in [200, 302]
 
-    def test_request_reset(self, api, ensure_running):
-        r = api.post("/api/auth/request-reset", json={
+    def test_request_a_link(self, api, ensure_running):
+        r = api.post("/api/auth/reset-access/request", json={
             "email": "test@test.com",
         })
-        # Always returns 200 to prevent email enumeration
-        assert r.status_code in [200, 401, 422]
+        # The same answer whether or not an account matched; 503 without email set up
+        assert r.status_code in [200, 429, 503]
 
-    def test_reset_with_invalid_token(self, api, ensure_running):
+    def test_the_old_password_reset_is_gone(self, api, ensure_running):
         r = api.post("/api/auth/reset-password", json={
             "token": "invalid-token",
             "new_password": "NewPassword123!",
         })
-        assert r.status_code in [200, 400, 401, 422]
+        assert r.status_code in [401, 404, 405]
 
 
 class TestMFA:

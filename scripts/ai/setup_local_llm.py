@@ -473,7 +473,7 @@ Examples:
     print("     - Local Python: uvicorn shikari.app:app --reload --port 32453")
     print()
     print("  2. Access Shikari at http://localhost:32453")
-    print("     - Login: admin@shikari.app")
+    print("     - Login: admin")
     print("     - Password: BigGameHunter")
     print()
     print("  3. Start using AI-powered detection generation!")

@@ -410,7 +410,7 @@ def main():
         parser.error("--tts google needs a key: set GOOGLE_TTS_API_KEY, --google-key, or --google-key-file")
     if args.ai_key_file:
         AI_KEY["value"] = Path(args.ai_key_file).expanduser().read_text().strip()
-    email = os.environ.get("SHIKARI_GUIDE_EMAIL", "admin@shikari.app")
+    email = os.environ.get("SHIKARI_GUIDE_EMAIL", "admin")
     password = os.environ.get("SHIKARI_GUIDE_PASSWORD", "BigGameHunter")
 
     spec = yaml.safe_load(SCRIPT.read_text())

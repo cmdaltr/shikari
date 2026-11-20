@@ -17,7 +17,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
 BASE = os.getenv("SHIKARI_BASE_URL", "http://localhost:32453").rstrip("/")
 # Defaults are the documented first-run admin from GETTING_STARTED.md
-EMAIL = os.getenv("SHIKARI_EMAIL", "admin@shikari.app")
+EMAIL = os.getenv("SHIKARI_EMAIL", "admin")
 PASSWORD = os.getenv("SHIKARI_PASSWORD", "BigGameHunter")
 SHOTS = Path(__file__).parent.parent / "screenshots" / "walkthrough" / datetime.now().strftime("%Y%m%d-%H%M%S")
 SHOTS.mkdir(parents=True, exist_ok=True)
@@ -418,7 +418,7 @@ def tour_attack_flow(page):
 @step("Login with default admin")
 def login(page):
     page.goto(f"{BASE}/login")
-    caption(page, "Logging in as admin@shikari.app")
+    caption(page, "Logging in as admin")
     page.fill("#email", EMAIL)
     page.fill("#password", PASSWORD)
     shot(page, "login")

@@ -8,7 +8,8 @@ codes shown once.
 
 The same flow as reset access (shikari/auth/reset_access.py) and the same link rules
 (shikari/auth/links.py), except that it makes the account at the end. There's no account to lock while
-it's pending, so wrong codes aren't limited (as in Ostraka): only someone holding the link can try.
+it's pending, so wrong codes count on the invitation itself: each is audited, and the fifth closes the
+link, so an admin has to issue a new one.
 """
 
 from datetime import datetime, timedelta
@@ -24,6 +25,11 @@ INVITATION_EXPIRY_HOURS = links.LINK_EXPIRY_HOURS
 EVENT_INVITATION_CREATED = "invitation_created"
 EVENT_INVITATION_REVOKED = "invitation_revoked"
 EVENT_ACCOUNT_CREATED = "account_created"
+EVENT_INVITATION_WRONG_CODE = "invitation_wrong_code"
+EVENT_INVITATION_CLOSED = "invitation_closed"
+
+# Wrong codes an invitation takes before it closes
+WRONG_CODES_ALLOWED = 5
 
 
 class InvitationError(ValueError):
@@ -40,6 +46,10 @@ class SeatsFull(InvitationError):
 
 class AdminExists(InvitationError):
     """create_admin.py without --force while an active admin exists."""
+
+
+class InvitationClosed(InvitationError):
+    """The fifth wrong code: the link no longer works."""
 
 
 def invitation_link(token: str, base: Optional[str] = None) -> str:
@@ -66,6 +76,19 @@ def _seat_problem(db, *, pending_too: bool, except_email: Optional[str] = None) 
         return None
     return (f"This install allows {licence.seats_allowed()} accounts, counting open invitations. Add a Pro "
             "or Services licence with more seats (Report branding → Licence), or revoke an invitation.")
+
+
+def _revoke_replaced(db, query, actor: Optional[User], **kw) -> None:
+    """Revoke the open invitations in `query` because a new one replaces them, each audited."""
+    now = datetime.utcnow()
+    replaced = query.filter(Invitation.accepted_at.is_(None), Invitation.revoked_at.is_(None)).all()
+    for old in replaced:
+        old.revoked_at = now
+        links.clear_choice(old)
+    db.commit()
+    for old in replaced:
+        links.audit(db, EVENT_INVITATION_REVOKED, user_id=actor.id if actor else None, email=old.email,
+                    invitation_id=old.id, actor_email=actor.email if actor else None, reason="replaced", **kw)
 
 
 def create_invitation(db: SQLAlchemySession, *, email: str, role, full_name: Optional[str] = None,
@@ -98,9 +121,8 @@ def create_invitation(db: SQLAlchemySession, *, email: str, role, full_name: Opt
         raise SeatsFull(problem)
 
     now = datetime.utcnow()
-    db.query(Invitation).filter(Invitation.email == email, Invitation.accepted_at.is_(None),
-                                Invitation.revoked_at.is_(None)).update({"revoked_at": now, **links.CLEARED,
-                                                                         "pending_full_name": None})
+    _revoke_replaced(db, db.query(Invitation).filter(Invitation.email == email), actor,
+                     ip_address=ip_address, user_agent=user_agent)
     token = links.new_token()
     invitation = Invitation(email=email, role=role, full_name=full_name, token_hash=links.token_hash(token),
                             invited_by=actor.id if actor else None,
@@ -122,10 +144,8 @@ def bootstrap_admin(db: SQLAlchemySession, email: str, *, force: bool = False) -
     if admins and not force:
         raise AdminExists("Shikari already has an active admin. Ask them to invite you (Settings → Users "
                           "→ Invite), or run this again with --force.")
-    db.query(Invitation).filter(Invitation.invited_by.is_(None), Invitation.role == UserRole.ADMIN,
-                                Invitation.accepted_at.is_(None), Invitation.revoked_at.is_(None)
-                                ).update({"revoked_at": datetime.utcnow(), **links.CLEARED, "pending_full_name": None})
-    db.commit()
+    _revoke_replaced(db, db.query(Invitation).filter(Invitation.invited_by.is_(None),
+                                                     Invitation.role == UserRole.ADMIN), None)
     # Getting back in when no admin is left always works; adding one beside them takes a seat
     return create_invitation(db, email=email, role=UserRole.ADMIN, via="bootstrap", check_seats=bool(admins))
 
@@ -144,18 +164,35 @@ def revoke(db: SQLAlchemySession, invitation_id: int, actor: User, ip_address: O
     if invitation is None:
         return False
     invitation.revoked_at = datetime.utcnow()
-    invitation.pending_full_name = invitation.pending_password_hash = invitation.pending_mfa_secret = None
+    links.clear_choice(invitation)
     db.commit()
     links.audit(db, EVENT_INVITATION_REVOKED, user_id=actor.id, email=invitation.email, ip_address=ip_address,
                 user_agent=user_agent, invitation_id=invitation.id, actor_email=actor.email)
     return True
 
 
+def find_invitation(db: SQLAlchemySession, token: str) -> Tuple[Optional[Invitation], str]:
+    """The invitation for this token and what it is: links.OPEN, links.EXPIRED (neither accepted nor
+    revoked, but past its time; anything chosen on it is cleared now) or links.INVALID (accepted,
+    revoked, replaced, closed by wrong codes, or unknown), with the invitation only when open."""
+    if not token:
+        return None, links.INVALID
+    invitation = db.query(Invitation).filter(Invitation.token_hash == links.token_hash(token),
+                                             Invitation.accepted_at.is_(None),
+                                             Invitation.revoked_at.is_(None)).first()
+    if invitation is None:
+        return None, links.INVALID
+    if datetime.utcnow() >= invitation.expires_at:
+        if invitation.pending_password_hash or invitation.pending_mfa_secret or invitation.pending_full_name:
+            links.clear_choice(invitation)
+            db.commit()
+        return None, links.EXPIRED
+    return invitation, links.OPEN
+
+
 def open_invitation(db: SQLAlchemySession, token: str) -> Optional[Invitation]:
     """The open, unexpired invitation for this token, if any."""
-    if not token:
-        return None
-    return _open_ones(db, datetime.utcnow()).filter(Invitation.token_hash == links.token_hash(token)).first()
+    return find_invitation(db, token)[0]
 
 
 def start_invitation(db: SQLAlchemySession, invitation: Invitation, full_name: str, new_password: str) -> str:
@@ -181,6 +218,29 @@ def _bootstrap_with_no_admin(db, invitation: Invitation) -> bool:
             and not db.query(User).filter(User.role == UserRole.ADMIN, User.is_active.is_(True)).count())
 
 
+def _wrong_code(db, invitation: Invitation, **kw) -> None:
+    """Count and audit a wrong code; the fifth closes the link (claimed as the completion is, so two
+    at once can't both slip past the limit) and clears what was chosen. Always raises."""
+    attempts = (invitation.failed_attempts or 0) + 1
+    invitation.failed_attempts = attempts
+    db.commit()
+    links.audit(db, EVENT_INVITATION_WRONG_CODE, user_id=None, email=invitation.email, success=False,
+                invitation_id=invitation.id, attempt=attempts, allowed=WRONG_CODES_ALLOWED, **kw)
+    if attempts < WRONG_CODES_ALLOWED:
+        left = WRONG_CODES_ALLOWED - attempts
+        raise InvitationError(f"{links.WRONG_CODE} {left} {'try' if left == 1 else 'tries'} left.")
+    closed = db.query(Invitation).filter(Invitation.id == invitation.id, Invitation.accepted_at.is_(None),
+                                         Invitation.revoked_at.is_(None)
+                                         ).update({"revoked_at": datetime.utcnow(), **links.CLEARED,
+                                                   "pending_full_name": None}, synchronize_session=False)
+    db.commit()
+    if closed:
+        links.audit(db, EVENT_INVITATION_CLOSED, user_id=None, email=invitation.email, success=False,
+                    invitation_id=invitation.id, reason=f"{WRONG_CODES_ALLOWED} wrong codes", **kw)
+    raise InvitationClosed(f"That code didn't match either, and after {WRONG_CODES_ALLOWED} wrong codes this "
+                           "invitation no longer works. Ask an admin for a new one.")
+
+
 def complete_invitation(db: SQLAlchemySession, invitation: Invitation, code: str,
                         ip_address: Optional[str] = None, user_agent: Optional[str] = None
                         ) -> Tuple[User, List[str]]:
@@ -190,7 +250,7 @@ def complete_invitation(db: SQLAlchemySession, invitation: Invitation, code: str
     if not (links.has_choice(invitation) and invitation.pending_full_name):
         raise InvitationError("Choose a password first.")
     if not links.code_matches(invitation, code):
-        raise InvitationError(links.WRONG_CODE)
+        _wrong_code(db, invitation, ip_address=ip_address, user_agent=user_agent)
     if db.query(User.id).filter(User.email == invitation.email).first():
         raise AccountExists(f"{invitation.email} already has an account. Sign in, or ask an admin to "
                             "reset your access.")

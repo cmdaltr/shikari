@@ -26,6 +26,7 @@ or as shikari.service (the pip-installed shikari).
     shikari docker <args>          docker compose with the project's docker-compose.yml
     shikari reset-access <email>   a one-time link for someone who can't sign in (new password and authenticator)
     shikari invite <email> --role R  a one-time link that opens an account (standard, operator or admin)
+    shikari first-admin <email>    a team server's first admin: an admin invitation, while there's no admin
 
 Options given to start or restart are remembered in settings.json in the state directory:
 ~/Library/Application Support/Shikari (macOS) or $XDG_STATE_HOME/shikari (Linux), or
@@ -681,6 +682,7 @@ HANDOVER = {
     "licence": ("shikari.cli.licence", False),
     "reset-access": ("shikari.cli.reset_access", False),
     "invite": ("shikari.cli.invite", False),
+    "first-admin": ("shikari.cli.first_admin", False),
 }
 
 
@@ -692,7 +694,9 @@ def main(argv=None):
         module, keep_name = HANDOVER[argv[0]]
         rest = argv if keep_name else argv[1:]
         prog = "shikari" if keep_name else f"shikari {argv[0]}"
-        os.chdir(ROOT)
+        # Where the app's relative paths (data/shikari.db…) resolve, as shikari/paths.py's HOME: a server's
+        # SHIKARI_HOME, else the checkout
+        os.chdir(Path(os.environ.get("SHIKARI_HOME") or ROOT).expanduser())
         os.execv(python(), [python(), "-c", f"import sys; sys.path.insert(0, {str(ROOT)!r}); from {module} import main; "
                             f"sys.argv = [{prog!r}] + sys.argv[1:]; sys.exit(main())"] + rest)
 
@@ -734,7 +738,8 @@ def main(argv=None):
                      "test populate|depopulate|status (sample data for a guided tour) · "
                      "app install|uninstall|open (a desktop app with a Dock / Start menu entry) · "
                      "reset-access <email> (a one-time link to a new password and authenticator) · "
-                     "invite <email> --role standard|operator|admin [--name N] (a one-time link to a new account)")
+                     "invite <email> --role standard|operator|admin [--name N] (a one-time link to a new account) · "
+                     "first-admin <email> [--force] (a team server's first admin, by invitation)")
 
     args = parser.parse_args(argv)
     commands = {"start": cmd_start, "stop": cmd_stop, "restart": cmd_restart, "status": cmd_status,

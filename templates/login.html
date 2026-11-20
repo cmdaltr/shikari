@@ -268,11 +268,15 @@
                 <div style="width: 50%;">
                   <div class="form-section" style="margin: 0;">
                     <label for="email" class="form-label">Email</label>
-                    <input type="email"
+                    {# Text, not email: a local Shikari's default admin signs in as `admin` #}
+                    <input type="text"
                            name="email"
                            id="email"
                            class="form-input"
-                           placeholder="you@example.com"
+                           autocomplete="username"
+                           autocapitalize="none"
+                           spellcheck="false"
+                           placeholder="{{ 'you@example.com' if is_server() else 'you@example.com, or admin' }}"
                            required
                            autofocus
                            maxlength="64">
@@ -305,7 +309,7 @@
                 </div>
 
                 <div style="text-align: center; margin-top: 1rem; width: 50%;">
-                  {% if request.app.state.desktop %}
+                  {% if registration_open() %}
                   <a href="/register" style="color: var(--accent); text-decoration: none; font-size: 0.9rem;">Register</a>
                   <span style="color: var(--text-secondary); margin: 0 0.5rem;">|</span>
                   {% endif %}

@@ -127,11 +127,19 @@ class TestIssue:
         assert row.user_id == admin.id and row.email == "new.person@example.org"
         assert d["role"] == "operator" and d["actor_email"] == admin.email and d["via"] == "admin"
 
-    def test_a_new_invitation_replaces_the_earlier_one(self, db_factory):
-        first, second = _token(_invite(db_factory)), _token(_invite(db_factory))
+    def test_a_new_invitation_replaces_the_earlier_one_and_the_revocation_is_audited(self, db_factory, admin):
+        first = _token(_invite(db_factory))
         db = db_factory()
-        assert inv.open_invitation(db, first) is None and inv.open_invitation(db, second) is not None
+        inv.start_invitation(db, inv.open_invitation(db, first), "New Person", PASSWORD)
+        inv.create_invitation(db, email="new.person@example.org", role="standard", actor=db.get(User, admin.id))
+        assert inv.open_invitation(db, first) is None
+        old = db.query(Invitation).filter(Invitation.token_hash == inv.links.token_hash(first)).one()
+        assert old.revoked_at and old.pending_password_hash is None and old.pending_mfa_secret is None
+        assert old.pending_full_name is None
         db.close()
+        [revoked] = _audits(db_factory, inv.EVENT_INVITATION_REVOKED)
+        d = json.loads(revoked.details)
+        assert d["reason"] == "replaced" and d["invitation_id"] == old.id and revoked.user_id == admin.id
 
     def test_an_existing_account_is_pointed_at_reset_access(self, db_factory, admin):
         db = db_factory()
@@ -177,10 +185,14 @@ class TestAccept:
         db.close()
 
         wrong = next(c for c in ("000000", "111111", "222222") if not pyotp.TOTP(secret).verify(c, valid_window=1))
-        for _ in range(7):  # no lockout: there's no account yet (as in Ostraka)
+        for attempt in range(1, inv.WRONG_CODES_ALLOWED):  # short of closing it
             r = _complete(client, token, csrf, wrong)
             assert r.status_code == 422 and "didn't match" in r.json()["error"]
+            assert f"{inv.WRONG_CODES_ALLOWED - attempt} tr" in r.json()["error"]
             csrf = r.json()["csrf_token"]
+        wrongs = _audits(db_factory, inv.EVENT_INVITATION_WRONG_CODE)
+        assert [json.loads(a.details)["attempt"] for a in wrongs] == list(range(1, inv.WRONG_CODES_ALLOWED))
+        assert all(not a.success and a.email == "new.person@example.org" for a in wrongs)
 
         r = _complete(client, token, csrf, pyotp.TOTP(secret).now())
         assert r.status_code == 200
@@ -198,10 +210,11 @@ class TestAccept:
         [created] = _audits(db_factory, inv.EVENT_ACCOUNT_CREATED)
         assert created.user_id == u.id and json.loads(created.details)["role"] == "operator"
 
-        # Single use
-        assert _start(client, token, _csrf(client)).status_code == 410
-        assert _complete(client, token, _csrf(client), pyotp.TOTP(secret).now()).status_code == 410
-        assert client.post("/api/auth/invitation/preview", json={"token": token}).status_code == 410
+        # Single use, with the generic "not valid"
+        r = _start(client, token, _csrf(client))
+        assert r.status_code == 404 and r.json()["error"] == app_module.INVITATION_GONE
+        assert _complete(client, token, _csrf(client), pyotp.TOTP(secret).now()).status_code == 404
+        assert client.post("/api/auth/invitation/preview", json={"token": token}).status_code == 404
 
     def test_name_and_password_rules(self, client, db_factory):
         token = _token(_invite(db_factory))
@@ -210,19 +223,68 @@ class TestAccept:
         r = _start(client, token, r.json()["csrf_token"], name="")
         assert r.status_code == 422
 
-    def test_expired_and_revoked_links_refused(self, client, db_factory, admin):
+    def test_an_expired_link_says_so_and_forgets_what_was_chosen(self, client, db_factory, admin):
         token = _token(_invite(db_factory))
+        _start(client, token, _csrf(client))
         db = db_factory()
-        db.query(Invitation).update({"expires_at": datetime.utcnow() - timedelta(seconds=1)})
+        db.query(Invitation).update({"expires_at": datetime.utcnow() - timedelta(hours=25)})
         db.commit()
         db.close()
-        assert _start(client, token, _csrf(client)).status_code == 410
-        token = _token(_invite(db_factory, email="other.one@example.org"))
+        for r in (_start(client, token, _csrf(client)),
+                  client.post("/api/auth/invitation/preview", json={"token": token})):
+            assert r.status_code == 410 and r.json()["error"] == app_module.INVITATION_EXPIRED
+        db = db_factory()
+        row = db.query(Invitation).one()
+        assert row.pending_password_hash is None and row.pending_mfa_secret is None and row.pending_full_name is None
+        db.close()
+
+    def test_revoked_replaced_and_unknown_links_get_the_same_generic_answer(self, client, db_factory, admin):
+        revoked = _token(_invite(db_factory, email="other.one@example.org"))
         db = db_factory()
         assert inv.revoke(db, db.query(Invitation).filter_by(email="other.one@example.org").one().id,
                           db.get(User, admin.id))
         db.close()
-        assert _start(client, token, _csrf(client)).status_code == 410
+        replaced = _token(_invite(db_factory))
+        _invite(db_factory)
+        answers = [_start(client, t, _csrf(client)) for t in (revoked, replaced, "no-such-token")]
+        assert {r.status_code for r in answers} == {404}
+        assert {r.json()["error"] for r in answers} == {app_module.INVITATION_GONE}
+
+    def test_opening_the_link_again_shows_the_same_authenticator(self, client, db_factory):
+        token = _token(_invite(db_factory))
+        first = _start(client, token, _csrf(client), name="First Name").json()
+        second = _start(client, token, _csrf(client), name="Second Name", password="Another-new-passw0rd!").json()
+        assert first["secret"] == second["secret"] and first["qr_code"] == second["qr_code"]
+        r = _complete(client, token, second["csrf_token"], pyotp.TOTP(first["secret"]).now())
+        assert r.status_code == 200
+        db = db_factory()
+        u = db.query(User).filter(User.email == "new.person@example.org").one()
+        assert u.full_name == "Second Name" and verify_password("Another-new-passw0rd!", u.password_hash)
+        db.close()
+
+    def test_the_fifth_wrong_code_closes_the_link(self, client, db_factory):
+        token = _token(_invite(db_factory))
+        r = _start(client, token, _csrf(client))
+        secret, csrf = r.json()["secret"], r.json()["csrf_token"]
+        wrong = next(c for c in ("000000", "111111", "222222") if not pyotp.TOTP(secret).verify(c, valid_window=1))
+        for _ in range(inv.WRONG_CODES_ALLOWED - 1):
+            r = _complete(client, token, csrf, wrong)
+            csrf = r.json()["csrf_token"]
+        r = _complete(client, token, csrf, wrong)
+        assert r.status_code == 404
+        assert "no longer works" in r.json()["error"] and "new one" in r.json()["error"]
+        db = db_factory()
+        row = db.query(Invitation).one()
+        assert row.revoked_at and row.failed_attempts == inv.WRONG_CODES_ALLOWED
+        assert row.pending_password_hash is None and row.pending_mfa_secret is None and row.pending_full_name is None
+        assert db.query(User).filter(User.email == "new.person@example.org").count() == 0
+        db.close()
+        assert len(_audits(db_factory, inv.EVENT_INVITATION_WRONG_CODE)) == inv.WRONG_CODES_ALLOWED
+        [closed] = _audits(db_factory, inv.EVENT_INVITATION_CLOSED)
+        assert closed.email == "new.person@example.org" and not closed.success
+        # Even the right code is too late now
+        r = _complete(client, token, _csrf(client), pyotp.TOTP(secret).now())
+        assert r.status_code == 404 and r.json()["error"] == app_module.INVITATION_GONE
 
     def test_seats_checked_again_at_completion(self, client, db_factory, admin, monkeypatch):
         token = _token(_invite(db_factory))
@@ -246,7 +308,7 @@ class TestAccept:
         csrf = re.search(r'let csrf = "([^"]+)"', r.text).group(1)
         r = client.post(f"/api/auth/invitation/start?token={token}",
                         json={"csrf_token": csrf, "full_name": "A B", "new_password": PASSWORD})
-        assert r.status_code == 410
+        assert r.status_code == 404
 
     @pytest.mark.login_gate
     def test_reachable_without_signing_in(self, client, db_factory):
@@ -306,21 +368,10 @@ class TestAdminEndpoints:
         db.close()
 
 
-@pytest.fixture
-def desktop():
-    """Set app.state.desktop for a test (starlette's State doesn't undo cleanly under monkeypatch)."""
-    was = app_module.app.state.desktop
-
-    def set_(value):
-        app_module.app.state.desktop = value
-    yield set_
-    app_module.app.state.desktop = was
-
-
 @pytest.mark.unit
 class TestRegistration:
-    def test_closed_on_a_server(self, client, desktop):
-        desktop(False)
+    def test_closed_on_a_server(self, client, monkeypatch):
+        monkeypatch.setenv("SHIKARI_MODE", "server")
         r = client.get("/register")
         assert r.status_code == 303 and r.headers["location"] == "/login?invite_only=1"
         r = client.post("/register", data={"email": "self.made@example.org", "full_name": "Self Made",
@@ -329,10 +380,37 @@ class TestRegistration:
         page = client.get("/login?invite_only=1").text
         assert "Ask an admin for an invitation" in page and 'href="/register"' not in page
 
-    def test_open_in_the_desktop_app(self, client, desktop):
-        desktop(True)
+    @pytest.mark.parametrize("mode", [None, "local", ""])
+    def test_open_on_a_local_shikari(self, client, monkeypatch, mode):
+        """The desktop app and `shikari start` from a checkout: not a server, whatever else is set."""
+        if mode is None:
+            monkeypatch.delenv("SHIKARI_MODE", raising=False)
+        else:
+            monkeypatch.setenv("SHIKARI_MODE", mode)
+        monkeypatch.delenv("SHIKARI_DESKTOP", raising=False)
+        for name in ("UVICORN_HOST", "SHIKARI_HOST"):
+            monkeypatch.delenv(name, raising=False)
         assert client.get("/register").status_code == 200
         assert 'href="/register"' in client.get("/login").text
+
+    @pytest.mark.parametrize("how", ["argv", "UVICORN_HOST", "SHIKARI_HOST"])
+    def test_closed_on_a_local_shikari_on_a_network_address(self, client, monkeypatch, how):
+        """The same guard as seeding the default admin: open registration on a LAN address is anyone's."""
+        import sys
+
+        monkeypatch.delenv("SHIKARI_MODE", raising=False)
+        for name in ("UVICORN_HOST", "SHIKARI_HOST"):
+            monkeypatch.delenv(name, raising=False)
+        if how == "argv":
+            monkeypatch.setattr(sys, "argv", ["uvicorn", "shikari.app:app", "--host", "0.0.0.0"])
+        else:
+            monkeypatch.setenv(how, "192.168.1.20")
+        r = client.get("/register")
+        assert r.status_code == 303 and r.headers["location"] == "/login?invite_only=1"
+        r = client.post("/register", data={"email": "self.made@example.org", "full_name": "Self Made",
+                                           "password": PASSWORD, "password_confirm": PASSWORD, "csrf_token": "t"})
+        assert r.status_code == 303 and r.headers["location"] == "/login?invite_only=1"
+        assert 'href="/register"' not in client.get("/login").text
 
 
 @pytest.mark.unit
@@ -360,43 +438,6 @@ class TestCommandLine:
         from shikari.cli.invite import main
 
         assert main([admin.email]) == 1 and "Reset access" in capsys.readouterr().err
-
-    def test_bootstrap_refused_while_an_admin_exists_unless_forced(self, db_factory, admin, capsys):
-        from shikari.cli.invite import ADMIN_EXISTS, main
-
-        assert main(["new.admin@example.org", "--bootstrap"]) == ADMIN_EXISTS
-        assert main(["new.admin@example.org", "--bootstrap", "--force"]) == 0
-        db = db_factory()
-        assert db.query(Invitation).one().role == UserRole.ADMIN
-        db.close()
-
-    def test_bootstrap_with_no_admin_and_only_the_newest_link_works(self, db_factory, capsys, monkeypatch):
-        from shikari.cli.invite import main
-
-        monkeypatch.setattr(licence, "seats_allowed", lambda: 0)  # getting back in always works
-        assert main(["first.admin@example.org", "--bootstrap"]) == 0
-        assert main(["second.admin@example.org", "--bootstrap"]) == 0
-        db = db_factory()
-        assert [i.email for i in inv.pending(db)] == ["second.admin@example.org"]
-        db.close()
-
-    def test_create_admin_script_is_the_bootstrap(self, monkeypatch):
-        import importlib.util
-        from pathlib import Path
-
-        calls = []
-        monkeypatch.setattr("shikari.cli.invite.invite", lambda *a, **k: calls.append((a, k)) or 0)
-        path = Path(__file__).parents[2] / "scripts" / "admin" / "create_admin.py"
-        cwd = Path.cwd()
-        try:
-            spec = importlib.util.spec_from_file_location("create_admin", path)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            assert module.main(["boss.two@example.org", "--force"]) == 0
-        finally:
-            import os
-            os.chdir(cwd)
-        assert calls == [(("boss.two@example.org", "admin"), {"bootstrap": True, "force": True})]
 
     def test_on_the_host_command(self):
         from shikari import service

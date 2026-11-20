@@ -225,8 +225,8 @@ The API test suite covers every endpoint in Shikari:
 | `GET /register` | `test_auth.py`, `unit/test_invitations.py` | Page load; a server redirects to /login |
 | `POST /register` | `test_auth.py`, `unit/test_invitations.py` | Validation; closed on a server |
 | `GET /forgot-password` | `test_auth.py` | Page load |
-| `POST /api/auth/request-reset` | `test_auth.py` | Email enumeration safe |
-| `POST /api/auth/reset-password` | `test_auth.py` | Invalid token |
+| `POST /api/auth/reset-access/request` | `unit/test_reset_access.py` | Forgot password: same answer either way, rate limits, off without email |
+| `/reset-access`, `/accept-invite` page script | `unit/test_link_page_script.py` | Run in headless Chromium, API stubbed |
 | `GET /reset-access`, `POST /api/auth/reset-access/start`, `/complete` | `unit/test_reset_access.py` | New password and authenticator, single use |
 | `GET /api/mfa/status` | `test_auth.py` | MFA state |
 | `POST /api/mfa/setup` | `test_auth.py` | MFA init |
@@ -307,7 +307,7 @@ The API test suite covers every endpoint in Shikari:
 |----------|-------------|---------|
 | `SHIKARI_BASE_URL` | Shikari server URL | `http://127.0.0.1:32453` |
 | `SHIKARI_TOKEN` | API token to sign in with (instead of email and password) | *(unset)* |
-| `SHIKARI_TEST_EMAIL` | Login email for tests | `admin@shikari.app` |
+| `SHIKARI_TEST_EMAIL` | Login for tests (a local Shikari's default admin is `admin`) | `admin` |
 | `SHIKARI_TEST_PASSWORD` | Login password for tests | *(see conftest)* |
 
 ## File Structure

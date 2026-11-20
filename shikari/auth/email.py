@@ -1,5 +1,5 @@
 """
-Email sending functionality for password reset and notifications.
+Email sending: self-service reset-access links (Forgot password) and notifications.
 
 Supports both SMTP and development mode (console output).
 """
@@ -25,32 +25,17 @@ SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
 EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "false").lower() == "true"
 SMTP_TIMEOUT = float(os.getenv("SMTP_TIMEOUT", "10"))
 
-# Base URL for reset links
+# The address links name (shikari/auth/links.py); self-service links are emailed only when it's set
 BASE_URL = os.getenv("BASE_URL") or "http://localhost:32453"  # empty, as compose passes it unset: the default
 
 
-def send_password_reset_email(email: str, token: str, full_name: Optional[str] = None) -> bool:
-    """
-    Send password reset email to user.
-
-    Args:
-        email: Recipient email address
-        token: Password reset token
-        full_name: User's full name (optional)
-
-    Returns:
-        True if email sent successfully, False otherwise
-    """
-    # Generate reset URL
-    reset_url = f"{BASE_URL}/reset-password?token={token}"
-
-    # Prepare email content
-    subject = "Password Reset Request - Shikari Security Platform"
-
-    # Personalize greeting
+def send_reset_access_email(email: str, link: str, full_name: Optional[str] = None,
+                            hours: int = 24) -> bool:
+    """Email a self-service reset-access link (shikari/auth/reset_access.py): a new password and a new
+    authenticator. The link carries its token after #, so it never reaches a server's logs."""
+    subject = "Reset your access - Shikari Security Platform"
     greeting = f"Hello {full_name}," if full_name else "Hello,"
 
-    # HTML version
     html_body = f"""
     <!DOCTYPE html>
     <html>
@@ -93,9 +78,6 @@ def send_password_reset_email(email: str, token: str, full_name: Optional[str] =
                 font-weight: 600;
                 margin: 20px 0;
             }}
-            .button:hover {{
-                background: #9b2626;
-            }}
             .footer {{
                 padding-top: 20px;
                 border-top: 1px solid #e2e8f0;
@@ -115,24 +97,24 @@ def send_password_reset_email(email: str, token: str, full_name: Optional[str] =
     <body>
         <div class="container">
             <div class="header">
-                <h1>🏹 Shikari Security Platform</h1>
+                <h1>Shikari Security Platform</h1>
             </div>
             <div class="content">
                 <p>{html.escape(greeting)}</p>
-                <p>We received a request to reset your password for your Shikari account.</p>
-                <p>Click the button below to reset your password:</p>
+                <p>Someone asked to reset access to your Shikari account. The link lets you choose a new
+                password and set up a new authenticator app; your old ones keep working until you finish.</p>
                 <p style="text-align: center;">
-                    <a href="{html.escape(reset_url)}" class="button">Reset Password</a>
+                    <a href="{html.escape(link)}" class="button">Reset access</a>
                 </p>
                 <p>Or copy and paste this link into your browser:</p>
                 <p style="word-break: break-all; background: #f7fafc; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px;">
-                    {reset_url}
+                    {html.escape(link)}
                 </p>
                 <div class="warning">
-                    <strong>⚠️ Security Notice:</strong>
+                    <strong>Security notice:</strong>
                     <ul style="margin: 8px 0 0 0; padding-left: 20px;">
-                        <li>This link will expire in <strong>1 hour</strong></li>
-                        <li>If you didn't request this reset, please ignore this email</li>
+                        <li>The link works once, within <strong>{hours} hours</strong></li>
+                        <li>If you didn't ask for this, ignore this email: nothing changes unless the link is used</li>
                         <li>Never share this link with anyone</li>
                     </ul>
                 </div>
@@ -146,31 +128,24 @@ def send_password_reset_email(email: str, token: str, full_name: Optional[str] =
     </html>
     """
 
-    # Plain text version (fallback)
     text_body = f"""
 {greeting}
 
-We received a request to reset your password for your Shikari account.
+Someone asked to reset access to your Shikari account. This link lets you choose a new password and
+set up a new authenticator app; your old ones keep working until you finish:
 
-Click the link below to reset your password:
-{reset_url}
+{link}
 
 SECURITY NOTICE:
-- This link will expire in 1 hour
-- If you didn't request this reset, please ignore this email
+- The link works once, within {hours} hours
+- If you didn't ask for this, ignore this email: nothing changes unless the link is used
 - Never share this link with anyone
 
 This is an automated message from Shikari Security Platform.
 If you have questions, please contact your system administrator.
     """
 
-    # Send email
-    return send_email(
-        to_email=email,
-        subject=subject,
-        html_body=html_body,
-        text_body=text_body
-    )
+    return send_email(to_email=email, subject=subject, html_body=html_body, text_body=text_body)
 
 
 def send_email(to_email: str, subject: str, html_body: str, text_body: str) -> bool:
