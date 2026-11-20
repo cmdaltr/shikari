@@ -741,6 +741,18 @@ assert hmac.compare_digest(expected, request.headers["X-Shikari-Signature"])
 
 The URL must be `https://`, or plain `http://` to localhost, a loopback or an RFC 1918 address; link-local addresses (cloud metadata) and credentials in the URL are refused, and redirects aren't followed, so a redirect is recorded as a failure. Deliveries are tried three times with backoff (a 4xx other than 429 isn't retried), and the last 20 per webhook show in `GET /api/webhooks`. `POST /api/webhooks/<id>/test` sends a test event and returns the result; `PATCH` changes `url`, `events`, `enabled` or `description`; `DELETE` removes it. Set `SHIKARI_PUBLIC_URL` (e.g. `https://shikari.example.com`) to make `results_url` absolute. Webhooks and their secrets are stored in `data/webhooks.json`, never in git.
 
+### Workflow 12: Leads from an X-SIEM Pivot
+
+A group's pivots are in `data/correlate/<group>.json` under `cross_vendor_correlations`, each with a `correlation_id`. Post a stage's results as a file named `s<stage>_<siem>` (stage from 0; `googlesecops`, `mde`, `splunk` or `elastic`), or name the stages to run on the server in `run` (`stage:siem`, comma-separated; only SIEMs whose query client is configured run). CSV, JSON or JSON lines, up to 25 MB a file; `tolerance` is the clock skew allowed, in seconds (300 by default).
+
+```bash
+curl -X POST http://127.0.0.1:32453/api/pivots/leads -H "Authorization: Bearer $SHIKARI_TOKEN" \
+  -F group_name=APT29 -F correlation_id=xv_fbea102259 -F tolerance=300 \
+  -F s0_googlesecops=@stage1-secops.json -F s1_mde=@stage2-defender.csv -F run=2:splunk
+```
+
+The answer has `leads` (ranked: `entity`, `value`, `stages_hit` of `stages_total`, `in_order`, `span_seconds`, `score`, and `hits` with the event behind each stage), `unjoined` (per stage and SIEM: `no_keys`, `no_time`, `outside_window` or `no_results`, with a `detail` to show), `ran` (stages run here, with `rows` and `truncated`), `problems` (a run that failed, in the SIEM's words) and `summary`. How the keys are normalised and leads ranked: [Results → Finding leads](../guide/06-results.md#finding-leads).
+
 ---
 
 ## Code Examples

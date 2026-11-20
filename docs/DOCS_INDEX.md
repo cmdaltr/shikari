@@ -16,7 +16,7 @@ Plain-language guide to every part of Shikari, one page each: what it's for, how
 | [Analyse](guide/03-analyse.md) | Detections from a report URL or file |
 | [Company profile](guide/04-company-profile.md) | Who targets a company, then their detections |
 | [Research](guide/05-research.md) | Find groups by keyword, compare their techniques, export |
-| [Results](guide/06-results.md) | Detections, correlations, attack flow, briefing, buttons |
+| [Results](guide/06-results.md) | Detections, correlations, X-SIEM pivots and their leads, attack flow, briefing, buttons |
 | [Library](guide/07-library.md) | Saved detections: search, filter, tag, export |
 | [Coverage](guide/08-coverage.md) | Reference and detection coverage across ATT&CK |
 | [Flows](guide/09-flows.md) | Attack flows: what you can and can't detect |

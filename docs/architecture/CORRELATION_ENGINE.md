@@ -109,7 +109,7 @@ in a process command line. A side left with no part drops the correlation.
 
 **Result:**
 - 100 detections → 4,950 possible pairs
-- Only same-vendor pairs (cross-vendor disabled)
+- Only same-vendor pairs: across SIEMs a chain becomes an X-SIEM pivot instead (below)
 
 ---
 
@@ -828,9 +828,11 @@ Already fixed! New limits ensure:
    - Train model on analyst feedback
    - Adaptive threshold based on environment
 
-2. **Cross-vendor Correlations:**
-   - Currently disabled
-   - Future: Correlate MDE + Splunk + Elastic
+2. **Cross-vendor Correlations:** done another way. Queries in different languages don't splice, so a chain
+   whose techniques two or more SIEMs detect becomes an **X-SIEM pivot** (`shikari/correlation/cross_vendor.py`):
+   its stages, each SIEM's query for each, the keys to join on and the window. **Find leads**
+   (`shikari/correlation/leads.py`, `POST /api/pivots/leads`) joins the stages' results, run through the query
+   clients or uploaded as exports, into ranked entities, and says what didn't join and why.
 
 3. **Configurable Limits:**
    - Make 8-technique limit adjustable

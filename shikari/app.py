@@ -6922,6 +6922,113 @@ def _saved_correlation_ids(db, user_id: int, group_name: str, grouped_correlatio
             for i, c in enumerate(vendor.get("correlations") or [], 1) if _correlation_key(c) in saved]
 
 
+# X-SIEM pivot leads (#46): an upload's size, and the rows a stage's run reads back, at most
+PIVOT_UPLOAD_BYTES = 25 * 1024 * 1024
+PIVOT_RUN_ROWS = 50000
+
+
+def _pivot_clients() -> dict:
+    """The SIEMs a pivot stage can be run in from here: those whose query client is configured
+    (docs/features/QUERY_EXECUTION.md), by the vendor keys playbooks use."""
+    from shikari.query.elastic import ElasticClient
+    from shikari.query.mde import MDEClient
+    from shikari.query.splunk import SplunkClient
+
+    env = os.environ.get
+    clients = {}
+    if env("SPLUNK_HOST") and (env("SPLUNK_TOKEN") or (env("SPLUNK_USERNAME") and env("SPLUNK_PASSWORD"))):
+        clients["splunk"] = lambda q: SplunkClient().execute_query(q, max_results=PIVOT_RUN_ROWS)
+    if (env("ELASTIC_URL") or env("ELASTIC_HOST")) and (
+            env("ELASTIC_API_KEY") or (env("ELASTIC_USERNAME") and env("ELASTIC_PASSWORD"))):
+        clients["elastic"] = lambda q: ElasticClient().execute_query(q, max_results=PIVOT_RUN_ROWS)
+    if env("SHIKARI_MDE_TENANT_ID") and env("SHIKARI_MDE_CLIENT_ID") and env("SHIKARI_MDE_CLIENT_SECRET"):
+        clients["mde"] = lambda q: MDEClient().execute_query(q, max_results=PIVOT_RUN_ROWS)
+    return clients
+
+
+def _pivot_playbook(group_name: str, correlation_id: str):
+    """A group's saved X-SIEM playbook by its id, or None."""
+    from shikari.correlation.cross_vendor import relabel
+
+    safe = sanitize_group_name(group_name or "")
+    path = os.path.join(CORRELATE_DIR, f"{safe}.json")
+    if not safe or not os.path.exists(path):
+        return None
+    try:
+        with open(path, encoding="utf-8") as fh:
+            playbooks = relabel(json.load(fh).get("cross_vendor_correlations", []) or [])
+    except (OSError, ValueError):
+        return None
+    return next((pb for pb in playbooks if pb.get("correlation_id") == correlation_id), None)
+
+
+@app.post("/api/pivots/leads")
+async def pivot_leads(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """
+    Leads from an X-SIEM pivot (#46). A form: group_name, correlation_id, tolerance (seconds of clock
+    skew, default 300), run (stages to run here, "1:splunk,2:elastic", for SIEMs whose client is
+    configured) and files named s<stage>_<vendor> (CSV, JSON or JSON lines exports). Each stage's
+    results are joined on the playbook's keys into ranked leads (shikari/correlation/leads.py).
+    """
+    import asyncio
+
+    from shikari.correlation.leads import TOLERANCE_SECONDS, consolidate, read_export
+
+    auth_result = require_auth(request, shikari_session)
+    if isinstance(auth_result, RedirectResponse):
+        return JSONResponse({"success": False, "error": "Not authenticated"}, status_code=401)
+    _user, db = auth_result
+    db.close()
+    form = await request.form()
+    playbook = _pivot_playbook(str(form.get("group_name") or ""), str(form.get("correlation_id") or ""))
+    if playbook is None:
+        return JSONResponse({"success": False, "error": "No such pivot for this group."}, status_code=404)
+    try:
+        tolerance = max(0, min(int(form.get("tolerance") or TOLERANCE_SECONDS), 86400))
+    except ValueError:
+        return JSONResponse({"success": False, "error": "Tolerance is a number of seconds."}, status_code=400)
+
+    stages = playbook.get("stages") or []
+    results, ran, problems = {}, [], []
+    for key, value in form.multi_items():
+        m = re.fullmatch(r"s(\d+)_([a-z]+)", key)
+        if not m or not hasattr(value, "read"):
+            continue
+        index, vendor = int(m.group(1)), m.group(2)
+        if index >= len(stages) or vendor not in (stages[index].get("vendors") or {}):
+            continue
+        data = await value.read(PIVOT_UPLOAD_BYTES + 1)
+        if len(data) > PIVOT_UPLOAD_BYTES:
+            return JSONResponse({"success": False, "error": f"{value.filename} is over 25 MB."}, status_code=413)
+        if not data:
+            continue
+        try:
+            results.setdefault(index, {})[vendor] = read_export(value.filename or key, data)
+        except ValueError as e:
+            return JSONResponse({"success": False, "error": str(e)}, status_code=400)
+
+    clients = _pivot_clients()
+    for pair in filter(None, str(form.get("run") or "").split(",")):
+        index_text, _, vendor = pair.partition(":")
+        if not index_text.isdigit() or int(index_text) >= len(stages):
+            continue
+        index = int(index_text)
+        query = ((stages[index].get("vendors") or {}).get(vendor) or {}).get("query")
+        if not query or vendor not in clients or vendor in results.get(index, {}):
+            continue
+        answer = await asyncio.to_thread(clients[vendor], query)
+        label = stages[index]["vendors"][vendor].get("label", vendor)
+        if answer.get("status") == "success":
+            results.setdefault(index, {})[vendor] = answer.get("results") or []
+            ran.append({"stage": index, "vendor": vendor, "rows": len(answer.get("results") or []),
+                        "truncated": bool((answer.get("stats") or {}).get("truncated"))})
+        else:
+            problems.append(f"Stage {index + 1}, {label}: {answer.get('error') or 'the query failed'}")
+
+    out = consolidate(playbook, results, tolerance=tolerance)
+    return {"success": True, "ran": ran, "problems": problems, **out}
+
+
 @app.get("/results", response_class=HTMLResponse)
 def results_page(request: Request, group_name: str, run: str = "", shikari_session: Optional[str] = Cookie(None)):
     """
@@ -7990,6 +8097,7 @@ def results_page(request: Request, group_name: str, run: str = "", shikari_sessi
             "briefing": briefing,
             "briefing_ai": briefing_lib.load_summary(safe_group, briefing),
             "cross_vendor": cross_vendor,
+            "pivot_runnable": sorted(_pivot_clients()) if cross_vendor else [],
         },
     )
 

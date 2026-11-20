@@ -257,7 +257,7 @@
     },
     {
      "title": "X-SIEM pivots",
-     "what": "Chains that span two or more of your SIEMs, laid out stage by stage with each SIEM's query and the fields to join them on. Run each stage where its telemetry lives and join the results inside the window.",
+     "what": "Chains that span two or more of your SIEMs, laid out stage by stage with each SIEM's query and the fields to join them on. Find leads joins each stage's results, run from Shikari or uploaded as exports, into ranked hosts, users, IPs and hashes, and says what didn't join and why.",
      "who": "SOC analysts and SOAR engineers.",
      "when": "Your endpoint and network telemetry live in different SIEMs.",
      "box": [

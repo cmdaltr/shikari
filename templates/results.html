@@ -1213,12 +1213,56 @@
             </div>
             {% endfor %}
           </details>
+          {# Leads (#46): each stage's results, run here or uploaded, joined on the keys into ranked entities #}
+          <details class="xv-leads" data-correlation="{{ pb.correlation_id }}">
+            <summary>Find leads</summary>
+            <p class="xv-leads-help">Give each stage its results: upload the export from that SIEM (CSV, JSON or JSON lines){% if pivot_runnable %}, or tick Run here to run it from Shikari{% endif %}. They're joined on the keys above inside the window, and every entity that hit a stage becomes a lead, ranked by how much of the chain it completed.</p>
+            <form class="xv-leads-form" onsubmit="return findPivotLeads(this)">
+              {% for st in pb.stages %}{% set si = loop.index0 %}
+              <div class="xv-leads-stage">
+                <div class="xv-stage-title"><strong>{{ loop.index }}.</strong> {{ st.technique_id }} {{ st.technique_name }}</div>
+                {% for vkey, v in st.vendors.items() %}
+                <label class="xv-leads-input">
+                  <span>{{ v.label }}</span>
+                  <input type="file" name="s{{ si }}_{{ vkey }}" accept=".csv,.json,.jsonl,.ndjson,text/csv,application/json">
+                  {% if vkey in pivot_runnable %}<span class="xv-run"><input type="checkbox" name="run" value="{{ si }}:{{ vkey }}"> Run here</span>{% endif %}
+                </label>
+                {% endfor %}
+              </div>
+              {% endfor %}
+              <div class="xv-leads-actions">
+                <label>Clock skew allowed <input type="number" name="tolerance" value="300" min="0" max="86400" step="30"> seconds</label>
+                <button type="submit" class="btn-selection">Find leads</button>
+              </div>
+            </form>
+            <div class="xv-leads-out" aria-live="polite"></div>
+          </details>
         </div>
         {% endfor %}
       </div>
       </div>
     </div>
     <style>
+      .xv-leads{margin-top:10px;}
+      .xv-leads>summary{cursor:pointer;color:var(--accent);font-size:0.9em;}
+      .xv-leads-help{font-size:0.85em;color:var(--text-secondary);margin:8px 0;}
+      .xv-leads-stage{margin:8px 0 0 6px;padding-left:10px;border-left:2px solid var(--border-color);}
+      .xv-leads-input{display:flex;align-items:center;gap:10px;font-size:0.85em;margin:4px 0;}
+      .xv-leads-input>span:first-child{min-width:110px;color:var(--text-secondary);}
+      .xv-run{display:inline-flex;align-items:center;gap:4px;}
+      .xv-leads-actions{display:flex;align-items:center;gap:16px;margin-top:12px;font-size:0.85em;}
+      .xv-leads-actions input[type=number]{width:80px;}
+      .xv-leads-out{margin-top:12px;font-size:0.86em;}
+      .xv-leads-table{border-collapse:collapse;width:100%;}
+      .xv-leads-table th,.xv-leads-table td{text-align:left;padding:5px 10px 5px 0;border-bottom:1px solid var(--border-color);vertical-align:top;}
+      .xv-leads-table th{color:var(--text-secondary);font-weight:600;}
+      .xv-lead-stages{display:flex;gap:4px;flex-wrap:wrap;}
+      .xv-lead-stage{border-radius:5px;padding:1px 7px;font-weight:700;font-size:0.85em;background:var(--bg-primary);border:1px solid var(--border-color);color:var(--text-secondary);}
+      .xv-lead-stage.hit{background:rgba(0,212,170,.15);border-color:transparent;color:#2e9e7f;}
+      .xv-lead-events summary{cursor:pointer;color:var(--accent);}
+      .xv-lead-events pre{max-height:200px;overflow:auto;font-size:0.8em;background:#1e1e2e;color:#cdd6f4;border-radius:4px;padding:8px;white-space:pre-wrap;word-break:break-word;}
+      .xv-unjoined{margin-top:12px;padding:8px 12px;border-left:3px solid #d08770;background:var(--bg-primary);}
+      .xv-unjoined li{margin:3px 0;}
       .xv-intro{margin:4px 0 0;color:var(--text-secondary);font-size:0.9em;}
       .xv-list{display:flex;flex-direction:column;gap:12px;margin-top:14px;}
       .xv-card{border:1px solid var(--border-color);border-radius:10px;padding:14px 16px;background:var(--bg-secondary);}
@@ -2897,6 +2941,58 @@ function toggleDetectionsSection() {
 }
 
 // Toggle Correlations section
+// X-SIEM pivot leads (#46): each stage's results joined into ranked entities, server-side
+function findPivotLeads(form) {
+  const box = form.closest('.xv-leads');
+  const out = box.querySelector('.xv-leads-out');
+  const data = new FormData(form);
+  data.set('group_name', new URLSearchParams(location.search).get('group_name') || '');
+  data.set('correlation_id', box.dataset.correlation);
+  data.set('run', data.getAll('run').join(','));
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+  const button = form.querySelector('button[type=submit]');
+  button.disabled = true;
+  out.textContent = 'Joining the results…';
+  fetch('/api/pivots/leads', {method: 'POST', body: data, credentials: 'same-origin'})
+    .then(r => r.json())
+    .then(d => {
+      if (!d.success) { out.textContent = d.error || 'That didn\'t work.'; return; }
+      const total = (d.summary || {}).leads || 0;
+      const stagesTotal = form.querySelectorAll('.xv-leads-stage').length;
+      let html = '<p><strong>' + total + ' lead' + (total === 1 ? '' : 's') + '</strong> from ' + d.summary.events
+        + ' events; ' + d.summary.complete + ' completed the chain. Joined on ' + esc(d.summary.join_keys.join(', ').replace(/_/g, ' '))
+        + ', ' + Math.round(d.summary.window_seconds / 60) + ' minutes plus ' + d.summary.tolerance_seconds + ' seconds of skew.</p>';
+      (d.problems || []).forEach(p => { html += '<p class="xv-unjoined">' + esc(p) + '</p>'; });
+      if (d.leads.length) {
+        html += '<table class="xv-leads-table"><tr><th>#</th><th>Entity</th><th>Stages</th><th>When</th><th>Score</th><th></th></tr>';
+        d.leads.slice(0, 100).forEach(l => {
+          const hit = new Set(l.hits.map(h => h.stage));
+          const pills = Array.from({length: stagesTotal}, (_, i) =>
+            '<span class="xv-lead-stage' + (hit.has(i) ? ' hit' : '') + '">' + (i + 1) + '</span>').join('');
+          const events = l.hits.map(h => '<div><strong>' + (h.stage + 1) + '. ' + esc(h.technique_id || h.technique_name) + '</strong> '
+            + esc(h.label || h.vendor) + ' · ' + esc(h.time) + ' · ' + h.events + ' event' + (h.events === 1 ? '' : 's')
+            + '<pre>' + esc(JSON.stringify(h.event, null, 1)) + '</pre></div>').join('');
+          html += '<tr><td>' + l.rank + '</td><td>' + esc(l.entity.replace('_', ' ')) + ' <code>' + esc(l.value) + '</code></td>'
+            + '<td><div class="xv-lead-stages">' + pills + '</div>' + l.stages_hit + ' of ' + l.stages_total
+            + (l.in_order ? '' : ', out of order') + '</td>'
+            + '<td>' + esc(l.first_seen) + (l.span_seconds ? '<br>+' + Math.round(l.span_seconds / 60) + ' min' : '') + '</td>'
+            + '<td>' + l.score + '</td>'
+            + '<td><details class="xv-lead-events"><summary>Evidence</summary>' + events + '</details></td></tr>';
+        });
+        html += '</table>';
+        if (d.leads.length > 100) html += '<p>The first 100 of ' + d.leads.length + ' leads.</p>';
+      }
+      if ((d.unjoined || []).length) {
+        html += '<div class="xv-unjoined"><strong>What didn\'t join</strong><ul>'
+          + d.unjoined.map(u => '<li>' + esc(u.detail) + '</li>').join('') + '</ul></div>';
+      }
+      out.innerHTML = html;
+    })
+    .catch(() => { out.textContent = 'Shikari didn\'t answer. Try again.'; })
+    .finally(() => { button.disabled = false; });
+  return false;
+}
+
 function toggleCrossVendorSection() {
   const content = document.getElementById('cross-vendor-section-content');
   const toggleText = document.getElementById('cross-vendor-section-toggle');

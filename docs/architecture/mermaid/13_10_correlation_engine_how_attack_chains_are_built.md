@@ -1,6 +1,6 @@
 # 10. Correlation Engine — How Attack Chains Are Built
 
-How Shikari links individual detections into attack chains: read detection metadata → group by tactic phase → score each pair on 5 criteria (group match 30pts, attack sequence 20pts, data availability 20pts, severity 15pts, specificity 15pts) → threshold at 70 → build combined correlation query.
+How Shikari links individual detections into attack chains: read detection metadata → group by tactic phase → score each pair on 5 criteria (group match 30pts, attack sequence 20pts, data availability 20pts, severity 15pts, specificity 15pts) → threshold at 70 → build combined correlation query. A chain spanning two or more of your SIEMs also becomes an X-SIEM pivot, whose stage results join into ranked leads.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'lineColor': '#ff6600', 'edgeLabelBackground': '#ffffff', 'primaryColor': '#4a90d9', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#2c5f8a', 'secondaryColor': '#e8e8e8', 'tertiaryColor': '#f5f5f5', 'clusterBkg': '#f0f0f0', 'clusterBorder': '#999999', 'titleColor': '#000000', 'nodeTextColor': '#000000', 'background': '#ffffff'}}}%%
@@ -39,8 +39,14 @@ flowchart TD
 
     COMBINED --> OUTPUT(["Correlation result:<br/>• Individual technique queries<br/>• Combined chain query<br/>• Tactics covered<br/>• Time window<br/>• Relevance score"])
 
+    CHAIN --> SPANS{"Chain spans two or<br/>more of your SIEMs?"}
+    SPANS -- "Yes" --> PIVOT["X-SIEM pivot<br/><i>Each stage's query per SIEM,<br/>join keys, time window</i>"]
+    PIVOT --> LEADS(["Find leads<br/>• Stage results run or uploaded<br/>• Joined per host, user, IP, hash<br/>• Ranked by stages completed<br/>• What didn't join, and why"])
+
     style ALL_YAMLS fill:#4a90d9,stroke:#2c5f8a,color:#fff
     style OUTPUT fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style LEADS fill:#7ed321,stroke:#4a8c0f,color:#fff
+    style SPANS fill:#f8e71c,stroke:#b8a700,color:#333
     style THRESHOLD fill:#f8e71c,stroke:#b8a700,color:#333
     linkStyle default stroke:#ff6600,stroke-width:3px
 ```

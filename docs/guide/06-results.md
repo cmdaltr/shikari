@@ -70,6 +70,22 @@ Most correlations are a pair of techniques. A **chain** joins three, shown with 
 
 A correlation joins detections within one SIEM, because across SIEMs there's no single query — YARA-L, KQL, SPL and ES\|QL don't splice. **X-SIEM pivots** take the chains that span two or more of your SIEMs and lay them out as a sequence instead: each stage with the per-SIEM query that detects it, the entity fields to join the stages on (host, user, IP, process hash — named for each SIEM), and the time window. You run each stage where that telemetry actually lives and join on the keys, in a SOAR or by hand — it's a playbook, not a query. Built from the same chains, so no AI and nothing new to tune. The section only appears with more than one SIEM ticked under Profile → Environment (none ticked counts as all four).
 
+### Finding leads
+
+Running a pivot still leaves every stage's raw events to line up. **Find leads**, under each pivot, does the lining up. Give each stage its results: upload the export from that SIEM (CSV, JSON or JSON lines; an Elasticsearch `hits` answer works as it comes), or tick **Run here** to run the stage from Shikari in a SIEM whose query client is configured on the server ([Query Execution](../features/QUERY_EXECUTION.md): Splunk, Elastic, Defender XDR). Google SecOps has no client yet, so its stages are uploaded.
+
+Each event's join keys are read under its SIEM's own field names, with the other names the same thing goes by in exports (`DeviceName`, `host.name`, `principal.hostname`, `ComputerName`), and normalised so the SIEMs agree:
+
+| Key | Joined on | Example |
+|---|---|---|
+| Host | Short name, lower case | `WS01.corp.local`, `ws01` and `WS01` are one host |
+| User | Account name, lower case | `CORP\jdoe` and `jdoe@corp.com` are `jdoe` |
+| IP, hash | Lower case | |
+
+Values that name nobody (`-`, `localhost`, `SYSTEM`) don't join. Every entity that hit a stage becomes a lead, fitted into the pivot's window plus the clock skew allowed (five minutes unless you change it). Leads rank by stages completed, then whether the stages came in the chain's order, then how tightly they fall: an entity that only hit the first stage stays as a low lead rather than disappearing. **Evidence** shows the event behind each stage. When a host lead and a user lead rest on the same events, only the host's is shown.
+
+**What didn't join** lists the reasons, per stage and SIEM, so a missing lead isn't read as a clean bill of health: events carrying none of the join keys (add them to the query's output), events with no readable time, events that matched an entity but fell outside the window (a SIEM's clock, or a second episode: allow more skew to test which), and stages with no results.
+
 ## Precision checks
 
 Before a detection is written, Shikari removes conditions that parse but can't fire for the right reason, and keeps the rest of the query. A query left with no condition isn't written.

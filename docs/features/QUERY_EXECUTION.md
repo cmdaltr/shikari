@@ -4,7 +4,7 @@ Running a generated query against the SIEM and reading the results back. Each cl
 
 ## Splunk
 
-`shikari/query/splunk.py` (`SplunkClient`) runs SPL through Splunk's search jobs API on the management port (8089) and reads the results back a page at a time. There's no page or CLI command that runs it yet; Detection Validation's Splunk instances use it (`shikari/validation/docker_manager.py`).
+`shikari/query/splunk.py` (`SplunkClient`) runs SPL through Splunk's search jobs API on the management port (8089) and reads the results back a page at a time. X-SIEM pivots' **Find leads** runs a stage through it when `SPLUNK_HOST` and a token or password are set ([Results](../guide/06-results.md#finding-leads)); Detection Validation's Splunk instances use it too (`shikari/validation/docker_manager.py`).
 
 ```bash
 export SPLUNK_HOST=splunk.example.com
@@ -34,7 +34,7 @@ Against Splunk Enterprise 10 (the Docker image, trial licence) on the homelab, 1
 
 ## Elastic
 
-`shikari/query/elastic.py` (`ElasticClient`) runs ES|QL, as `shikari/build/elastic.py` writes it, through Elasticsearch's query API (`POST /_query`) and reads the rows back. There's no page or CLI command that runs it yet; Detection Validation's Elastic container uses it (`shikari/validation/docker_manager.py`).
+`shikari/query/elastic.py` (`ElasticClient`) runs ES|QL, as `shikari/build/elastic.py` writes it, through Elasticsearch's query API (`POST /_query`) and reads the rows back. X-SIEM pivots' **Find leads** runs a stage through it when `ELASTIC_URL` (or `ELASTIC_HOST`) and a key or password are set ([Results](../guide/06-results.md#finding-leads)); Detection Validation's Elastic container uses it too (`shikari/validation/docker_manager.py`).
 
 ```bash
 export ELASTIC_URL=https://elastic.example.com:9200   # or ELASTIC_HOST (and ELASTIC_PORT, 9200)
@@ -59,7 +59,9 @@ else:
 
 ### Validated
 
-Against Elasticsearch 9.4.0 (the Docker image, security on, on the MacBook), 17 November 2026 ([#50](https://github.com/cmdaltr/shikari/issues/50)): the Windows 11 lab recording (`atomics-win11-20261109`) indexed as ECS through `DockerSIEMManager.ingest_lab_run`, 458,981 events into the process, file, registry and network streams in 54 seconds; a T1082 detection from `ElasticQueryGenerator` run through the manager returned its 100 summary rows (HOSTNAME.EXE 115 times from the lab's own runs); 1,308 process events paged in two requests and 25,000 registry events in three of 10,000, none repeated, past both the 1,000 default and the 10,000 cap; API-key and password authentication; bad ES|QL, an unknown field, a wrong password, a revoked key, a timeout and an unreachable host each reported. Rate limiting is covered by unit tests (`tests/test_elastic_client.py`). It ran from the MacBook's Shikari, not from inside Shikari's container as the Splunk run did.
+Against Elasticsearch 9.4.0 (the Docker image, security on, on the MacBook), 17 November 2026 ([#50](https://github.com/cmdaltr/shikari/issues/50)): the Windows 11 lab recording (`atomics-win11-20261109`) indexed as ECS through `DockerSIEMManager.ingest_lab_run`, 458,981 events into the process, file, registry and network streams in 54 seconds; a T1082 detection from `ElasticQueryGenerator` run through the manager returned its 100 summary rows (HOSTNAME.EXE 115 times from the lab's own runs); 1,308 process events paged in two requests and 25,000 registry events in three of 10,000, none repeated, past both the 1,000 default and the 10,000 cap; API-key and password authentication; bad ES|QL, an unknown field, a wrong password, a revoked key, a timeout and an unreachable host each reported. Rate limiting is covered by unit tests (`tests/test_elastic_client.py`).
+
+Again from inside Shikari's container, 20 November 2026, on samarkand 0.2.2: the recording indexed the same way (458,981 events in 58 seconds) into Elasticsearch 9.4.0 on the container's network; a T1082 detection from `ElasticQueryGenerator` (hostname and systeminfo) returned its 18 summary rows with a password and with an API key; 1,308 process events paged in two requests, none repeated; bad ES\|QL, an unknown column, a wrong password, an invalid key and an unreachable host each reported.
 
 ## Defender XDR
 
@@ -71,4 +73,4 @@ from shikari.query.mde import MDEClient
 hits = MDEClient().hit_count(kql)   # the query with `| count` appended; None if it failed
 ```
 
-Errors are returned as `{"status": "error", "error": ...}`, as the others' are. Advanced Hunting has no paging: it answers at most 100,000 rows over its own 30-day window. Not yet run against a live tenant.
+Errors are returned as `{"status": "error", "error": ...}`, as the others' are. X-SIEM pivots' **Find leads** runs a stage through it when the three `SHIKARI_MDE_*` values are set. Advanced Hunting has no paging: it answers at most 100,000 rows over its own 30-day window. Not yet run against a live tenant.
