@@ -16,9 +16,10 @@
 | 2025-09-19 | Project created (initially as "Archer") | first commit `d0bf8a0`, repo `github.com/cmdaltr/shikari` |
 | 2026-11-02 | **Name "Shikari" adopted**; full rebrand (name, wordmark, bateleur logo) | commit `9f7901d` "rename archer → shikari and rebrand the UI"; `shikari/branding.py` |
 | 2026-11-07 | Product walkthrough video produced showing the Shikari name and UI | `shikari-walkthrough.mp4` (local), narrated feature tour |
-| 2026-11-08 | **v2.0.0** release prepared under the Shikari name (installers, wordmark) | tag `v2.0.0` → `7bd7643` (GitHub release, currently draft) |
+| 2026-11-08 | **v2.0.0** release prepared under the Shikari name (installers, wordmark) | first draft on `7bd7643`; superseded by the published release below |
 | 2026-11-10 | **™ first asserted** on the wordmark, README and app, with a trademark notice | commit `b49ffa7` |
 | 2026-11-10 | **Domain `shikari.uk` registered** under the Shikari name | Nominet registration (registrar receipt / account) |
+| 2026-11-20 | **v2.0.0 published** on GitHub under the Shikari name: five installers (macOS Apple Silicon and Intel, Windows, Linux x64 and ARM64) with the wordmark | release `github.com/cmdaltr/shikari/releases/tag/v2.0.0`, tag `v2.0.0` → `0cba259f`, published 2026-11-20 13:23 UTC |
 
 ## Continued / public use
 
@@ -28,7 +29,7 @@
 
 ## To add as it happens (strengthens the record)
 
-- [ ] v2.0.0 GitHub release **published** (date: ____) — public, under the Shikari name, with the wordmark installers
+- [x] v2.0.0 GitHub release **published** (date: 2026-11-20) — public, under the Shikari name, with the wordmark installers
 - [ ] First blog post naming Shikari — *Adventures of Benny and Claude* (date / URL: ____)
 - [ ] First LinkedIn / YouTube post under **@cmdaltr** naming Shikari (date / URL: ____)
 - [ ] Walkthrough video published (date / URL: ____)
