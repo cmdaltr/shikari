@@ -527,6 +527,36 @@ class TestDeadLinksAndRaces:
             "https://shikari.example.net/reset-access#")
 
 
+@pytest.mark.unit
+class TestRequestOrigin:
+    """An admin's link without BASE_URL names the address they're using, as in Ostraka and Rowanholt."""
+
+    @staticmethod
+    def request(headers: dict, base: str = "http://127.0.0.1:32453/"):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(headers={k.lower(): v for k, v in headers.items()},
+                               url=SimpleNamespace(scheme=base.split(":")[0]), base_url=base)
+
+    def test_the_pages_origin_first(self):
+        from shikari.auth.links import request_origin
+
+        r = self.request({"Origin": "https://shikari.example.org", "X-Forwarded-Host": "other.example.org"})
+        assert request_origin(r) == "https://shikari.example.org"
+
+    def test_then_the_proxys_forwarded_host(self):
+        from shikari.auth.links import request_origin
+
+        r = self.request({"X-Forwarded-Host": "shikari.example.org:8443, inner"}, base="https://10.0.0.2:32453/")
+        assert request_origin(r) == "https://shikari.example.org:8443"
+
+    def test_a_header_that_adds_a_path_is_ignored(self):
+        from shikari.auth.links import request_origin
+
+        r = self.request({"Origin": "https://evil.example/x", "X-Forwarded-Host": "evil.example/phish"})
+        assert request_origin(r) == "http://127.0.0.1:32453"
+
+
 def _sign_in(client, email, password, monkeypatch):
     from shikari.security import csrf, rate_limit
 

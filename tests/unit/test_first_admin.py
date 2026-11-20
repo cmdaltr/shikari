@@ -81,6 +81,18 @@ class TestTheSignal:
         assert deployment.bind_host(["uvicorn", "shikari.app:app"]) == "0.0.0.0"
         assert deployment.bind_host(["uvicorn", "--host", "127.0.0.1"]) == "127.0.0.1", "--host wins, as in uvicorn"
 
+    @pytest.mark.parametrize("argv", [["uvicorn", "--uds", "/run/shikari.sock"], ["uvicorn", "--uds=/tmp/s"],
+                                      ["uvicorn", "--fd", "3"], ["uvicorn", "--host", "127.0.0.1", "--fd=3"]])
+    def test_a_socket_handed_over_is_never_loopback(self, argv):
+        """uvicorn listens on --uds or --fd before --host, and who can reach those is anyone's guess: a
+        proxy in front, or systemd socket activation on any address. So no default admin, no /register."""
+        assert not deployment.loopback_only(deployment.bind_host(argv))
+        assert not deployment.registration_open(argv)
+
+    def test_uvicorns_own_socket_settings_count_too(self, monkeypatch):
+        monkeypatch.setenv("UVICORN_FD", "3")
+        assert not deployment.registration_open(LOOPBACK)
+
     def test_registration_open_only_locally_on_loopback(self, monkeypatch):
         assert deployment.registration_open(LOOPBACK)
         assert not deployment.registration_open(["uvicorn", "--host", "0.0.0.0"])
