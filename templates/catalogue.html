@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="{{ url_for('static', path='css/campaigns.css') }}?v={{ request.app.state.asset_version }}">
 <style>
   .cat-tabs { display: flex; gap: 8px; margin: 0 0 22px; }
-  .cat-pane[hidden] { display: none; }
+  .cat-pane[hidden], .cat-card[hidden] { display: none; }
   .cat-head { margin: 0 0 6px; }
   .cat-sub { color: var(--text-secondary); margin: 0 0 24px; }
   .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
@@ -40,6 +40,19 @@
   .cat-btn.ghost { background: transparent; color: #0284C7; border: 1px solid #0284C7; }
   .cat-btn.ghost:hover { background: rgba(2, 132, 199, .08); }
   .cat-empty { color: var(--text-secondary); padding: 40px 0; }
+  .cat-kind { flex: 0 0 auto; margin-left: auto; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 5px; color: #0F766E; background: rgba(13, 148, 136, .1); }
+  .cat-kind.cve { color: #B45309; background: rgba(217, 119, 6, .1); }
+  .cat-kind.techniques { color: #6D28D9; background: rgba(124, 58, 237, .1); }
+  [data-theme="dark"] .cat-kind { color: #5EEAD4; } [data-theme="dark"] .cat-kind.cve { color: #FBBF24; } [data-theme="dark"] .cat-kind.techniques { color: #C4B5FD; }
+  .cat-stat.ref { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .cat-stat.hits { color: #B91C1C; border-color: #FCA5A5; }
+  [data-theme="dark"] .cat-stat.hits { color: #F87171; border-color: #7f1d1d; }
+  .cat-src { color: var(--text-secondary); font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cat-src a { color: inherit; }
+  .cat-pending { color: var(--text-secondary); font-size: .88rem; align-self: center; }
+  .cat-filter { width: 100%; max-width: 360px; margin: 0 0 18px; padding: 8px 12px; border-radius: 6px;
+    border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); font: inherit; }
 </style>
 {% endblock %}
 
@@ -52,8 +65,81 @@
   </div>
 
   <div class="cat-tabs" role="tablist" aria-label="Catalogue">
+    <button type="button" class="ui-pill" role="tab" data-tab="hunts" id="cat-tab-hunts" aria-controls="cat-pane-hunts">Hunts <span class="run-view-n">{{ hunts|length }}</span></button>
+    <button type="button" class="ui-pill" role="tab" data-tab="analyses" id="cat-tab-analyses" aria-controls="cat-pane-analyses">Analyses <span class="run-view-n">{{ analyses|length }}</span></button>
     <button type="button" class="ui-pill" role="tab" data-tab="companies" id="cat-tab-companies" aria-controls="cat-pane-companies">Companies <span class="run-view-n">{{ companies|length }}</span></button>
     <button type="button" class="ui-pill" role="tab" data-tab="campaigns" id="cat-tab-campaigns" aria-controls="cat-pane-campaigns">Campaigns <span class="run-view-n">{{ campaigns|length }}</span></button>
+  </div>
+
+  <!-- ===== Hunts: generation runs for a group, CVEs or techniques ===== -->
+  <div class="cat-pane" id="cat-pane-hunts" role="tabpanel" aria-labelledby="cat-tab-hunts" hidden>
+  <p class="cat-sub">Every hunt run, newest first: a threat group, CVEs or techniques. Each opens the detections its latest run produced.
+    A hunt started from Ostraka carries its reference; one that was executed shows how many results its queries found.</p>
+  {% if hunts %}
+  <input type="search" class="cat-filter" data-filter="hunts" placeholder="Filter hunts" aria-label="Filter hunts">
+  <div class="cat-grid">
+    {% for h in hunts %}
+    <div class="cat-card" data-card-static data-q="{{ (h.title ~ ' ' ~ h.name ~ ' ' ~ h.external_ref) | lower }}">
+      <div class="cat-card-head">
+        <h3>{% if h.href %}<a href="{{ h.href }}">{{ h.title }}</a>{% else %}{{ h.title }}{% endif %}</h3>
+        <span class="cat-kind {{ h.hunt_kind }}">{{ {'group': 'Group', 'cve': 'CVE', 'techniques': 'Techniques'}[h.hunt_kind] }}</span>
+      </div>
+      <div class="cat-meta">
+        {% if h.when %}<span>hunted {{ short_date(h.when) }}</span>{% endif %}
+        {% if h.status != 'complete' %}<span>· {{ h.status }}</span>{% endif %}
+      </div>
+      <div class="cat-stats">
+        {% if h.external_ref %}<span class="cat-stat ref" title="Ostraka reference">{{ h.external_ref }}</span>{% endif %}
+        <span class="cat-stat">{{ h.detections }} detection{{ '' if h.detections == 1 else 's' }}</span>
+        {% if h.no_detection %}<span class="cat-stat" title="Techniques the run could write no detection for">{{ h.no_detection }} without</span>{% endif %}
+        {% if h.warnings %}<span class="cat-stat" title="Inputs outside the technology stack">{{ h.warnings }} warning{{ '' if h.warnings == 1 else 's' }}</span>{% endif %}
+        {% if h.executed %}<span class="cat-stat{% if h.totals.hits %} hits{% endif %}" title="Queries run against the SIEM connections">{{ h.totals.run or 0 }} run · {{ h.totals.hits or 0 }} hit{{ '' if h.totals.hits == 1 else 's' }}</span>{% endif %}
+      </div>
+      {% if h.error %}<div class="cat-meta">{{ h.error }}</div>{% endif %}
+      <div class="cat-actions">
+        {% if h.href %}<a class="cat-btn" href="{{ h.href }}">Results →</a>{% else %}<span class="cat-pending">No detections yet</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="cat-empty">No hunts yet. Hunt a group, a CVE or techniques on the <a href="/">home page</a> and it will appear here.</p>
+  {% endif %}
+  </div>
+
+  <!-- ===== Analyses: reports read, from a URL, a file or an import ===== -->
+  <div class="cat-pane" id="cat-pane-analyses" role="tabpanel" aria-labelledby="cat-tab-analyses" hidden>
+  <p class="cat-sub">Every report analysed, newest first: a blog URL, an uploaded file, or a STIX/TAXII or MISP import.
+    Each shows what was extracted from it and, once generated, opens its detections.</p>
+  {% if analyses %}
+  <input type="search" class="cat-filter" data-filter="analyses" placeholder="Filter analyses" aria-label="Filter analyses">
+  <div class="cat-grid">
+    {% for a in analyses %}
+    <div class="cat-card" data-card-static data-q="{{ (a.title ~ ' ' ~ a.source.text ~ ' ' ~ a.actor) | lower }}">
+      <div class="cat-card-head">
+        <h3>{% if a.href %}<a href="{{ a.href }}">{{ a.title }}</a>{% else %}{{ a.title }}{% endif %}{% if a.ai %} †{% endif %}</h3>
+        <span class="cat-kind">{{ a.source.kind }}</span>
+      </div>
+      {% if a.source.text %}<div class="cat-src" title="{{ a.source.url or a.source.text }}">{% if a.source.url %}<a href="{{ a.source.url }}" target="_blank" rel="noopener noreferrer">{{ a.source.text }}</a>{% else %}{{ a.source.text }}{% endif %}</div>{% endif %}
+      <div class="cat-meta">
+        {% if a.when %}<span>analysed {{ short_date(a.when) }}</span>{% endif %}
+        {% if a.actor and a.actor != a.title %}<span>· {{ a.actor }}</span>{% endif %}
+      </div>
+      <div class="cat-stats">
+        <span class="cat-stat">{{ a.ttps }} technique{{ '' if a.ttps == 1 else 's' }}</span>
+        {% if a.iocs %}<span class="cat-stat">{{ a.iocs }} indicator{{ '' if a.iocs == 1 else 's' }}</span>{% endif %}
+        {% if a.procedures %}<span class="cat-stat">{{ a.procedures }} procedure{{ '' if a.procedures == 1 else 's' }}</span>{% endif %}
+        {% if a.generated %}<span class="cat-stat">{{ a.detections }} detection{{ '' if a.detections == 1 else 's' }}</span>{% endif %}
+      </div>
+      <div class="cat-actions">
+        {% if a.href %}<a class="cat-btn" href="{{ a.href }}">Results →</a>{% else %}<span class="cat-pending">Extracted, not generated</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="cat-empty">No reports analysed yet. Upload a file or a blog URL on the <a href="/">home page</a> and it will appear here.</p>
+  {% endif %}
   </div>
 
   <!-- ===== Companies: organisations profiled, the defender's side ===== -->
@@ -154,7 +240,7 @@
 </div>
 <script>
 (function () {
-  // The tab in ?tab=, else the one used last, else Companies
+  // The tab in ?tab=, else the one used last, else Hunts
   const tabs = document.querySelectorAll('.cat-tabs [data-tab]');
   function show(name, remember) {
     tabs.forEach(b => {
@@ -170,7 +256,14 @@
   }
   let first = new URLSearchParams(location.search).get('tab');
   if (!first) { try { first = localStorage.getItem('catalogueTab'); } catch (e) {} }
-  show(first === 'campaigns' ? 'campaigns' : 'companies', false);
+  const names = Array.from(tabs, b => b.dataset.tab);
+  show(names.includes(first) ? first : 'hunts', false);
+  document.querySelectorAll('[data-filter]').forEach(input => input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    document.querySelectorAll('#cat-pane-' + input.dataset.filter + ' .cat-card').forEach(card => {
+      card.hidden = !!q && !card.dataset.q.includes(q);
+    });
+  }));
   tabs.forEach(b => b.addEventListener('click', () => show(b.dataset.tab, true)));
 
   const $ = (id) => document.getElementById(id);

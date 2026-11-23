@@ -312,3 +312,14 @@
 [data-theme="dark"] .cvp-stack { background: rgba(77,182,172,.18); color: #80cbc4; }
 [data-theme="dark"] .cvp-done-mark { background: rgba(76,175,80,.18); color: #81c784; }
 @media (max-width: 600px) { .cvp-head, .cvp-controls, .cvp-foot { padding-left: 16px; padding-right: 16px; } .cvp-list { padding: 0 6px; } }
+
+/* Recent strip under each tab's form: the newest of its Catalogue tab */
+.home-tabs .hp-recent { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; overflow: hidden;
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color); font-size: .85rem; }
+.home-tabs .hp-recent-label { flex: 0 0 auto; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;
+  letter-spacing: .05em; font-size: .72rem; }
+.home-tabs .hp-recent a { min-width: 0; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border-color);
+  color: var(--text-primary); text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+.home-tabs .hp-recent a:hover { border-color: #0284C7; color: #0284C7; }
+.home-tabs .hp-recent a small { color: var(--text-secondary); margin-left: 4px; }
+.home-tabs .hp-recent a.hp-recent-all { flex: 0 0 auto; margin-left: auto; border: none; color: #0284C7; font-weight: 600; padding: 3px 0; }

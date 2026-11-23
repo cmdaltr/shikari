@@ -11151,51 +11151,34 @@ def api_campaign_report(request: Request, campaign_slug: str, fmt: str = Query("
 @app.get("/catalogue", response_class=HTMLResponse)
 def catalogue_page(request: Request, shikari_session: Optional[str] = Cookie(None)):
     """
-    Two tabs. Companies: every organisation profiled so far (data/profiles/*_profile.json), newest
-    first, each linking to its exposure map. Campaigns: the research form and the saved campaigns
-    (shikari.intelligence.campaign), each linking to /campaigns/<slug>.
+    The work done so far, one tab each (shikari.catalogue): Hunts (generation runs, each opening its
+    results), Analyses (reports read from a URL, a file or an import), Companies (organisations
+    profiled, each opening its review and exposure map) and Campaigns (the research form and the
+    saved campaigns, each opening /campaigns/<slug>).
     """
-    from shikari.intelligence import campaign as campaign_mod
+    from shikari import catalogue
+
     auth_result = require_auth(request, shikari_session)
     if isinstance(auth_result, RedirectResponse):
         return auth_result
     user, db = auth_result
     db.close()
+    every = catalogue.everything(user)
+    return templates.TemplateResponse(request, "catalogue.html", {"request": request, "user": user, **every,
+                                                                  "short_date": catalogue.short_date})
 
-    home_org = ((user.organisation if user else "") or "").strip().lower()
-    companies = []
-    profiles_dir = Path("data") / "profiles"
-    if profiles_dir.is_dir():
-        for path in profiles_dir.glob("*_profile.json"):
-            try:
-                with open(path, encoding="utf-8") as fh:
-                    prof = json.load(fh)
-            except (OSError, ValueError):
-                continue
-            ci = prof.get("company_info") or {}
-            osint = prof.get("osint") or {}
-            net = ci.get("networks") or {}
-            domain = prof.get("domain") or ci.get("domain")
-            if not domain:
-                continue
-            companies.append({
-                "domain": domain,
-                "name": ci.get("company_name") or domain,
-                "is_home": bool(home_org) and str(domain).strip().lower() == home_org,  # the user's own org — starred
-                "country": ci.get("country"),
-                "risk": prof.get("risk_score") or 0,
-                "groups": len(prof.get("recommended_groups") or []),
-                "timestamp": prof.get("timestamp"),
-                "ips": len(ci.get("ip_addresses") or []),
-                "subdomains": len(osint.get("subdomains") or []),
-                "asns": len(net.get("asns") or []),
-                "hosting": net.get("hosting_countries") or [],
-                "breaches": (prof.get("breach_surface") or {}).get("count") or 0,
-            })
-    # The user's own organisation first (starred), then most-recently profiled
-    companies.sort(key=lambda c: (c["is_home"], c["timestamp"] or ""), reverse=True)
-    return templates.TemplateResponse(request, "catalogue.html", {"request": request, "user": user, "companies": companies,
-                                                         "campaigns": campaign_mod.all_campaigns()})
+
+@app.get("/api/catalogue/recent")
+def catalogue_recent(request: Request, shikari_session: Optional[str] = Cookie(None)):
+    """The newest three of each Catalogue tab, for the home page's Recent strips."""
+    from shikari import catalogue
+
+    auth = require_auth(request, shikari_session)
+    if isinstance(auth, RedirectResponse):
+        return JSONResponse({"error": "Log in"}, status_code=401)
+    user, db = auth
+    db.close()
+    return catalogue.recent(user)
 
 
 @app.get("/api/adversaries")
@@ -11487,6 +11470,9 @@ async def library_page(request: Request, shikari_session: Optional[str] = Cookie
         # Query all detections and correlations for this user
         detections = db.query(LibraryDetection).filter_by(user_id=user.id).all()
         correlations_db = db.query(LibraryCorrelation).filter_by(user_id=user.id).all()
+        from shikari import catalogue
+
+        sources = catalogue.source_index(user)  # each detection's "from:" chip: the hunt or analysis that made it
 
         # Helper function to fix query indentation (4 spaces -> 2 spaces before pipes)
         def fix_query_indentation(query_text):
@@ -11790,6 +11776,7 @@ async def library_page(request: Request, shikari_session: Optional[str] = Cookie
                 "splunk_indexes": splunk_indexes,
                 "tags": tags,
                 "group": group_name,
+                "source": catalogue.source_for(sources, group_name),
                 "tactic": tactics[0] if tactics else "Unknown",
                 "saved_date": det.created_at.strftime("%Y-%m-%d") if det.created_at else "",
                 "attack_override": content_data.get("attack_override"),  # ATT&CK mapping changed by hand
@@ -12003,10 +11990,13 @@ async def library_page(request: Request, shikari_session: Optional[str] = Cookie
                         "rule_name": det.get("rule_name"),
                         "attack_mapping_history": [],
                         "legacy": det.get("legacy"),
+                        "sources": [],
                     }
 
                 # Add this detection's ID to the group
                 grouped[key]["ids"].append(det.get("id"))
+                if det.get("source") and det["source"] not in grouped[key]["sources"]:
+                    grouped[key]["sources"].append(det["source"])
                 if det.get("attack_override") and not grouped[key]["attack_override"]:
                     grouped[key]["attack_override"] = det["attack_override"]
                 if len(det.get("attack_mapping_history") or []) > len(grouped[key]["attack_mapping_history"]):
@@ -12079,6 +12069,7 @@ async def library_page(request: Request, shikari_session: Optional[str] = Cookie
                         "rule_name": data["rule_name"],
                         "attack_mapping_history": data["attack_mapping_history"],
                         "legacy": data["legacy"],
+                        "sources": data["sources"],
                     }
                 )
 

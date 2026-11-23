@@ -2141,6 +2141,31 @@
         })();
     </script>
 
+    {% if user %}
+    <script>
+        // A Recent strip under each tab's form, from the Catalogue: Hunt -> Hunts, Upload -> Analyses,
+        // Profile -> Companies, Research -> Campaigns. Below the form, so the panes stay equal height.
+        (function () {
+            const strips = {generate: ['hunts', 'hunts'], upload: ['analyses', 'analyses'],
+                            profile: ['companies', 'profiles'], research: ['campaigns', 'campaigns']};
+            const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+            fetch('/api/catalogue/recent', {credentials: 'same-origin'}).then(r => r.ok ? r.json() : null).then(data => {
+                if (!data) return;
+                Object.entries(strips).forEach(([tab, [kind, noun]]) => {
+                    const rows = data[kind] || [];
+                    const form = document.querySelector('#tab-' + tab + ' .hp-form');
+                    if (!rows.length || !form) return;
+                    const strip = document.createElement('div');
+                    strip.className = 'hp-recent';
+                    strip.innerHTML = '<span class="hp-recent-label">Recent</span>' + rows.map(r =>
+                        `<a href="${esc(r.href)}" title="${esc(r.label)}">${esc(r.label)}${r.meta ? `<small>${esc(r.meta)}</small>` : ''}</a>`).join('') +
+                        `<a class="hp-recent-all" href="/catalogue?tab=${kind}">All ${data.counts[kind]} ${noun} →</a>`;
+                    form.after(strip);
+                });
+            }).catch(() => {});
+        })();
+    </script>
+    {% endif %}
     <script src="{{ url_for('static', path='js/auto_validate.js') }}?v={{ request.app.state.asset_version }}"></script>
 
     {% include "partials/ask_shikari.html" %}
