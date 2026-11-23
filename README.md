@@ -12,6 +12,8 @@ Shikari™ automates threat hunting and detection engineering from MITRE ATT&CK.
 
 ## 🛠️ Setup and Usage
 
+Shikari is one of three products that sit beside each other, with Ostraka (the incident record) and Rowanholt (evidence and analysis): how they work together is in [docs/suite](docs/suite/README.md), and `scripts/install-suite.sh` (or `install-suite.ps1` on Windows) installs all three with one command.
+
 **📘 User guide, one page per part of Shikari: [docs/guide](docs/guide/README.md)**
 
 **📖 Setup instructions: [GETTING_STARTED.md](GETTING_STARTED.md)**
