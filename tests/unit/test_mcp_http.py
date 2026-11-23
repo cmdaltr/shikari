@@ -25,7 +25,7 @@ def http(monkeypatch):
     import shikari.app as app_module
     import shikari.auth.tokens as tokens
 
-    monkeypatch.setattr(tokens, "session_for", lambda t: "session-1" if t == "shik_good" else None)
+    monkeypatch.setattr(tokens, "resolve", lambda t: ("session-1", tokens.FULL) if t == "shik_good" else None)
     monkeypatch.setattr(mcp_server, "_request_client",
                         lambda request: FakeClient(request.headers["authorization"][7:]))
     return TestClient(app_module.app)

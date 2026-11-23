@@ -16,7 +16,7 @@
 | Change Password | At least 16 characters, with letters, numbers and special characters |
 | Two-Factor Authentication | Scan the QR code with an authenticator app (or type the key), enter a code to turn it on |
 | Backup Codes | One-time codes for when you lose your authenticator. Shown once: download or copy them |
-| API Tokens | For the console, the MCP server and your own scripts: set `SHIKARI_TOKEN` instead of a password. Works with MFA. A token acts as you, so revoke it here if it leaks |
+| API Tokens | For the console, the MCP server and your own scripts: set `SHIKARI_TOKEN` instead of a password. Works with MFA. A token acts as you, so revoke it here if it leaks. Each shows its scope: **Full** (anything you may do; every token you make here) or **Ostraka** (made by pairing: it reads coverage, results and hunt runs and starts hunt runs, and expires after a year). Revoking an Ostraka token undoes the pairing |
 
 ## Timeline
 
@@ -39,6 +39,8 @@ Keys are stored encrypted. Keys in `.env` in the project root work too.
 ## Config (administrators)
 
 System-wide correlation settings, applied to every run from then on. They're kept in `data/correlation_settings.json`; a setting you don't change keeps its value.
+
+**Pair with Ostraka** connects Shikari to Ostraka in one step. **Make pairing link**, with a note if you like, and copy the link: it's shown once, works once and lapses after 10 minutes. An Ostraka admin pastes it into Ostraka (Settings → Integrations), and that makes an Ostraka-scope API token (yours, named *Ostraka (paired)*) and a webhook to Ostraka for `run.completed`, `run.failed` and `run.executed`. The panel lists the links you've made, open, claimed or expired; **Withdraw** stops an open one working. Revoking the token, or removing the webhook, undoes the pairing.
 
 | Setting | Meaning | Recommended |
 |---|---|---|

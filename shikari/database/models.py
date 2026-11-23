@@ -10,6 +10,8 @@ This module defines SQLAlchemy models for:
 - AgentRuns: Agent session traces
 - SecurityQuestions: For password reset fallback
 - Invitations: one-time links that open an account
+- PairingCodes: one-use links that pair Ostraka with this server (shikari/pairing.py)
+- HuntRuns: hunts started through POST /api/runs, kept by a stable id (shikari/hunt_runs.py)
 """
 
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, Enum, UniqueConstraint
@@ -232,6 +234,11 @@ class ApiToken(Base):
     prefix = Column(String(16), nullable=False)  # first characters, to tell tokens apart
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_used_at = Column(DateTime, nullable=True)
+    # What the token may do (shikari/auth/tokens.py, SCOPES): NULL or "full" is anything its owner may,
+    # "ostraka" only what docs/suite/INTEGRATION.md lets a paired Ostraka do. Nullable so an existing
+    # database gains it (shikari/database/db.py, _add_missing_columns), every older token being full.
+    scope = Column(String(16), nullable=True)
+    expires_at = Column(DateTime, nullable=True)  # NULL: never (a token made on the profile page)
 
 
 class AgentRun(Base):
@@ -557,3 +564,52 @@ class AssessmentResult(Base):
 
     def __repr__(self):
         return f"<AssessmentResult(id={self.id}, assessment={self.assessment_id}, tech='{self.technique_id}')>"
+
+
+class PairingCode(Base):
+    """
+    A pairing link an admin makes for Ostraka (shikari/pairing.py, docs/suite/INTEGRATION.md): <origin>/pair#<code>.
+    It works once, within 10 minutes; code_hash is the code's SHA-256, never the code. Claiming it makes
+    an `ostraka`-scope API token (token_id) and a webhook (webhook_id) together.
+    """
+    __tablename__ = "pairing_codes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    code_hash = Column(String(64), unique=True, nullable=False, index=True)
+    note = Column(String(200), nullable=False, default="")
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    claimed_at = Column(DateTime, nullable=True)
+    claimed_by_name = Column(String(100), nullable=True)  # the name the claim gave, e.g. "Ostraka"
+    claim_ip = Column(String(45), nullable=True)
+    withdrawn_at = Column(DateTime, nullable=True)
+    token_id = Column(Integer, nullable=True)
+    webhook_id = Column(String(32), nullable=True)
+
+
+class HuntRun(Base):
+    """
+    One request to hunt a target through POST /api/runs (shikari/hunt_runs.py). Its id stays put when
+    the same group is hunted again: the detections it made (and their queries) are copied here when
+    generation finishes. When it was asked to execute them, `counts` holds how many results each query
+    found against the SIEM connections, and never a result itself.
+    """
+    __tablename__ = "hunt_runs"
+
+    id = Column(String(32), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    kind = Column(String(16), nullable=False)  # group | cve | techniques
+    target = Column(Text, nullable=False)
+    external_ref = Column(String(32), nullable=True, index=True)  # an Ostraka reference, OST-26-014
+    execute = Column(Boolean, nullable=False, default=False)
+    window_days = Column(Integer, nullable=False, default=7)
+    status = Column(String(16), nullable=False, default="queued")
+    group_name = Column(String(255), nullable=False, index=True)
+    error = Column(Text, nullable=True)
+    detections = Column(Text, nullable=False, default="[]")  # JSON
+    counts = Column(Text, nullable=False, default="[]")  # JSON: counts only
+    totals = Column(Text, nullable=True)  # JSON
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    completed_at = Column(DateTime, nullable=True)
+    executed_at = Column(DateTime, nullable=True)

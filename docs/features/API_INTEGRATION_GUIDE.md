@@ -720,9 +720,12 @@ An admin registers URLs that Shikari POSTs to when something happens:
 
 | Event | Sent when | `data` |
 |---|---|---|
-| `run.completed` | a hunt finishes | `run`, `phase`, `created_yaml`, `results_url` |
-| `run.failed` | a hunt stops with an error | `run`, `status`, `error` |
+| `run.completed` | a hunt finishes | `run`, `phase`, `created_yaml`, `results_url`, `run_id`, `external_ref` |
+| `run.failed` | a hunt stops with an error | `run`, `status`, `error`, `run_id`, `external_ref` |
+| `run.executed` | a hunt run's queries have been run against the SIEMs | `run_id`, `external_ref`, `group_name`, `totals` |
 | `watchlist.match` | a Threat Feed watchlist finds new posts | `user_id`, `matches` (`query`, `title`, `url`) |
+
+`run_id` and `external_ref` name the hunt run ([Workflow 13](#workflow-13-hunt-runs)) a hunt was started for; both are `null` for any other hunt. A hunt run sends its own `run.completed` once it has kept its detections, so `GET /api/runs/<run_id>` already has them when the webhook arrives; `totals` is the run's (`queries`, `run`, `hits`, `errors`, `skipped`), never a result.
 
 ```bash
 curl -X POST http://127.0.0.1:32453/api/webhooks -H "Authorization: Bearer $ADMIN_TOKEN" \
@@ -752,6 +755,83 @@ curl -X POST http://127.0.0.1:32453/api/pivots/leads -H "Authorization: Bearer $
 ```
 
 The answer has `leads` (ranked: `entity`, `value`, `stages_hit` of `stages_total`, `in_order`, `span_seconds`, `score`, and `hits` with the event behind each stage), `unjoined` (per stage and SIEM: `no_keys`, `no_time`, `outside_window` or `no_results`, with a `detail` to show), `ran` (stages run here, with `rows` and `truncated`), `problems` (a run that failed, in the SIEM's words) and `summary`. How the keys are normalised and leads ranked: [Results → Finding leads](../guide/06-results.md#finding-leads).
+
+### Workflow 13: Hunt Runs
+
+A hunt run is one request to hunt a target, with an id that a later hunt of the same group doesn't overwrite. It may carry an Ostraka reference, and it may run its detections' queries against Shikari's SIEM connections, keeping only how many results each one found.
+
+```bash
+curl -X POST http://127.0.0.1:32453/api/runs -H "Authorization: Bearer $SHIKARI_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"kind": "group", "target": "APT29", "external_ref": "HNT-26-003", "execute": true, "window_days": 7}'
+# 202 {"id": "3f2a9c01d4e5b6a7", "status": "queued", "group_name": "APT29", "status_url": "/api/runs/3f2a9c01d4e5b6a7"}
+
+curl http://127.0.0.1:32453/api/runs/3f2a9c01d4e5b6a7 -H "Authorization: Bearer $SHIKARI_TOKEN"
+curl "http://127.0.0.1:32453/api/runs?external_ref=HNT-26-003" -H "Authorization: Bearer $SHIKARI_TOKEN"
+```
+
+| Field | Meaning |
+|---|---|
+| `kind` | `group` (an ATT&CK group by name), `cve` (`CVE-2024-3400`, or several comma-separated) or `techniques` (`T1059.001,T1003.001`) |
+| `target` | What to hunt; generated as `/generate`, `/generate/cve` and `/hunt/technique` do, as you, so your SIEM platforms, technology stack and AI settings apply |
+| `external_ref` | Optional: an Ostraka reference matching `^(OST\|HNT)-\d{2}(\d{2})?-\d{3,}$` (`OST-26-014`, `HNT-26-003`); anything else is 422 |
+| `execute` | `true` runs each generated query once generation finishes (default `false`) |
+| `window_days` | The search window for `execute`, 1 to 90 days (default 7) |
+
+`status` goes `queued` → `generating` → `generated`, then `executing` → `executed` with `execute`, or `failed` with an `error`. A run is kept in the database with the detections it made (`file`, `name`, `techniques`, `platforms`, `queries` with `platform` and `query`), copied when generation finishes, so hunting the group again changes the group's results page but not the run. At most two runs generate at once (`SHIKARI_HUNT_RUNS_AT_ONCE`); the rest wait, queued. A run that a restart cut short is marked failed when Shikari starts.
+
+With `execute`, each query goes to the SIEM for its platform through the query clients ([Query execution](QUERY_EXECUTION.md): Splunk, Elasticsearch, Defender XDR, configured from the environment), asked for its count rather than its rows (`| stats count`, `| STATS … = COUNT(*)`, `| count`). The query's own window (`earliest=-1d`, `NOW() - 1 day`, `ago(1d)`) becomes the run's; a Defender XDR query with no `ago()` gets a `Timestamp` filter after its table, and one that doesn't start with a table can't be windowed and is reported as an error. Four queries are in flight at once (`SHIKARI_HUNT_RUN_QUERIES_AT_ONCE`), each for up to 120 seconds (`SHIKARI_HUNT_RUN_QUERY_TIMEOUT`). A platform with no connection here (Google SecOps has no query client) is recorded as skipped. `counts` has one entry per query:
+
+```json
+{"file": "APT29_T1059.001_Splunk.yaml", "technique": "T1059.001", "platform": "Splunk",
+ "query_index": 0, "hits": 12, "error": "", "skipped": false}
+```
+
+and `totals` sums them: `queries`, `run` (counted without an error), `hits`, `errors` and `skipped`. **Results are counted, never kept:** no result row from a hunt run is stored, logged or returned, only the count, as with Ostraka's SIEM queries. `GET /api/runs` lists your runs (an admin's lists everyone's), newest first, without their detections and counts; `GET /api/runs/<id>` is 404 for someone else's run unless you're an admin. While a run is executing, `/api/busy` counts it, so a homelab pull waits.
+
+*Decided 23 November 2026 (Ben), with Ostraka and Rowanholt: the contract is [docs/suite/INTEGRATION.md](../suite/INTEGRATION.md), the same file in all three repositories.*
+
+### Workflow 14: Pairing with Ostraka
+
+An admin makes a pairing link (Profile → Config → Pair with Ostraka, or the API), and an Ostraka admin pastes it into Ostraka, which claims it. The claim makes an API token in the `ostraka` scope and a webhook to Ostraka together.
+
+```bash
+curl -X POST http://127.0.0.1:32453/api/pairing -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" -d '{"note": "Ostraka on the homelab"}'
+# 201 {"id": 3, "link": "https://shikari.example.org/pair#pair_Xb3…", "expires_at": "2026-11-23T10:10:00Z"}
+
+curl http://127.0.0.1:32453/api/pairing -H "Authorization: Bearer $ADMIN_TOKEN"
+# [{"id", "note", "created_by", "created_at", "expires_at", "claimed_at", "claimed_by_name"}]
+curl -X DELETE http://127.0.0.1:32453/api/pairing/3 -H "Authorization: Bearer $ADMIN_TOKEN"   # 204
+```
+
+The link is `SHIKARI_PUBLIC_URL` (else the address you asked from), `/pair#`, then the code: `pair_` and 43 random characters. It works once, within 10 minutes, and only its SHA-256 is stored; the link is only in the answer that makes it. An admin may have any number open. Making, withdrawing and claiming are audited (`pairing_created`, `pairing_withdrawn`, `pairing_claimed`, `pairing_claim_refused`). The claim needs no sign-in, since the code is the credential:
+
+```bash
+curl -X POST https://shikari.example.org/api/pairing/claim -H "Content-Type: application/json" \
+  -d '{"code": "pair_…", "product": "ostraka", "name": "Ostraka", "version": "0.3.0",
+       "webhook_url": "https://ostraka.example.org/api/integrations/shikari/webhook"}'
+# 200 {"product": "shikari", "version": "2.1.0", "token": "shik_…", "token_expires_at": "…",
+#      "webhook_id": "…", "webhook_secret": "…", "events": ["run.completed", "run.failed", "run.executed"]}
+```
+
+| Refused | Status and `detail` |
+|---|---|
+| The code doesn't exist, was claimed or was withdrawn | 404 "This pairing link isn't valid. Ask for a new one." |
+| The code has expired | 410 "This pairing link has expired. Ask for a new one." |
+| The admin who made it is deactivated or no longer an admin | 404, the same message |
+| `webhook_url` breaks the webhook URL rules ([Workflow 11](#workflow-11-webhooks)) | 422, with the rule broken; the code still works |
+
+One conditional update claims the code, so of two claims at once only one succeeds. The token belongs to the admin who made the code, is named *Ostraka (paired)* and lasts 365 days; the webhook is described the same way and has a new secret. It's made even on a Free install, where it won't fire until a licence with `automation` is installed. The token and secret are in the claim's answer and nowhere else. Revoking the token (Profile → Security → API Tokens) or removing the webhook undoes the pairing. Opening a pairing link in a browser shows a page saying what it is.
+
+An `ostraka`-scope token may only make these requests; anything else is 403:
+
+| Method | Path |
+|---|---|
+| `GET` | `/health`, `/api/coverage`, `/api/runs`, `/api/runs/<id>`, `/api/results/<group>`, `/progress_status` |
+| `POST` | `/api/runs` |
+
+Every other token is `full`, and may do anything its owner may; `GET /api/profile/tokens` gives each token's `scope` and `expires` (`null`: never).
 
 ---
 

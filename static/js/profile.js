@@ -854,8 +854,11 @@ document.head.appendChild(style);
     const tokens = data.tokens || [];
     table.hidden = !tokens.length;
     if (!tokens.length && !message.textContent) message.textContent = 'No tokens yet.';
+    // full: anything you may do; ostraka: what a paired Ostraka may (shikari/auth/tokens.py)
+    const scope = s => s === 'ostraka' ? '<span title="Reads coverage, results and hunt runs, and starts hunt runs">Ostraka</span>' : 'Full';
     rows.innerHTML = tokens.map(t => `<tr><td>${esc(t.name)}</td><td><code>${esc(t.prefix)}…</code></td>`
-      + `<td>${when(t.created)}</td><td>${when(t.last_used)}</td>`
+      + `<td>${scope(t.scope)}</td><td>${when(t.created)}</td><td>${when(t.last_used)}</td>`
+      + `<td>${t.expires ? when(t.expires) : 'never'}</td>`
       + `<td><button type="button" data-id="${t.id}">Revoke</button></td></tr>`).join('');
     rows.querySelectorAll('button').forEach(b => b.addEventListener('click', async () => {
       // Two clicks, no dialog: the first arms the button
