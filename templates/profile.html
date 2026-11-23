@@ -1005,7 +1005,7 @@
               </div>
               <div id="api-token-message" class="api-token-message"></div>
               <table class="api-token-table" id="api-token-table" hidden>
-                <thead><tr><th>Name</th><th>Token</th><th>Created</th><th>Last used</th><th></th></tr></thead>
+                <thead><tr><th>Name</th><th>Token</th><th>Scope</th><th>Created</th><th>Last used</th><th>Expires</th><th></th></tr></thead>
                 <tbody id="api-token-rows"></tbody>
               </table>
             </div>
@@ -1065,7 +1065,7 @@
 
           <!-- CONFIG TAB (formerly Mappings) -->
           <div class="tab-pane" id="tab-mappings">
-            <nav class="tab-toc" aria-label="On this page"><span class="toc-label">On this page</span><a href="#cfg-correlation">Correlation parameters</a><a href="#cfg-detections-code">Detections as code</a><a href="#cfg-webhooks">Webhooks</a><a href="#cfg-data-sources">SIEM data sources</a><a href="#cfg-field-mapping">SIEM field mapping</a><a href="#sample-data-card">Sample data</a></nav>
+            <nav class="tab-toc" aria-label="On this page"><span class="toc-label">On this page</span><a href="#cfg-correlation">Correlation parameters</a><a href="#cfg-detections-code">Detections as code</a><a href="#cfg-webhooks">Webhooks</a><a href="#cfg-pairing">Pair with Ostraka</a><a href="#cfg-data-sources">SIEM data sources</a><a href="#cfg-field-mapping">SIEM field mapping</a><a href="#sample-data-card">Sample data</a></nav>
             <div class="tab-description">
               System-wide configuration settings
             </div>
@@ -1198,7 +1198,7 @@
                   Webhooks
                 </h3>
                 <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6; margin-bottom: 20px;">
-                  URLs Shikari POSTs JSON to when a hunt finishes or fails, or a watchlist finds new posts. Each delivery is
+                  URLs Shikari POSTs JSON to when a hunt finishes or fails, a hunt run's queries have been run, or a watchlist finds new posts. Each delivery is
                   signed with the webhook's secret (<code>X-Shikari-Signature: sha256=…</code>); the secret is shown once,
                   when you add the webhook. <a href="https://github.com/cmdaltr/shikari/blob/main/docs/features/API_INTEGRATION_GUIDE.md#workflow-11-webhooks">How to check it</a>.
                 </p>
@@ -1218,6 +1218,37 @@
                 </div>
                 <div id="wh-status" style="margin-top:16px;padding:12px;border-radius:6px;display:none;"></div>
                 <div id="wh-list" style="margin-top:16px;"></div>
+              </div>
+
+              <!-- PAIR WITH OSTRAKA (Admin Only, shikari/pairing.py, docs/suite/INTEGRATION.md) -->
+              <div class="ui-card" id="cfg-pairing" style="padding: 24px; margin-bottom: 32px;">
+                <h3 class="section-title">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  Pair with Ostraka
+                </h3>
+                <p style="color: var(--text-secondary); font-size: 0.95em; line-height: 1.6; margin-bottom: 20px;">
+                  Make a pairing link and paste it into Ostraka (Settings → Integrations) as an Ostraka admin. Ostraka
+                  claims it once, within 10 minutes, and gets an API token that can only read coverage, results and hunt
+                  runs and start hunt runs, with a webhook for the hunt-run events. The token is yours, named
+                  <em>Ostraka (paired)</em> under Profile → Security → API Tokens; revoking it, or removing the webhook
+                  above, undoes the pairing.
+                </p>
+                <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;">
+                  <div style="flex:3 1 260px;min-width:0;">
+                    <label for="pair-note" style="display:block;font-weight:600;margin-bottom:6px;">Note <span style="font-weight:400;color:var(--text-secondary);">(optional)</span></label>
+                    <input type="text" id="pair-note" class="form-input" maxlength="200" placeholder="Ostraka on the homelab" style="width:100%;box-sizing:border-box;">
+                  </div>
+                  <div class="ui-actions"><button id="pair-make" class="btn-primary">Make pairing link</button></div>
+                </div>
+                <div id="pair-new" hidden style="margin-top:16px;">
+                  <p style="margin:0 0 6px;"><strong>Copy this link now.</strong> It won't be shown again.</p>
+                  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <code id="pair-link" style="user-select:all;overflow-wrap:anywhere;flex:1 1 260px;min-width:0;"></code>
+                    <button type="button" class="btn-secondary" id="pair-copy">Copy</button>
+                  </div>
+                </div>
+                <div id="pair-status" style="margin-top:16px;padding:12px;border-radius:6px;display:none;"></div>
+                <div id="pair-list" style="margin-top:16px;"></div>
               </div>
 
               <!-- SIEM DATA SOURCES / AVAILABILITY (Admin Only) -->
@@ -2963,6 +2994,71 @@
                         } else if (b.dataset.whDelete) {
                             await call('DELETE', `/api/webhooks/${b.dataset.whDelete}`);
                         }
+                        load();
+                    } catch (err) { show(err.message, false); }
+                });
+                load();
+            })();
+
+            // Pair with Ostraka (admin, shikari/pairing.py)
+            (function () {
+                const list = document.getElementById('pair-list');
+                if (!list) return;  // not admin
+                const statusEl = document.getElementById('pair-status');
+                const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+                const when = iso => iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '';
+                function show(msg, ok) {
+                    statusEl.style.display = msg ? 'block' : 'none';
+                    statusEl.style.background = ok ? 'rgba(52,168,83,.12)' : 'rgba(217,48,37,.1)';
+                    statusEl.style.color = ok ? '#2e9e4f' : '#d93025';
+                    statusEl.textContent = msg;
+                }
+                async function call(method, url, body) {
+                    const r = await fetch(url, { method, headers: body ? { 'Content-Type': 'application/json' } : {},
+                                                  body: body ? JSON.stringify(body) : undefined });
+                    const j = r.status === 204 ? {} : await r.json().catch(() => ({}));
+                    if (!r.ok) throw new Error(j.error || j.detail || `HTTP ${r.status}`);
+                    return j;
+                }
+                function state(c) {
+                    if (c.claimed_at) return `claimed by ${esc(c.claimed_by_name || 'Ostraka')}, ${when(c.claimed_at)}`;
+                    if (new Date(c.expires_at) <= new Date()) return 'expired';
+                    return `open until ${when(c.expires_at)}`;
+                }
+                function render(codes) {
+                    list.innerHTML = codes.length ? codes.map(c => {
+                        const open = !c.claimed_at && new Date(c.expires_at) > new Date();
+                        return `<div style="border:1px solid var(--border-color);border-radius:8px;padding:12px 14px;margin-bottom:10px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                          <div style="flex:1 1 260px;min-width:0;overflow-wrap:anywhere;">
+                            <strong>${esc(c.note || 'Pairing link')}</strong>
+                            <div style="color:var(--text-secondary);font-size:.85em;margin-top:4px;">Made by ${esc(c.created_by || '')}, ${when(c.created_at)} · ${state(c)}</div>
+                          </div>
+                          ${open ? `<button class="btn-ghost" data-pair-withdraw="${esc(c.id)}">Withdraw</button>` : ''}
+                        </div>`;
+                    }).join('') : '<p style="color:var(--text-secondary);margin:0;">No pairing links yet.</p>';
+                }
+                const load = () => call('GET', '/api/pairing').then(render).catch(e => show(e.message, false));
+                document.getElementById('pair-make').addEventListener('click', async () => {
+                    try {
+                        const made = await call('POST', '/api/pairing', { note: document.getElementById('pair-note').value });
+                        document.getElementById('pair-link').textContent = made.link;
+                        document.getElementById('pair-new').hidden = false;
+                        document.getElementById('pair-note').value = '';
+                        show('', true);
+                        load();
+                    } catch (e) { show(e.message, false); }
+                });
+                document.getElementById('pair-copy').addEventListener('click', () => {
+                    navigator.clipboard.writeText(document.getElementById('pair-link').textContent)
+                        .then(() => show('Copied.', true), () => show('Select the link and copy it.', false));
+                });
+                list.addEventListener('click', async e => {
+                    const b = e.target.closest('button[data-pair-withdraw]'); if (!b) return;
+                    try {
+                        await call('DELETE', `/api/pairing/${b.dataset.pairWithdraw}`);
+                        document.getElementById('pair-new').hidden = true;
+                        document.getElementById('pair-link').textContent = '';
+                        show('Withdrawn: that link no longer works.', true);
                         load();
                     } catch (err) { show(err.message, false); }
                 });

@@ -1220,6 +1220,7 @@ PUBLIC_PATHS = {"/login", "/login/mfa", "/register", "/logout", "/forgot-passwor
                 "/reset-access", "/api/auth/reset-access/start",
                 "/api/auth/reset-access/complete", "/accept-invite", "/api/auth/invitation/preview",
                 "/api/auth/invitation/start", "/api/auth/invitation/complete",
+                "/pair", "/api/pairing/claim",  # the pairing code is the credential (shikari/pairing.py)
                 "/mcp"}  # MCP answers a missing token itself; an invalid one is refused above
 PUBLIC_PREFIXES = ("/static/",)
 # SHIKARI_ALLOW_GUESTS=1: people who aren't signed in may browse (GET) for a demo, never change anything
@@ -1248,11 +1249,16 @@ async def api_token_auth(request: Request, call_next):
     token = _bearer_token(request)
     session_id = request.cookies.get("shikari_session")
     if token is not None:
-        from shikari.auth.tokens import session_for
+        from shikari.auth import tokens as api_tokens
 
-        session_id = await run_in_threadpool(session_for, token)
-        if not session_id:
+        found = await run_in_threadpool(api_tokens.resolve, token)
+        if not found:
             return JSONResponse({"error": "Invalid or revoked API token"}, status_code=401)
+        session_id, scope = found
+        # A scoped token (a paired Ostraka's) reaches only its routes, public ones included
+        if not api_tokens.allows(scope, request.method, request.url.path):
+            return JSONResponse({"error": f"This API token's scope ({scope}) doesn't allow this request"},
+                                status_code=403)
         cookies = [c for c in (request.headers.get("cookie") or "").split(";")
                    if c.strip() and not c.strip().startswith("shikari_session=")]
         headers = [(k, v) for k, v in request.scope["headers"] if k != b"cookie"]
@@ -1407,7 +1413,13 @@ def busy():
     now = time.time()
     live = [g for g in run_files.running()
             if os.path.exists(progress_path(g)) and now - os.path.getmtime(progress_path(g)) < BUSY_STALE_SECONDS]
-    return {"busy": bool(live), "runs": len(live)}
+    try:  # hunt runs counting their queries' results (shikari/hunt_runs.py)
+        from shikari.hunt_runs import executing
+
+        counting = executing()
+    except Exception:
+        counting = 0
+    return {"busy": bool(live) or bool(counting), "runs": len(live) + counting}
 
 
 # MCP over HTTP, as the bearer token's owner (shikari/mcp_server.py)
@@ -1438,9 +1450,13 @@ app.include_router(lab_router)
 
 from shikari.runs_api import router as runs_router
 from shikari.webhooks import router as webhooks_router
+from shikari.pairing import router as pairing_router
+from shikari.hunt_runs import router as hunt_runs_router
 
 app.include_router(runs_router)
 app.include_router(webhooks_router)
+app.include_router(pairing_router)
+app.include_router(hunt_runs_router)
 app.include_router(elevation_router)
 
 
@@ -1551,6 +1567,12 @@ def initialize_database():
     Creates all tables if they don't exist. Database is stored at data/shikari.db.
     """
     init_db()
+    try:  # no thread survived the restart to finish them
+        from shikari.hunt_runs import interrupted
+
+        interrupted()
+    except Exception as e:
+        print(f"Note: could not close interrupted hunt runs: {e}")
 
 
 # Validate required mapping files on startup

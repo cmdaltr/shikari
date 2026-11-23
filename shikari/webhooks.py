@@ -2,9 +2,15 @@
 Webhooks: Shikari POSTs JSON to URLs an admin registers when something happens (#35).
 
 Events
-    run.completed    a hunt finished: {run, phase, created_yaml, results_url}
-    run.failed       a hunt stopped with an error: {run, status, error}
+    run.completed    a hunt finished: {run, phase, created_yaml, results_url, run_id, external_ref}
+    run.failed       a hunt stopped with an error: {run, status, error, run_id, external_ref}
+    run.executed     a hunt run's queries were run against the SIEMs: {run_id, external_ref, group_name, totals}
     watchlist.match  a Threat Feed watchlist found new posts: {user_id, matches: [{query, title, url}]}
+
+run_id and external_ref name the hunt run (shikari/hunt_runs.py, POST /api/runs) a hunt was started
+for, and are null for any other hunt. A hunt run's own run.completed and run.failed are sent by the run
+once it has copied its detections, so a receiver reading GET /api/runs/{id} finds them there; the
+progress record's finish doesn't send a second one (docs/suite/INTEGRATION.md).
 
 The envelope, its signature, the URL rules and the sending are the suite's shared ones, from
 `samarkand.webhooks`: each delivery is {"event", "sent_at", "data"} (`sent_at` ISO 8601 in UTC), with
@@ -30,7 +36,7 @@ from samarkand import webhooks as shared
 
 from shikari import paths
 
-EVENTS = ("run.completed", "run.failed", "watchlist.match")
+EVENTS = ("run.completed", "run.failed", "run.executed", "watchlist.match")
 PREFIX = "X-Shikari"
 KEEP_DELIVERIES = shared.KEEP_DELIVERIES
 TRIES = shared.TRIES
@@ -160,16 +166,38 @@ def emit(event: str, data: Dict) -> int:
     return len(targets)
 
 
-def emit_run(group_name: str, progress: Dict) -> None:
-    """A run's terminal progress record, as run.completed or run.failed."""
+def emit_run(group_name: str, progress: Dict, *, run_id: Optional[str] = None,
+             external_ref: Optional[str] = None) -> None:
+    """A run's terminal progress record, as run.completed or run.failed. Called without run_id (by the
+    progress record) for a group a hunt run is generating, it sends nothing: the hunt run sends its own."""
+    if run_id is None and _hunt_run_owns(group_name):
+        return
     status = progress.get("status")
+    ids = {"run_id": run_id, "external_ref": external_ref}
     if status in ("error", "failed", "cancelled"):
-        emit("run.failed", {"run": group_name, "status": status, "error": progress.get("error") or progress.get("message")})
+        emit("run.failed", {"run": group_name, "status": status,
+                            "error": progress.get("error") or progress.get("message"), **ids})
     else:
         base = (os.getenv("SHIKARI_PUBLIC_URL") or "").rstrip("/")
         emit("run.completed", {"run": group_name, "phase": progress.get("phase"),
                                "created_yaml": progress.get("created_yaml"),
-                               "results_url": f"{base}/results/{group_name}" if base else f"/results/{group_name}"})
+                               "results_url": f"{base}/results/{group_name}" if base else f"/results/{group_name}",
+                               **ids})
+
+
+def emit_executed(run_id: str, external_ref: Optional[str], group_name: str, totals: Dict) -> None:
+    """A hunt run's queries have been run: run.executed, with the totals and never a result."""
+    emit("run.executed", {"run_id": run_id, "external_ref": external_ref, "group_name": group_name,
+                          "totals": totals})
+
+
+def _hunt_run_owns(group_name: str) -> bool:
+    try:
+        from shikari import hunt_runs
+
+        return hunt_runs.generating(group_name)
+    except Exception:
+        return False
 
 
 router = APIRouter()
