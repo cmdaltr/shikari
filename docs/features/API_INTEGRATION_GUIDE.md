@@ -811,7 +811,7 @@ The link is `SHIKARI_PUBLIC_URL` (else the address you asked from), `/pair#`, th
 curl -X POST https://shikari.example.org/api/pairing/claim -H "Content-Type: application/json" \
   -d '{"code": "pair_…", "product": "ostraka", "name": "Ostraka", "version": "0.3.0",
        "webhook_url": "https://ostraka.example.org/api/integrations/shikari/webhook"}'
-# 200 {"product": "shikari", "version": "2.1.0", "token": "shik_…", "token_expires_at": "…",
+# 200 {"product": "shikari", "version": "2.2.0", "token": "shik_…", "token_expires_at": "…",
 #      "webhook_id": "…", "webhook_secret": "…", "events": ["run.completed", "run.failed", "run.executed"]}
 ```
 
