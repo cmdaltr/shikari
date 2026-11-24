@@ -168,11 +168,14 @@ def obtain_technique_descriptions(bundle):
 
 
 def check_group_in_mitre(bundle, group):
+    # The whole name or a whole alias: a substring of the alias list matched "" and "apt2" too
+    wanted = (group or "").strip().lower()
+    if not wanted:
+        return "N"
     for obj in bundle.objects:
         if obj.get("type") == "intrusion-set":
-            group_name = obj.get("name").lower()
-            aliases = str(obj.get("aliases")).lower()
-            if group.lower() == group_name or group.lower() in aliases:
+            names = [obj.get("name") or ""] + list(obj.get("aliases") or [])
+            if wanted in (str(n).strip().lower() for n in names):
                 return "Y"
 
     return "N"

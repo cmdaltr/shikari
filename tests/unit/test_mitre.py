@@ -280,6 +280,17 @@ class TestCheckGroupInMitre:
 
         assert result == "N"
 
+    def test_blank_and_partial_names_are_not_actors(self):
+        """A blank name or a fragment of an alias isn't a known group (a blank one once ran as group "")."""
+        from shikari.mitre.enterprise import check_group_in_mitre
+
+        mock_bundle = MagicMock()
+        mock_bundle.objects = [{"type": "intrusion-set", "name": "APT29", "aliases": ["APT29", "Cozy Bear"]}]
+
+        for name in ("", "   ", None, "apt2", "bear", "Cozy", "'"):
+            assert check_group_in_mitre(mock_bundle, name) == "N", name
+        assert check_group_in_mitre(mock_bundle, " Cozy Bear ") == "Y"
+
 
 class TestConsolidateTactics:
     """Test tactic consolidation from kill chain phases."""
